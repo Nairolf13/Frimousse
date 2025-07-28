@@ -1,3 +1,18 @@
+import React from 'react';
+import NannyCalendar from '../components/NannyCalendar';
+
+
+function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
+        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
+        <h2 className="text-xl font-bold mb-4 text-center">Planning de {nanny.name}</h2>
+        <NannyCalendar nannyId={nanny.id} />
+      </div>
+    </div>
+  );
+}
 
 import { useEffect, useState } from 'react';
 
@@ -33,6 +48,7 @@ export default function Nannies() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
+  const [planningNanny, setPlanningNanny] = useState<Nanny|null>(null);
   const [search, setSearch] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState('');
   const [experienceFilter, setExperienceFilter] = useState('');
@@ -196,46 +212,73 @@ export default function Nannies() {
         {loading ? (
           <div>Chargement...</div>
         ) : (
-          <div className="flex flex-col gap-6 w-full">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 w-full">
             {filtered.map((nanny, idx) => {
               const avatar = avatarEmojis[idx % avatarEmojis.length];
+              const cardColors = [
+                'bg-blue-50',
+                'bg-yellow-50',
+                'bg-purple-50',
+                'bg-green-50',
+                'bg-pink-50',
+                'bg-orange-50',
+              ];
+              const color = cardColors[idx % cardColors.length];
               return (
-                <div key={nanny.id} className="bg-white rounded-2xl shadow p-6 flex flex-col md:flex-row md:items-center gap-6 border border-[#f3f3fa]">
-                  {/* Avatar + nom + expérience */}
-                  <div className="flex items-center gap-4 min-w-[180px]">
-                    <div className="w-16 h-16 rounded-full bg-yellow-100 flex items-center justify-center text-4xl shadow border border-gray-100">{avatar}</div>
-                    <div>
-                      <div className="font-bold text-lg text-gray-900">{nanny.name}</div>
-                      <div className="text-xs text-gray-500 font-medium">{nanny.experience} ans d'expérience</div>
-                    </div>
+                <div
+                  key={nanny.id}
+                  className={`rounded-2xl shadow-lg ${color} flex flex-col items-center min-h-[300px] p-0 relative overflow-hidden`}
+                  style={{ height: '100%' }}
+                >
+                  {/* Avatar centré, badge expérience en haut à droite, statut en badge rond */}
+                  <div className="w-full flex flex-col items-center relative pt-6 pb-2">
+                    <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-3xl shadow border-2 border-gray-100 mb-2">{avatar}</div>
+                    <span
+                      className={`absolute right-4 top-4 text-xs font-bold px-3 py-1 rounded-full shadow border ${
+                        nanny.availability === 'Disponible'
+                          ? 'bg-green-100 text-green-700 border-green-200'
+                          : nanny.availability === 'En_congé'
+                          ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                          : 'bg-red-100 text-red-700 border-red-200'
+                      }`}
+                    >
+                      {nanny.availability === 'En_congé' ? 'En congé' : nanny.availability}
+                    </span>
+                    <span className="mt-1 text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">{nanny.experience} ans</span>
                   </div>
-                  {/* Contact + dispo */}
-                  <div className="flex-1 flex flex-col md:flex-row md:items-center gap-4">
-                    <div className="flex flex-col gap-1 min-w-[180px]">
-                      <div className="text-sm text-gray-700 flex items-center gap-2"><span className="font-medium">Disponibilité :</span> {nanny.availability === 'En_congé' ? 'En congé' : nanny.availability}</div>
-                      <div className="text-sm text-gray-700 flex items-center gap-2"><span className="font-medium">Statut :</span> <span className={nanny.status === 'Disponible' ? 'text-green-600' : 'text-red-500'}>{nanny.status}</span></div>
-                    </div>
-                    {/* Spécialisations */}
-                    <div className="flex flex-wrap gap-2">
-                      {nanny.specializations?.map((spec, i) => (
-                        <span key={i} className="bg-purple-50 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold border border-purple-100">{spec}</span>
+                  {/* Nom centré + disponibilité */}
+                  <div className="flex flex-col items-center mb-2">
+                    <span className="font-semibold text-lg text-gray-900">{nanny.name}</span>
+                  </div>
+                  {/* Spécialisations en badges, centrées */}
+                  {nanny.specializations && nanny.specializations.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-2 mb-2 w-full px-4">
+                      {nanny.specializations.map((spec, i) => (
+                        <span key={i} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold border border-purple-200">{spec}</span>
                       ))}
                     </div>
+                  )}
+                  {/* Enfants assignés, badges ludiques, centrés */}
+                  <div className="text-sm text-gray-700 mb-2 w-full flex flex-col items-center">
+                    <span className="block font-medium mb-1">
+                      Affectations du jour
+                      <span className="inline-block bg-white text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 ml-1">
+                        {nanny.assignedChildren.length}
+                      </span>
+                    </span>
+                    {nanny.assignedChildren.length > 0 && (
+                      <div className="flex flex-wrap justify-center gap-2 w-full px-4">
+                        {nanny.assignedChildren.map(child => (
+                          <span key={child.id} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200">{child.name}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  {/* Enfants assignés */}
-                  <div className="flex-1">
-                    <div className="text-sm text-gray-700 font-medium mb-1">Affectations du jour ({nanny.assignedChildren.length})</div>
-                    <div className="flex flex-wrap gap-2">
-                      {nanny.assignedChildren.map(child => (
-                        <span key={child.id} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200">{child.name}</span>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Actions */}
-                  <div className="flex flex-col gap-2 min-w-[120px] items-end">
-                    <button className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-semibold border border-blue-100 mb-1">Voir profil</button>
-                    <button onClick={() => handleEdit(nanny)} className="bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full font-semibold border border-yellow-100">Éditer</button>
-                    <button onClick={() => handleDelete(nanny.id)} className="bg-red-50 text-red-600 px-3 py-1 rounded-full font-semibold border border-red-100">Supprimer</button>
+                  {/* Actions en bas, centrées, ludiques */}
+                  <div className="flex justify-center gap-2 mt-auto mb-4 w-full">
+                    <button onClick={() => setPlanningNanny(nanny)} className="bg-cyan-100 text-cyan-700 px-4 py-1 rounded-full font-semibold border border-cyan-200 shadow-sm hover:bg-cyan-200 transition">Voir planning</button>
+                    <button onClick={() => handleEdit(nanny)} className="bg-yellow-100 text-yellow-700 px-4 py-1 rounded-full font-semibold border border-yellow-200 shadow-sm hover:bg-yellow-200 transition">Éditer</button>
+                    <button onClick={() => handleDelete(nanny.id)} className="bg-red-100 text-red-600 px-4 py-1 rounded-full font-semibold border border-red-200 shadow-sm hover:bg-red-200 transition">Supprimer</button>
                   </div>
                 </div>
               );
@@ -243,6 +286,9 @@ export default function Nannies() {
           </div>
         )}
       </div>
+      {planningNanny && (
+        <PlanningModal nanny={planningNanny} onClose={() => setPlanningNanny(null)} />
+      )}
     </div>
   );
 }

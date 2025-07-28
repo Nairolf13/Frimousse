@@ -7,12 +7,6 @@ enum Availability {
   En_congé
   Maladie
 }
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -43,6 +37,27 @@ model RefreshToken {
   createdAt DateTime @default(now())
 }
 
+model Nanny {
+  id         String   @id @default(uuid())
+  name       String
+  availability Availability @default(Disponible)
+  experience Int
+  assignedChildren Assignment[]
+  schedules  Schedule[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Schedule {
+  id        String   @id @default(uuid())
+  date      DateTime
+  startTime String
+  endTime   String
+  nanny     Nanny    @relation(fields: [nannyId], references: [id])
+  nannyId   String
+  // Ajoute d'autres champs si besoin (activité, commentaire, etc.)
+}
+
 model Child {
   id         String   @id @default(uuid())
   name       String
@@ -52,16 +67,6 @@ model Child {
   parentContact String
   allergies  String?
   assignments Assignment[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-
-model Nanny {
-  id         String   @id @default(uuid())
-  name       String
-  availability Availability @default(Disponible)
-  experience Int
-  assignedChildren Assignment[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
