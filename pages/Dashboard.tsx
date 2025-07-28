@@ -4,6 +4,8 @@ interface Nanny {
   availability: string;
 }
 import { useEffect, useState } from 'react';
+import { useAuth } from '../src/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import AssignmentModal from '../components/AssignmentModal';
 
 interface Assignment {
@@ -42,6 +44,13 @@ function getMonthGrid(date: Date) {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (user && user.nannyId) {
+      navigate('/mon-planning', { replace: true });
+    }
+  }, [user, navigate]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [childrenCount, setChildrenCount] = useState<number>(0);
   const [activeCaregivers, setActiveCaregivers] = useState<number>(0);

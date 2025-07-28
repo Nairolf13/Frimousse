@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react';
 export interface User {
   name: string;
   role: string;
+  nannyId?: string;
 }
 
 export const AuthContext = createContext<{ user: User | null }>({ user: null });

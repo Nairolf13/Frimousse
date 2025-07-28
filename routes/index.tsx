@@ -6,6 +6,7 @@ import Dashboard from '../pages/Dashboard';
 import Children from '../pages/Children';
 import Nannies from '../pages/Nannies';
 import ProtectedLayout from '../components/ProtectedLayout';
+import MonPlanning from '../pages/MonPlanning';
 
 export default function AppRoutes() {
   return (
@@ -18,8 +19,10 @@ export default function AppRoutes() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/children" element={<Children />} />
           <Route path="/nannies" element={<Nannies />} />
+          <Route path="/mon-planning" element={<MonPlanning />} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
+

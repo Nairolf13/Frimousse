@@ -6,7 +6,17 @@ const prisma = new PrismaClient();
 
 // Get all assignments (calendar view)
 router.get('/', auth, async (req, res) => {
+  const { nannyId, start, end } = req.query;
+  const where = {};
+  if (nannyId) where.nannyId = nannyId;
+  if (start && end) {
+    where.date = {
+      gte: new Date(start),
+      lte: new Date(end)
+    };
+  }
   const assignments = await prisma.assignment.findMany({
+    where,
     include: { child: true, nanny: true }
   });
   res.json(assignments);

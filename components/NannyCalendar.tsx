@@ -1,4 +1,8 @@
 import { useState, useEffect } from 'react';
+interface Child {
+  id: string;
+  name: string;
+}
 
 interface Assignment {
   id: string;
@@ -30,6 +34,16 @@ function getMonthGrid(date: Date) {
 }
 
 export default function NannyCalendar({ nannyId }: { nannyId: string }) {
+  const [children, setChildren] = useState<Child[]>([]);
+  const [showForm, setShowForm] = useState<{ date: string } | null>(null);
+  const [selectedChild, setSelectedChild] = useState<string>('');
+  const [error, setError] = useState('');
+  // Fetch children list
+  useEffect(() => {
+    fetch('/api/children', { credentials: 'include' })
+      .then(res => res.json())
+      .then(setChildren);
+  }, []);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   useEffect(() => {
@@ -82,6 +96,9 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
             });
             const isToday = day.toDateString() === new Date().toDateString();
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+            // Format YYYY-MM-DD sans décalage horaire (UTC)
+            const pad = (n: number) => n.toString().padStart(2, '0');
+            const dayStr = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
             return (
               <div key={idx} className={
                 "align-top p-1 h-full flex flex-col " +
@@ -91,6 +108,12 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
               }>
                 <div className="flex items-center justify-between mb-1">
                   <span className={"text-xs font-bold " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}>{day.getDate()}</span>
+                  <button
+                    className="text-green-500 hover:text-green-700 text-lg font-bold px-1"
+                    title="Ajouter un enfant à ce jour"
+                    onClick={() => { setShowForm({ date: dayStr }); setSelectedChild(''); setError(''); }}
+                  >+
+                  </button>
                 </div>
                 {assigns.length === 0 ? (
                   <div className="text-gray-300 text-xs">—</div>
@@ -102,11 +125,75 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
                     </div>
                   ))
                 )}
+                {/* Rien ici, la modal globale est en dehors de la grille */}
               </div>
             );
           })}
         </div>
       </div>
+    {/* Modal globale d'ajout d'affectation */}
+    {showForm && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <form
+          className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs flex flex-col items-center relative"
+          onSubmit={async e => {
+            e.preventDefault();
+            setError('');
+            if (!selectedChild) { setError('Sélectionnez un enfant'); return; }
+            // Vérifie si déjà assigné ce jour-là
+            const assignsForDay = assignments.filter(a => a.date.split('T')[0] === showForm.date && a.nanny.id === nannyId);
+            if (assignsForDay.some(a => a.child.id === selectedChild)) {
+              setError('Cet enfant est déjà assigné ce jour-là');
+              return;
+            }
+            // Envoyer la date en UTC (sans décalage local)
+            const [year, month, day] = showForm.date.split('-');
+            const utcDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+            const utcStr = utcDate.toISOString().split('T')[0];
+            const res = await fetch('/api/assignments', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ date: utcStr, childId: selectedChild, nannyId }),
+            });
+            if (!res.ok) {
+              setError('Erreur lors de l\'ajout');
+              return;
+            }
+            setShowForm(null);
+            setSelectedChild('');
+            // Rafraîchir les assignments
+            const yearNow = currentDate.getFullYear();
+            const monthNow = currentDate.getMonth();
+            const first = new Date(yearNow, monthNow, 1);
+            const last = new Date(yearNow, monthNow + 1, 0);
+            fetch(`/api/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`,
+              { credentials: 'include' })
+              .then(res => res.json())
+              .then(setAssignments);
+          }}
+        >
+          <button type="button" onClick={() => setShowForm(null)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
+          <h2 className="text-lg font-bold mb-4 text-center">Ajouter une affectation</h2>
+          <select
+            value={selectedChild}
+            onChange={e => setSelectedChild(e.target.value)}
+            className="border rounded px-2 py-1 mb-2 w-full"
+            required
+          >
+            <option value="">Sélectionner un enfant</option>
+            {children.map(child => (
+              <option key={child.id} value={child.id}>{child.name}</option>
+            ))}
+          </select>
+          <div className="flex gap-2 w-full">
+            <button type="submit" className="bg-green-500 text-white px-3 py-1 rounded w-full">Ajouter</button>
+            <button type="button" className="bg-gray-300 px-3 py-1 rounded w-full" onClick={() => setShowForm(null)}>Annuler</button>
+          </div>
+          {error && <div className="text-red-600 text-xs mt-2 text-center w-full">{error}</div>}
+        </form>
+      </div>
+    )}
     </div>
   );
 }

@@ -31,12 +31,14 @@ interface Nanny {
   status?: 'Disponible' | 'En congé';
 }
 
-const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> = {
+const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; password?: string } = {
   name: '',
   availability: 'Disponible',
   experience: 0,
   specializations: [],
   status: 'Disponible',
+  email: '',
+  password: '',
 };
 
 const avatarEmojis = ['🦁', '🐻', '🐱', '🐶', '🦊', '🐼', '🐵', '🐯'];
@@ -77,6 +79,9 @@ export default function Nannies() {
         ...form,
         experience: Number(form.experience),
       };
+      // Si email et password sont renseignés, on les garde, sinon on les retire du payload
+      if (!payload.email) delete payload.email;
+      if (!payload.password) delete payload.password;
       const res = await fetch(editingId ? `/api/nannies/${editingId}` : '/api/nannies', {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -198,6 +203,9 @@ export default function Nannies() {
             </select>
             <input name="experience" type="number" value={form.experience} onChange={handleChange} placeholder="Expérience (années)" required className="border rounded px-3 py-2" />
             <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder="Spécialisations (séparées par virgule)" className="border rounded px-3 py-2 md:col-span-2" />
+            {/* Champs pour le compte utilisateur de la nounou (optionnels) */}
+            <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder="Email (pour accès nounou)" className="border rounded px-3 py-2" />
+            <input name="password" type="password" value={form.password || ''} onChange={handleChange} placeholder="Mot de passe (pour accès nounou)" className="border rounded px-3 py-2" />
             <div className="md:col-span-2 flex gap-2">
               <button type="submit" className="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600 transition">
                 {editingId ? 'Modifier' : 'Ajouter'}

@@ -4,14 +4,32 @@ import { useAuth } from '../src/context/AuthContext';
 import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog } from 'react-icons/hi';
 import MobileMenu from './MobileMenu';
 
-const navLinks = [
-  { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
-  { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-  { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
-  { to: '/schedule', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
-  { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-  { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
-];
+
+type User = {
+  name?: string;
+  role?: string;
+  nannyId?: string;
+  // Add other properties as needed
+};
+
+function getNavLinks(user: User | null) {
+  if (user && user.nannyId) {
+    // Nounou : seulement Dashboard et Enfants
+    return [
+      { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
+      { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+    ];
+  }
+  // Admin ou autre : tout
+  return [
+    { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
+    { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+    { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
+    { to: '/schedule', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
+    { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+    { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
+  ];
+}
 
 export default function Sidebar() {
   const location = useLocation();
@@ -50,7 +68,7 @@ export default function Sidebar() {
         {/* Navigation */}
         <nav className="flex-1 px-2">
           <ul className="space-y-1">
-            {navLinks.map(link => (
+            {getNavLinks(user).map(link => (
               <li key={link.to}>
                 <Link
                   to={link.to}

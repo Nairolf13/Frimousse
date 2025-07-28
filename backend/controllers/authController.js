@@ -14,13 +14,15 @@ function generateRefreshToken(user) {
 }
 
 exports.register = async (req, res) => {
-  const { email, password, name, role } = req.body;
+  const { email, password, name, role, nannyId } = req.body;
   if (!email || !password || !name || !role) return res.status(400).json({ message: 'Missing fields' });
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ message: 'User already exists' });
   const hash = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({ data: { email, password: hash, name, role } });
-  res.status(201).json({ id: user.id, email: user.email, name: user.name, role: user.role });
+  const userData = { email, password: hash, name, role };
+  if (nannyId) userData.nannyId = nannyId;
+  const user = await prisma.user.create({ data: userData });
+  res.status(201).json({ id: user.id, email: user.email, name: user.name, role: user.role, nannyId: user.nannyId });
 };
 
 exports.login = async (req, res) => {
