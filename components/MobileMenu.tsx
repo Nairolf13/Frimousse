@@ -19,7 +19,7 @@ export default function MobileMenu() {
     <>
       {/* Burger button visible only on mobile */}
       <button
-        className="fixed top-4 left-4 z-40 md:hidden bg-white rounded-full p-2 shadow-lg border border-gray-200"
+        className="fixed top-4 right-4 z-40 md:hidden bg-white rounded-full p-2 shadow-lg border border-gray-200"
         onClick={() => setOpen(true)}
         aria-label="Ouvrir le menu"
       >

@@ -18,7 +18,7 @@ interface Nanny {
 
 const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> = {
   name: '',
-  availability: '',
+  availability: 'Disponible',
   experience: 0,
   specializations: [],
   status: 'Disponible',
@@ -31,6 +31,7 @@ export default function Nannies() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState('');
@@ -56,11 +57,15 @@ export default function Nannies() {
     e.preventDefault();
     setError('');
     try {
+      const payload = {
+        ...form,
+        experience: Number(form.experience),
+      };
       const res = await fetch(editingId ? `/api/nannies/${editingId}` : '/api/nannies', {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Erreur lors de la sauvegarde');
       setForm(emptyForm);
@@ -112,26 +117,28 @@ export default function Nannies() {
   );
 
   return (
-    <div className="min-h-screen bg-[#fcfcff] p-0 pl-0 md:pl-[252px]">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
+      <div className="max-w-7xl mx-auto w-full">
         {/* Header + stats */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des intervenants</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des nannies</h1>
             <div className="text-gray-400 text-base">Gérez les profils, plannings, qualifications et affectations des intervenants.</div>
           </div>
           <div className="flex gap-2 items-center self-end">
             <button className="bg-white border border-gray-200 rounded-lg px-4 py-2 text-gray-700 font-semibold shadow hover:bg-gray-100 transition">Exporter</button>
-            <form onSubmit={handleSubmit} className="inline">
-              <button type="submit" className="bg-green-500 text-black font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-green-600 transition">
-                {editingId ? 'Modifier' : 'Ajouter un intervenant'}
-              </button>
-            </form>
+            <button
+              type="button"
+              onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
+              className="bg-green-500 text-black font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-green-600 transition"
+            >
+              Ajouter une nounou
+            </button>
           </div>
         </div>
 
         {/* Filtres, recherche, stats */}
-        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6 w-full">
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
           <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base">
             <option value="">Toute disponibilité</option>
@@ -165,31 +172,31 @@ export default function Nannies() {
         </div>
 
         {/* Formulaire d'ajout/édition (modal style, inline pour démo) */}
-        {editingId || form.name ? (
+        {(adding || editingId) && (
           <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
             <input name="name" value={form.name} onChange={handleChange} placeholder="Nom" required className="border rounded px-3 py-2" />
-            <input name="availability" value={form.availability} onChange={handleChange} placeholder="Disponibilité" required className="border rounded px-3 py-2" />
+            <select name="availability" value={form.availability} onChange={handleChange} required className="border rounded px-3 py-2">
+              <option value="Disponible">Disponible</option>
+              <option value="En_congé">En congé</option>
+              <option value="Maladie">Maladie</option>
+            </select>
             <input name="experience" type="number" value={form.experience} onChange={handleChange} placeholder="Expérience (années)" required className="border rounded px-3 py-2" />
             <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder="Spécialisations (séparées par virgule)" className="border rounded px-3 py-2 md:col-span-2" />
-            <select name="status" value={form.status} onChange={handleChange} className="border rounded px-3 py-2">
-              <option value="Disponible">Disponible</option>
-              <option value="En congé">En congé</option>
-            </select>
             <div className="md:col-span-2 flex gap-2">
               <button type="submit" className="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600 transition">
                 {editingId ? 'Modifier' : 'Ajouter'}
               </button>
-              <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
+              <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(false); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
             </div>
             {error && <div className="text-red-600 md:col-span-2">{error}</div>}
           </form>
-        ) : null}
+        )}
 
         {/* Cartes intervenants */}
         {loading ? (
           <div>Chargement...</div>
         ) : (
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 w-full">
             {filtered.map((nanny, idx) => {
               const avatar = avatarEmojis[idx % avatarEmojis.length];
               return (
@@ -205,7 +212,7 @@ export default function Nannies() {
                   {/* Contact + dispo */}
                   <div className="flex-1 flex flex-col md:flex-row md:items-center gap-4">
                     <div className="flex flex-col gap-1 min-w-[180px]">
-                      <div className="text-sm text-gray-700 flex items-center gap-2"><span className="font-medium">Disponibilité :</span> {nanny.availability}</div>
+                      <div className="text-sm text-gray-700 flex items-center gap-2"><span className="font-medium">Disponibilité :</span> {nanny.availability === 'En_congé' ? 'En congé' : nanny.availability}</div>
                       <div className="text-sm text-gray-700 flex items-center gap-2"><span className="font-medium">Statut :</span> <span className={nanny.status === 'Disponible' ? 'text-green-600' : 'text-red-500'}>{nanny.status}</span></div>
                     </div>
                     {/* Spécialisations */}

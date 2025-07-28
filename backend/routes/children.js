@@ -12,16 +12,42 @@ router.get('/', auth, async (req, res) => {
 
 // Add a child
 router.post('/', auth, async (req, res) => {
-  const { name, age, parentName, parentContact, allergies } = req.body;
-  const child = await prisma.child.create({ data: { name, age, parentName, parentContact, allergies } });
+  const { name, age, sexe, parentName, parentContact, allergies } = req.body;
+  const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
+  if (isNaN(parsedAge)) {
+    return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
+  }
+  if (sexe !== 'masculin' && sexe !== 'feminin') {
+    return res.status(400).json({ error: 'Le champ "sexe" doit être "masculin" ou "feminin".' });
+  }
+  const child = await prisma.child.create({
+    data: {
+      name,
+      age: parsedAge,
+      sexe,
+      parentName,
+      parentContact,
+      allergies,
+    }
+  });
   res.status(201).json(child);
 });
 
 // Edit a child
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const { name, age, parentName, parentContact, allergies } = req.body;
-  const child = await prisma.child.update({ where: { id }, data: { name, age, parentName, parentContact, allergies } });
+  const { name, age, sexe, parentName, parentContact, allergies } = req.body;
+  const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
+  if (isNaN(parsedAge)) {
+    return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
+  }
+  if (sexe !== 'masculin' && sexe !== 'feminin') {
+    return res.status(400).json({ error: 'Le champ "sexe" doit être "masculin" ou "feminin".' });
+  }
+  const child = await prisma.child.update({
+    where: { id },
+    data: { name, age: parsedAge, sexe, parentName, parentContact, allergies }
+  });
   res.json(child);
 });
 

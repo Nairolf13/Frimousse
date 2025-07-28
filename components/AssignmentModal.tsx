@@ -35,10 +35,10 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+    <div className="fixed inset-0 z-50 bg-white/40 backdrop-blur-[2px] flex items-center justify-center">
       <div className="bg-white rounded shadow-lg p-6 w-full max-w-md relative">
         <button onClick={onClose} className="absolute top-2 right-2 text-gray-500">✕</button>
-        <h2 className="text-xl font-bold mb-4">{initial ? 'Modifier' : 'Ajouter'} une affectation</h2>
+        <h2 className="text-xl font-bold mb-4">{initial ? 'Ajouter':'Modifier'} au plannig</h2>
         <form onSubmit={e => { e.preventDefault(); onSave(form); }} className="grid gap-3">
           <label>Date
             <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} required className="border rounded px-3 py-2 w-full" />

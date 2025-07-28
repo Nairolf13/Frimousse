@@ -1,3 +1,12 @@
+enum Sexe {
+  masculin
+  feminin
+}
+enum Availability {
+  Disponible
+  En_congé
+  Maladie
+}
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -38,6 +47,7 @@ model Child {
   id         String   @id @default(uuid())
   name       String
   age        Int
+  sexe       Sexe     @default(masculin)
   parentName String
   parentContact String
   allergies  String?
@@ -49,7 +59,7 @@ model Child {
 model Nanny {
   id         String   @id @default(uuid())
   name       String
-  availability String
+  availability Availability @default(Disponible)
   experience Int
   assignedChildren Assignment[]
   createdAt  DateTime @default(now())

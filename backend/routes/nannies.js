@@ -13,7 +13,17 @@ router.get('/', auth, async (req, res) => {
 // Add a nanny
 router.post('/', auth, async (req, res) => {
   const { name, availability, experience } = req.body;
-  const nanny = await prisma.nanny.create({ data: { name, availability, experience } });
+  const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
+  if (isNaN(parsedExperience)) {
+    return res.status(400).json({ error: 'Le champ "experience" doit être un nombre.' });
+  }
+  const nanny = await prisma.nanny.create({
+    data: {
+      name,
+      availability,
+      experience: parsedExperience,
+    }
+  });
   res.status(201).json(nanny);
 });
 
