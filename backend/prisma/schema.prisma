@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String
+  role          String   // 'admin', 'staff', 'parent', etc.
+  refreshTokens RefreshToken[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Child {
+  id         String   @id @default(uuid())
+  name       String
+  age        Int
+  parentName String
+  parentContact String
+  allergies  String?
+  assignments Assignment[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Nanny {
+  id         String   @id @default(uuid())
+  name       String
+  availability String
+  experience Int
+  assignedChildren Assignment[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Assignment {
+  id        String   @id @default(uuid())
+  date      DateTime
+  child     Child    @relation(fields: [childId], references: [id])
+  childId   String
+  nanny     Nanny    @relation(fields: [nannyId], references: [id])
+  nannyId   String
+  createdAt DateTime @default(now())
+}
