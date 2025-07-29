@@ -67,6 +67,7 @@ model Child {
   sexe       Sexe     @default(masculin)
   parentName String
   parentContact String
+  parentMail   String?
   allergies  String?
   cotisationPaidUntil DateTime?
   assignments Assignment[]

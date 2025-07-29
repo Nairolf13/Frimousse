@@ -1,3 +1,13 @@
+// Utilitaire pour obtenir le mois courant au format YYYY-MM
+function getCurrentMonth() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+interface Billing {
+  days: number;
+  amount: number;
+}
 
 
 
@@ -12,6 +22,7 @@ interface Child {
   sexe: 'masculin' | 'feminin';
   parentName: string;
   parentContact: string;
+  parentMail: string;
   allergies?: string;
   group?: string;
   present?: boolean;
@@ -30,6 +41,7 @@ const emptyForm: Omit<Child, 'id'> = {
   sexe: 'masculin',
   parentName: '',
   parentContact: '',
+  parentMail: '',
   allergies: '',
   group: '',
   present: true,
@@ -50,6 +62,8 @@ const emojiBySexe = {
 };
 
 export default function Children() {
+  // Stocke les montants à payer pour chaque enfant
+  const [billings, setBillings] = useState<Record<string, Billing>>({});
   // Permet d'éditer un enfant depuis la carte
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +79,11 @@ export default function Children() {
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
 
   function handleEdit(child: Child) {
-    setForm({ ...child });
+    setForm({
+      ...emptyForm,
+      ...child,
+      group: child.group || '',
+    });
     setEditingId(child.id);
     setError('');
     setShowForm(true);
@@ -93,6 +111,27 @@ export default function Children() {
 
   useEffect(() => {
     fetchChildren();
+    // Récupère les factures pour chaque enfant
+    const fetchBillings = async () => {
+      try {
+        const todayMonth = getCurrentMonth();
+        // On attend d'avoir les enfants chargés
+        const childrenRes = await fetch('/api/children', { credentials: 'include' });
+        const childrenData: Child[] = await childrenRes.json();
+        const billingData: Record<string, Billing> = {};
+        await Promise.all(childrenData.map(async (child) => {
+          const res = await fetch(`/api/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            billingData[child.id] = { days: data.days, amount: data.amount };
+          }
+        }));
+        setBillings(billingData);
+      } catch {
+        setBillings({});
+      }
+    };
+    fetchBillings();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -240,7 +279,8 @@ export default function Children() {
             {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
           </select>
           <input name="parentName" value={form.parentName} onChange={handleChange} placeholder="Nom du parent" required className="border rounded px-3 py-2" />
-          <input name="parentContact" value={form.parentContact} onChange={handleChange} placeholder="Contact parent" required className="border rounded px-3 py-2" />
+          <input name="parentContact" value={form.parentContact} onChange={handleChange} placeholder="Téléphone parent" required className="border rounded px-3 py-2" />
+          <input name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder="Email parent" required className="border rounded px-3 py-2" />
           <input name="allergies" value={form.allergies} onChange={handleChange} placeholder="Allergies (optionnel)" className="border rounded px-3 py-2 md:col-span-2" />
           <div className="md:col-span-2 flex gap-2">
             <button type="submit" className="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600 transition">
@@ -261,6 +301,7 @@ export default function Children() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 w-full">
           {filtered.map((child, idx) => {
+            const billing = billings[child.id];
             const color = cardColors[idx % cardColors.length];
             const emoji = emojiBySexe[child.sexe] || '👦';
             const isDeleting = deleteId === child.id;
@@ -300,7 +341,7 @@ export default function Children() {
             return (
               <div
                 key={child.id}
-                className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[260px] h-full transition-transform duration-500 perspective-1000`}
+                className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[320px] h-full transition-transform duration-500 perspective-1000`}
                 style={{height:'100%', perspective: '1000px'}}
               >
                 <div
@@ -313,55 +354,62 @@ export default function Children() {
                     style={{backfaceVisibility: 'hidden'}}
                   >
                     {/* Avatar + badge âge + sexe */}
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{emoji}</div>
-                      <span className="ml-auto text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">{child.age} ans</span>
-                      <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700" title="Sexe">{child.sexe === 'masculin' ? 'Garçon' : 'Fille'}</span>
+                      <span className="font-semibold text-lg text-gray-900 ml-2 truncate max-w-[120px] min-w-0" title={child.name}>{child.name}</span>
+                      <span className="ml-auto text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100 whitespace-nowrap">{child.age} ans</span>
+                      <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap" title="Sexe">{child.sexe === 'masculin' ? 'Garçon' : 'Fille'}</span>
                     </div>
-                    {/* Cotisation annuelle */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-semibold text-gray-700">Cotisation annuelle&nbsp;:</span>
-                      <span className="text-base font-bold text-green-700">15€</span>
-                      {cotisationOk ? (
-                        <span className="text-green-500 text-xl">✔️</span>
-                      ) : (
-                        cotisationLoadingId === child.id ? (
-                          <span className="text-gray-400 text-xs ml-2 animate-pulse">Mise à jour...</span>
-                        ) : (
-                          <button onClick={handleCotisation} className="text-blue-500 text-xs font-semibold px-2 py-1 rounded bg-blue-100 hover:bg-green-100 transition" title="Payer la cotisation">Payer</button>
-                        )
-                      )}
-                      <span className="text-xs text-gray-500 ml-2">{countdown}</span>
-                    </div>
-                    {/* Nom + groupe */}
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-lg text-gray-900">{child.name}</span>
-                      {child.group && <span className="text-xs font-medium text-gray-500">{groupLabels.find(g => g.key === child.group)?.label}</span>}
-                    </div>
+                    {/* Allergies sous l'avatar */}
+                    <span className="block text-xs text-yellow-700 flex items-center gap-1 mb-2">
+                      <span>⚠️ Allergies :</span>
+                      <span className="font-medium">{child.allergies ? child.allergies : <span className="text-gray-400">Aucune</span>}</span>
+                    </span>
+                  
                     {/* Parent + contact */}
-                    <div className="text-sm text-gray-700 mb-1">
+                    <div className="flex flex-col gap-3 text-sm text-gray-700 mb-4">
                       <span className="block">👤 Parent : {child.parentName}</span>
-                      <span className="block">✉️ {child.parentContact}</span>
+                      <span className="block">📞 <a href={`tel:${child.parentContact}`} className="text-blue-600 underline hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" title="Appeler le parent">{child.parentContact}</a></span>
+                      <span className="block">✉️ <a href={`mailto:${child.parentMail}`} className="text-blue-600 underline hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" title="Envoyer un mail au parent">{child.parentMail}</a></span>
+                      {/* Cotisation annuelle et facture mensuelle sous l'email */}
+                      <div className="flex flex-col gap-2 mt-2 mb-0" style={{marginBottom: 0}}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-gray-700">Cotisation annuelle&nbsp;:</span>
+                          <span className="text-base font-bold text-green-700">15€</span>
+                          {cotisationOk ? (
+                            <span className="text-green-500 text-xl">✔️</span>
+                          ) : (
+                            cotisationLoadingId === child.id ? (
+                              <span className="text-gray-400 text-xs ml-2 animate-pulse">Mise à jour...</span>
+                            ) : (
+                              <button onClick={handleCotisation} className="text-blue-500 text-xs font-semibold px-2 py-1 rounded bg-blue-100 hover:bg-green-100 transition" title="Payer la cotisation">Payer</button>
+                            )
+                          )}
+                          <span className="text-xs text-gray-500 ml-2">{countdown}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-gray-700">À payer ce mois-ci&nbsp;:</span>
+                          <span className="text-base font-bold text-blue-700">{billing ? `${billing.amount}€` : '...'}</span>
+                          <span className="text-xs text-gray-500">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
+                        </div>
+                      </div>
                     </div>
-                    {/* Allergies */}
-                    {child.allergies && (
-                      <div className="text-xs text-yellow-700 flex items-center gap-1 mb-1"><span>⚠️ Allergies :</span> <span className="font-medium">{child.allergies}</span></div>
-                    )}
-                    {/* Statut présence */}
-                    <div className="flex items-center gap-2">
-                      {child.present ? (
-                        <span className="text-green-600 text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Présent aujourd'hui</span>
-                      ) : (
-                        <span className="text-red-500 text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Absent aujourd'hui</span>
-                      )}
-                      {child.newThisMonth && (
-                        <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Nouveau</span>
-                      )}
-                    </div>
-                    {/* Actions juste sous le statut présence */}
-                    <div className="flex justify-end gap-1 mt-2">
-                      <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
-                      <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                    {/* Statut présence + actions alignées */}
+                    <div className="flex items-center gap-2 justify-between mt-2">
+                      <div className="flex items-center gap-2">
+                        {child.present ? (
+                          <span className="text-green-600 text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Présent aujourd'hui</span>
+                        ) : (
+                          <span className="text-red-500 text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Absent aujourd'hui</span>
+                        )}
+                        {child.newThisMonth && (
+                          <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Nouveau</span>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
+                        <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </div>
                     </div>
                   </div>
                   {/* Face arrière (modal suppression) */}
