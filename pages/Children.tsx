@@ -16,6 +16,7 @@ interface Child {
   group?: string;
   present?: boolean;
   newThisMonth?: boolean;
+  cotisationPaidUntil?: string; // ISO date
 }
 
 interface Assignment {
@@ -60,6 +61,8 @@ export default function Children() {
   const [sort, setSort] = useState('name');
   const [showForm, setShowForm] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
+  // Cotisation loading state
+  const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
 
   function handleEdit(child: Child) {
     setForm({ ...child });
@@ -261,6 +264,39 @@ export default function Children() {
             const color = cardColors[idx % cardColors.length];
             const emoji = emojiBySexe[child.sexe] || '👦';
             const isDeleting = deleteId === child.id;
+            // Cotisation logic
+            const now = new Date();
+            const paidUntil = child.cotisationPaidUntil ? new Date(child.cotisationPaidUntil) : null;
+            const cotisationOk = paidUntil && paidUntil > now;
+            let countdown = '';
+            if (paidUntil) {
+              const diff = paidUntil.getTime() - now.getTime();
+              if (diff > 0) {
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                countdown = days > 365 ? 'Cotisation à jour' : `${days} jours restants`;
+              } else {
+                countdown = 'Cotisation à renouveler';
+              }
+            }
+            const handleCotisation = async () => {
+              setCotisationLoadingId(child.id);
+              await fetch(`/api/children/${child.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  name: child.name,
+                  age: child.age,
+                  sexe: child.sexe,
+                  parentName: child.parentName,
+                  parentContact: child.parentContact,
+                  allergies: child.allergies || '',
+                  payCotisation: true
+                })
+              });
+              await fetchChildren();
+              setCotisationLoadingId(null);
+            };
             return (
               <div
                 key={child.id}
@@ -281,6 +317,21 @@ export default function Children() {
                       <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{emoji}</div>
                       <span className="ml-auto text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">{child.age} ans</span>
                       <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700" title="Sexe">{child.sexe === 'masculin' ? 'Garçon' : 'Fille'}</span>
+                    </div>
+                    {/* Cotisation annuelle */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-semibold text-gray-700">Cotisation annuelle&nbsp;:</span>
+                      <span className="text-base font-bold text-green-700">15€</span>
+                      {cotisationOk ? (
+                        <span className="text-green-500 text-xl">✔️</span>
+                      ) : (
+                        cotisationLoadingId === child.id ? (
+                          <span className="text-gray-400 text-xs ml-2 animate-pulse">Mise à jour...</span>
+                        ) : (
+                          <button onClick={handleCotisation} className="text-blue-500 text-xs font-semibold px-2 py-1 rounded bg-blue-100 hover:bg-green-100 transition" title="Payer la cotisation">Payer</button>
+                        )
+                      )}
+                      <span className="text-xs text-gray-500 ml-2">{countdown}</span>
                     </div>
                     {/* Nom + groupe */}
                     <div className="flex items-center gap-2 mb-1">
