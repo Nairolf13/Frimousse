@@ -1,12 +1,12 @@
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../src/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import AssignmentModal from '../components/AssignmentModal';
 interface Nanny {
   id: string;
   name: string;
   availability: string;
 }
-import { useEffect, useState } from 'react';
-import { useAuth } from '../src/context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import AssignmentModal from '../components/AssignmentModal';
 
 interface Assignment {
   id: string;
@@ -59,15 +59,27 @@ export default function Dashboard() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  const fetchAssignments = (start?: Date, end?: Date) => {
+  const fetchAssignments = React.useCallback((start?: Date, end?: Date) => {
     let url = '/api/assignments';
+    const params = [];
     if (start && end) {
-      url += `?start=${start.toISOString()}&end=${end.toISOString()}`;
+      params.push(`start=${start.toISOString()}`);
+      params.push(`end=${end.toISOString()}`);
+    }
+    // Filtre par nannyId uniquement si l'utilisateur est une nounou
+    if (user && user.role === 'nanny' && user.nannyId) {
+      params.push(`nannyId=${user.nannyId}`);
+    }
+    if (params.length > 0) {
+      url += '?' + params.join('&');
     }
     fetch(url, { credentials: 'include' })
       .then(res => res.json())
-      .then(setAssignments);
-  };
+      .then(data => {
+        console.log('Assignments API response:', data);
+        setAssignments(data);
+      });
+  }, [user]);
 
   useEffect(() => {
     const year = currentDate.getFullYear();
@@ -91,7 +103,7 @@ export default function Dashboard() {
         }
       })
       .catch(() => setActiveCaregivers(0));
-  }, [currentDate]);
+  }, [currentDate, fetchAssignments]);
 
   const totalChildren = childrenCount;
   const today = new Date();
@@ -138,16 +150,20 @@ export default function Dashboard() {
   const handleQuickAdd = (date: Date) => {
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
       .toISOString().split('T')[0];
-    setModalInitial({ date: localDate, childId: '', nannyId: '' });
+    // Pré-remplit le nannyId si l'utilisateur est une nounou
+    setModalInitial({ date: localDate, childId: '', nannyId: user && user.nannyId ? user.nannyId : '' });
     setModalOpen(true);
   };
 
   const [saveError, setSaveError] = useState<string | null>(null);
   const handleSave = async (data: AssignmentForm) => {
     setSaveError(null);
+    // Force la date au format UTC (YYYY-MM-DD)
+    const utcDate = new Date(data.date + 'T00:00:00Z').toISOString().split('T')[0];
+    const dataToSend = { ...data, date: utcDate };
     const duplicate = assignments.some(a =>
       a.child.id === data.childId &&
-      a.date.split('T')[0] === data.date &&
+      a.date.split('T')[0] === utcDate &&
       (!selectedId || a.id !== selectedId)
     );
     if (duplicate) {
@@ -159,23 +175,36 @@ export default function Dashboard() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(data),
+        body: JSON.stringify(dataToSend),
       });
+      setModalOpen(false);
+      setSelectedId(null);
+      setModalInitial(null);
+      const year = currentDate.getFullYear();
+      const monthIdx = currentDate.getMonth();
+      const first = new Date(year, monthIdx, 1);
+      const last = new Date(year, monthIdx + 1, 0);
+      fetchAssignments(first, last);
     } else {
-      await fetch('/api/assignments', {
+      const res = await fetch('/api/assignments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(data),
+        body: JSON.stringify(dataToSend),
       });
+      if (res.ok) {
+        setModalOpen(false);
+        setSelectedId(null);
+        setModalInitial(null);
+        const year = currentDate.getFullYear();
+        const monthIdx = currentDate.getMonth();
+        const first = new Date(year, monthIdx, 1);
+        const last = new Date(year, monthIdx + 1, 0);
+        fetchAssignments(first, last);
+      } else {
+        setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
+      }
     }
-    setModalOpen(false);
-    setSelectedId(null);
-    setModalInitial(null);
-    const month = getMonthGrid(currentDate);
-    const first = month[0][0];
-    const last = month[month.length - 1][6];
-    fetchAssignments(first, last);
   };
 
   const handleDelete = async () => {
@@ -187,9 +216,11 @@ export default function Dashboard() {
       setModalOpen(false);
       setSelectedId(null);
       setModalInitial(null);
-      const month = getMonthGrid(currentDate);
-      const first = month[0][0];
-      const last = month[month.length - 1][6];
+      // Utilise la même logique que le useEffect pour la plage de dates
+      const year = currentDate.getFullYear();
+      const monthIdx = currentDate.getMonth();
+      const first = new Date(year, monthIdx, 1);
+      const last = new Date(year, monthIdx + 1, 0);
       fetchAssignments(first, last);
     }
   };

@@ -10,15 +10,21 @@ router.get('/', auth, async (req, res) => {
   const where = {};
   if (nannyId) where.nannyId = nannyId;
   if (start && end) {
+    // Pour inclure toute la journée de fin, on ajoute 1 jour à end et on filtre strictement avant
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    endDate.setDate(endDate.getDate() + 1);
     where.date = {
-      gte: new Date(start),
-      lte: new Date(end)
+      gte: startDate,
+      lt: endDate
     };
   }
   const assignments = await prisma.assignment.findMany({
     where,
     include: { child: true, nanny: true }
   });
+  console.log('Assignments API where:', where);
+  console.log('Assignments API count:', assignments.length);
   res.json(assignments);
 });
 
