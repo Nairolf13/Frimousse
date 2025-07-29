@@ -58,6 +58,9 @@ export default function Dashboard() {
   const [modalInitial, setModalInitial] = useState<AssignmentForm | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [dayModalOpen, setDayModalOpen] = useState(false);
+  const [dayModalAssignments, setDayModalAssignments] = useState<Assignment[]>([]);
+  const [dayModalDate, setDayModalDate] = useState<string>('');
 
   const fetchAssignments = React.useCallback((start?: Date, end?: Date) => {
     let url = '/api/assignments';
@@ -66,7 +69,6 @@ export default function Dashboard() {
       params.push(`start=${start.toISOString()}`);
       params.push(`end=${end.toISOString()}`);
     }
-    // Filtre par nannyId uniquement si l'utilisateur est une nounou
     if (user && user.role === 'nanny' && user.nannyId) {
       params.push(`nannyId=${user.nannyId}`);
     }
@@ -315,13 +317,23 @@ export default function Dashboard() {
                   " relative"
                 }>
                   <div className="flex items-center justify-between mb-1">
-                    <span className={"text-xs font-bold " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}>{day.getDate()}</span>
+                    <span
+                      className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}
+                      onClick={() => {
+                        setDayModalAssignments(assigns);
+                        setDayModalDate(day.toLocaleDateString());
+                        setDayModalOpen(true);
+                      }}
+                      title="Voir la liste des enfants gardés ce jour"
+                    >
+                      {day.getDate()}
+                    </span>
                     <button onClick={() => handleQuickAdd(day)} className="text-green-500 hover:text-green-700 text-lg font-bold">+</button>
                   </div>
                   {assigns.length === 0 ? (
                     <div className="text-gray-300 text-xs">—</div>
                   ) : (
-                    assigns.map((a, j) => (
+                    assigns.slice(0, 2).map((a, j) => (
                       <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-green-50' : 'bg-yellow-50') + " shadow-sm group"}>
                         <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-green-400' : 'bg-yellow-400')}></span>
                         <span
@@ -345,6 +357,9 @@ export default function Dashboard() {
                         </span>
                       </div>
                     ))
+                  )}
+                  {assigns.length > 2 && (
+                    <div className="text-gray-400 text-xs italic">...et {assigns.length - 2} autres</div>
                   )}
                 </div>
               );
@@ -384,36 +399,51 @@ export default function Dashboard() {
                         " relative"
                       }>
                         <div className="flex items-center justify-between mb-1">
-                          <span className={"text-xs font-bold " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}>{day.getDate()}</span>
+                          <span
+                            className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}
+                            onClick={() => {
+                              setDayModalAssignments(assigns);
+                              setDayModalDate(day.toLocaleDateString());
+                              setDayModalOpen(true);
+                            }}
+                            title="Voir la liste des enfants gardés ce jour"
+                          >
+                            {day.getDate()}
+                          </span>
                           <button onClick={() => handleQuickAdd(day)} className="text-green-500 hover:text-green-700 text-lg font-bold">+</button>
                         </div>
                         {assigns.length === 0 ? (
                           <div className="text-gray-300 text-sm">—</div>
                         ) : (
-                          assigns.map((a, j) => (
-                            <div key={a.id} className={"flex items-center gap-2 mb-2 px-2 py-1 rounded-lg " + (j === 0 ? 'bg-green-50' : 'bg-yellow-50') + " shadow-sm group"}>
-                              <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-green-400' : 'bg-yellow-400')}></span>
-                              <span
-                                className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600"
-                                title="Supprimer cette affectation"
-                                onClick={() => {
-                                  if (window.confirm('Supprimer cette affectation pour cet enfant ?')) {
-                                    fetch(`/api/assignments/${a.id}`, {
-                                      method: 'DELETE',
-                                      credentials: 'include',
-                                    }).then(() => {
-                                      const month = getMonthGrid(currentDate);
-                                      const first = month[0][0];
-                                      const last = month[month.length - 1][6];
-                                      fetchAssignments(first, last);
-                                    });
-                                  }
-                                }}
-                              >
-                                {a.child.name}
-                              </span>
-                            </div>
-                          ))
+                          <>
+                            {assigns.slice(0, 2).map((a, j) => (
+                              <div key={a.id} className={"flex items-center gap-2 mb-2 px-2 py-1 rounded-lg " + (j === 0 ? 'bg-green-50' : 'bg-yellow-50') + " shadow-sm group"}>
+                                <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-green-400' : 'bg-yellow-400')}></span>
+                                <span
+                                  className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600"
+                                  title="Supprimer cette affectation"
+                                  onClick={() => {
+                                    if (window.confirm('Supprimer cette affectation pour cet enfant ?')) {
+                                      fetch(`/api/assignments/${a.id}`, {
+                                        method: 'DELETE',
+                                        credentials: 'include',
+                                      }).then(() => {
+                                        const month = getMonthGrid(currentDate);
+                                        const first = month[0][0];
+                                        const last = month[month.length - 1][6];
+                                        fetchAssignments(first, last);
+                                      });
+                                    }
+                                  }}
+                                >
+                                  {a.child.name}
+                                </span>
+                              </div>
+                            ))}
+                            {assigns.length > 2 && (
+                              <div className="text-gray-400 text-xs italic">...et {assigns.length - 2} autres</div>
+                            )}
+                          </>
                         )}
                       </td>
                     );
@@ -440,6 +470,35 @@ export default function Dashboard() {
       />
       {selectedId && modalOpen && (
         <button onClick={handleDelete} className="mt-4 bg-red-500 text-white px-4 py-2 rounded">Supprimer l’affectation</button>
+      )}
+      {/* Modal enfants gardés un jour donné, groupés par nounou */}
+      {dayModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
+            <button onClick={() => setDayModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
+            <h2 className="text-xl font-bold mb-4 text-center">Enfants gardés le {dayModalDate}</h2>
+            {dayModalAssignments.length === 0 ? (
+              <div className="text-gray-500 text-center">Aucun enfant gardé ce jour.</div>
+            ) : (
+              <div className="space-y-4">
+                {Object.entries(dayModalAssignments.reduce((acc, a) => {
+                  if (!acc[a.nanny.name]) acc[a.nanny.name] = [];
+                  acc[a.nanny.name].push(a.child);
+                  return acc;
+                }, {} as Record<string, {id: string, name: string}[]>)).map(([nannyName, children]) => (
+                  <div key={nannyName}>
+                    <div className="font-bold text-blue-700 mb-2 text-center">{nannyName}</div>
+                    <ul className="space-y-2">
+                      {children.map(child => (
+                        <li key={child.id} className="bg-blue-50 rounded px-3 py-2 text-gray-800 font-semibold text-center border border-blue-100">{child.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
       </div>
     </div>

@@ -29,6 +29,8 @@ interface Nanny {
   assignedChildren: Child[];
   specializations?: string[];
   status?: 'Disponible' | 'En congé';
+  contact?: string;
+  email?: string;
 }
 
 const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; password?: string } = {
@@ -37,6 +39,7 @@ const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; pass
   experience: 0,
   specializations: [],
   status: 'Disponible',
+  contact: '',
   email: '',
   password: '',
 };
@@ -45,6 +48,14 @@ const avatarEmojis = ['🦁', '🐻', '🐱', '🐶', '🦊', '🐼', '🐵', '�
 
 export default function Nannies() {
   const [nannies, setNannies] = useState<Nanny[]>([]);
+  interface Assignment {
+    id: string;
+    date: string;
+    nanny: Nanny;
+    child: Child;
+  }
+  
+    const [assignments, setAssignments] = useState<Assignment[]>([]); // Ajout assignments
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,6 +76,9 @@ export default function Nannies() {
 
   useEffect(() => {
     fetchNannies();
+    fetch('/api/assignments', { credentials: 'include' })
+      .then(res => res.json())
+      .then(setAssignments);
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -124,16 +138,17 @@ export default function Nannies() {
     }
   };
 
-  // Stats
   const totalNannies = nannies.length;
-  const availableToday = nannies.filter(n => n.status === 'Disponible').length;
-  const onLeave = nannies.filter(n => n.status === 'En congé').length;
+  const availableToday = nannies.filter(n => n.availability === 'Disponible').length;
+  const onLeave = nannies.filter(n => n.availability === 'En_congé' || n.availability === 'En congé').length;
   const avgExperience = totalNannies ? (nannies.reduce((acc, n) => acc + n.experience, 0) / totalNannies).toFixed(1) : '0';
 
-  // Filtres et recherche
   const filtered = nannies.filter(n =>
     (!search || n.name.toLowerCase().includes(search.toLowerCase())) &&
-    (!availabilityFilter || n.status === availabilityFilter) &&
+    (!availabilityFilter ||
+      (availabilityFilter === 'Disponible' && n.availability === 'Disponible') ||
+      (availabilityFilter === 'En congé' && (n.availability === 'En_congé' || n.availability === 'En congé')) ||
+      availabilityFilter === '') &&
     (!experienceFilter || (experienceFilter === 'junior' ? n.experience < 3 : n.experience >= 3))
   );
 
@@ -203,6 +218,7 @@ export default function Nannies() {
             </select>
             <input name="experience" type="number" value={form.experience} onChange={handleChange} placeholder="Expérience (années)" required className="border rounded px-3 py-2" />
             <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder="Spécialisations (séparées par virgule)" className="border rounded px-3 py-2 md:col-span-2" />
+            <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder="Téléphone (contact)" className="border rounded px-3 py-2" />
             {/* Champs pour le compte utilisateur de la nounou (optionnels) */}
             <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder="Email (pour accès nounou)" className="border rounded px-3 py-2" />
             <input name="password" type="password" value={form.password || ''} onChange={handleChange} placeholder="Mot de passe (pour accès nounou)" className="border rounded px-3 py-2" />
@@ -257,6 +273,24 @@ export default function Nannies() {
                   {/* Nom centré + disponibilité */}
                   <div className="flex flex-col items-center mb-2">
                     <span className="font-semibold text-lg text-gray-900">{nanny.name}</span>
+                    <div className="flex flex-col gap-1 items-center mt-1 w-full">
+                      <span className="flex items-center gap-2 w-full justify-center">
+                        <span role="img" aria-label="Téléphone">📞</span>
+                        {nanny.contact ? (
+                          <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-sm" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
+                        ) : (
+                          <span className="text-gray-400 text-sm">—</span>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-2 w-full justify-center">
+                        <span role="img" aria-label="Email">✉️</span>
+                        {nanny.email ? (
+                          <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-sm" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
+                        ) : (
+                          <span className="text-gray-400 text-sm">—</span>
+                        )}
+                      </span>
+                    </div>
                   </div>
                   {/* Spécialisations en badges, centrées */}
                   {nanny.specializations && nanny.specializations.length > 0 && (
@@ -268,19 +302,20 @@ export default function Nannies() {
                   )}
                   {/* Enfants assignés, badges ludiques, centrés */}
                   <div className="text-sm text-gray-700 mb-2 w-full flex flex-col items-center">
-                    <span className="block font-medium mb-1">
-                      Affectations du jour
-                      <span className="inline-block bg-white text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 ml-1">
-                        {nanny.assignedChildren.length}
-                      </span>
-                    </span>
-                    {nanny.assignedChildren.length > 0 && (
-                      <div className="flex flex-wrap justify-center gap-2 w-full px-4">
-                        {nanny.assignedChildren.map(child => (
-                          <span key={child.id} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200">{child.name}</span>
-                        ))}
-                      </div>
-                    )}
+                    {(() => {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      const assignedToday = assignments.filter(a =>
+                        a.nanny && a.nanny.id === nanny.id && a.date.split('T')[0] === todayStr
+                      );
+                      return (
+                        <span className="block font-medium mb-1">
+                          Affectations aujourd'hui
+                          <span className="inline-block bg-white text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 ml-1">
+                            {assignedToday.length}
+                          </span>
+                        </span>
+                      );
+                    })()}
                   </div>
                   {/* Actions en bas, centrées, ludiques */}
                   <div className="flex justify-center gap-2 mt-auto mb-4 w-full">

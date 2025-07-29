@@ -41,6 +41,8 @@ model RefreshToken {
 model Nanny {
   id         String   @id @default(uuid())
   name       String
+  contact    String?
+  email      String?
   availability Availability @default(Disponible)
   experience Int
   assignedChildren Assignment[]

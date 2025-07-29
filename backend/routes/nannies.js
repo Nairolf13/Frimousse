@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
-const { PrismaClient } = require('../generated/prisma');
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // Get all nannies
@@ -24,7 +24,7 @@ function generateRefreshToken(user) {
 }
 
 router.post('/', auth, async (req, res) => {
-  const { name, availability, experience, email, password } = req.body;
+  const { name, availability, experience, contact, email, password } = req.body;
   const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
   if (isNaN(parsedExperience)) {
     return res.status(400).json({ error: 'Le champ "experience" doit être un nombre.' });
@@ -37,6 +37,8 @@ router.post('/', auth, async (req, res) => {
           name,
           availability,
           experience: parsedExperience,
+          contact,
+          email,
         }
       });
       // On va utiliser la logique de register d'authController
@@ -88,6 +90,8 @@ router.post('/', auth, async (req, res) => {
         name,
         availability,
         experience: parsedExperience,
+        contact,
+        email,
       }
     });
     res.status(201).json(nanny);
@@ -97,8 +101,11 @@ router.post('/', auth, async (req, res) => {
 // Edit a nanny
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const { name, availability, experience } = req.body;
-  const nanny = await prisma.nanny.update({ where: { id }, data: { name, availability, experience } });
+  const { name, availability, experience, contact, email } = req.body;
+  const nanny = await prisma.nanny.update({
+    where: { id },
+    data: { name, availability, experience, contact, email }
+  });
   res.json(nanny);
 });
 
