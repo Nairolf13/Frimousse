@@ -46,7 +46,7 @@ model Nanny {
   availability Availability @default(Disponible)
   experience Int
   assignedChildren Assignment[]
-  schedules  Schedule[]
+  schedules  Schedule[] @relation("NannySchedules")
   user       User?     @relation("NannyUser")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -57,9 +57,9 @@ model Schedule {
   date      DateTime
   startTime String
   endTime   String
-  nanny     Nanny    @relation(fields: [nannyId], references: [id])
-  nannyId   String
-  // Ajoute d'autres champs si besoin (activité, commentaire, etc.)
+  name      String
+  comment   String?
+  nannies   Nanny[] @relation("NannySchedules")
 }
 
 model Child {

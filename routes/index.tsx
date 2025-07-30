@@ -7,6 +7,8 @@ import Children from '../pages/Children';
 import Nannies from '../pages/Nannies';
 import ProtectedLayout from '../components/ProtectedLayout';
 import MonPlanning from '../pages/MonPlanning';
+import Activites from '../pages/Activites';
+
 
 export default function AppRoutes() {
   return (
@@ -20,6 +22,7 @@ export default function AppRoutes() {
           <Route path="/children" element={<Children />} />
           <Route path="/nannies" element={<Nannies />} />
           <Route path="/mon-planning" element={<MonPlanning />} />
+          <Route path="/activites" element={<Activites />} />
         </Route>
       </Routes>
     </BrowserRouter>

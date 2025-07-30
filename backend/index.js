@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -29,10 +28,11 @@ app.use('/api/children', childrenRoutes);
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
-
-
 const assignmentsRoutes = require('./routes/assignments');
 app.use('/api/assignments', assignmentsRoutes);
+
+const schedulesRoutes = require('./routes/schedules');
+app.use('/api', schedulesRoutes);
 
 app.get('/', (req, res) => {
   res.send('API is running');

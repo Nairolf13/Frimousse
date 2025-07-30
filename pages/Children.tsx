@@ -1,4 +1,3 @@
-// Utilitaire pour obtenir le mois courant au format YYYY-MM
 function getCurrentMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -8,10 +7,6 @@ interface Billing {
   days: number;
   amount: number;
 }
-
-
-
-
 
 import { useEffect, useState } from 'react';
 
@@ -32,7 +27,6 @@ interface Child {
 
 interface Assignment {
   child: Child;
-  // Ajoutez d'autres propriétés si nécessaire selon la structure réelle de l'objet assignment
 }
 
 const emptyForm: Omit<Child, 'id'> = {
@@ -62,9 +56,7 @@ const emojiBySexe = {
 };
 
 export default function Children() {
-  // Stocke les montants à payer pour chaque enfant
   const [billings, setBillings] = useState<Record<string, Billing>>({});
-  // Permet d'éditer un enfant depuis la carte
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
@@ -75,7 +67,6 @@ export default function Children() {
   const [sort, setSort] = useState('name');
   const [showForm, setShowForm] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
-  // Cotisation loading state
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
 
   function handleEdit(child: Child) {

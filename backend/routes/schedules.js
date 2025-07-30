@@ -1,13 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('../generated/prisma');
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Get all schedules (admin)
 router.get('/schedules', async (req, res) => {
   try {
     const schedules = await prisma.schedule.findMany({
-      include: { nanny: true },
+      include: { nannies: true },
       orderBy: { date: 'asc' },
     });
     res.json(schedules);
@@ -16,12 +15,11 @@ router.get('/schedules', async (req, res) => {
   }
 });
 
-// Get schedules for a specific nanny
 router.get('/nannies/:id/schedules', async (req, res) => {
   try {
     const { id } = req.params;
     const schedules = await prisma.schedule.findMany({
-      where: { nannyId: id },
+      where: { nannies: { some: { id } } },
       orderBy: { date: 'asc' },
     });
     res.json(schedules);
@@ -30,36 +28,43 @@ router.get('/nannies/:id/schedules', async (req, res) => {
   }
 });
 
-// Create a schedule for a nanny
-router.post('/nannies/:id/schedules', async (req, res) => {
+router.post('/schedules', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { date, startTime, endTime } = req.body;
+    const { date, startTime, endTime, name, nannyIds, comment } = req.body;
     const schedule = await prisma.schedule.create({
       data: {
         date: new Date(date),
         startTime,
         endTime,
-        nanny: { connect: { id } },
+        name,
+        comment,
+        nannies: { connect: nannyIds.map(id => ({ id })) },
       },
     });
-    res.json(schedule);
+    const fullSchedule = await prisma.schedule.findUnique({
+      where: { id: schedule.id },
+      include: { nannies: true },
+    });
+    res.json(fullSchedule);
   } catch (err) {
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error('Erreur POST /schedules:', err);
+    res.status(500).json({ error: err.message || 'Erreur serveur' });
   }
 });
 
-// Update a schedule
 router.put('/schedules/:scheduleId', async (req, res) => {
   try {
     const { scheduleId } = req.params;
-    const { date, startTime, endTime } = req.body;
+    const { date, startTime, endTime, name, nannyIds, comment } = req.body;
     const schedule = await prisma.schedule.update({
       where: { id: scheduleId },
       data: {
         date: new Date(date),
         startTime,
         endTime,
+        name,
+        comment,
+        nannies: nannyIds ? { set: nannyIds.map(id => ({ id })) } : undefined,
       },
     });
     res.json(schedule);
@@ -68,7 +73,6 @@ router.put('/schedules/:scheduleId', async (req, res) => {
   }
 });
 
-// Delete a schedule
 router.delete('/schedules/:scheduleId', async (req, res) => {
   try {
     const { scheduleId } = req.params;
