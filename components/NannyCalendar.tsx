@@ -38,6 +38,7 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
   const [showForm, setShowForm] = useState<{ date: string } | null>(null);
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   // Fetch children list
   useEffect(() => {
     fetch('/api/children', { credentials: 'include' })
@@ -85,20 +86,17 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
             <div key={i} className="text-center text-gray-500 font-semibold text-xs py-1">{day}</div>
           ))}
           {monthGrid.flat().map((day, idx) => {
-            const assigns = assignments.filter(a => {
-              const date = new Date(a.date);
-              return (
-                a.nanny.id === nannyId &&
-                date.getFullYear() === day.getFullYear() &&
-                date.getMonth() === day.getMonth() &&
-                date.getDate() === day.getDate()
-              );
-            });
             const isToday = day.toDateString() === new Date().toDateString();
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-            // Format YYYY-MM-DD sans décalage horaire (UTC)
-            const pad = (n: number) => n.toString().padStart(2, '0');
-            const dayStr = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+        // Compare date as string (YYYY-MM-DD) to avoid UTC/local mismatch
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const dayStr = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+        const assigns = assignments.filter(a => {
+          return (
+            a.nanny.id === nannyId &&
+            a.date.split('T')[0] === dayStr
+          );
+        });
             return (
               <div key={idx} className={
                 "align-top p-1 h-full flex flex-col " +
@@ -139,6 +137,7 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
           onSubmit={async e => {
             e.preventDefault();
             setError('');
+            setSuccess('');
             if (!selectedChild) { setError('Sélectionnez un enfant'); return; }
             // Vérifie si déjà assigné ce jour-là
             const assignsForDay = assignments.filter(a => a.date.split('T')[0] === showForm.date && a.nanny.id === nannyId);
@@ -146,22 +145,25 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
               setError('Cet enfant est déjà assigné ce jour-là');
               return;
             }
-            // Envoyer la date en UTC (sans décalage local)
+            // Envoyer la date au format ISO complet (YYYY-MM-DDT00:00:00.000Z)
             const [year, month, day] = showForm.date.split('-');
-            const utcDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
-            const utcStr = utcDate.toISOString().split('T')[0];
+            const isoDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toISOString();
             const res = await fetch('/api/assignments', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({ date: utcStr, childId: selectedChild, nannyId }),
+              body: JSON.stringify({ date: isoDate, childId: selectedChild, nannyId }),
             });
             if (!res.ok) {
               setError('Erreur lors de l\'ajout');
               return;
             }
-            setShowForm(null);
-            setSelectedChild('');
+            setSuccess('Enfant ajouté au planning !');
+            setTimeout(() => {
+              setShowForm(null);
+              setSelectedChild('');
+              setSuccess('');
+            }, 1200);
             // Rafraîchir les assignments
             const yearNow = currentDate.getFullYear();
             const monthNow = currentDate.getMonth();
@@ -191,6 +193,7 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
             <button type="button" className="bg-gray-300 px-3 py-1 rounded w-full" onClick={() => setShowForm(null)}>Annuler</button>
           </div>
           {error && <div className="text-red-600 text-xs mt-2 text-center w-full">{error}</div>}
+          {success && <div className="text-green-600 text-xs mt-2 text-center w-full">{success}</div>}
         </form>
       </div>
     )}

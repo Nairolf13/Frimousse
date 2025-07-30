@@ -8,6 +8,8 @@ import Nannies from '../pages/Nannies';
 import ProtectedLayout from '../components/ProtectedLayout';
 import MonPlanning from '../pages/MonPlanning';
 import Activites from '../pages/Activites';
+import ReportsPage from '../pages/ReportsPage';
+
 
 
 export default function AppRoutes() {
@@ -23,6 +25,7 @@ export default function AppRoutes() {
           <Route path="/nannies" element={<Nannies />} />
           <Route path="/mon-planning" element={<MonPlanning />} />
           <Route path="/activites" element={<Activites />} />
+          <Route path="/reports" element={<ReportsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

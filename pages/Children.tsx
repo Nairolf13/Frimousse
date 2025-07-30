@@ -43,11 +43,12 @@ const emptyForm: Omit<Child, 'id'> = {
 };
 
 const groupLabels = [
-  { key: 'G1', label: 'Groupe 1 (1-2 ans)', min: 1, max: 2 },
-  { key: 'G2', label: 'Groupe 2 (2-3 ans)', min: 2, max: 3 },
-  { key: 'G3', label: 'Groupe 3 (3-4 ans)', min: 3, max: 4 },
-  { key: 'G4', label: 'Groupe 4 (4-5 ans)', min: 4, max: 5 },
-  { key: 'G5', label: 'Groupe 5 (5-6 ans)', min: 5, max: 6 },
+  { key: 'G1', label: 'Groupe 1 (0-1 ans)', min: 0, max: 1 },
+  { key: 'G2', label: 'Groupe 2 (1-2 ans)', min: 1, max: 2 },
+  { key: 'G3', label: 'Groupe 3 (2-3 ans)', min: 2, max: 3 },
+  { key: 'G4', label: 'Groupe 4 (3-4 ans)', min: 3, max: 4 },
+  { key: 'G5', label: 'Groupe 5 (4-5 ans)', min: 4, max: 5 },
+  { key: 'G6', label: 'Groupe 6 (5-6 ans)', min: 5, max: 6 },
 ];
 
 const emojiBySexe = {

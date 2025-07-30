@@ -8,6 +8,7 @@ const app = express();
 const meRoutes = require('./routes/me');
 const nanniesRoutes = require('./routes/nannies');
 const childrenRoutes = require('./routes/children');
+const reportsRoutes = require('./routes/reports');
 
 
 app.use(cors({
@@ -24,6 +25,7 @@ app.use('/api/me', meRoutes);
 app.use('/api/user/me', meRoutes);
 app.use('/api/nannies', nanniesRoutes);
 app.use('/api/children', childrenRoutes);
+app.use('/api/reports', reportsRoutes);
 
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);

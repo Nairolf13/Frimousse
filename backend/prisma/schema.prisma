@@ -7,6 +7,25 @@ enum Availability {
   En_congé
   Maladie
 }
+
+enum NannyRole {
+  Nounou_Senior
+  Responsable
+  Stagiaire
+  Remplacante
+  Autre
+}
+
+enum ChildGroup {
+  G1 // Groupe 1 (0-1 ans)
+  G2 // Groupe 2 (1-2 ans)
+  G3 // Groupe 3 (2-3 ans)
+  G4 // Groupe 4 (3-4 ans)
+  G5 // Groupe 5 (4-5 ans)
+  G6 // Groupe 6 (5-6 ans)
+  Autre
+}
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -41,6 +60,7 @@ model RefreshToken {
 model Nanny {
   id         String   @id @default(uuid())
   name       String
+  role       NannyRole @default(Nounou_Senior)
   contact    String?
   email      String?
   availability Availability @default(Disponible)
@@ -48,18 +68,9 @@ model Nanny {
   assignedChildren Assignment[]
   schedules  Schedule[] @relation("NannySchedules")
   user       User?     @relation("NannyUser")
+  reports    Report[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-}
-
-model Schedule {
-  id        String   @id @default(uuid())
-  date      DateTime
-  startTime String
-  endTime   String
-  name      String
-  comment   String?
-  nannies   Nanny[] @relation("NannySchedules")
 }
 
 model Child {
@@ -67,12 +78,14 @@ model Child {
   name       String
   age        Int
   sexe       Sexe     @default(masculin)
+  group      ChildGroup @default(G1)
   parentName String
   parentContact String
   parentMail   String?
   allergies  String?
   cotisationPaidUntil DateTime?
   assignments Assignment[]
+  reports    Report[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -85,4 +98,35 @@ model Assignment {
   nanny     Nanny    @relation(fields: [nannyId], references: [id])
   nannyId   String
   createdAt DateTime @default(now())
+}
+
+model Schedule {
+  id        String   @id @default(uuid())
+  date      DateTime
+  startTime String
+  endTime   String
+  name      String
+  comment   String?
+  nannies   Nanny[] @relation("NannySchedules")
+}
+
+model Report {
+  id               String   @id @default(uuid())
+  priority         String   // 'haute' | 'moyenne' | 'basse'
+  type             String   // 'incident' | 'comportement' | 'soin'
+  status           String   // 'en_attente' | 'traite' | 'resolu'
+  childId          String
+  nannyId          String
+  summary          String
+  details          String
+  date             DateTime
+  time             String   // HH:mm
+  duration         String?  // Optionnel, pour comportement
+  childrenInvolved Int?     // Optionnel, pour comportement
+
+  child            Child    @relation(fields: [childId], references: [id])
+  nanny            Nanny    @relation(fields: [nannyId], references: [id])
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
