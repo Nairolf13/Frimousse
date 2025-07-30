@@ -72,6 +72,10 @@ export default function WeeklyActivityCalendar() {
   });
   const [nannies, setNannies] = useState<Nanny[]>([]);
 
+  // Modal state for activity actions
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
   useEffect(() => {
     fetch('/api/nannies', { credentials: 'include' })
       .then(res => res.json())
@@ -84,8 +88,6 @@ export default function WeeklyActivityCalendar() {
       .then(data => setActivities(data));
   }, [currentDate]);
 
-  const weekDates = getWeekDates(currentDate);
-  const weekLabel = `${weekDates[0].toLocaleDateString()} - ${weekDates[6].toLocaleDateString()}`;
 
   const handleAddActivity = async () => {
     if (!form.name || !form.startTime || !form.endTime || form.nannyIds.length === 0 || !form.date) return;
@@ -115,6 +117,42 @@ export default function WeeklyActivityCalendar() {
     setAdding(false);
   };
 
+  // Handler for card click (mobile/tablet)
+  function handleActivityCardClick(activity: Activity) {
+    console.log('Carte activité cliquée', activity);
+    setSelectedActivity(activity);
+    setModalOpen(true);
+  }
+
+  // Handler for delete (demo only, replace with real logic)
+  async function handleDeleteActivity(id: string) {
+    setModalOpen(false);
+    setSelectedActivity(null);
+    // TODO: Replace with real API call
+    await fetch(`/api/schedules/${id}`, { method: 'DELETE', credentials: 'include' });
+    await fetch('/api/schedules', { credentials: 'include' })
+      .then(res => res.json())
+      .then((data) => setActivities(data));
+  }
+
+  // Handler for edit (demo only, replace with real logic)
+  function handleEditActivity(activity: Activity) {
+    setModalOpen(false);
+    setAdding(true);
+    setForm({
+      date: activity.date,
+      startTime: activity.startTime,
+      endTime: activity.endTime,
+      name: activity.name,
+      comment: activity.comment || '',
+      nannyIds: [],
+      showNannyDropdown: false,
+    });
+  }
+
+  const weekDates = getWeekDates(currentDate);
+  const weekLabel = `${weekDates[0].toLocaleDateString()} - ${weekDates[6].toLocaleDateString()}`;
+
   return (
     <div className="min-h-screen bg-[#f7f8fa] flex flex-col items-center py-8 px-2">
       <div className="w-full max-w-6xl mx-auto">
@@ -129,8 +167,8 @@ export default function WeeklyActivityCalendar() {
             <button onClick={() => setAdding(true)} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition text-base ml-2">+ Add Activity</button>
           </div>
         </div>
-        {/* Desktop/tablette : tableau horaire */}
-        <div className="hidden md:block">
+        {/* Desktop/tablette : tableau horaire, visible uniquement au-dessus de 1050px */}
+        <div className="hidden lg:block max-w-5xl mx-auto">
           <div className="overflow-x-auto">
             <table className="min-w-[600px] w-full border-separate border-spacing-0" style={{ tableLayout: 'fixed' }}>
               <thead>
@@ -166,7 +204,10 @@ export default function WeeklyActivityCalendar() {
                             return activityDate === dateStr && startH === hour && startM === 0;
                           });
                           if (activitiesAtSlot.length > 0) {
-                            return activitiesAtSlot.map((activity, idx) => {
+                            // Pour chaque activité, utilise son index dans la liste des activités du jour pour la couleur
+                            const dayActivities = activities.filter(a => a.date.split('T')[0] === dateStr);
+                            return activitiesAtSlot.map((activity) => {
+                              const activityDayIdx = dayActivities.findIndex(a => a.id === activity.id);
                               // Calcule le nombre d'heures entre startTime et endTime
                               const [startH] = activity.startTime.split(':').map(Number);
                               const [endH, endM] = activity.endTime.split(':').map(Number);
@@ -178,18 +219,24 @@ export default function WeeklyActivityCalendar() {
                               for (let i = startIdx + 1; i < startIdx + span; i++) {
                                 if (i < 13) cellHidden[i][dayIdx] = true;
                               }
-                              const visuals = getActivityVisuals(activity.name, idx);
+                              const visuals = getActivityVisuals(activity.name, activityDayIdx);
                               return (
                                 <td
                                   key={activity.id}
                                   rowSpan={span}
-                                  className={`align-top p-0 border-t border-b border-gray-100 h-full ${visuals.bg} ${visuals.border} border-2 rounded-xl shadow-lg`}
+                                  className={`align-top p-0 h-full ${visuals.bg} ${visuals.border} border-2 rounded-xl shadow-lg cursor-pointer`}
                                   style={{ verticalAlign: 'top' }}
+                                  onClick={() => handleActivityCardClick(activity)}
+                                  tabIndex={0}
                                 >
-                                  <div className={`flex flex-col items-start justify-start px-4 py-3 h-full rounded-xl`}>
+                                  <div className={`flex flex-col gap-2 h-full rounded-2xl px-4 py-3 shadow-md ${visuals.bg} ${visuals.border}`}
+                                    style={{ minHeight: '90px', position: 'relative' }}>
                                     <span className={`font-bold text-base mb-1 ${visuals.text}`}>{activity.name}</span>
                                     {activity.comment && (
-                                      <span className="block text-sm text-gray-700 bg-gray-50 rounded px-2 py-1 mb-1 w-full whitespace-pre-line">{activity.comment}</span>
+                                      <span className={`block text-[15px] md:text-[15px] text-[13px] font-sans italic text-gray-700 px-3 md:px-3 px-1 py-2 md:py-2 py-1 mb-1 w-full whitespace-pre-line rounded-xl shadow-sm ${visuals.bg} border-l-4 ${visuals.border} break-words break-all max-w-full overflow-hidden`}
+                                        style={{ fontFamily: 'Inter, Arial, sans-serif', letterSpacing: '0.01em' }}>
+                                        {activity.comment}
+                                      </span>
                                     )}
                                   </div>
                                 </td>
@@ -207,8 +254,8 @@ export default function WeeklyActivityCalendar() {
             </table>
           </div>
         </div>
-        {/* Mobile : cards verticales par jour, regroupées par slot */}
-        <div className="block md:hidden">
+        {/* Mobile & tablette : cards verticales par jour, regroupées par slot, visible en dessous de 1050px */}
+        <div className="block lg:hidden">
           <div className="flex flex-col gap-6">
             {weekDates.map((date, i) => {
               const dateStr = date.toISOString().split('T')[0];
@@ -258,7 +305,8 @@ export default function WeeklyActivityCalendar() {
                                 return (
                                   <div
                                     key={activity.id}
-                                    className={`rounded-xl shadow border flex flex-col gap-1 ${visuals.bg} ${visuals.border} px-2 py-2`}
+                                    className={`rounded-xl shadow border flex flex-col gap-1 ${visuals.bg} ${visuals.border} px-2 py-2 cursor-pointer transition-transform hover:scale-105 active:scale-95`}
+                                    onClick={() => handleActivityCardClick(activity)}
                                   >
                                     <span className={`font-bold text-base mb-1 ${visuals.text}`}>{activity.name}</span>
                                     {activity.comment && (
@@ -278,7 +326,33 @@ export default function WeeklyActivityCalendar() {
             })}
           </div>
         </div>
-        </div>
+        {/* Ludique modal for activity actions - accessible partout, centré */}
+        {modalOpen && selectedActivity && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-xs relative border-4 border-pink-100 flex flex-col items-center gap-6 animate-fade-in">
+              <button onClick={() => setModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-3xl">🎈</span>
+                <span className="font-extrabold text-lg text-pink-700 mb-2">Que veux-tu faire ?</span>
+                <span className="font-bold text-base text-gray-700 mb-1">{selectedActivity.name}</span>
+              </div>
+              <div className="flex flex-col gap-4 w-full">
+                <button
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-100 text-blue-700 font-bold text-lg shadow hover:bg-blue-200 transition-transform hover:scale-105 active:scale-95"
+                  onClick={() => handleEditActivity(selectedActivity)}
+                >
+                  <span className="text-2xl">✏️</span> Modifier
+                </button>
+                <button
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-100 text-red-700 font-bold text-lg shadow hover:bg-red-200 transition-transform hover:scale-105 active:scale-95"
+                  onClick={() => handleDeleteActivity(selectedActivity.id)}
+                >
+                  <span className="text-2xl">🗑️</span> Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       {adding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative border border-blue-100">
@@ -339,6 +413,7 @@ export default function WeeklyActivityCalendar() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }
