@@ -120,14 +120,16 @@ export default function Nannies() {
     setEditingId(nanny.id);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Supprimer cette nounou ?')) return;
+  const [deleteId, setDeleteId] = useState<string|null>(null);
+  const handleDelete = async () => {
+    if (!deleteId) return;
     try {
-      const res = await fetch(`/api/nannies/${id}`, {
+      const res = await fetch(`/api/nannies/${deleteId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Erreur lors de la suppression');
+      setDeleteId(null);
       fetchNannies();
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -244,80 +246,112 @@ export default function Nannies() {
                 'bg-orange-50',
               ];
               const color = cardColors[idx % cardColors.length];
+              // Flip 3D card like Children.tsx
+              const isDeleting = deleteId === nanny.id;
               return (
                 <div
                   key={nanny.id}
-                  className={`rounded-2xl shadow-lg ${color} flex flex-col items-center min-h-[300px] p-0 relative overflow-hidden`}
-                  style={{ height: '100%' }}
+                  className={`rounded-2xl shadow-lg ${color} relative flex flex-col min-h-[320px] h-full transition-transform duration-500 perspective-1000`}
+                  style={{ height: '100%', perspective: '1000px' }}
                 >
-                  {/* Avatar centré, badge expérience en haut à droite, statut en badge rond */}
-                  <div className="w-full flex flex-col items-center relative pt-6 pb-2">
-                    <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-3xl shadow border-2 border-gray-100 mb-2">{avatar}</div>
-                    <span
-                      className={`absolute right-4 top-4 text-xs font-bold px-3 py-1 rounded-full shadow border ${
-                        nanny.availability === 'Disponible'
-                          ? 'bg-green-100 text-green-700 border-green-200'
-                          : nanny.availability === 'En_congé'
-                          ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
-                          : 'bg-red-100 text-red-700 border-red-200'
-                      }`}
+                  <div
+                    className={`w-full h-full transition-transform duration-500 ${isDeleting ? 'rotate-y-180' : ''}`}
+                    style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
+                  >
+                    {/* Face avant (carte nounou) */}
+                    <div
+                      className={`absolute inset-0 w-full h-full p-0 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
+                      style={{ backfaceVisibility: 'hidden' }}
                     >
-                      {nanny.availability === 'En_congé' ? 'En congé' : nanny.availability}
-                    </span>
-                    <span className="mt-1 text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">{nanny.experience} ans</span>
-                  </div>
-                  {/* Nom centré + disponibilité */}
-                  <div className="flex flex-col items-center mb-2">
-                    <span className="font-semibold text-base md:text-lg text-gray-900">{nanny.name}</span>
-                    <div className="flex flex-col gap-1 items-center mt-1 w-full">
-                      <span className="flex items-center gap-2 w-full justify-center">
-                        <span role="img" aria-label="Téléphone">📞</span>
-                        {nanny.contact ? (
-                          <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
-                        ) : (
-                          <span className="text-gray-400 text-xs md:text-sm">—</span>
-                        )}
-                      </span>
-                      <span className="flex items-center gap-2 w-full justify-center">
-                        <span role="img" aria-label="Email">✉️</span>
-                        {nanny.email ? (
-                          <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
-                        ) : (
-                          <span className="text-gray-400 text-xs md:text-sm">—</span>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                  {/* Spécialisations en badges, centrées */}
-                  {nanny.specializations && nanny.specializations.length > 0 && (
-                    <div className="flex flex-wrap justify-center gap-2 mb-2 w-full px-4">
-                      {nanny.specializations.map((spec, i) => (
-                        <span key={i} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold border border-purple-200">{spec}</span>
-                      ))}
-                    </div>
-                  )}
-                  {/* Enfants assignés, badges ludiques, centrés */}
-                  <div className="text-xs md:text-sm text-gray-700 mb-2 w-full flex flex-col items-center">
-                    {(() => {
-                      const todayStr = new Date().toISOString().split('T')[0];
-                      const assignedToday = assignments.filter(a =>
-                        a.nanny && a.nanny.id === nanny.id && a.date.split('T')[0] === todayStr
-                      );
-                      return (
-                        <span className="block font-medium mb-1">
-                          Affectations aujourd'hui
-                          <span className="inline-block bg-white text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 ml-1">
-                            {assignedToday.length}
-                          </span>
+                      {/* Avatar centré, badge expérience en haut à droite, statut en badge rond */}
+                      <div className="w-full flex flex-col items-center relative pt-6 pb-2">
+                        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-3xl shadow border-2 border-gray-100 mb-2">{avatar}</div>
+                        <span
+                          className={`absolute right-4 top-4 text-xs font-bold px-3 py-1 rounded-full shadow border ${
+                            nanny.availability === 'Disponible'
+                              ? 'bg-green-100 text-green-700 border-green-200'
+                              : nanny.availability === 'En_congé'
+                              ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                              : 'bg-red-100 text-red-700 border-red-200'
+                          }`}
+                        >
+                          {nanny.availability === 'En_congé' ? 'En congé' : nanny.availability}
                         </span>
-                      );
-                    })()}
-                  </div>
-                  {/* Actions en bas, centrées, ludiques */}
-                  <div className="flex justify-center gap-2 mt-auto mb-4 w-full">
-                    <button onClick={() => setPlanningNanny(nanny)} className="bg-cyan-100 text-cyan-700 px-3 md:px-4 py-1 rounded-full font-semibold border border-cyan-200 shadow-sm hover:bg-cyan-200 transition text-xs md:text-base">Voir planning</button>
-                    <button onClick={() => handleEdit(nanny)} className="bg-yellow-100 text-yellow-700 px-3 md:px-4 py-1 rounded-full font-semibold border border-yellow-200 shadow-sm hover:bg-yellow-200 transition text-xs md:text-base">Éditer</button>
-                    <button onClick={() => handleDelete(nanny.id)} className="bg-red-100 text-red-600 px-3 md:px-4 py-1 rounded-full font-semibold border border-red-200 shadow-sm hover:bg-red-200 transition text-xs md:text-base">Supprimer</button>
+                        <span className="mt-1 text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">{nanny.experience} ans</span>
+                      </div>
+                      {/* Nom centré + disponibilité */}
+                      <div className="flex flex-col items-center mb-2">
+                        <span className="font-semibold text-base md:text-lg text-gray-900">{nanny.name}</span>
+                        <div className="flex flex-col gap-1 items-center mt-1 w-full">
+                          <span className="flex items-center gap-2 w-full justify-center">
+                            <span role="img" aria-label="Téléphone">📞</span>
+                            {nanny.contact ? (
+                              <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
+                            ) : (
+                              <span className="text-gray-400 text-xs md:text-sm">—</span>
+                            )}
+                          </span>
+                          <span className="flex items-center gap-2 w-full justify-center">
+                            <span role="img" aria-label="Email">✉️</span>
+                            {nanny.email ? (
+                              <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
+                            ) : (
+                              <span className="text-gray-400 text-xs md:text-sm">—</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Spécialisations en badges, centrées */}
+                      {nanny.specializations && nanny.specializations.length > 0 && (
+                        <div className="flex flex-wrap justify-center gap-2 mb-2 w-full px-4">
+                          {nanny.specializations.map((spec, i) => (
+                            <span key={i} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold border border-purple-200">{spec}</span>
+                          ))}
+                        </div>
+                      )}
+                      {/* Enfants assignés, badges ludiques, centrés */}
+                      <div className="text-xs md:text-sm text-gray-700 mb-2 w-full flex flex-col items-center">
+                        {(() => {
+                          const todayStr = new Date().toISOString().split('T')[0];
+                          const assignedToday = assignments.filter(a =>
+                            a.nanny && a.nanny.id === nanny.id && a.date.split('T')[0] === todayStr
+                          );
+                          return (
+                            <span className="block font-medium mb-1">
+                              Affectations aujourd'hui
+                              <span className="inline-block bg-white text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 ml-1">
+                                {assignedToday.length}
+                              </span>
+                            </span>
+                          );
+                        })()}
+                      </div>
+                      {/* Actions en bas, centrées, ludiques */}
+                      <div className="flex justify-center gap-2 mt-auto mb-4 w-full">
+                        <button onClick={() => setPlanningNanny(nanny)} className="bg-cyan-100 text-cyan-700 px-3 md:px-4 py-1 rounded-full font-semibold border border-cyan-200 shadow-sm hover:bg-cyan-200 transition text-xs md:text-base">Voir planning</button>
+                        <button onClick={() => handleEdit(nanny)} className="bg-yellow-100 text-yellow-700 px-3 md:px-4 py-1 rounded-full font-semibold border border-yellow-200 shadow-sm hover:bg-yellow-200 transition text-xs md:text-base">Éditer</button>
+                        <button onClick={() => setDeleteId(nanny.id)} className="bg-red-100 text-red-600 px-3 md:px-4 py-1 rounded-full font-semibold border border-red-200 shadow-sm hover:bg-red-200 transition text-xs md:text-base">Supprimer</button>
+                      </div>
+                    </div>
+                    {/* Face arrière (modal suppression) */}
+                    <div
+                      className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-8 ${isDeleting ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+                      style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+                    >
+                      <div className="text-red-500 text-4xl mb-2">🗑️</div>
+                      <div className="text-lg font-semibold mb-2 text-gray-900 text-center">Confirmer la suppression</div>
+                      <div className="text-gray-500 mb-6 text-center">Voulez-vous vraiment supprimer cette nounou ? <br/>Cette action est irréversible.</div>
+                      <div className="flex gap-3 w-full">
+                        <button
+                          onClick={() => setDeleteId(null)}
+                          className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 font-medium hover:bg-gray-200 transition"
+                        >Annuler</button>
+                        <button
+                          onClick={handleDelete}
+                          className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 font-medium hover:bg-red-600 transition shadow"
+                        >Supprimer</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );

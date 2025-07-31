@@ -58,7 +58,7 @@ export default function Sidebar() {
           <div className="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center text-2xl">
             <span role="img" aria-label="maison">🏡</span>
           </div>
-          <span className="font-extrabold text-xl text-gray-900">Frimousse</span>
+         <span className="font-extrabold text-xl text-gray-900">Frimousse</span>
         </div>
         <nav className="flex-1 px-2">
           <ul className="space-y-1">

@@ -209,23 +209,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleDelete = async () => {
-    if (selectedId && window.confirm('Supprimer cette affectation ?')) {
-      await fetch(`/api/assignments/${selectedId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      setModalOpen(false);
-      setSelectedId(null);
-      setModalInitial(null);
-      // Utilise la même logique que le useEffect pour la plage de dates
-      const year = currentDate.getFullYear();
-      const monthIdx = currentDate.getMonth();
-      const first = new Date(year, monthIdx, 1);
-      const last = new Date(year, monthIdx + 1, 0);
-      fetchAssignments(first, last);
-    }
-  };
+  // handleDelete supprimé, la suppression passe par la modal stylée
 
   const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
@@ -246,9 +230,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6 mb-8 w-full max-w-full mx-auto 
-        md:grid-cols-2 md:w-auto
-        xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6 mb-8 w-full max-w-full mx-auto md:grid-cols-2 md:w-auto xl:grid-cols-4">
         <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{totalChildren}</span>
@@ -286,7 +268,7 @@ export default function Dashboard() {
       {/* Custom Calendar */}
       <div className="bg-white rounded-2xl shadow p-2 sm:p-4 md:p-6 border border-[#f3f3fa] w-full max-w-full mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-6 gap-2">
-          <div className="text-lg md:text-2xl font-bold text-gray-900">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
+            <div className="text-lg md:text-2xl font-bold text-gray-900">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
           <div className="flex items-center gap-2">
             <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></button>
             <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
@@ -294,7 +276,7 @@ export default function Dashboard() {
         </div>
         {/* Table calendrier : grid en mobile, table classique en sm+ */}
         <div className="block sm:hidden w-full">
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-1" style={{ minWidth: '350px' }}>
             {weekDays.map((day, i) => (
               <div key={i} className="text-center text-gray-500 font-semibold text-xs py-1">{day}</div>
             ))}
@@ -337,21 +319,9 @@ export default function Dashboard() {
                       <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-green-50' : 'bg-yellow-50') + " shadow-sm group"}>
                         <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-green-400' : 'bg-yellow-400')}></span>
                         <span
-                          className="font-semibold text-gray-800 text-xs group-hover:underline cursor-pointer hover:text-red-600"
-                          title="Supprimer cette affectation"
-                          onClick={() => {
-                            if (window.confirm('Supprimer cette affectation pour cet enfant ?')) {
-                              fetch(`/api/assignments/${a.id}`, {
-                                method: 'DELETE',
-                                credentials: 'include',
-                              }).then(() => {
-                                const month = getMonthGrid(currentDate);
-                                const first = month[0][0];
-                                const last = month[month.length - 1][6];
-                                fetchAssignments(first, last);
-                              });
-                            }
-                          }}
+                          className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]"
+                          title={a.child.name}
+                          onClick={() => setSelectedId(a.id)}
                         >
                           {a.child.name}
                         </span>
@@ -422,19 +392,7 @@ export default function Dashboard() {
                                 <span
                                   className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600"
                                   title="Supprimer cette affectation"
-                                  onClick={() => {
-                                    if (window.confirm('Supprimer cette affectation pour cet enfant ?')) {
-                                      fetch(`/api/assignments/${a.id}`, {
-                                        method: 'DELETE',
-                                        credentials: 'include',
-                                      }).then(() => {
-                                        const month = getMonthGrid(currentDate);
-                                        const first = month[0][0];
-                                        const last = month[month.length - 1][6];
-                                        fetchAssignments(first, last);
-                                      });
-                                    }
-                                  }}
+                                  onClick={() => setSelectedId(a.id)}
                                 >
                                   {a.child.name}
                                 </span>
@@ -468,8 +426,44 @@ export default function Dashboard() {
         onSave={handleSave}
         initial={modalInitial || undefined}
       />
-      {selectedId && modalOpen && (
-        <button onClick={handleDelete} className="mt-4 bg-red-500 text-white px-4 py-2 rounded">Supprimer l’affectation</button>
+      {selectedId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm relative flex flex-col items-center">
+            <button onClick={() => setSelectedId(null)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl" aria-label="Fermer">×</button>
+            <div className="flex flex-col items-center gap-4">
+              <div className="bg-red-100 rounded-full p-4 mb-2">
+                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Confirmer la suppression</h3>
+              <p className="text-gray-600 text-center mb-4">Voulez-vous vraiment supprimer cette affectation ? Cette action est irréversible.</p>
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setSelectedId(null)}
+                  className="flex-1 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition"
+                >Annuler</button>
+                <button
+                  onClick={async () => {
+                    await fetch(`/api/assignments/${selectedId}`, {
+                      method: 'DELETE',
+                      credentials: 'include',
+                    });
+                    setSelectedId(null);
+                    setModalInitial(null);
+                    const year = currentDate.getFullYear();
+                    const monthIdx = currentDate.getMonth();
+                    const first = new Date(year, monthIdx, 1);
+                    const last = new Date(year, monthIdx + 1, 0);
+                    fetchAssignments(first, last);
+                  }}
+                  className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white font-bold shadow-lg hover:from-red-600 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 transition-all duration-150"
+                  aria-label="Supprimer l’affectation"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
       {/* Modal enfants gardés un jour donné, groupés par nounou */}
       {dayModalOpen && (
