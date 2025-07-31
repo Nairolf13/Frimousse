@@ -9,6 +9,7 @@ import ProtectedLayout from '../components/ProtectedLayout';
 import MonPlanning from '../pages/MonPlanning';
 import Activites from '../pages/Activites';
 import ReportsPage from '../pages/ReportsPage';
+import Settings from '../pages/Settings';
 
 
 
@@ -26,6 +27,7 @@ export default function AppRoutes() {
           <Route path="/mon-planning" element={<MonPlanning />} />
           <Route path="/activites" element={<Activites />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
     </BrowserRouter>

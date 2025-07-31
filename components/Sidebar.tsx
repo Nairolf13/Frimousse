@@ -9,18 +9,18 @@ type User = {
   name?: string;
   role?: string;
   nannyId?: string;
-  // Add other properties as needed
 };
 
 function getNavLinks(user: User | null) {
   if (user && user.nannyId) {
-    // Nounou : seulement Dashboard et Enfants
     return [
       { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
       { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/activites', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
+      { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
+
     ];
   }
-  // Admin ou autre : tout
   return [
     { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
     { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
@@ -33,9 +33,7 @@ function getNavLinks(user: User | null) {
 
 export default function Sidebar() {
   const location = useLocation();
-  // Récupère l'utilisateur connecté via le contexte
   const { user } = useAuth();
-  // Affichage robuste du nom et des initiales
   let userName = 'Utilisateur';
   let userRole = 'Utilisateur';
   let userInitials = 'UT';
@@ -54,18 +52,14 @@ export default function Sidebar() {
   }
   return (
     <>
-      {/* Menu mobile visible uniquement sur mobile */}
       <MobileMenu />
-      {/* Sidebar desktop */}
       <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white shadow-lg flex-col p-0 border-r border-gray-100 z-30">
-        {/* Logo et titre */}
         <div className="flex items-center gap-3 px-6 pt-8 pb-6">
           <div className="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center text-2xl">
             <span role="img" aria-label="maison">🏡</span>
           </div>
           <span className="font-extrabold text-xl text-gray-900">Frimousse</span>
         </div>
-        {/* Navigation */}
         <nav className="flex-1 px-2">
           <ul className="space-y-1">
             {getNavLinks(user).map(link => (
@@ -81,7 +75,6 @@ export default function Sidebar() {
             ))}
           </ul>
         </nav>
-        {/* Profil utilisateur en bas */}
         <div className="mt-auto flex items-center gap-3 px-6 py-6">
           <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-base font-bold text-blue-700 border border-blue-100">{userInitials}</div>
           <div>

@@ -17,7 +17,6 @@ export default function MobileMenu() {
 
   return (
     <>
-      {/* Burger button visible only on mobile */}
       <button
         className="fixed top-4 right-4 z-40 md:hidden bg-white rounded-full p-2 shadow-lg border border-gray-200"
         onClick={() => setOpen(true)}
@@ -25,7 +24,6 @@ export default function MobileMenu() {
       >
         <HiOutlineMenu className="w-7 h-7 text-gray-700" />
       </button>
-      {/* Overlay menu */}
       {open && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           <div className="flex items-center gap-3 px-6 pt-8 pb-6">

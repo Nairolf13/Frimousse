@@ -40,7 +40,7 @@ model User {
   email         String   @unique
   password      String
   name          String
-  role          String   // 'admin', 'staff', 'parent', 'nanny', etc.
+  role          String   
   nanny         Nanny?   @relation("NannyUser", fields: [nannyId], references: [id])
   nannyId       String?  @unique
   refreshTokens RefreshToken[]
@@ -112,17 +112,17 @@ model Schedule {
 
 model Report {
   id               String   @id @default(uuid())
-  priority         String   // 'haute' | 'moyenne' | 'basse'
-  type             String   // 'incident' | 'comportement' | 'soin'
-  status           String   // 'en_attente' | 'traite' | 'resolu'
+  priority         String   
+  type             String  
+  status           String   
   childId          String
   nannyId          String
   summary          String
   details          String
   date             DateTime
-  time             String   // HH:mm
-  duration         String?  // Optionnel, pour comportement
-  childrenInvolved Int?     // Optionnel, pour comportement
+  time             String   
+  duration         String?  
+  childrenInvolved Int?     
 
   child            Child    @relation(fields: [childId], references: [id])
   nanny            Nanny    @relation(fields: [nannyId], references: [id])

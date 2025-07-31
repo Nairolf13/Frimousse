@@ -33,6 +33,8 @@ exports.login = async (req, res) => {
   if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
+  // Supprime tous les anciens refresh tokens de l'utilisateur
+  await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
   await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
   res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000 });
   res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000 });
@@ -46,7 +48,8 @@ exports.refresh = async (req, res) => {
   if (!stored) return res.status(403).json({ message: 'Invalid refresh token' });
   try {
     const payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
-    await prisma.refreshToken.delete({ where: { token: refreshToken } });
+    // Supprime tous les anciens refresh tokens de l'utilisateur
+    await prisma.refreshToken.deleteMany({ where: { userId: payload.id } });
     const user = await prisma.user.findUnique({ where: { id: payload.id } });
     if (!user) return res.status(404).json({ message: 'User not found' });
     const newRefreshToken = generateRefreshToken(user);

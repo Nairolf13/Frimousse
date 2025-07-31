@@ -2,12 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-
-
-// Utilise le vrai middleware d'auth
 const requireAuth = require('../middleware/authMiddleware');
 
-// GET /api/me : infos utilisateur connecté (inclut nannyId si nounou)
 router.get('/', requireAuth, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({

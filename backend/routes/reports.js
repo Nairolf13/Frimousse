@@ -3,7 +3,6 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// GET /api/reports - fetch all reports with child and nanny info
 router.get('/', async (req, res) => {
   try {
     const reports = await prisma.report.findMany({
@@ -19,11 +18,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/reports - create a new report
 router.post('/', async (req, res) => {
   try {
     const { priority, type, status, childId, nannyId, summary, details, date, time, duration, childrenInvolved } = req.body;
-    // Conversion date au format ISO si besoin
     let isoDate = date;
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
       isoDate = new Date(date + 'T' + (time || '00:00') + ':00.000Z').toISOString();

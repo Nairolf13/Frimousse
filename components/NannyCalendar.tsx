@@ -39,7 +39,6 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  // Fetch children list
   useEffect(() => {
     fetch('/api/children', { credentials: 'include' })
       .then(res => res.json())
@@ -88,7 +87,6 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
           {monthGrid.flat().map((day, idx) => {
             const isToday = day.toDateString() === new Date().toDateString();
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-        // Compare date as string (YYYY-MM-DD) to avoid UTC/local mismatch
         const pad = (n: number) => n.toString().padStart(2, '0');
         const dayStr = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
         const assigns = assignments.filter(a => {
@@ -123,13 +121,11 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
                     </div>
                   ))
                 )}
-                {/* Rien ici, la modal globale est en dehors de la grille */}
               </div>
             );
           })}
         </div>
       </div>
-    {/* Modal globale d'ajout d'affectation */}
     {showForm && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
         <form
@@ -139,13 +135,11 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
             setError('');
             setSuccess('');
             if (!selectedChild) { setError('Sélectionnez un enfant'); return; }
-            // Vérifie si déjà assigné ce jour-là
             const assignsForDay = assignments.filter(a => a.date.split('T')[0] === showForm.date && a.nanny.id === nannyId);
             if (assignsForDay.some(a => a.child.id === selectedChild)) {
               setError('Cet enfant est déjà assigné ce jour-là');
               return;
             }
-            // Envoyer la date au format ISO complet (YYYY-MM-DDT00:00:00.000Z)
             const [year, month, day] = showForm.date.split('-');
             const isoDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toISOString();
             const res = await fetch('/api/assignments', {
@@ -164,7 +158,6 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
               setSelectedChild('');
               setSuccess('');
             }, 1200);
-            // Rafraîchir les assignments
             const yearNow = currentDate.getFullYear();
             const monthNow = currentDate.getMonth();
             const first = new Date(yearNow, monthNow, 1);

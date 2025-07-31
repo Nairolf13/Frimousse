@@ -4,7 +4,6 @@ const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('../generated/prisma');
 const prisma = new PrismaClient();
 
-// Get current user profile
 router.get('/me', auth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },

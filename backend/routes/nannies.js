@@ -3,14 +3,6 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-
-// Get all nannies
-router.get('/', auth, async (req, res) => {
-  const nannies = await prisma.nanny.findMany({ include: { assignedChildren: true } });
-  res.json(nannies);
-});
-
-// Add a nanny
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -23,6 +15,11 @@ function generateRefreshToken(user) {
   return jwt.sign({ id: user.id }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 }
 
+router.get('/', auth, async (req, res) => {
+  const nannies = await prisma.nanny.findMany({ include: { assignedChildren: true } });
+  res.json(nannies);
+});
+
 router.post('/', auth, async (req, res) => {
   const { name, availability, experience, contact, email, password } = req.body;
   const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
@@ -30,7 +27,6 @@ router.post('/', auth, async (req, res) => {
     return res.status(400).json({ error: 'Le champ "experience" doit être un nombre.' });
   }
   if (email && password) {
-    // Création nounou + user associé via la logique register
     try {
       const nanny = await prisma.nanny.create({
         data: {
@@ -41,9 +37,7 @@ router.post('/', auth, async (req, res) => {
           email,
         }
       });
-      // On va utiliser la logique de register d'authController
       const authController = require('../controllers/authController');
-      // On forge une requête factice pour register
       const fakeReq = {
         body: {
           email,
@@ -54,7 +48,6 @@ router.post('/', auth, async (req, res) => {
         },
         cookies: req.cookies
       };
-      // On utilise une promesse pour capturer la réponse
       await new Promise((resolve, reject) => {
         const fakeRes = {
           status: (code) => { fakeRes.statusCode = code; return fakeRes; },
@@ -63,7 +56,6 @@ router.post('/', auth, async (req, res) => {
         };
         authController.register(fakeReq, fakeRes).catch(reject);
       });
-      // On connecte la nounou pour générer les tokens comme dans login
       const user = await prisma.user.findUnique({ where: { email } });
       const jwt = require('jsonwebtoken');
       const JWT_SECRET = process.env.JWT_SECRET;
@@ -84,7 +76,6 @@ router.post('/', auth, async (req, res) => {
       res.status(400).json({ error: e.message });
     }
   } else {
-    // Création nounou seule (pas de compte user)
     const nanny = await prisma.nanny.create({
       data: {
         name,
@@ -98,7 +89,6 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Edit a nanny
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
   const { name, availability, experience, contact, email } = req.body;
@@ -109,23 +99,16 @@ router.put('/:id', auth, async (req, res) => {
   res.json(nanny);
 });
 
-// Delete a nanny
 router.delete('/:id', auth, async (req, res) => {
   const { id } = req.params;
   try {
-    // Supprime d'abord les assignments liés à la nounou
     await prisma.assignment.deleteMany({ where: { nannyId: id } });
-    // Supprime aussi les plannings liés si besoin
     await prisma.schedule.deleteMany({ where: { nannyId: id } });
-    // Trouve le(s) user(s) associé(s) à cette nounou
     const users = await prisma.user.findMany({ where: { nannyId: id } });
     for (const user of users) {
-      // Supprime les refresh tokens liés à ce user
       await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
     }
-    // Supprime le user associé
     await prisma.user.deleteMany({ where: { nannyId: id } });
-    // Supprime la nounou
     await prisma.nanny.delete({ where: { id } });
     res.json({ success: true });
   } catch (e) {
@@ -133,7 +116,6 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// Get nanny by id
 router.get('/:id', auth, async (req, res) => {
   const { id } = req.params;
   const nanny = await prisma.nanny.findUnique({ where: { id }, include: { assignedChildren: true } });

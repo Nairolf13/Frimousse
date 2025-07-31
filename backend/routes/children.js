@@ -4,17 +4,15 @@ const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Route pour calculer le montant à payer pour un enfant sur un mois donné
 router.get('/:id/billing', auth, async (req, res) => {
   const { id } = req.params;
-  const { month } = req.query; // format attendu: '2025-07'
+  const { month } = req.query; 
   if (!month || !/^\d{4}-\d{2}$/.test(month)) {
     return res.status(400).json({ error: 'Le paramètre month est requis au format YYYY-MM.' });
   }
   const [year, mon] = month.split('-').map(Number);
   const startDate = new Date(year, mon - 1, 1);
   const endDate = new Date(year, mon, 1);
-  // Récupère toutes les présences (assignments) de l'enfant pour le mois
   const assignments = await prisma.assignment.findMany({
     where: {
       childId: id,

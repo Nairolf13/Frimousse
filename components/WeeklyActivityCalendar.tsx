@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 
 interface Activity {
   id: string;
-  date: string; // YYYY-MM-DD
-  startTime: string; // HH:mm
-  endTime: string; // HH:mm
+  date: string; 
+  startTime: string; 
+  endTime: string; 
   name: string;
   comment?: string;
 }
@@ -36,7 +36,6 @@ function getWeekDates(date: Date) {
 
 
 export default function WeeklyActivityCalendar() {
-  // Palette pastel identique aux cartes enfants
   const cardColors = [
     { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700' },
     { bg: 'bg-yellow-50', border: 'border-yellow-100', text: 'text-yellow-700' },
@@ -45,7 +44,6 @@ export default function WeeklyActivityCalendar() {
     { bg: 'bg-pink-50', border: 'border-pink-100', text: 'text-pink-700' },
     { bg: 'bg-orange-50', border: 'border-orange-100', text: 'text-orange-700' },
   ];
-  // Utilitaire pour emoji, couleur cyclique
   function getActivityVisuals(name: string, idx: number) {
     let emoji = '✨';
     if (/art|dessin|peinture|workshop/i.test(name)) emoji = '🎨';
@@ -72,7 +70,6 @@ export default function WeeklyActivityCalendar() {
   });
   const [nannies, setNannies] = useState<Nanny[]>([]);
 
-  // Modal state for activity actions
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -117,25 +114,21 @@ export default function WeeklyActivityCalendar() {
     setAdding(false);
   };
 
-  // Handler for card click (mobile/tablet)
   function handleActivityCardClick(activity: Activity) {
     console.log('Carte activité cliquée', activity);
     setSelectedActivity(activity);
     setModalOpen(true);
   }
 
-  // Handler for delete (demo only, replace with real logic)
   async function handleDeleteActivity(id: string) {
     setModalOpen(false);
     setSelectedActivity(null);
-    // TODO: Replace with real API call
     await fetch(`/api/schedules/${id}`, { method: 'DELETE', credentials: 'include' });
     await fetch('/api/schedules', { credentials: 'include' })
       .then(res => res.json())
       .then((data) => setActivities(data));
   }
 
-  // Handler for edit (demo only, replace with real logic)
   function handleEditActivity(activity: Activity) {
     setModalOpen(false);
     setAdding(true);
@@ -167,7 +160,6 @@ export default function WeeklyActivityCalendar() {
             <button onClick={() => setAdding(true)} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition text-base ml-2">+ Add Activity</button>
           </div>
         </div>
-        {/* Desktop/tablette : tableau horaire, visible uniquement au-dessus de 1050px */}
         <div className="hidden lg:block max-w-5xl mx-auto">
           <div className="overflow-x-auto">
             <table className="min-w-[600px] w-full border-separate border-spacing-0" style={{ tableLayout: 'fixed' }}>
@@ -183,9 +175,7 @@ export default function WeeklyActivityCalendar() {
                 </tr>
               </thead>
               <tbody>
-                {/* Nouvelle logique : grille heures pleines, carte avec rowSpan qui recouvre le créneau */}
                 {(() => {
-                  // On prépare une matrice pour savoir si une cellule doit être masquée (rowSpan)
                   const cellHidden: boolean[][] = Array.from({ length: 13 }, () => Array(7).fill(false));
                   return [...Array(13)].map((_, slotIdx) => {
                     const hour = 7 + slotIdx;
@@ -196,26 +186,21 @@ export default function WeeklyActivityCalendar() {
                         {weekDates.map((date, dayIdx) => {
                           if (cellHidden[slotIdx][dayIdx]) return null;
                           const dateStr = date.toISOString().split('T')[0];
-                          // On n'affiche plus les labels Matin/Après-midi
-                          // Cherche toutes les activités qui commencent à ce créneau
                           const activitiesAtSlot = activities.filter(a => {
                             const activityDate = a.date.split('T')[0];
                             const [startH, startM] = a.startTime.split(':').map(Number);
                             return activityDate === dateStr && startH === hour && startM === 0;
                           });
                           if (activitiesAtSlot.length > 0) {
-                            // Pour chaque activité, utilise son index dans la liste des activités du jour pour la couleur
                             const dayActivities = activities.filter(a => a.date.split('T')[0] === dateStr);
                             return activitiesAtSlot.map((activity) => {
                               const activityDayIdx = dayActivities.findIndex(a => a.id === activity.id);
-                              // Calcule le nombre d'heures entre startTime et endTime
                               const [startH] = activity.startTime.split(':').map(Number);
                               const [endH, endM] = activity.endTime.split(':').map(Number);
                               const startIdx = startH - 7;
                               let endIdx = endH - 7;
-                              if (endM > 0 || endM === 0) endIdx += 1; // On inclut toujours la dernière heure
+                              if (endM > 0 || endM === 0) endIdx += 1; 
                               const span = Math.max(1, endIdx - startIdx);
-                              // Marque les cellules à masquer
                               for (let i = startIdx + 1; i < startIdx + span; i++) {
                                 if (i < 13) cellHidden[i][dayIdx] = true;
                               }
@@ -254,13 +239,11 @@ export default function WeeklyActivityCalendar() {
             </table>
           </div>
         </div>
-        {/* Mobile & tablette : cards verticales par jour, regroupées par slot, visible en dessous de 1050px */}
         <div className="block lg:hidden">
           <div className="flex flex-col gap-6">
             {weekDates.map((date, i) => {
               const dateStr = date.toISOString().split('T')[0];
               const dayActivities = activities.filter(a => a.date.split('T')[0] === dateStr);
-              // Regroupement par slot
               const slots = [
                 {
                   label: 'Matin (7h-12h)',
@@ -326,7 +309,6 @@ export default function WeeklyActivityCalendar() {
             })}
           </div>
         </div>
-        {/* Ludique modal for activity actions - accessible partout, centré */}
         {modalOpen && selectedActivity && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-xs relative border-4 border-pink-100 flex flex-col items-center gap-6 animate-fade-in">
