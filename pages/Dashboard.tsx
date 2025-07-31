@@ -10,7 +10,7 @@ interface Nanny {
 
 interface Assignment {
   id: string;
-  date: string; // ISO string
+  date: string; 
   child: { id: string; name: string };
   nanny: { id: string; name: string };
 }
@@ -117,7 +117,6 @@ export default function Dashboard() {
         .map(a => a.child.id)
     )
   ).length;
-  // Moyenne hebdomadaire dynamique :
   let weeklyAverage = 0;
   if (totalChildren > 0) {
     const last7Days: string[] = [];
@@ -152,7 +151,6 @@ export default function Dashboard() {
   const handleQuickAdd = (date: Date) => {
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
       .toISOString().split('T')[0];
-    // Pré-remplit le nannyId si l'utilisateur est une nounou
     setModalInitial({ date: localDate, childId: '', nannyId: user && user.nannyId ? user.nannyId : '' });
     setModalOpen(true);
   };
@@ -160,7 +158,6 @@ export default function Dashboard() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const handleSave = async (data: AssignmentForm) => {
     setSaveError(null);
-    // Force la date au format UTC (YYYY-MM-DD)
     const utcDate = new Date(data.date + 'T00:00:00Z').toISOString().split('T')[0];
     const dataToSend = { ...data, date: utcDate };
     const duplicate = assignments.some(a =>
@@ -209,14 +206,11 @@ export default function Dashboard() {
     }
   };
 
-  // handleDelete supprimé, la suppression passe par la modal stylée
-
   const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#fcfcff] w-full">
-      <div className="p-2 sm:p-4 md:p-8 md:pl-64 w-full max-w-full flex flex-col">
-      {/* Header Dashboard */}
+    <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
+      <div className="max-w-7xl mx-auto w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
         <div className="flex-1 min-w-0">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">Tableau de bord</h1>
@@ -228,10 +222,8 @@ export default function Dashboard() {
           <button onClick={() => handleQuickAdd(new Date())} className="bg-green-500 text-black font-semibold rounded-lg px-4 py-2 text-base shadow hover:bg-green-600 transition whitespace-nowrap">+ Ajouter</button>
         </div>
       </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6 mb-8 w-full max-w-full mx-auto md:grid-cols-2 md:w-auto xl:grid-cols-4">
-        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] w-full">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 mb-8 w-full">
+        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{totalChildren}</span>
             <span className="bg-blue-50 text-blue-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg></span>
@@ -239,7 +231,7 @@ export default function Dashboard() {
           <div className="text-gray-500 font-medium text-sm sm:text-base">Enfants inscrits</div>
           <div className="text-green-500 text-xs sm:text-sm font-semibold flex items-center gap-1">+12% depuis le mois dernier</div>
         </div>
-        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] w-full">
+        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{presentToday}</span>
             <span className="bg-green-50 text-green-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
@@ -247,7 +239,7 @@ export default function Dashboard() {
           <div className="text-gray-500 font-medium text-sm sm:text-base">Présents aujourd'hui</div>
           <div className="text-green-500 text-xs sm:text-sm font-semibold flex items-center gap-1">Taux de présence 75%</div>
         </div>
-        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] w-full">
+        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{activeCaregivers}</span>
             <span className="bg-yellow-50 text-yellow-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21C7 21 2 17 2 12V7a5 5 0 0 1 10 0v5c0 5-5 9-10 9z"/></svg></span>
@@ -255,7 +247,7 @@ export default function Dashboard() {
           <div className="text-gray-500 font-medium text-sm sm:text-base">Intervenants actifs</div>
           <div className="text-gray-400 text-xs sm:text-sm font-medium flex items-center gap-1">— Pas de changement</div>
         </div>
-        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] w-full">
+        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{weeklyAverage}%</span>
             <span className="bg-purple-50 text-purple-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 17l4-4 4 4"/></svg></span>
@@ -264,9 +256,7 @@ export default function Dashboard() {
           <div className="text-green-500 text-xs sm:text-sm font-semibold flex items-center gap-1">+5% depuis la semaine dernière</div>
         </div>
       </div>
-
-      {/* Custom Calendar */}
-      <div className="bg-white rounded-2xl shadow p-2 sm:p-4 md:p-6 border border-[#f3f3fa] w-full max-w-full mx-auto">
+      <div className="bg-white rounded-2xl shadow p-4 md:p-6 border border-[#f3f3fa] w-full mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-6 gap-2">
             <div className="text-lg md:text-2xl font-bold text-gray-900">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
           <div className="flex items-center gap-2">
@@ -274,9 +264,8 @@ export default function Dashboard() {
             <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
           </div>
         </div>
-        {/* Table calendrier : grid en mobile, table classique en sm+ */}
-        <div className="block sm:hidden w-full">
-          <div className="grid grid-cols-7 gap-1" style={{ minWidth: '350px' }}>
+        <div className="block sm:hidden w-full overflow-x-auto">
+          <div className="grid grid-cols-7 gap-1 w-full">
             {weekDays.map((day, i) => (
               <div key={i} className="text-center text-gray-500 font-semibold text-xs py-1">{day}</div>
             ))}
@@ -329,15 +318,15 @@ export default function Dashboard() {
                     ))
                   )}
                   {assigns.length > 2 && (
-                    <div className="text-gray-400 text-xs italic">...et {assigns.length - 2} autres</div>
+                    <div className="text-gray-400 text-xs italic truncate max-w-[70px] overflow-hidden whitespace-nowrap">...et {assigns.length - 2} autres</div>
                   )}
                 </div>
               );
             })}
           </div>
         </div>
-        <div className="hidden sm:block w-full overflow-x-auto">
-          <table className="min-w-[420px] md:min-w-[600px] xl:min-w-[700px] bg-white rounded-lg w-full max-w-full">
+        <div className="hidden sm:block w-full">
+          <table className="w-full table-fixed bg-white rounded-lg">
             <thead>
               <tr>
                 {weekDays.map((day, i) => (
@@ -416,7 +405,6 @@ export default function Dashboard() {
       {saveError && (
         <div className="text-red-600 font-semibold mb-2">{saveError}</div>
       )}
-      {/* Flou de fond personnalisé pour le modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-40 bg-white/40 backdrop-blur-sm transition-all"></div>
       )}
@@ -465,7 +453,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-      {/* Modal enfants gardés un jour donné, groupés par nounou */}
       {dayModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">

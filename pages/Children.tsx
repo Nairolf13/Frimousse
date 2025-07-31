@@ -22,7 +22,7 @@ interface Child {
   group?: string;
   present?: boolean;
   newThisMonth?: boolean;
-  cotisationPaidUntil?: string; // ISO date
+  cotisationPaidUntil?: string; 
 }
 
 interface Assignment {
@@ -103,11 +103,9 @@ export default function Children() {
 
   useEffect(() => {
     fetchChildren();
-    // Récupère les factures pour chaque enfant
     const fetchBillings = async () => {
       try {
         const todayMonth = getCurrentMonth();
-        // On attend d'avoir les enfants chargés
         const childrenRes = await fetch('/api/children', { credentials: 'include' });
         const childrenData: Child[] = await childrenRes.json();
         const billingData: Record<string, Billing> = {};
@@ -156,8 +154,6 @@ export default function Children() {
     }
   };
 
-
-  // Gestion de la modal de suppression
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const handleDelete = async () => {
@@ -182,15 +178,11 @@ export default function Children() {
     }
   };
 
-  // Statistiques
   const totalChildren = children.length;
   const presentToday = children.filter(c => c.present).length;
 
-  // Filtres et tri
   let filtered = children.filter(c => {
-    // Recherche texte
     const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.parentName.toLowerCase().includes(search.toLowerCase());
-    // Filtre groupe dynamique : par champ group OU par âge si group absent/incorrect
     let matchGroup = true;
     if (groupFilter) {
       const group = groupLabels.find(g => g.key === groupFilter);
@@ -203,7 +195,6 @@ export default function Children() {
   if (sort === 'name') filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
   if (sort === 'age') filtered = filtered.sort((a, b) => a.age - b.age);
 
-  // Couleurs de carte
   const cardColors = [
     'bg-blue-50',
     'bg-yellow-50',
@@ -216,7 +207,6 @@ export default function Children() {
   return (
     <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
       <div className="max-w-7xl mx-auto w-full">
-      {/* Header + stats */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des enfants</h1>
@@ -233,7 +223,6 @@ export default function Children() {
         </div>
       </div>
 
-      {/* Filtres, recherche, stats */}
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6 w-full">
         <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom, parent..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
         <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base">
@@ -257,7 +246,6 @@ export default function Children() {
         </div>
       </div>
 
-      {/* Formulaire d'ajout/édition (affiché uniquement si showForm ou édition) */}
       {(showForm || editingId) && (
         <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
           <input name="name" value={form.name} onChange={handleChange} placeholder="Nom" required className="border rounded px-3 py-2" />
@@ -287,7 +275,6 @@ export default function Children() {
         <div className="mb-4 text-green-600 font-semibold text-center bg-green-50 border border-green-200 rounded-lg py-2">{successMsg}</div>
       )}
 
-      {/* Cartes enfants */}
       {loading ? (
         <div>Chargement...</div>
       ) : (
@@ -297,7 +284,6 @@ export default function Children() {
             const color = cardColors[idx % cardColors.length];
             const emoji = emojiBySexe[child.sexe] || '👦';
             const isDeleting = deleteId === child.id;
-            // Cotisation logic
             const now = new Date();
             const paidUntil = child.cotisationPaidUntil ? new Date(child.cotisationPaidUntil) : null;
             const cotisationOk = paidUntil && paidUntil > now;
@@ -340,30 +326,25 @@ export default function Children() {
                   className={`w-full h-full transition-transform duration-500 ${isDeleting ? 'rotate-y-180' : ''}`}
                   style={{transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%'}}
                 >
-                  {/* Face avant (carte enfant) */}
                   <div
                     className={`absolute inset-0 w-full h-full p-5 flex flex-col ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
                     style={{backfaceVisibility: 'hidden'}}
                   >
-                    {/* Avatar + badge âge + sexe */}
                     <div className="flex items-center gap-3 mb-2 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{emoji}</div>
                       <span className="font-semibold text-lg text-gray-900 ml-2 truncate max-w-[120px] min-w-0" title={child.name}>{child.name}</span>
                       <span className="ml-auto text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100 whitespace-nowrap">{child.age} ans</span>
                       <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap" title="Sexe">{child.sexe === 'masculin' ? 'Garçon' : 'Fille'}</span>
                     </div>
-                    {/* Allergies sous l'avatar */}
                     <span className="block text-xs text-yellow-700 flex items-center gap-1 mb-2">
                       <span>⚠️ Allergies :</span>
                       <span className="font-medium">{child.allergies ? child.allergies : <span className="text-gray-400">Aucune</span>}</span>
                     </span>
                   
-                    {/* Parent + contact */}
                     <div className="flex flex-col gap-3 text-sm text-gray-700 mb-4">
                       <span className="block">👤 Parent : {child.parentName}</span>
                       <span className="block">📞 <a href={`tel:${child.parentContact}`} className="text-blue-600 underline hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" title="Appeler le parent">{child.parentContact}</a></span>
                       <span className="block">✉️ <a href={`mailto:${child.parentMail}`} className="text-blue-600 underline hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" title="Envoyer un mail au parent">{child.parentMail}</a></span>
-                      {/* Cotisation annuelle et facture mensuelle sous l'email */}
                       <div className="flex flex-col gap-2 mt-2 mb-0" style={{marginBottom: 0}}>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-gray-700">Cotisation annuelle&nbsp;:</span>
@@ -386,7 +367,6 @@ export default function Children() {
                         </div>
                       </div>
                     </div>
-                    {/* Statut présence + actions alignées */}
                     <div className="flex items-center gap-2 justify-between mt-2">
                       <div className="flex items-center gap-2">
                         {child.present ? (
@@ -404,7 +384,6 @@ export default function Children() {
                       </div>
                     </div>
                   </div>
-                  {/* Face arrière (modal suppression) */}
                   <div
                     className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-8 ${isDeleting ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                     style={{backfaceVisibility: 'hidden', transform: 'rotateY(180deg)'}}

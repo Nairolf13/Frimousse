@@ -55,9 +55,11 @@ export default function Nannies() {
     child: Child;
   }
   
-    const [assignments, setAssignments] = useState<Assignment[]>([]); // Ajout assignments
+    const [assignments, setAssignments] = useState<Assignment[]>([]); 
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
+  const [showPw, setShowPw] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
@@ -88,12 +90,15 @@ export default function Nannies() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    if (form.password && form.password !== confirmPassword) {
+      setError('Les mots de passe ne correspondent pas');
+      return;
+    }
     try {
       const payload = {
         ...form,
         experience: Number(form.experience),
       };
-      // Si email et password sont renseignés, on les garde, sinon on les retire du payload
       if (!payload.email) delete payload.email;
       if (!payload.password) delete payload.password;
       const res = await fetch(editingId ? `/api/nannies/${editingId}` : '/api/nannies', {
@@ -104,6 +109,7 @@ export default function Nannies() {
       });
       if (!res.ok) throw new Error('Erreur lors de la sauvegarde');
       setForm(emptyForm);
+      setConfirmPassword('');
       setEditingId(null);
       fetchNannies();
     } catch (err: unknown) {
@@ -156,7 +162,6 @@ export default function Nannies() {
   return (
     <div className="min-h-screen bg-[#fcfcff] p-2 md:p-4 md:pl-64 w-full">
       <div className="max-w-7xl mx-auto w-full">
-        {/* Header + stats */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
           <div>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">Gestion des nannies</h1>
@@ -174,7 +179,6 @@ export default function Nannies() {
           </div>
         </div>
 
-        {/* Filtres, recherche, stats */}
         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-6 w-full">
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-xs md:text-base w-full md:w-64" />
           <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-xs md:text-base w-full md:w-auto">
@@ -205,7 +209,6 @@ export default function Nannies() {
           </div>
         </div>
 
-        {/* Formulaire d'ajout/édition (modal style, inline pour démo) */}
         {(adding || editingId) && (
           <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
             <input name="name" value={form.name} onChange={handleChange} placeholder="Nom" required className="border rounded px-3 py-2 text-xs md:text-base" />
@@ -216,21 +219,26 @@ export default function Nannies() {
             </select>
             <input name="experience" type="number" value={form.experience} onChange={handleChange} placeholder="Expérience (années)" required className="border rounded px-3 py-2 text-xs md:text-base" />
             <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder="Spécialisations (séparées par virgule)" className="border rounded px-3 py-2 text-xs md:text-base md:col-span-2" />
-            <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder="Téléphone (contact)" className="border rounded px-3 py-2 text-xs md:text-base" />
-            {/* Champs pour le compte utilisateur de la nounou (optionnels) */}
-            <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder="Email (pour accès nounou)" className="border rounded px-3 py-2 text-xs md:text-base" />
-            <input name="password" type="password" value={form.password || ''} onChange={handleChange} placeholder="Mot de passe (pour accès nounou)" className="border rounded px-3 py-2 text-xs md:text-base" />
+            <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder="Téléphone" className="border rounded px-3 py-2 text-xs md:text-base" />
+            <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder="Email " className="border rounded px-3 py-2 text-xs md:text-base" />
+            <div className="relative md:col-span-1">
+              <input name="password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder="Mot de passe" className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
+              <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
+            </div>
+            <div className="relative md:col-span-1">
+              <input name="confirmPassword" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirmer le mot de passe" className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
+              <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
+            </div>
             <div className="md:col-span-2 flex gap-2">
               <button type="submit" className="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600 transition text-xs md:text-base">
                 {editingId ? 'Modifier' : 'Ajouter'}
               </button>
-              <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(false); }} className="bg-gray-300 px-4 py-2 rounded text-xs md:text-base">Annuler</button>
+              <button type="button" onClick={() => { setForm(emptyForm); setConfirmPassword(''); setEditingId(null); setAdding(false); }} className="bg-gray-300 px-4 py-2 rounded text-xs md:text-base">Annuler</button>
             </div>
             {error && <div className="text-red-600 md:col-span-2">{error}</div>}
           </form>
         )}
 
-        {/* Cartes intervenants */}
         {loading ? (
           <div>Chargement...</div>
         ) : (
@@ -246,7 +254,6 @@ export default function Nannies() {
                 'bg-orange-50',
               ];
               const color = cardColors[idx % cardColors.length];
-              // Flip 3D card like Children.tsx
               const isDeleting = deleteId === nanny.id;
               return (
                 <div
@@ -258,12 +265,10 @@ export default function Nannies() {
                     className={`w-full h-full transition-transform duration-500 ${isDeleting ? 'rotate-y-180' : ''}`}
                     style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
                   >
-                    {/* Face avant (carte nounou) */}
                     <div
                       className={`absolute inset-0 w-full h-full p-0 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
                       style={{ backfaceVisibility: 'hidden' }}
                     >
-                      {/* Avatar centré, badge expérience en haut à droite, statut en badge rond */}
                       <div className="w-full flex flex-col items-center relative pt-6 pb-2">
                         <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-3xl shadow border-2 border-gray-100 mb-2">{avatar}</div>
                         <span
@@ -279,7 +284,6 @@ export default function Nannies() {
                         </span>
                         <span className="mt-1 text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">{nanny.experience} ans</span>
                       </div>
-                      {/* Nom centré + disponibilité */}
                       <div className="flex flex-col items-center mb-2">
                         <span className="font-semibold text-base md:text-lg text-gray-900">{nanny.name}</span>
                         <div className="flex flex-col gap-1 items-center mt-1 w-full">
@@ -301,7 +305,6 @@ export default function Nannies() {
                           </span>
                         </div>
                       </div>
-                      {/* Spécialisations en badges, centrées */}
                       {nanny.specializations && nanny.specializations.length > 0 && (
                         <div className="flex flex-wrap justify-center gap-2 mb-2 w-full px-4">
                           {nanny.specializations.map((spec, i) => (
@@ -309,7 +312,6 @@ export default function Nannies() {
                           ))}
                         </div>
                       )}
-                      {/* Enfants assignés, badges ludiques, centrés */}
                       <div className="text-xs md:text-sm text-gray-700 mb-2 w-full flex flex-col items-center">
                         {(() => {
                           const todayStr = new Date().toISOString().split('T')[0];
@@ -326,14 +328,12 @@ export default function Nannies() {
                           );
                         })()}
                       </div>
-                      {/* Actions en bas, centrées, ludiques */}
                       <div className="flex justify-center gap-2 mt-auto mb-4 w-full">
                         <button onClick={() => setPlanningNanny(nanny)} className="bg-cyan-100 text-cyan-700 px-3 md:px-4 py-1 rounded-full font-semibold border border-cyan-200 shadow-sm hover:bg-cyan-200 transition text-xs md:text-base">Voir planning</button>
                         <button onClick={() => handleEdit(nanny)} className="bg-yellow-100 text-yellow-700 px-3 md:px-4 py-1 rounded-full font-semibold border border-yellow-200 shadow-sm hover:bg-yellow-200 transition text-xs md:text-base">Éditer</button>
                         <button onClick={() => setDeleteId(nanny.id)} className="bg-red-100 text-red-600 px-3 md:px-4 py-1 rounded-full font-semibold border border-red-200 shadow-sm hover:bg-red-200 transition text-xs md:text-base">Supprimer</button>
                       </div>
                     </div>
-                    {/* Face arrière (modal suppression) */}
                     <div
                       className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-8 ${isDeleting ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
                       style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}

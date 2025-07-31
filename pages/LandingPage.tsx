@@ -1,7 +1,6 @@
 export default function LandingPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white p-0 m-0">
-      {/* Header */}
       <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-2 px-4">
           <div className="flex items-center gap-2">
@@ -11,20 +10,17 @@ export default function LandingPage() {
             </div>
           </div>
         
-          {/* Boutons cachés sur mobile, visibles sur md+ */}
           <div className="hidden md:flex gap-1">
             <a href="/login" className="border border-gray-300 rounded px-3 py-1 text-gray-700 hover:bg-gray-100 transition text-sm">Connexion</a>
             <a href="/register" className="bg-green-500 text-white rounded px-3 py-1 font-semibold hover:bg-green-600 transition text-sm">Inscription</a>
           </div>
         </div>
       </header>
-      {/* Barre d'action mobile sticky en bas */}
       <div className="fixed bottom-0 left-0 w-full flex md:hidden bg-white border-t border-gray-200 z-20">
         <a href="/login" className="flex-1 text-center py-3 border-r border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition">Connexion</a>
         <a href="/register" className="flex-1 text-center py-3 text-white font-medium bg-green-500 hover:bg-green-600 transition">Inscription</a>
       </div>
 
-      {/* Hero Section */}
       <section className="w-full min-h-[60vh] flex flex-col items-center justify-center text-center p-0 m-0">
         <h1 className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">Prendre soin des enfants,<br />Accompagner les familles</h1>
         <span className="text-gray-500 mb-4 block text-base sm:text-lg">Familles épanouies, organisation optimale</span>
@@ -39,7 +35,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features Section */}
       <section id="services" className="w-full py-8 px-3 sm:py-12 sm:px-6">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-6 text-center">Tout pour gérer votre association sereinement</h2>
         <p className="text-gray-600 mb-8 sm:mb-10 max-w-full sm:max-w-2xl mx-auto text-center text-base sm:text-lg">Gagnez du temps, améliorez la communication et concentrez-vous sur l’essentiel : le bien-être des enfants.</p>
@@ -62,7 +57,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Mission Section */}
       <section className="w-full bg-gradient-to-r from-green-50 to-white py-12 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">Notre mission</h2>
@@ -84,7 +78,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="w-full bg-gray-900 text-gray-100 py-10 px-6 mt-auto">
         <div className="w-full flex flex-col items-center text-center gap-6">
           <div className="flex flex-col items-center gap-2 mb-2">

@@ -9,7 +9,6 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    // On ignore le champ role, il est toujours admin
     if (e.target.name === 'role') return;
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -96,7 +95,6 @@ export default function RegisterPage() {
             </button>
           </div>
         </label>
-        {/* Le rôle est forcé à admin, pas de select affiché */}
         <button type="submit" className="w-full bg-gray-100 text-black border-2 border-gray-300 py-2 rounded-full font-semibold hover:bg-gray-200 transition">S’inscrire</button>
         <div className="mt-4 text-sm text-gray-500">Déjà un compte ? <a href="/login" className="text-green-600 hover:underline">Se connecter</a></div>
       </form>

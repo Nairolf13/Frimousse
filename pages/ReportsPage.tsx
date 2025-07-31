@@ -42,7 +42,6 @@ interface Report {
   childrenInvolved?: number;
 }
 
-// ...
 
 const priorityStyles = {
   haute: 'bg-red-50 border-red-100',
@@ -93,12 +92,10 @@ export default function ReportsPage() {
     return reportDate >= startOfWeek && reportDate <= endOfWeek;
   }).length;
 
-  // Etats pour filtres
   const [filterLast30Days, setFilterLast30Days] = useState(false);
   const [filterType, setFilterType] = useState('');
   const [searchText, setSearchText] = useState('');
 
-  // Filtrage des rapports
   const filteredReports = reports.filter(r => {
     let ok = true;
     if (filterLast30Days) {
@@ -208,7 +205,6 @@ export default function ReportsPage() {
         <div className="w-full max-w-5xl mx-auto">
           <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Rapports d'Incidents</h1>
           <div className="text-base md:text-lg text-gray-500 font-medium mb-4 md:mb-6">Consultez tous les signalements des nounous concernant les incidents, comportements et observations quotidiennes des enfants.</div>
-          {/* Filtres et stats */}
           <div className="flex flex-col md:flex-row flex-wrap gap-2 mb-4 md:mb-6 items-stretch md:items-center">
             <div className="flex gap-2 flex-wrap">
               <button
@@ -237,7 +233,6 @@ export default function ReportsPage() {
             </div>
             <button className="bg-red-500 text-white px-4 md:px-5 py-2 rounded-lg font-bold shadow hover:bg-red-600 transition text-sm md:text-base mt-2 md:mt-0 md:ml-2 w-full md:w-auto" onClick={() => setModalOpen(true)}>Nouveau Rapport</button>
           </div>
-          {/* Statistiques */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-4 md:mb-6">
             <div className="bg-white rounded-xl shadow border border-gray-100 p-3 md:p-4 flex flex-col items-center">
               <div className="text-2xl md:text-3xl font-extrabold text-red-500">{total}</div>
@@ -248,16 +243,13 @@ export default function ReportsPage() {
               <div className="text-xs text-gray-500 mt-1">Cette Semaine</div>
             </div>
           </div>
-        {/* Liste des rapports */}
         <div className="flex flex-col gap-4 md:gap-6">
           {filteredReports.map(report => {
-            // Gestion des initiales si absentes
             const childInitials = report.child?.initials || (report.child?.name ? report.child.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : '');
             const nannyInitials = report.nanny?.initials || (report.nanny?.name ? report.nanny.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : '');
             return (
               <div key={report.id} className={`rounded-xl shadow border-2 ${priorityStyles[report.priority as keyof typeof priorityStyles] || ''} p-0 overflow-hidden`}
                 style={{ minWidth: 0 }}>
-                {/* Bandeau priorité/type */}
                 <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 md:px-6 py-2 ${report.priority === 'haute' ? 'bg-red-50' : report.priority === 'moyenne' ? 'bg-yellow-50' : 'bg-green-50'}`}> 
                   <div className="flex items-center gap-2 md:gap-3 mb-2 sm:mb-0">
                     <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs ${report.type === 'incident' ? 'bg-red-100 text-red-700' : report.type === 'comportement' ? 'bg-yellow-100 text-yellow-700' : report.type === 'soin' ? 'bg-green-100 text-green-700' : ''}`}>{typeLabel[report.type as keyof typeof typeLabel] || report.type}</span>
@@ -270,25 +262,21 @@ export default function ReportsPage() {
                     <span className="font-bold text-yellow-700 text-xs md:text-sm ml-1">{report.nanny?.name}</span>
                   </div>
                 </div>
-                {/* Résumé ou observation */}
                 <div className="px-4 md:px-6 pb-4">
                   <div className="font-bold text-gray-700 mb-1 text-sm md:text-base">{report.type === 'incident' ? 'Résumé du Rapport' : report.type === 'comportement' ? 'Observation Comportementale' : 'Observation de Soin'}</div>
                   <div className="text-gray-700 text-sm md:text-base mb-2">{report.summary}</div>
-                  {/* Infos supplémentaires pour comportement */}
                   {report.type === 'comportement' && (
                     <div className="flex gap-4 md:gap-6 items-center text-xs text-gray-500 mt-2 flex-wrap">
                       <span className="flex items-center gap-1"><span>⏱️</span> Durée : {report.duration}</span>
                       <span className="flex items-center gap-1"><span>👧</span> {report.childrenInvolved} enfants impliqués</span>
                     </div>
                   )}
-                  {/* Bloc auteur/date déplacé en bas à droite */}
                   <div className="flex flex-col items-end mt-4">
                     <span className="text-xs text-gray-500 italic">
                       Rapport établi par <span className="font-bold text-yellow-700">{report.nanny?.name}</span> concernant <span className="font-bold text-blue-700">{report.child?.name}</span>
                     </span>
                     <span className="text-xs text-gray-500">
                       {(() => {
-                        // Formatage date et heure en français
                         let dateObj;
                         try {
                           dateObj = new Date(report.date);
@@ -306,12 +294,10 @@ export default function ReportsPage() {
                     </span>
                   </div>
                 </div>
-                {/* Bouton voir détails supprimé */}
               </div>
             );
           })}
         </div>
-        {/* Modal formulaire création rapport */}
         {modalOpen && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative border-4 border-pink-100 flex flex-col gap-6 animate-fade-in">
@@ -377,7 +363,6 @@ export default function ReportsPage() {
                 <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
                 <input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
                 <textarea placeholder="Résumé du rapport" value={form.summary} onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
-                {/* Champs spécifiques comportement */}
                 {form.type === 'comportement' && (
                   <div className="flex gap-2">
                     <input type="text" placeholder="Durée" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} className="border rounded px-3 py-2 w-1/2" />
