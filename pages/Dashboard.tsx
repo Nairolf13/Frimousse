@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../src/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import AssignmentModal from '../components/AssignmentModal';
+
+const API_URL = import.meta.env.VITE_API_URL;
+
 interface Nanny {
   id: string;
   name: string;
@@ -63,7 +66,7 @@ export default function Dashboard() {
   const [dayModalDate, setDayModalDate] = useState<string>('');
 
   const fetchAssignments = React.useCallback((start?: Date, end?: Date) => {
-    let url = '/api/assignments';
+    let url = `${API_URL}/api/assignments`;
     const params = [];
     if (start && end) {
       params.push(`start=${start.toISOString()}`);
@@ -78,7 +81,6 @@ export default function Dashboard() {
     fetch(url, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
-        console.log('Assignments API response:', data);
         setAssignments(data);
       });
   }, [user]);
@@ -90,12 +92,12 @@ export default function Dashboard() {
     const last = new Date(year, month + 1, 0);
     fetchAssignments(first, last);
 
-    fetch('/api/children', { credentials: 'include' })
+    fetch(`${API_URL}/api/children`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setChildrenCount(Array.isArray(data) ? data.length : 0))
       .catch(() => setChildrenCount(0));
 
-    fetch('/api/nannies', { credentials: 'include' })
+    fetch(`${API_URL}/api/nannies`, { credentials: 'include' })
       .then(res => res.json())
       .then((data: Nanny[]) => {
         if (Array.isArray(data)) {
@@ -170,7 +172,7 @@ export default function Dashboard() {
       return;
     }
     if (selectedId) {
-      await fetch(`/api/assignments/${selectedId}`, {
+      await fetch(`${API_URL}/api/assignments/${selectedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -185,7 +187,7 @@ export default function Dashboard() {
       const last = new Date(year, monthIdx + 1, 0);
       fetchAssignments(first, last);
     } else {
-      const res = await fetch('/api/assignments', {
+      const res = await fetch(`${API_URL}/api/assignments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

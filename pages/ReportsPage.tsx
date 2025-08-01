@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+
+const API_URL = import.meta.env.VITE_API_URL;
+
 const childGroups = [
   { key: 'G1', label: 'Groupe 1 (0-1 ans)' },
   { key: 'G2', label: 'Groupe 2 (1-2 ans)' },
@@ -62,11 +65,11 @@ const typeLabel = {
 export default function ReportsPage() {
 
   useEffect(() => {
-    fetch('/api/children')
+    fetch(`${API_URL}/api/children`)
       .then(res => res.json())
       .then(data => setChildrenList(data))
       .catch(() => setChildrenList([]));
-    fetch('/api/nannies')
+    fetch(`${API_URL}/api/nannies`)
       .then(res => res.json())
       .then(data => setNanniesList(data))
       .catch(() => setNanniesList([]));
@@ -74,7 +77,7 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
 
   useEffect(() => {
-    fetch('/api/reports')
+    fetch(`${API_URL}/api/reports`)
       .then(res => res.json())
       .then(data => setReports(data))
       .catch(() => setReports([]));
@@ -143,11 +146,11 @@ export default function ReportsPage() {
   const [nanniesList, setNanniesList] = useState<{id: string, name: string, role: string}[]>([]);
 
   useEffect(() => {
-    fetch('/api/children')
+    fetch(`${API_URL}/api/children`)
       .then(res => res.json())
       .then(data => setChildrenList(data))
       .catch(() => setChildrenList([]));
-    fetch('/api/nannies')
+    fetch(`${API_URL}/api/nannies`)
       .then(res => res.json())
       .then(data => setNanniesList(data))
       .catch(() => setNanniesList([]));
@@ -168,12 +171,12 @@ export default function ReportsPage() {
       duration: form.type === 'comportement' ? form.duration : undefined,
       childrenInvolved: form.type === 'comportement' ? Number(form.childrenInvolved) || undefined : undefined,
     };
-    await fetch('/api/reports', {
+    await fetch(`${API_URL}/api/reports`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    fetch('/api/reports')
+    fetch(`${API_URL}/api/reports`)
       .then(res => res.json())
       .then(data => setReports(data))
       .catch(() => setReports([]));

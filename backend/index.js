@@ -1,4 +1,6 @@
-require('dotenv').config();
+require('dotenv').config({
+  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
+});
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -12,14 +14,12 @@ const reportsRoutes = require('./routes/reports');
 
 
 app.use(cors({
-  origin: 'http://localhost:5173',
-  credentials: true
-}));
+   origin: process.env.API_URL,
+   credentials: true
+ }));
+
 app.use(express.json());
 app.use(cookieParser());
-
-
-
 
 app.use('/api/me', meRoutes);
 app.use('/api/user/me', meRoutes);

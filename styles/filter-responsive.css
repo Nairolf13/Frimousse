@@ -1,0 +1,7 @@
+@media (min-width: 768px) and (max-width: 950px) {
+  .filter-responsive {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+}

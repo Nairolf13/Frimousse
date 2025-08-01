@@ -1,5 +1,7 @@
 import { useState } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [language, setLanguage] = useState('fr');
@@ -40,7 +42,7 @@ export default function Settings() {
           <button className="bg-red-700 text-white px-4 py-2 rounded mb-2" onClick={() => setShowDeleteModal(true)}>Supprimer le compte</button>
         </div>
         <button className="bg-gray-300 text-gray-700 px-4 py-2 rounded w-full" style={{marginTop: '8px'}} onClick={async () => {
-          await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+          await fetch(`${API_URL}/api/logout`, { method: 'POST', credentials: 'include' });
           window.location.href = '/login';
         }}>Se déconnecter</button>
         {showPasswordModal && (
@@ -59,7 +61,7 @@ export default function Settings() {
                   setPasswordError('Les mots de passe ne correspondent pas');
                   return;
                 }
-                const res = await fetch('/api/user/password', {
+                const res = await fetch(`${API_URL}/api/user/password`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   credentials: 'include',
@@ -112,7 +114,7 @@ export default function Settings() {
                 <button type="button" className="bg-gray-300 px-3 py-1 rounded w-full" onClick={() => setShowDeleteModal(false)}>Annuler</button>
                 <button type="button" className="bg-red-500 text-white px-3 py-1 rounded w-full font-bold" onClick={async () => {
                   setDeleteError('');
-                  const res = await fetch('/api/user', {
+                  const res = await fetch(`${API_URL}/api/user`, {
                     method: 'DELETE',
                     credentials: 'include',
                   });

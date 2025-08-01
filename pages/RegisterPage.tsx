@@ -1,4 +1,5 @@
 import { useState } from 'react';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ email: '', password: '', name: '', role: 'admin' });
@@ -22,7 +23,7 @@ export default function RegisterPage() {
       return;
     }
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)

@@ -1,3 +1,5 @@
+const API_URL = import.meta.env.VITE_API_URL;
+
 import { useState, useEffect } from 'react';
 interface Child {
   id: string;
@@ -40,7 +42,7 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   useEffect(() => {
-    fetch('/api/children', { credentials: 'include' })
+    fetch(`${API_URL}/api/children`, { credentials: 'include' })
       .then(res => res.json())
       .then(setChildren);
   }, []);
@@ -51,7 +53,7 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
     const month = currentDate.getMonth();
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
-    fetch(`/api/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
+    fetch(`${API_URL}/api/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
       .then(res => res.json())
       .then(setAssignments);
   }, [nannyId, currentDate]);
@@ -142,7 +144,7 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
             }
             const [year, month, day] = showForm.date.split('-');
             const isoDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toISOString();
-            const res = await fetch('/api/assignments', {
+            const res = await fetch(`${API_URL}/api/assignments`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
@@ -162,7 +164,7 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
             const monthNow = currentDate.getMonth();
             const first = new Date(yearNow, monthNow, 1);
             const last = new Date(yearNow, monthNow + 1, 0);
-            fetch(`/api/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`,
+            fetch(`${API_URL}/api/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`,
               { credentials: 'include' })
               .then(res => res.json())
               .then(setAssignments);

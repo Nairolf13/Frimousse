@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import NannyCalendar from '../components/NannyCalendar';
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function MonPlanning() {
   const [nannyId, setNannyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/me', { credentials: 'include' })
+    fetch(`${API_URL}/api/me`, { credentials: 'include' })
       .then(res => res.json())
       .then(user => {
         if (user.role === 'nanny' && user.nannyId) {

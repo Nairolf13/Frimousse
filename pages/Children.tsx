@@ -1,3 +1,5 @@
+const API_URL = import.meta.env.VITE_API_URL;
+
 function getCurrentMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -9,6 +11,8 @@ interface Billing {
 }
 
 import { useEffect, useState } from 'react';
+import '../styles/filter-responsive.css';
+import '../styles/children-responsive.css';
 
 interface Child {
   id: string;
@@ -87,8 +91,8 @@ export default function Children() {
     try {
       const today = new Date().toISOString().split('T')[0];
       const [childrenRes, assignmentsRes] = await Promise.all([
-        fetch('/api/children', { credentials: 'include' }),
-        fetch(`/api/assignments?start=${today}&end=${today}`, { credentials: 'include' })
+        fetch(`${API_URL}/api/children`, { credentials: 'include' }),
+        fetch(`${API_URL}/api/assignments?start=${today}&end=${today}`, { credentials: 'include' })
       ]);
       const childrenData: Child[] = await childrenRes.json();
       const assignmentsData: Assignment[] = await assignmentsRes.json();
@@ -106,11 +110,11 @@ export default function Children() {
     const fetchBillings = async () => {
       try {
         const todayMonth = getCurrentMonth();
-        const childrenRes = await fetch('/api/children', { credentials: 'include' });
+        const childrenRes = await fetch(`${API_URL}/api/children`, { credentials: 'include' });
         const childrenData: Child[] = await childrenRes.json();
         const billingData: Record<string, Billing> = {};
         await Promise.all(childrenData.map(async (child) => {
-          const res = await fetch(`/api/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
+          const res = await fetch(`${API_URL}/api/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
           if (res.ok) {
             const data = await res.json();
             billingData[child.id] = { days: data.days, amount: data.amount };
@@ -132,7 +136,7 @@ export default function Children() {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch(editingId ? `/api/children/${editingId}` : '/api/children', {
+      const res = await fetch(editingId ? `${API_URL}/api/children/${editingId}` : `${API_URL}/api/children`, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -160,7 +164,7 @@ export default function Children() {
     if (!deleteId) return;
     setDeleteLoading(true);
     try {
-      const res = await fetch(`/api/children/${deleteId}`, {
+      const res = await fetch(`${API_URL}/api/children/${deleteId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -206,45 +210,46 @@ export default function Children() {
 
   return (
     <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
-      <div className="max-w-7xl mx-auto w-full">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des enfants</h1>
-          <div className="text-gray-400 text-base">Gérez les profils, informations médicales et contacts d'urgence.</div>
+      <div className="max-w-7xl mx-auto w-full children-responsive-row">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full children-responsive-header">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des enfants</h1>
+            <div className="text-gray-400 text-base">Gérez les profils, informations médicales et contacts d'urgence.</div>
+          </div>
+          <div className="flex gap-2 items-center self-end children-responsive-btn">
+            <button
+              type="button"
+              onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
+              className="bg-green-500 text-black font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-green-600 transition h-[60px] min-h-[60px] flex items-center"
+            >
+              Ajouter un enfant
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2 items-center self-end">
-          <button
-            type="button"
-            onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
-            className="bg-green-500 text-black font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-green-600 transition"
-          >
-            Ajouter un enfant
-          </button>
-        </div>
-      </div>
 
-      <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6 w-full">
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom, parent..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
-        <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base">
-          <option value="">Tous les groupes</option>
-          {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
-        </select>
-        <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base">
-          <option value="name">Nom A-Z</option>
-          <option value="age">Âge croissant</option>
-        </select>
-        <div className="flex-1"></div>
-        <div className="flex gap-2">
-          <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px]">
-            <div className="text-xs text-gray-400">Total</div>
-            <div className="text-lg font-bold text-gray-900">{totalChildren}</div>
+        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6 w-full filter-responsive-row children-responsive-filters">
+          <div className="flex flex-col md:flex-row gap-3 w-full children-responsive-filters-inner">
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom, parent..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
+            <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base">
+              <option value="">Tous les groupes</option>
+              {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+            </select>
+            <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base">
+              <option value="name">Nom A-Z</option>
+              <option value="age">Âge croissant</option>
+            </select>
           </div>
-          <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px]">
-            <div className="text-xs text-gray-400">Présents</div>
-            <div className="text-lg font-bold text-gray-900">{presentToday}</div>
+          <div className="flex gap-2 items-center children-responsive-indicators">
+            <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] h-[60px] justify-center">
+              <div className="text-xs text-gray-400">Total</div>
+              <div className="text-lg font-bold text-gray-900">{totalChildren}</div>
+            </div>
+            <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] h-[60px] justify-center">
+              <div className="text-xs text-gray-400">Présents</div>
+              <div className="text-lg font-bold text-gray-900">{presentToday}</div>
+            </div>
           </div>
         </div>
-      </div>
 
       {(showForm || editingId) && (
         <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
@@ -278,7 +283,7 @@ export default function Children() {
       {loading ? (
         <div>Chargement...</div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 w-full">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full children-responsive-grid">
           {filtered.map((child, idx) => {
             const billing = billings[child.id];
             const color = cardColors[idx % cardColors.length];

@@ -1,5 +1,8 @@
 import React from 'react';
+import '../styles/filter-responsive.css';
 import NannyCalendar from '../components/NannyCalendar';
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 
 function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }) {
@@ -70,7 +73,7 @@ export default function Nannies() {
 
   const fetchNannies = () => {
     setLoading(true);
-    fetch('/api/nannies', { credentials: 'include' })
+    fetch(`${API_URL}/api/nannies`, { credentials: 'include' })
       .then(res => res.json())
       .then(setNannies)
       .finally(() => setLoading(false));
@@ -78,7 +81,7 @@ export default function Nannies() {
 
   useEffect(() => {
     fetchNannies();
-    fetch('/api/assignments', { credentials: 'include' })
+    fetch(`${API_URL}/api/assignments`, { credentials: 'include' })
       .then(res => res.json())
       .then(setAssignments);
   }, []);
@@ -101,7 +104,7 @@ export default function Nannies() {
       };
       if (!payload.email) delete payload.email;
       if (!payload.password) delete payload.password;
-      const res = await fetch(editingId ? `/api/nannies/${editingId}` : '/api/nannies', {
+      const res = await fetch(editingId ? `${API_URL}/api/nannies/${editingId}` : `${API_URL}/api/nannies`, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -130,7 +133,7 @@ export default function Nannies() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      const res = await fetch(`/api/nannies/${deleteId}`, {
+      const res = await fetch(`${API_URL}/api/nannies/${deleteId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -160,39 +163,28 @@ export default function Nannies() {
   );
 
   return (
-    <div className="min-h-screen bg-[#fcfcff] p-2 md:p-4 md:pl-64 w-full">
-      <div className="max-w-7xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
+
+    <div className="min-h-screen bg-[#fcfcff] p-2 sm:p-4 md:pl-64 w-full">
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full">
           <div>
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">Gestion des nannies</h1>
             <div className="text-gray-400 text-sm md:text-base">Gérez les profils, plannings, qualifications et affectations des intervenants.</div>
           </div>
-          <div className="flex gap-2 items-center self-end">
-            <button className="bg-white border border-gray-200 rounded-lg px-3 md:px-4 py-2 text-gray-700 font-semibold shadow hover:bg-gray-100 transition text-xs md:text-base">Exporter</button>
+        </div>
+
+        {/* Buttons and indicator cards on the same left-aligned line above filters, switch to column between 768px and 950px */}
+        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full lg:flex-row lg:items-center lg:gap-4 lg:mb-6 lg:w-full md:max-w-md md:w-full">
+          <div className="flex gap-2 items-center mb-2 md:mb-0">
             <button
               type="button"
               onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
-              className="bg-green-500 text-black font-semibold rounded-lg px-4 md:px-5 py-2 text-xs md:text-base shadow hover:bg-green-600 transition"
+              className="bg-green-500 text-black font-semibold rounded-lg px-4 md:px-5 py-2 md:py-4 text-xs md:text-base shadow hover:bg-green-600 transition flex items-center h-[56px] md:h-[60px]"
             >
               Ajouter une nounou
             </button>
           </div>
-        </div>
-
-        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-6 w-full">
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-xs md:text-base w-full md:w-64" />
-          <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-xs md:text-base w-full md:w-auto">
-            <option value="">Toute disponibilité</option>
-            <option value="Disponible">Disponible</option>
-            <option value="En congé">En congé</option>
-          </select>
-          <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-xs md:text-base w-full md:w-auto">
-            <option value="">Toute expérience</option>
-            <option value="junior">Junior (-3 ans)</option>
-            <option value="senior">Senior (3+ ans)</option>
-          </select>
-          <div className="flex-1"></div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap justify-start w-full">
             <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px]">
               <div className="text-xs text-gray-400">Total</div>
               <div className="text-base md:text-lg font-bold text-gray-900">{totalNannies}</div>
@@ -205,8 +197,23 @@ export default function Nannies() {
               <div className="text-xs text-gray-400">En congé</div>
               <div className="text-base md:text-lg font-bold text-gray-900">{onLeave}</div>
             </div>
-            
           </div>
+        </div>
+
+        {/* Filters below indicator cards, switch to column between 768px and 950px */}
+        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-6 w-full filter-responsive">
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-xs md:text-base w-full md:w-64" />
+          <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-xs md:text-base w-full md:w-auto">
+            <option value="">Toute disponibilité</option>
+            <option value="Disponible">Disponible</option>
+            <option value="En congé">En congé</option>
+          </select>
+          <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-xs md:text-base w-full md:w-auto">
+            <option value="">Toute expérience</option>
+            <option value="junior">Junior (-3 ans)</option>
+            <option value="senior">Senior (3+ ans)</option>
+          </select>
+          <div className="flex-1"></div>
         </div>
 
         {(adding || editingId) && (
@@ -242,7 +249,7 @@ export default function Nannies() {
         {loading ? (
           <div>Chargement...</div>
         ) : (
-          <div className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 w-full">
             {filtered.map((nanny, idx) => {
               const avatar = avatarEmojis[idx % avatarEmojis.length];
               const cardColors = [
@@ -258,9 +265,23 @@ export default function Nannies() {
               return (
                 <div
                   key={nanny.id}
-                  className={`rounded-2xl shadow-lg ${color} relative flex flex-col min-h-[320px] h-full transition-transform duration-500 perspective-1000`}
+                  className={`rounded-2xl shadow-lg ${color} relative flex flex-col min-h-[320px] h-full transition-transform duration-500 perspective-1000 max-w-xs w-full`}
                   style={{ height: '100%', perspective: '1000px' }}
                 >
+                  {/* Badge always at top right of card, never inside avatar */}
+                  <span
+                    className={`absolute text-xs font-bold px-3 py-1 rounded-full shadow border whitespace-nowrap
+                      ${nanny.availability === 'Disponible'
+                        ? 'bg-green-100 text-green-700 border-green-200'
+                        : nanny.availability === 'En_congé'
+                        ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
+                        : 'bg-red-100 text-red-700 border-red-200'}
+                      right-4 top-4
+                      `}
+                    style={{zIndex:2}}
+                  >
+                    {nanny.availability === 'En_congé' ? 'En congé' : nanny.availability}
+                  </span>
                   <div
                     className={`w-full h-full transition-transform duration-500 ${isDeleting ? 'rotate-y-180' : ''}`}
                     style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
@@ -270,18 +291,9 @@ export default function Nannies() {
                       style={{ backfaceVisibility: 'hidden' }}
                     >
                       <div className="w-full flex flex-col items-center relative pt-6 pb-2">
-                        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-3xl shadow border-2 border-gray-100 mb-2">{avatar}</div>
-                        <span
-                          className={`absolute right-4 top-4 text-xs font-bold px-3 py-1 rounded-full shadow border ${
-                            nanny.availability === 'Disponible'
-                              ? 'bg-green-100 text-green-700 border-green-200'
-                              : nanny.availability === 'En_congé'
-                              ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
-                              : 'bg-red-100 text-red-700 border-red-200'
-                          }`}
-                        >
-                          {nanny.availability === 'En_congé' ? 'En congé' : nanny.availability}
-                        </span>
+                        <div className="relative w-16 h-16 mb-2 flex items-center justify-center">
+                          <span className="rounded-full bg-white flex items-center justify-center text-3xl shadow border-2 border-gray-100 w-16 h-16">{avatar}</span>
+                        </div>
                         <span className="mt-1 text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">{nanny.experience} ans</span>
                       </div>
                       <div className="flex flex-col items-center mb-2">
@@ -328,10 +340,19 @@ export default function Nannies() {
                           );
                         })()}
                       </div>
-                      <div className="flex justify-center gap-2 mt-auto mb-4 w-full">
-                        <button onClick={() => setPlanningNanny(nanny)} className="bg-cyan-100 text-cyan-700 px-3 md:px-4 py-1 rounded-full font-semibold border border-cyan-200 shadow-sm hover:bg-cyan-200 transition text-xs md:text-base">Voir planning</button>
-                        <button onClick={() => handleEdit(nanny)} className="bg-yellow-100 text-yellow-700 px-3 md:px-4 py-1 rounded-full font-semibold border border-yellow-200 shadow-sm hover:bg-yellow-200 transition text-xs md:text-base">Éditer</button>
-                        <button onClick={() => setDeleteId(nanny.id)} className="bg-red-100 text-red-600 px-3 md:px-4 py-1 rounded-full font-semibold border border-red-200 shadow-sm hover:bg-red-200 transition text-xs md:text-base">Supprimer</button>
+                      <div className="flex flex-row flex-wrap justify-center gap-2 mt-auto mb-4 w-full min-w-0">
+                        <button
+                          onClick={() => setPlanningNanny(nanny)}
+                          className="w-[90px] min-w-[80px] max-w-[100px] bg-cyan-100 text-cyan-700 px-2 py-1 rounded-full font-semibold border border-cyan-200 shadow-sm hover:bg-cyan-200 transition text-xs text-center"
+                        >Planning</button>
+                        <button
+                          onClick={() => handleEdit(nanny)}
+                          className="w-[90px] min-w-[80px] max-w-[100px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold border border-yellow-200 shadow-sm hover:bg-yellow-200 transition text-xs text-center"
+                        >Éditer</button>
+                        <button
+                          onClick={() => setDeleteId(nanny.id)}
+                          className="w-[90px] min-w-[80px] max-w-[100px] bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold border border-red-200 shadow-sm hover:bg-red-200 transition text-xs text-center"
+                        >Supprimer</button>
                       </div>
                     </div>
                     <div
