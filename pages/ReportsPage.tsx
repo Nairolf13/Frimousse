@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -65,11 +66,11 @@ const typeLabel = {
 export default function ReportsPage() {
 
   useEffect(() => {
-    fetch(`${API_URL}/api/children`)
+    fetchWithRefresh(`${API_URL}/api/children`)
       .then(res => res.json())
       .then(data => setChildrenList(data))
       .catch(() => setChildrenList([]));
-    fetch(`${API_URL}/api/nannies`)
+    fetchWithRefresh(`${API_URL}/api/nannies`)
       .then(res => res.json())
       .then(data => setNanniesList(data))
       .catch(() => setNanniesList([]));
@@ -77,7 +78,7 @@ export default function ReportsPage() {
   const [reports, setReports] = useState<Report[]>([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/reports`)
+    fetchWithRefresh(`${API_URL}/api/reports`)
       .then(res => res.json())
       .then(data => setReports(data))
       .catch(() => setReports([]));
@@ -146,11 +147,11 @@ export default function ReportsPage() {
   const [nanniesList, setNanniesList] = useState<{id: string, name: string, role: string}[]>([]);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/children`)
+    fetchWithRefresh(`${API_URL}/api/children`)
       .then(res => res.json())
       .then(data => setChildrenList(data))
       .catch(() => setChildrenList([]));
-    fetch(`${API_URL}/api/nannies`)
+    fetchWithRefresh(`${API_URL}/api/nannies`)
       .then(res => res.json())
       .then(data => setNanniesList(data))
       .catch(() => setNanniesList([]));
@@ -171,12 +172,12 @@ export default function ReportsPage() {
       duration: form.type === 'comportement' ? form.duration : undefined,
       childrenInvolved: form.type === 'comportement' ? Number(form.childrenInvolved) || undefined : undefined,
     };
-    await fetch(`${API_URL}/api/reports`, {
+    await fetchWithRefresh(`${API_URL}/api/reports`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    fetch(`${API_URL}/api/reports`)
+    fetchWithRefresh(`${API_URL}/api/reports`)
       .then(res => res.json())
       .then(data => setReports(data))
       .catch(() => setReports([]));

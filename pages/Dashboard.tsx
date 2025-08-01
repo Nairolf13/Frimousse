@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../src/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import AssignmentModal from '../components/AssignmentModal';
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -78,7 +79,7 @@ export default function Dashboard() {
     if (params.length > 0) {
       url += '?' + params.join('&');
     }
-    fetch(url, { credentials: 'include' })
+    fetchWithRefresh(url, { credentials: 'include' })
       .then(res => res.json())
       .then(data => {
         setAssignments(data);
@@ -92,7 +93,7 @@ export default function Dashboard() {
     const last = new Date(year, month + 1, 0);
     fetchAssignments(first, last);
 
-    fetch(`${API_URL}/api/children`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setChildrenCount(Array.isArray(data) ? data.length : 0))
       .catch(() => setChildrenCount(0));
@@ -172,7 +173,7 @@ export default function Dashboard() {
       return;
     }
     if (selectedId) {
-      await fetch(`${API_URL}/api/assignments/${selectedId}`, {
+      await fetchWithRefresh(`${API_URL}/api/assignments/${selectedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -187,7 +188,7 @@ export default function Dashboard() {
       const last = new Date(year, monthIdx + 1, 0);
       fetchAssignments(first, last);
     } else {
-      const res = await fetch(`${API_URL}/api/assignments`, {
+      const res = await fetchWithRefresh(`${API_URL}/api/assignments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -433,7 +434,7 @@ export default function Dashboard() {
                 >Annuler</button>
                 <button
                   onClick={async () => {
-                    await fetch(`/api/assignments/${selectedId}`, {
+                    await fetchWithRefresh(`/api/assignments/${selectedId}`, {
                       method: 'DELETE',
                       credentials: 'include',
                     });

@@ -1,6 +1,7 @@
 import React from 'react';
 import '../styles/filter-responsive.css';
 import NannyCalendar from '../components/NannyCalendar';
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -73,7 +74,7 @@ export default function Nannies() {
 
   const fetchNannies = () => {
     setLoading(true);
-    fetch(`${API_URL}/api/nannies`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/api/nannies`, { credentials: 'include' })
       .then(res => res.json())
       .then(setNannies)
       .finally(() => setLoading(false));
@@ -81,7 +82,7 @@ export default function Nannies() {
 
   useEffect(() => {
     fetchNannies();
-    fetch(`${API_URL}/api/assignments`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/api/assignments`, { credentials: 'include' })
       .then(res => res.json())
       .then(setAssignments);
   }, []);
@@ -133,7 +134,7 @@ export default function Nannies() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      const res = await fetch(`${API_URL}/api/nannies/${deleteId}`, {
+      const res = await fetchWithRefresh(`${API_URL}/api/nannies/${deleteId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -173,7 +174,6 @@ export default function Nannies() {
           </div>
         </div>
 
-        {/* Buttons and indicator cards on the same left-aligned line above filters, switch to column between 768px and 950px */}
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full lg:flex-row lg:items-center lg:gap-4 lg:mb-6 lg:w-full md:max-w-md md:w-full">
           <div className="flex gap-2 items-center mb-2 md:mb-0">
             <button
@@ -200,7 +200,6 @@ export default function Nannies() {
           </div>
         </div>
 
-        {/* Filters below indicator cards, switch to column between 768px and 950px */}
         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-6 w-full filter-responsive">
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-xs md:text-base w-full md:w-64" />
           <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-xs md:text-base w-full md:w-auto">
@@ -268,7 +267,6 @@ export default function Nannies() {
                   className={`rounded-2xl shadow-lg ${color} relative flex flex-col min-h-[320px] h-full transition-transform duration-500 perspective-1000 max-w-xs w-full`}
                   style={{ height: '100%', perspective: '1000px' }}
                 >
-                  {/* Badge always at top right of card, never inside avatar */}
                   <span
                     className={`absolute text-xs font-bold px-3 py-1 rounded-full shadow border whitespace-nowrap
                       ${nanny.availability === 'Disponible'

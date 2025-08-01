@@ -1,3 +1,4 @@
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 const API_URL = import.meta.env.VITE_API_URL;
 
 function getCurrentMonth() {
@@ -91,8 +92,8 @@ export default function Children() {
     try {
       const today = new Date().toISOString().split('T')[0];
       const [childrenRes, assignmentsRes] = await Promise.all([
-        fetch(`${API_URL}/api/children`, { credentials: 'include' }),
-        fetch(`${API_URL}/api/assignments?start=${today}&end=${today}`, { credentials: 'include' })
+        fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' }),
+        fetchWithRefresh(`${API_URL}/api/assignments?start=${today}&end=${today}`, { credentials: 'include' })
       ]);
       const childrenData: Child[] = await childrenRes.json();
       const assignmentsData: Assignment[] = await assignmentsRes.json();
@@ -110,11 +111,11 @@ export default function Children() {
     const fetchBillings = async () => {
       try {
         const todayMonth = getCurrentMonth();
-        const childrenRes = await fetch(`${API_URL}/api/children`, { credentials: 'include' });
+        const childrenRes = await fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' });
         const childrenData: Child[] = await childrenRes.json();
         const billingData: Record<string, Billing> = {};
         await Promise.all(childrenData.map(async (child) => {
-          const res = await fetch(`${API_URL}/api/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
+          const res = await fetchWithRefresh(`${API_URL}/api/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
           if (res.ok) {
             const data = await res.json();
             billingData[child.id] = { days: data.days, amount: data.amount };
@@ -136,7 +137,7 @@ export default function Children() {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch(editingId ? `${API_URL}/api/children/${editingId}` : `${API_URL}/api/children`, {
+      const res = await fetchWithRefresh(editingId ? `${API_URL}/api/children/${editingId}` : `${API_URL}/api/children`, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -164,7 +165,7 @@ export default function Children() {
     if (!deleteId) return;
     setDeleteLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/children/${deleteId}`, {
+      const res = await fetchWithRefresh(`${API_URL}/api/children/${deleteId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -304,7 +305,7 @@ export default function Children() {
             }
             const handleCotisation = async () => {
               setCotisationLoadingId(child.id);
-              await fetch(`/api/children/${child.id}`, {
+              await fetchWithRefresh(`/api/children/${child.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

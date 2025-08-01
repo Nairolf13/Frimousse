@@ -1,4 +1,7 @@
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+
 const API_URL = import.meta.env.VITE_API_URL;
+
 
 import { useState, useEffect } from 'react';
 interface Child {
@@ -42,7 +45,7 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   useEffect(() => {
-    fetch(`${API_URL}/api/children`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' })
       .then(res => res.json())
       .then(setChildren);
   }, []);
@@ -53,7 +56,7 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
     const month = currentDate.getMonth();
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
-    fetch(`${API_URL}/api/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/api/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
       .then(res => res.json())
       .then(setAssignments);
   }, [nannyId, currentDate]);

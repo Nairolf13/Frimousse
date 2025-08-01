@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from './Sidebar';
 import { useNavigate, useOutlet } from 'react-router-dom';
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -11,7 +12,7 @@ export default function ProtectedLayout() {
   const outlet = useOutlet();
 
   useEffect(() => {
-    fetch(`${API_URL}/api/user/me`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/api/user/me`, { credentials: 'include' })
       .then(res => setAuthenticated(res.ok))
       .finally(() => setLoading(false));
   }, []);

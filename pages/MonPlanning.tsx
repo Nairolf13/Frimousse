@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import NannyCalendar from '../components/NannyCalendar';
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -8,7 +9,7 @@ export default function MonPlanning() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/me`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/api/me`, { credentials: 'include' })
       .then(res => res.json())
       .then(user => {
         if (user.role === 'nanny' && user.nannyId) {

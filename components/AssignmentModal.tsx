@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -24,10 +25,10 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
 
   useEffect(() => {
     if (open) {
-      fetch(`${API_URL}/api/children`, { credentials: 'include' })
+      fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' })
         .then(res => res.json())
         .then(setChildren);
-      fetch(`${API_URL}/api/nannies`, { credentials: 'include' })
+      fetchWithRefresh(`${API_URL}/api/nannies`, { credentials: 'include' })
         .then(res => res.json())
         .then(setNannies);
       setForm(initial || { date: '', childId: '', nannyId: '' });
