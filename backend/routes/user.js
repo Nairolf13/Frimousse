@@ -13,4 +13,15 @@ router.get('/me', auth, async (req, res) => {
   res.json(user);
 });
 
+
+// Endpoint pour récupérer tous les utilisateurs (admin inclus)
+router.get('/all', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({ select: { id: true, role: true } });
+    res.json(users);
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur lors de la récupération des utilisateurs.' });
+  }
+});
+
 module.exports = router;

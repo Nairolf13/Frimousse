@@ -1,7 +1,13 @@
+import GuideStartPage from '../pages/GuideStartPage';
+import GuideAddChildPage from '../pages/GuideAddChildPage';
+import GuidePlanningPage from '../pages/GuidePlanningPage';
+import GuideExportReportPage from '../pages/GuideExportReportPage';
+import GuideSecurityPage from '../pages/GuideSecurityPage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from '../pages/LandingPage';
 import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
+
 import Dashboard from '../pages/Dashboard';
 import Children from '../pages/Children';
 import Nannies from '../pages/Nannies';
@@ -12,14 +18,35 @@ import ReportsPage from '../pages/ReportsPage';
 import Settings from '../pages/Settings';
 
 
+import AboutPage from '../pages/AboutPage';
+import FeaturesPage from '../pages/FeaturesPage';
+import PricingPage from '../pages/PricingPage';
+import SupportPage from '../pages/SupportPage';
+import PrivacyPolicyPage from '../pages/PrivacyPolicyPage';
+import TermsPage from '../pages/TermsPage';
+import LegalNoticePage from '../pages/LegalNoticePage';
+
+
 
 export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+  <Route path="/login" element={<LoginPage />} />
+  <Route path="/register" element={<RegisterPage />} />
+  <Route path="/about" element={<AboutPage />} />
+  <Route path="/fonctionnalites" element={<FeaturesPage />} />
+  <Route path="/tarifs" element={<PricingPage />} />
+  <Route path="/support" element={<SupportPage />} />
+  <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
+  <Route path="/cgu" element={<TermsPage />} />
+  <Route path="/mentions-legales" element={<LegalNoticePage />} />
+  <Route path="/guide-demarrage" element={<GuideStartPage />} />
+  <Route path="/guide-ajouter-enfant" element={<GuideAddChildPage />} />
+  <Route path="/guide-planning" element={<GuidePlanningPage />} />
+  <Route path="/guide-export-rapport" element={<GuideExportReportPage />} />
+  <Route path="/guide-securite" element={<GuideSecurityPage />} />
         <Route element={<ProtectedLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/children" element={<Children />} />

@@ -14,9 +14,23 @@ const reportsRoutes = require('./routes/reports');
 
 
 app.use(cors({
-   origin: process.env.API_URL,
-   credentials: true
- }));
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      process.env.API_URL,
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'http://localhost:4000',
+      'http://192.168.1.64:5173', 
+    ];
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -26,6 +40,10 @@ app.use('/api/user/me', meRoutes);
 app.use('/api/nannies', nanniesRoutes);
 app.use('/api/children', childrenRoutes);
 app.use('/api/reports', reportsRoutes);
+
+
+const userRoutes = require('./routes/user');
+app.use('/api/user', userRoutes);
 
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);

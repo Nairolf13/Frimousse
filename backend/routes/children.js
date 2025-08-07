@@ -1,8 +1,19 @@
+
+
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+
+router.get('/count', async (req, res) => {
+  try {
+    const count = await prisma.child.count();
+    res.json({ count });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 router.get('/:id/billing', auth, async (req, res) => {
   const { id } = req.params;
