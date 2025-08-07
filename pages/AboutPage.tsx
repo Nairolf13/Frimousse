@@ -1,4 +1,3 @@
-import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 
@@ -118,7 +117,6 @@ export default function AboutPage() {
               <strong>Frimousse</strong> s’adresse à toutes les structures d’accueil collectif ou familial&nbsp;: crèches associatives, micro-crèches, garderies, centres de loisirs, MAM, etc. Notre solution accompagne les professionnels dans leur mission d’accueil, de suivi et d’épanouissement des enfants.
             </div>
 
-            {/* Section : Pourquoi la digitalisation de la garde d'enfants ? */}
             <div className="mt-12 text-left max-w-3xl mx-auto">
               <h2 className="text-2xl font-bold text-green-700 mb-4">Pourquoi digitaliser la gestion de la garde d’enfants&nbsp;?</h2>
               <p className="mb-4">La gestion de la garde d’enfants implique de nombreux défis&nbsp;: suivi des présences, gestion des plannings, communication avec les familles, respect des normes administratives et sanitaires, sécurité des données, etc. La digitalisation permet de centraliser toutes ces tâches, d’automatiser les processus répétitifs et de garantir une traçabilité optimale pour chaque enfant accueilli.</p>
@@ -130,7 +128,6 @@ export default function AboutPage() {
               </ul>
             </div>
 
-            {/* Section : Sécurité et conformité */}
             <div className="mt-12 text-left max-w-3xl mx-auto">
               <h2 className="text-2xl font-bold text-green-700 mb-4">Sécurité, confidentialité et conformité RGPD</h2>
               <p className="mb-4">La sécurité des données des enfants et des familles est une priorité absolue. Frimousse met en œuvre&nbsp;:</p>
@@ -142,7 +139,6 @@ export default function AboutPage() {
               </ul>
             </div>
 
-            {/* Section : Bénéfices pour les familles et intervenants */}
             <div className="mt-12 text-left max-w-3xl mx-auto">
               <h2 className="text-2xl font-bold text-green-700 mb-4">Quels bénéfices pour les familles et les intervenants&nbsp;?</h2>
               <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
@@ -152,7 +148,6 @@ export default function AboutPage() {
               </ul>
             </div>
 
-            {/* Section : L'impact de Frimousse */}
             <div className="mt-12 text-left max-w-3xl mx-auto">
               <h2 className="text-2xl font-bold text-green-700 mb-4">L’impact de Frimousse sur la qualité de l’accueil</h2>
               <p className="mb-4">En centralisant toutes les informations et en fluidifiant la communication, Frimousse permet aux équipes de se concentrer sur l’essentiel&nbsp;: le bien-être, l’éveil et la sécurité des enfants. L’application favorise l’implication des familles, la personnalisation de l’accueil et l’amélioration continue des pratiques professionnelles.</p>
