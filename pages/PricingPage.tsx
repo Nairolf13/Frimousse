@@ -1,19 +1,21 @@
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 
+
 const plans = [
   {
     name: 'Découverte',
     price: '0€',
-  description: 'Pour tester Frimousse sans engagement (15 jours max)',
+    description: 'Pour tester Frimousse sans engagement (15 jours max)',
     features: [
       'Jusqu’à 10 enfants',
       'Gestion de base des plannings',
       'Support par email',
       'Accès web responsive',
     ],
-    cta: 'Commencer gratuitement',
+    cta: 'Essai gratuit',
     highlight: false,
+    buyButtonId: null,
   },
   {
     name: 'Essentiel',
@@ -28,6 +30,8 @@ const plans = [
     ],
     cta: 'Choisir Essentiel',
     highlight: false,
+  buyButtonId: 'buy_btn_1Ru88bExeKKlzm3U232ITaMN', 
+  productId: 'prod_SpdCOBUbbne4oo',
   },
   {
     name: 'Pro',
@@ -43,11 +47,14 @@ const plans = [
     ],
     cta: 'Choisir Pro',
     highlight: true,
+    buyButtonId: 'buy_btn_1Ru84HExeKKlzm3UMPmR820n', 
+    productId: 'prod_SpdCOBUbbne4oo',
   },
 ];
 
 export default function PricingPage() {
   const navigate = useNavigate();
+
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white p-0 m-0">
       <Helmet>
@@ -58,6 +65,9 @@ export default function PricingPage() {
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://frimousse-asso.fr/tarifs" />
         <meta property="og:image" content="/frimousse-cover.png" />
+  <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+        {/* Stripe Buy Button script */}
+        <script async src="https://js.stripe.com/v3/buy-button.js"></script>
       </Helmet>
       <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-2 px-4">
@@ -83,12 +93,12 @@ export default function PricingPage() {
             <p className="text-gray-700 text-base sm:text-lg mb-10">
               Des forfaits simples et transparents, adaptés à toutes les structures d’accueil d’enfants : crèches associatives, micro-crèches, garderies, centres de loisirs, MAM…
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch w-full">
               {plans.map((plan, idx) => (
                 <div
                   key={idx}
-                  className={`rounded-lg border shadow p-6 flex flex-col items-center bg-white ${plan.highlight ? 'border-green-600 shadow-lg' : 'border-gray-100'} h-full min-h-[440px]`}
-                  style={{height: '100%'}}
+                  className={`rounded-lg border shadow p-6 flex flex-col items-center bg-white ${plan.highlight ? 'border-green-600 shadow-lg' : 'border-gray-100'} h-full min-w-0 w-full max-w-md mx-auto md:max-w-[420px] md:w-full md:h-auto`}
+                  style={{width: '100%', maxWidth: '420px', margin: '0 auto'}}
                 >
                   <h2 className={`text-xl font-bold mb-2 ${plan.highlight ? 'text-green-700' : 'text-gray-800'}`}>{plan.name}</h2>
                   <div className="text-3xl font-extrabold mb-2">{plan.price}</div>
@@ -100,7 +110,31 @@ export default function PricingPage() {
                       ))}
                     </ul>
                   </div>
-                  <button className={`mt-auto px-4 py-2 rounded font-semibold transition ${plan.highlight ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>{plan.cta}</button>
+                  {plan.buyButtonId ? (
+                    <>
+                      <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+                      <div
+                        className="w-full flex justify-center mt-2"
+                        style={{overflow: 'hidden'}}
+                        dangerouslySetInnerHTML={{
+                          __html: `<div style='max-width:140px;width:100%;display:flex;justify-content:center;margin:0 auto;'><stripe-buy-button buy-button-id="${plan.buyButtonId}" publishable-key="pk_test_51RtxT0ExeKKlzm3UmxayzpTJm1VnNuLMeyq0QAhTaJxVf7Yid5Ec5UpBgSk27T018lVDFBvBPReDOBgHfTSmMsZ70032QMqtZW"></stripe-buy-button></div>`
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <div className="w-full flex justify-center mt-2 relative" style={{position: 'relative'}}>
+                      <button
+                        className="BuyButton-Button is-cardLayout h-[44px] px-6 py-0 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 flex items-center justify-center cursor-pointer mt-0"
+                        type="button"
+                        style={{borderRadius: 0, backgroundColor: '#00a63e', color: '#fff', position: 'absolute', top: '-122px', left: 0, right: 0, margin: 'auto', zIndex: 20, height: '44px'}}
+                        onClick={() => navigate('/register')}
+                      >
+                        <span className="BuyButton-ButtonText Text Text-color--default Text-fontWeight--500 Text--truncate" data-testid="hosted-buy-button-text">
+                          {plan.cta}
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -6,6 +6,12 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const app = express();
 
+// Stripe integration
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('La clé STRIPE_SECRET_KEY doit être définie dans le fichier .env ou l’environnement.');
+}
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 
 const meRoutes = require('./routes/me');
 const nanniesRoutes = require('./routes/nannies');
@@ -56,6 +62,44 @@ app.use('/api', schedulesRoutes);
 
 app.get('/', (req, res) => {
   res.send('API is running');
+});
+
+// Endpoint pour créer un PaymentIntent
+app.post('/create-payment-intent', async (req, res) => {
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: 1000, // Montant en centimes (10€)
+      currency: 'eur',
+      automatic_payment_methods: {enabled: true},
+    });
+    res.send({ clientSecret: paymentIntent.client_secret });
+  } catch (error) {
+    res.status(500).send({error: error.message});
+  }
+});
+
+// Endpoint webhook Stripe
+app.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_...';
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+  } catch (err) {
+    return res.status(400).send(`Erreur de webhook: ${err.message}`);
+  }
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      const paymentIntent = event.data.object;
+      console.log('Paiement réussi:', paymentIntent.id);
+      break;
+    case 'payment_intent.payment_failed':
+      console.log('Échec du paiement');
+      break;
+    default:
+      console.log(`Événement non traité: ${event.type}`);
+  }
+  res.send();
 });
 
 
