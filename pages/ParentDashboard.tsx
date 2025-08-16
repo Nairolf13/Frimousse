@@ -38,9 +38,12 @@ const ParentDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adminData, setAdminData] = useState<AdminData>(null);
+  const [parentBilling, setParentBilling] = useState<Record<string, number>>({});
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [showChildModal, setShowChildModal] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [editingParent, setEditingParent] = useState<Parent | null>(null);
+  const [deletingParentId, setDeletingParentId] = useState<string | null>(null);
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -61,6 +64,33 @@ const ParentDashboard: React.FC = () => {
             throw new Error(message);
           }
           setAdminData(json as AdminData);
+          // compute billing totals per parent for current month
+          try {
+            const now = new Date();
+            const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const parentsList = (json && typeof json === 'object' && 'parents' in (json as any)) ? (json as any).parents : [];
+            const billingMap: Record<string, number> = {};
+            await Promise.all((parentsList || []).map(async (p: any) => {
+              let total = 0;
+              const childrenArr = Array.isArray(p.children) ? p.children : [];
+              await Promise.all(childrenArr.map(async (ci: any) => {
+                const childId = ci?.child?.id || ci?.id;
+                if (!childId) return;
+                try {
+                  const res = await fetchWithRefresh(`${resolvedApi}/api/children/${childId}/billing?month=${month}`, { credentials: 'include' });
+                  if (!res.ok) return;
+                  const data = await res.json();
+                  if (data && typeof data.amount === 'number') total += data.amount;
+                } catch (e) {
+                  // ignore per-child failure
+                }
+              }));
+              billingMap[String(p.id)] = total;
+            }));
+            setParentBilling(billingMap);
+          } catch (e) {
+            // ignore billing errors
+          }
         } else {
           const res = await fetchWithRefresh(`${resolvedApi}/api/parent/children`, { credentials: 'include' });
           const text = await res.text();
@@ -123,7 +153,7 @@ const ParentDashboard: React.FC = () => {
             </div>
           </div>
 
-          {adding && (
+          {(adding || editingParent) && (
             <form onSubmit={async (e) => {
               e.preventDefault();
               setFormError(null);
@@ -140,8 +170,11 @@ const ParentDashboard: React.FC = () => {
                 const payload: CreateParentPayload = { name: `${form.firstName} ${form.lastName}`, email: form.email, phone: form.phone };
                 if (form.password) payload.password = form.password;
 
-                const res = await fetchWithRefresh(`${resolvedApi}/api/parent`, {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload)
+                const url = editingParent ? `${resolvedApi}/api/parent/${editingParent.id}` : `${resolvedApi}/api/parent`;
+                const method = editingParent ? 'PUT' : 'POST';
+
+                const res = await fetchWithRefresh(url, {
+                  method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload)
                 });
                 let resBody: unknown = null;
                 try { resBody = await res.json(); } catch (e) { }
@@ -149,13 +182,14 @@ const ParentDashboard: React.FC = () => {
                   const bodyText = typeof resBody === 'object' && resBody !== null && 'message' in (resBody as Record<string, unknown>) ? String((resBody as Record<string, unknown>).message) : (await res.text());
                   throw new Error(bodyText || 'Erreur création parent');
                 }
-                setSuccessMessage(form.password ? 'Parent créé avec mot de passe.' : 'Parent créé — une invitation a été envoyée.');
+                setSuccessMessage(form.password ? (editingParent ? 'Parent modifié.' : 'Parent créé avec mot de passe.') : (editingParent ? 'Parent modifié.' : 'Parent créé — une invitation a été envoyée.'));
                 const reload = await fetchWithRefresh(`${resolvedApi}/api/parent/admin`, { credentials: 'include' });
                 const reloadText = await reload.text();
                 let json: unknown = null;
                 try { json = reloadText ? JSON.parse(reloadText) : null; } catch { json = reloadText; }
                 setAdminData(json as AdminData);
                 setAdding(false);
+                setEditingParent(null);
                 // clear form and errors
                 setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' });
               } catch (err: unknown) {
@@ -171,8 +205,8 @@ const ParentDashboard: React.FC = () => {
               <input name="password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Mot de passe (laisser vide pour envoyer une invitation)" className="border rounded px-3 py-2 text-xs md:text-base" />
               <input name="confirmPassword" type="password" value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Confirmer le mot de passe" className="border rounded px-3 py-2 text-xs md:text-base" />
               <div className="md:col-span-2 flex gap-2">
-                <button type="submit" className="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600 transition">Ajouter</button>
-                <button type="button" onClick={() => setAdding(false)} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
+                <button type="submit" className="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600 transition">{editingParent ? 'Enregistrer' : 'Ajouter'}</button>
+                <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); setFormError(null); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
               </div>
               {formError && <div className="text-red-600 md:col-span-2">{formError}</div>}
               {successMessage && <div className="text-green-600 md:col-span-2">{successMessage}</div>}
@@ -186,12 +220,46 @@ const ParentDashboard: React.FC = () => {
                 return parents.map((p, idx) => {
                   const color = cardColors[idx % cardColors.length];
                   return (
-                    <ParentCard key={p.id} parent={p} color={color} onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }} />
-                  );
+                      <ParentCard
+                        key={p.id}
+                        parent={p}
+                        color={color}
+                        parentDue={parentBilling[String(p.id)] || 0}
+                        onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }}
+                        onEdit={(par) => { setEditingParent(par); setAdding(false); setFormError(null); setForm({ firstName: par.firstName || '', lastName: par.lastName || '', email: par.email || '', phone: par.phone || '', password: '', confirmPassword: '' }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        onDelete={(id) => { setDeletingParentId(id); }}
+                      />
+                    );
                 });
               })()}
             </div>
           </div>
+          {deletingParentId && (
+            <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+              <div className="bg-white rounded-lg shadow p-6 w-full max-w-md">
+                <div className="text-lg font-semibold mb-4 text-gray-900">Confirmer la suppression</div>
+                <div className="text-sm text-gray-600 mb-4">Voulez-vous vraiment supprimer ce parent ? Cette action est irréversible.</div>
+                <div className="flex gap-3">
+                  <button onClick={() => setDeletingParentId(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2">Annuler</button>
+                  <button onClick={async () => {
+                    try {
+                      const res = await fetchWithRefresh(`${resolvedApi}/api/parent/${deletingParentId}`, { method: 'DELETE', credentials: 'include' });
+                      if (!res.ok) throw new Error('Erreur suppression');
+                      const reload = await fetchWithRefresh(`${resolvedApi}/api/parent/admin`, { credentials: 'include' });
+                      const text = await reload.text();
+                      let json: unknown = null;
+                      try { json = text ? JSON.parse(text) : null; } catch { json = text; }
+                      setAdminData(json as AdminData);
+                      setDeletingParentId(null);
+                    } catch (err) {
+                      console.error('Delete parent failed', err);
+                      setDeletingParentId(null);
+                    }
+                  }} className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2">Supprimer</button>
+                </div>
+              </div>
+            </div>
+          )}
           {showChildModal && <ChildOptionsModal child={selectedChild} onClose={() => { setShowChildModal(false); setSelectedChild(null); }} />}
         </div>
       </div>

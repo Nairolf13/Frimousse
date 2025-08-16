@@ -103,6 +103,52 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// Mettre à jour un Parent (admin/nanny)
+router.put('/:id', requireAuth, async (req, res) => {
+  try {
+    const userReq = req.user || {};
+    if (!(userReq.role === 'admin' || userReq.nannyId)) return res.status(403).json({ message: 'Forbidden' });
+    const { id } = req.params;
+    const { name, email, phone, firstName, lastName } = req.body;
+    let data = {};
+    if (name) {
+      const parts = name.trim().split(/\s+/);
+      data.firstName = parts.shift() || '';
+      data.lastName = parts.join(' ') || '';
+    }
+    if (firstName !== undefined) data.firstName = firstName;
+    if (lastName !== undefined) data.lastName = lastName;
+    if (email !== undefined) data.email = email;
+    if (phone !== undefined) data.phone = phone;
+
+    const updated = await prisma.parent.update({ where: { id }, data });
+    res.json(updated);
+  } catch (err) {
+    console.error('PUT /api/parent/:id error', err);
+    if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent not found' });
+    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
+// Supprimer un Parent (admin/nanny)
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const userReq = req.user || {};
+    if (!(userReq.role === 'admin' || userReq.nannyId)) return res.status(403).json({ message: 'Forbidden' });
+    const { id } = req.params;
+    // In a transaction, unlink any users and delete parent
+    await prisma.$transaction(async (tx) => {
+      await tx.user.updateMany({ where: { parentId: id }, data: { parentId: null } });
+      await tx.parent.delete({ where: { id } });
+    });
+    res.json({ message: 'Parent deleted' });
+  } catch (err) {
+    console.error('DELETE /api/parent/:id error', err);
+    if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent not found' });
+    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
 // Endpoint pour accepter l'invitation et définir le mot de passe
 router.post('/accept-invite', async (req, res) => {
   try {
