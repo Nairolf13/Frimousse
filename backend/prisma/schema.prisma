@@ -6,6 +6,8 @@ model Parent {
   phone     String?
   user      User?    @relation("UserParent")
   children  ParentChild[]
+  center    Center?  @relation(fields: [centerId], references: [id])
+  centerId  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -65,6 +67,8 @@ model User {
   nannyId       String?  @unique
   parent        Parent?  @relation("UserParent", fields: [parentId], references: [id])
   parentId      String?  @unique
+  center        Center?  @relation(fields: [centerId], references: [id])
+  centerId      String?
   refreshTokens RefreshToken[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -91,6 +95,8 @@ model Nanny {
   schedules  Schedule[] @relation("NannySchedules")
   user       User?     @relation("NannyUser")
   reports    Report[]
+  center     Center?   @relation(fields: [centerId], references: [id])
+  centerId   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -106,6 +112,8 @@ model Child {
   cotisationPaidUntil DateTime?
   assignments Assignment[]
   reports    Report[]
+  center     Center?  @relation(fields: [centerId], references: [id])
+  centerId   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -117,6 +125,8 @@ model Assignment {
   childId   String
   nanny     Nanny    @relation(fields: [nannyId], references: [id])
   nannyId   String
+  center    Center?  @relation(fields: [centerId], references: [id])
+  centerId  String?
   createdAt DateTime @default(now())
 }
 
@@ -128,6 +138,8 @@ model Schedule {
   name      String
   comment   String?
   nannies   Nanny[] @relation("NannySchedules")
+  center    Center? @relation(fields: [centerId], references: [id])
+  centerId  String?
 }
 
 model Report {
@@ -146,7 +158,22 @@ model Report {
 
   child            Child    @relation(fields: [childId], references: [id])
   nanny            Nanny    @relation(fields: [nannyId], references: [id])
+  center           Center?  @relation(fields: [centerId], references: [id])
+  centerId         String?
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model Center {
+  id        String   @id @default(uuid())
+  name      String
+  users     User[]
+  parents   Parent[]
+  children  Child[]
+  nannies   Nanny[]
+  assignments Assignment[]
+  schedules Schedule[]
+  reports   Report[]
+  createdAt DateTime @default(now())
 }

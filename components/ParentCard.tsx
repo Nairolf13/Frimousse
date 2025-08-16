@@ -43,7 +43,7 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
               {(parent.children || []).map(c => (
                 <button
                   key={c.child.id}
-                  onClick={() => { console.debug('[ParentCard] child click', c.child); if (onChildClick) { onChildClick(c.child); } else navigate(`/parent/child/${c.child.id}/reports`); }}
+                  onClick={() => { if (onChildClick) { onChildClick(c.child); } else navigate(`/parent/child/${c.child.id}/reports`); }}
                   className="px-3 py-2 bg-gray-100 text-blue-700 rounded text-sm border text-left focus:outline-none hover:bg-gray-50 cursor-pointer hover:underline"
                   aria-label={`Voir les rapports de ${c.child.name}`}>
                   <div className="font-medium">{c.child.name}</div>
@@ -56,7 +56,7 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
           <div className="mt-auto flex items-center justify-between">
             <div className="text-sm text-gray-700">À payer ce mois: <span className="font-bold text-blue-700">{(parentDue || 0)}€</span></div>
             <div className="flex gap-2">
-              <button onClick={() => { if (onEdit) onEdit(parent); else console.debug('[ParentCard] edit', parent); }} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm" title="Éditer">
+              <button onClick={() => { if (onEdit) onEdit(parent); }} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm" title="Éditer">
                 <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
               </button>
               <button onClick={() => setIsDeleting(true)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer">

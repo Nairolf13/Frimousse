@@ -2,7 +2,7 @@ import { useState } from 'react';
 const API_URL = import.meta.env.VITE_API_URL;
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ email: '', password: '', name: '', role: 'admin' });
+  const [form, setForm] = useState({ email: '', password: '', name: '', role: 'admin', centerName: '' });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -18,7 +18,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     setSuccess(false);
-    if (form.password !== confirmPassword) {
+  if (form.password !== confirmPassword) {
       setError('Les mots de passe ne correspondent pas.');
       return;
     }
@@ -26,7 +26,7 @@ export default function RegisterPage() {
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
+    body: JSON.stringify(form)
       });
       if (!res.ok) throw new Error('Erreur lors de l’inscription');
       setSuccess(true);
@@ -50,6 +50,9 @@ export default function RegisterPage() {
         {success && <div className="mb-4 text-green-600 w-full text-center">Inscription réussie ! Redirection...</div>}
         <label className="block mb-3 w-full text-left font-medium text-gray-700">Nom
           <input name="name" value={form.name} onChange={handleChange} required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-200" />
+        </label>
+        <label className="block mb-3 w-full text-left font-medium text-gray-700">Société / Crèche 
+          <input name="centerName" value={form.centerName} onChange={handleChange} placeholder="Nom de la crèche ou société" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-200" />
         </label>
         <label className="block mb-3 w-full text-left font-medium text-gray-700">Email
           <input name="email" type="email" value={form.email} onChange={handleChange} required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-200" />

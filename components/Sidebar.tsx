@@ -56,7 +56,7 @@ export default function Sidebar() {
     <>
       <MobileMenu />
       <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white shadow-lg flex-col p-0 border-r border-gray-100 z-30">
-        <div className="flex items-center gap-3 px-6 pt-8 pb-6">
+         <div className="flex items-center gap-3 px-6 pt-8 pb-6">
           <div className="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center text-2xl">
             <span role="img" aria-label="maison">🏡</span>
           </div>

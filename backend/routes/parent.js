@@ -8,6 +8,12 @@ const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const requireAuth = require('../middleware/authMiddleware');
 
+function isSuperAdmin(user) {
+  if (!user || !user.role) return false;
+  const r = String(user.role).toLowerCase();
+  return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super');
+}
+
 // Récupérer les enfants du parent connecté
 router.get('/children', requireAuth, async (req, res) => {
   try {
@@ -25,8 +31,8 @@ router.get('/children', requireAuth, async (req, res) => {
 // Créer un Parent (admin/nanny) -> body: { name, email, phone, password }
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const userReq = req.user || {};
-    if (!(userReq.role === 'admin' || userReq.nannyId)) return res.status(403).json({ message: 'Forbidden' });
+  const userReq = req.user || {};
+  if (!(userReq.role === 'admin' || userReq.nannyId || isSuperAdmin(userReq))) return res.status(403).json({ message: 'Forbidden' });
 
     const { name, email, phone, password } = req.body;
     if (!name || !email) return res.status(400).json({ message: 'Missing fields: name and email required' });
@@ -43,7 +49,9 @@ router.post('/', requireAuth, async (req, res) => {
     // random password (hashed) and then generate/send an invitation token so the parent
     // can set their real password via the invite flow.
     const result = await prisma.$transaction(async (tx) => {
-      const parent = await tx.parent.create({ data: { firstName, lastName, email, phone } });
+      const data = { firstName, lastName, email, phone };
+      if (!isSuperAdmin(userReq) && userReq.centerId) data.centerId = userReq.centerId;
+      const parent = await tx.parent.create({ data });
       if (existingUser) {
         // link existing user
         await tx.user.update({ where: { id: existingUser.id }, data: { parentId: parent.id } });
@@ -53,7 +61,9 @@ router.post('/', requireAuth, async (req, res) => {
         // real password via the invite link. We never expose passwords in the API response.
         const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
         const hash = await bcrypt.hash(tempPassword, 10);
-        const user = await tx.user.create({ data: { email, password: hash, name: `${firstName} ${lastName}`, role: 'parent', parentId: parent.id } });
+  const userData = { email, password: hash, name: `${firstName} ${lastName}`, role: 'parent', parentId: parent.id };
+  if (!isSuperAdmin(userReq) && userReq.centerId) userData.centerId = userReq.centerId;
+  const user = await tx.user.create({ data: userData });
         return { parent, user };
       }
     });
@@ -106,8 +116,8 @@ router.post('/', requireAuth, async (req, res) => {
 // Mettre à jour un Parent (admin/nanny)
 router.put('/:id', requireAuth, async (req, res) => {
   try {
-    const userReq = req.user || {};
-    if (!(userReq.role === 'admin' || userReq.nannyId)) return res.status(403).json({ message: 'Forbidden' });
+  const userReq = req.user || {};
+  if (!(userReq.role === 'admin' || userReq.nannyId || isSuperAdmin(userReq))) return res.status(403).json({ message: 'Forbidden' });
     const { id } = req.params;
     const { name, email, phone, firstName, lastName } = req.body;
     let data = {};
@@ -121,6 +131,11 @@ router.put('/:id', requireAuth, async (req, res) => {
     if (email !== undefined) data.email = email;
     if (phone !== undefined) data.phone = phone;
 
+    // Ensure the parent belongs to the same center (unless super-admin)
+    if (!isSuperAdmin(userReq)) {
+      const existing = await prisma.parent.findUnique({ where: { id } });
+      if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent not found' });
+    }
     const updated = await prisma.parent.update({ where: { id }, data });
     res.json(updated);
   } catch (err) {
@@ -133,12 +148,18 @@ router.put('/:id', requireAuth, async (req, res) => {
 // Supprimer un Parent (admin/nanny)
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
-    const userReq = req.user || {};
-    if (!(userReq.role === 'admin' || userReq.nannyId)) return res.status(403).json({ message: 'Forbidden' });
+  const userReq = req.user || {};
+  if (!(userReq.role === 'admin' || userReq.nannyId || isSuperAdmin(userReq))) return res.status(403).json({ message: 'Forbidden' });
     const { id } = req.params;
-    // In a transaction, unlink any users and delete parent
+    // In a transaction, unlink any users and delete parent (ensure center match)
+    if (!isSuperAdmin(userReq)) {
+      const existing = await prisma.parent.findUnique({ where: { id } });
+      if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent not found' });
+    }
     await prisma.$transaction(async (tx) => {
       await tx.user.updateMany({ where: { parentId: id }, data: { parentId: null } });
+      // remove ParentChild relations first to avoid foreign key constraint
+      await tx.parentChild.deleteMany({ where: { parentId: id } });
       await tx.parent.delete({ where: { id } });
     });
     res.json({ message: 'Parent deleted' });
@@ -176,13 +197,15 @@ router.post('/accept-invite', async (req, res) => {
 router.get('/admin', requireAuth, async (req, res) => {
   try {
     // autoriser les admins et les nounous
-    const user = req.user || {};
-    if (!(user.role === 'admin' || user.nannyId)) return res.status(403).json({ message: 'Forbidden' });
+  const user = req.user || {};
+  if (!(user.role === 'admin' || user.nannyId || isSuperAdmin(user))) return res.status(403).json({ message: 'Forbidden' });
 
     let parents = [];
     // If Parent model exists use it; otherwise fallback to users with role 'parent'
     if (prisma.parent && typeof prisma.parent.findMany === 'function') {
-      parents = await prisma.parent.findMany({ include: { children: { include: { child: true } } }, orderBy: { createdAt: 'desc' } });
+      const where = {};
+      if (!isSuperAdmin(user) && user.centerId) where.centerId = user.centerId;
+  parents = await prisma.parent.findMany({ where, include: { children: { include: { child: true } } }, orderBy: { createdAt: 'desc' } });
     } else {
       // fallback: users with role 'parent'
       const users = await prisma.user.findMany({ where: { role: 'parent' }, orderBy: { createdAt: 'desc' } });
@@ -222,7 +245,9 @@ router.get('/admin', requireAuth, async (req, res) => {
     todayStart.setHours(0,0,0,0);
     const todayEnd = new Date();
     todayEnd.setHours(23,59,59,999);
-    const presentAssignments = await prisma.assignment.count({ where: { date: { gte: todayStart, lte: todayEnd } } });
+  const assignmentWhere = { date: { gte: todayStart, lte: todayEnd } };
+  if (!isSuperAdmin(user) && user.centerId) assignmentWhere.centerId = user.centerId;
+  const presentAssignments = await prisma.assignment.count({ where: assignmentWhere });
 
     res.json({
       stats: { parentsCount, childrenCount, presentToday: presentAssignments },

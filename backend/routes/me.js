@@ -14,6 +14,8 @@ router.get('/', requireAuth, async (req, res) => {
         name: true,
         role: true,
         nannyId: true,
+        parentId: true,
+        centerId: true,
       },
     });
     if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });

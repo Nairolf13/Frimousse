@@ -50,6 +50,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/parent', parentRoutes);
 
 
+
 const userRoutes = require('./routes/user');
 app.use('/api/user', userRoutes);
 

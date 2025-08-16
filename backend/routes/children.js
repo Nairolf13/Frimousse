@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
+function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -24,6 +25,10 @@ router.get('/:id/billing', auth, async (req, res) => {
   const [year, mon] = month.split('-').map(Number);
   const startDate = new Date(year, mon - 1, 1);
   const endDate = new Date(year, mon, 1);
+  if (!isSuperAdmin(req.user)) {
+    const child = await prisma.child.findUnique({ where: { id } });
+    if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
+  }
   const assignments = await prisma.assignment.findMany({
     where: {
       childId: id,
@@ -40,7 +45,11 @@ router.get('/:id/billing', auth, async (req, res) => {
 
 router.get('/', auth, async (req, res) => {
   try {
-    const children = await prisma.child.findMany({ include: { parents: { include: { parent: true } } } });
+    let where = {};
+    if (!isSuperAdmin(req.user)) {
+      where.centerId = req.user.centerId;
+    }
+    const children = await prisma.child.findMany({ where, include: { parents: { include: { parent: true } } } });
     return res.json(children);
   } catch (error) {
     console.error('Error fetching children', error);
@@ -59,39 +68,41 @@ router.post('/', auth, async (req, res) => {
   }
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const child = await tx.child.create({
-        data: {
-          name,
-          age: parsedAge,
-          sexe,
-          allergies,
-        }
-      });
+      const childData = {
+        name,
+        age: parsedAge,
+        sexe,
+        allergies,
+      };
+      // assign centerId for non-super-admins
+      if (!isSuperAdmin(req.user) && req.user.centerId) {
+        childData.centerId = req.user.centerId;
+      } else if (req.body.centerId) {
+        childData.centerId = req.body.centerId;
+      }
+      const child = await tx.child.create({ data: childData });
 
-      // Link parent via ParentChild relation. Prefer explicit parentId from the client.
       let linkedParent = null;
-      if (parentId) {
-        // ensure parent exists
+    if (parentId) {
         const parent = await tx.parent.findUnique({ where: { id: parentId } });
         if (parent) {
           await tx.parentChild.create({ data: { parentId: parent.id, childId: child.id } });
           linkedParent = parent;
         }
       } else if (parentMail) {
-        // try to find parent by email, otherwise create a minimal parent and link
         let parent = await tx.parent.findUnique({ where: { email: parentMail } });
         if (!parent) {
-          // try to split name into first/last
-          const names = (parentName || '').trim().split(/\s+/);
-          const firstName = names.shift() || 'Parent';
-          const lastName = names.join(' ') || '';
-          parent = await tx.parent.create({ data: { firstName, lastName, email: parentMail, phone: parentContact || null } });
+      const names = (parentName || '').trim().split(/\s+/);
+      const firstName = names.shift() || 'Parent';
+      const lastName = names.join(' ') || '';
+      const parentData = { firstName, lastName, email: parentMail, phone: parentContact || null };
+      if (!isSuperAdmin(req.user) && req.user.centerId) parentData.centerId = req.user.centerId;
+      parent = await tx.parent.create({ data: parentData });
         }
         await tx.parentChild.create({ data: { parentId: parent.id, childId: child.id } });
         linkedParent = parent;
       }
 
-      // return child with optional linked parent info for client convenience
       const childWithParents = await tx.child.findUnique({ where: { id: child.id }, include: { parents: { include: { parent: true } } } });
       return childWithParents;
     });
@@ -120,6 +131,11 @@ router.put('/:id', auth, async (req, res) => {
     cotisationDate = nextYear;
   }
   try {
+    // verify ownership / center
+    const existingChild = await prisma.child.findUnique({ where: { id } });
+    if (!existingChild) return res.status(404).json({ error: 'Child not found' });
+    if (!isSuperAdmin(req.user) && existingChild.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
+
     const result = await prisma.$transaction(async (tx) => {
       const child = await tx.child.update({
         where: { id },
@@ -132,7 +148,6 @@ router.put('/:id', auth, async (req, res) => {
         }
       });
 
-      // If a parentId is provided, replace existing parent links with the new one.
       if (parentId) {
         await tx.parentChild.deleteMany({ where: { childId: id } });
         const parent = await tx.parent.findUnique({ where: { id: parentId } });
@@ -140,8 +155,11 @@ router.put('/:id', auth, async (req, res) => {
           await tx.parentChild.create({ data: { parentId: parent.id, childId: id } });
         }
       } else if (parentMail) {
-        // fallback: find or create parent by email and ensure link
         let parent = await tx.parent.findUnique({ where: { email: parentMail } });
+          if (!isSuperAdmin(req.user)) {
+            const existing = await prisma.child.findUnique({ where: { id } });
+            if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
+          }
         if (!parent) {
           const names = (parentName || '').trim().split(/\s+/);
           const firstName = names.shift() || 'Parent';
@@ -168,7 +186,9 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   const { id } = req.params;
   try {
-    // delete dependent records that reference child to avoid FK constraint errors
+    const existingChild = await prisma.child.findUnique({ where: { id } });
+    if (!existingChild) return res.status(404).json({ error: 'Child not found' });
+    if (!isSuperAdmin(req.user) && existingChild.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
     await prisma.$transaction(async (tx) => {
       await tx.parentChild.deleteMany({ where: { childId: id } });
       await tx.assignment.deleteMany({ where: { childId: id } });
@@ -178,11 +198,9 @@ router.delete('/:id', auth, async (req, res) => {
     return res.json({ message: 'Child deleted' });
   } catch (error) {
     console.error('Error deleting child', error);
-    // Prisma record not found
     if (error && error.code === 'P2025') {
       return res.status(404).json({ error: 'Child not found' });
     }
-    // Foreign key / constraint error
     if (error && error.code === 'P2003') {
       return res.status(400).json({ error: 'Impossible de supprimer l\'enfant : des enregistrements dépendants existent.' });
     }

@@ -23,7 +23,7 @@ const resolvedApi = (() => {
     return 'http://localhost:4000';
   }
 })();
-console.debug('[ParentDashboard] API base:', resolvedApi);
+// debug: API base logged only during development when needed
 
 type Child = { id: string; name: string; group?: string };
 type Parent = { id: string; name?: string | null; firstName?: string | null; lastName?: string | null; email?: string | null; phone?: string | null; children?: { child: Child }[]; createdAt?: string | null };
@@ -34,6 +34,11 @@ type AuthUser = { role?: string | null; nannyId?: string | null } | null;
 const ParentDashboard: React.FC = () => {
   const { user } = useAuth();
   const authUser = user as AuthUser;
+  const isAdminView = (u: AuthUser) => {
+    if (!u) return false;
+    const r = (u.role || '').toLowerCase();
+    return r === 'admin' || !!u.nannyId || r.includes('super');
+  };
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +59,7 @@ const ParentDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        if (authUser && (authUser.role === 'admin' || authUser.nannyId)) {
+        if (isAdminView(authUser)) {
           const res = await fetchWithRefresh(`${resolvedApi}/api/parent/admin`, { credentials: 'include' });
           const text = await res.text();
           let json: unknown = null;
@@ -117,7 +122,7 @@ const ParentDashboard: React.FC = () => {
   if (error) return <div className="p-6 text-red-600">Erreur: {error}</div>;
 
 
-  if (authUser && (authUser.role === 'admin' || authUser.nannyId)) {
+  if (isAdminView(authUser)) {
   const stats: AdminStats = adminData?.stats ?? { parentsCount: 0, childrenCount: 0, presentToday: 0 };
   const parents: Parent[] = adminData?.parents ?? [];
     return (
@@ -244,7 +249,15 @@ const ParentDashboard: React.FC = () => {
                   <button onClick={async () => {
                     try {
                       const res = await fetchWithRefresh(`${resolvedApi}/api/parent/${deletingParentId}`, { method: 'DELETE', credentials: 'include' });
-                      if (!res.ok) throw new Error('Erreur suppression');
+                      const respText = await res.text();
+                      let respBody: any = null;
+                      try { respBody = respText ? JSON.parse(respText) : null; } catch { respBody = respText; }
+                      if (!res.ok) {
+                        const message = respBody && typeof respBody === 'object' && ('message' in respBody || 'error' in respBody)
+                          ? (respBody.message || respBody.error)
+                          : (typeof respBody === 'string' ? respBody : 'Erreur suppression');
+                        throw new Error(String(message));
+                      }
                       const reload = await fetchWithRefresh(`${resolvedApi}/api/parent/admin`, { credentials: 'include' });
                       const text = await reload.text();
                       let json: unknown = null;
@@ -253,6 +266,12 @@ const ParentDashboard: React.FC = () => {
                       setDeletingParentId(null);
                     } catch (err) {
                       console.error('Delete parent failed', err);
+                      // show a helpful message to the user
+                      if (err instanceof Error) {
+                        alert('Suppression échouée: ' + err.message);
+                      } else {
+                        alert('Suppression échouée');
+                      }
                       setDeletingParentId(null);
                     }
                   }} className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2">Supprimer</button>
