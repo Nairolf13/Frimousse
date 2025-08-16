@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
+import ParentCard from '../components/ParentCard';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 function getApiUrl(): string {
@@ -185,43 +186,7 @@ const ParentDashboard: React.FC = () => {
                 return parents.map((p, idx) => {
                   const color = cardColors[idx % cardColors.length];
                   return (
-                    <div key={p.id} className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[220px] h-full p-5`}>
-                          <div className="flex items-start gap-3 mb-2">
-                            <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-lg shadow border border-gray-100 font-bold text-purple-700">{((p.firstName && p.lastName) ? `${p.firstName[0] || ''}${p.lastName[0] || ''}` : (p.name || 'U')).toUpperCase().slice(0,2)}</div>
-                            <div className="truncate flex-1">
-                              <div className="font-semibold text-gray-900 truncate">{(p.firstName || p.lastName) ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : (p.name || '—')}</div>
-                                <div className="text-sm text-gray-600 mt-1">{
-                                  p.email ? (
-                                    <a href={`mailto:${p.email}`} className="text-blue-600 hover:underline" aria-label={`Envoyer un e-mail à ${p.email}`}>{p.email}</a>
-                                  ) : '—'
-                                }</div>
-                                <div className="text-sm text-gray-600">{
-                                  p.phone ? (
-                                    <a href={`tel:${p.phone.replace(/\s+/g, '')}`} className="text-blue-600 hover:underline" aria-label={`Appeler ${p.phone}`}>{p.phone}</a>
-                                  ) : '—'
-                                }</div>
-                            </div>
-                          </div>
-                          <div className="mb-3">
-                            <div className="text-sm font-medium text-gray-700 mb-2">Enfants</div>
-                            <div className="flex flex-wrap gap-2">
-                              {(p.children || []).map(c => (
-                                <div key={c.child.id} className="px-2 py-1 bg-white text-blue-700 rounded text-sm border">
-                                  <div className="font-medium">{c.child.name}</div>
-                                  <div className="text-xs text-gray-500">Groupe: {c.child.group || '—'}</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                      <div className="mt-auto flex items-center justify-between">
-                        <div className="text-xs text-gray-500">Statut: <span className="text-green-600 font-semibold">Actif</span></div>
-                        <div className="flex gap-2">
-                          <button className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2" title="Voir">👁️</button>
-                          <button className="bg-white border border-gray-200 text-gray-500 hover:text-blue-500 rounded-full p-2" title="Éditer">✏️</button>
-                          <button className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2" title="Plus">⋯</button>
-                        </div>
-                      </div>
-                    </div>
+                    <ParentCard key={p.id} parent={p} color={color} />
                   );
                 });
               })()}
@@ -245,7 +210,7 @@ const ParentDashboard: React.FC = () => {
             <div key={child.id} className="p-4 border rounded shadow-sm">
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="font-medium">{child.name}</div>
+                  <div className="font-medium cursor-pointer hover:underline" onClick={() => navigate(`/parent/child/${child.id}/reports`)}>{child.name}</div>
                   <div className="text-sm text-gray-500">Groupe: {child.group}</div>
                 </div>
                 <div className="flex space-x-2">

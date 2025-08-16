@@ -133,10 +133,40 @@ router.get('/admin', requireAuth, async (req, res) => {
     const user = req.user || {};
     if (!(user.role === 'admin' || user.nannyId)) return res.status(403).json({ message: 'Forbidden' });
 
-    const parents = await prisma.parent.findMany({
-      include: { children: { include: { child: true } } },
-      orderBy: { createdAt: 'desc' }
-    });
+    let parents = [];
+    // If Parent model exists use it; otherwise fallback to users with role 'parent'
+    if (prisma.parent && typeof prisma.parent.findMany === 'function') {
+      parents = await prisma.parent.findMany({ include: { children: { include: { child: true } } }, orderBy: { createdAt: 'desc' } });
+    } else {
+      // fallback: users with role 'parent'
+      const users = await prisma.user.findMany({ where: { role: 'parent' }, orderBy: { createdAt: 'desc' } });
+      const allChildren = await prisma.child.findMany();
+      // build children mapping by email and by name
+      const byEmail = new Map();
+      const byName = new Map();
+      for (const c of allChildren) {
+        if (c.parentMail) {
+          const list = byEmail.get(c.parentMail) || [];
+          list.push({ child: c });
+          byEmail.set(c.parentMail, list);
+        }
+        if (c.parentName) {
+          const key = String(c.parentName).trim();
+          const list = byName.get(key) || [];
+          list.push({ child: c });
+          byName.set(key, list);
+        }
+      }
+      parents = users.map(u => {
+        const fullName = `${u.name || ''}`.trim();
+        const childrenFromEmail = u.email ? (byEmail.get(u.email) || []) : [];
+        const childrenFromName = fullName ? (byName.get(fullName) || []) : [];
+        // merge unique children
+        const merged = [...childrenFromEmail, ...childrenFromName];
+        const unique = Array.from(new Map(merged.map(item => [item.child.id, item])).values());
+        return { id: u.id, firstName: u.name, lastName: '', email: u.email, phone: u.parentPhone || u.phone || null, children: unique };
+      });
+    }
 
     const parentsCount = parents.length;
     const childrenCount = parents.reduce((acc, p) => acc + (p.children?.length || 0), 0);

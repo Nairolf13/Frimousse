@@ -23,6 +23,7 @@ interface Child {
   parentName: string;
   parentContact: string;
   parentMail: string;
+  parentId?: string | null;
   allergies?: string;
   group?: string;
   present?: boolean;
@@ -41,6 +42,7 @@ const emptyForm: Omit<Child, 'id'> = {
   parentName: '',
   parentContact: '',
   parentMail: '',
+  parentId: undefined,
   allergies: '',
   group: '',
   present: true,
@@ -66,6 +68,8 @@ export default function Children() {
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
+  const [parentsList, setParentsList] = useState<{ id: string; name: string; email?: string | null; phone?: string | null }[]>([]);
+  const [showParentsDropdown, setShowParentsDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -95,10 +99,41 @@ export default function Children() {
         fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' }),
         fetchWithRefresh(`${API_URL}/api/assignments?start=${today}&end=${today}`, { credentials: 'include' })
       ]);
-      const childrenData: Child[] = await childrenRes.json();
+      const childrenDataRaw = await childrenRes.json();
       const assignmentsData: Assignment[] = await assignmentsRes.json();
       const presentIds = new Set(assignmentsData.map((a) => a.child.id));
-      setChildren(childrenData.map((c: Child) => ({ ...c, present: presentIds.has(c.id) })));
+
+      // Normalize children: if backend returns parents relation, derive parentName/contact/mail for UI
+      const childrenData: Child[] = Array.isArray(childrenDataRaw) ? childrenDataRaw.map((c: Record<string, unknown>) => {
+        const base = { ...c } as Record<string, unknown>;
+        // If parents relation present, use the first linked parent for display
+        const parentsArr = Array.isArray(base['parents']) ? (base['parents'] as unknown as Array<Record<string, unknown>>) : undefined;
+        if (parentsArr && parentsArr.length > 0 && parentsArr[0] && (parentsArr[0] as Record<string, unknown>)['parent']) {
+          const p = (parentsArr[0] as Record<string, unknown>)['parent'] as Record<string, unknown>;
+          const parentName = `${String(p['firstName'] ?? '')} ${String(p['lastName'] ?? '')}`.trim();
+          base['parentName'] = parentName || String(base['parentName'] ?? '');
+          base['parentContact'] = (p['phone'] as string) ?? String(base['parentContact'] ?? '');
+          base['parentMail'] = (p['email'] as string) ?? String(base['parentMail'] ?? '');
+          base['parentId'] = String(p['id'] ?? base['parentId'] ?? '');
+        }
+        const typedChild: Child = {
+          id: String(base['id'] ?? ''),
+          name: String(base['name'] ?? ''),
+          age: Number(base['age'] ?? 0),
+          sexe: (base['sexe'] === 'feminin' ? 'feminin' : 'masculin'),
+          parentName: String(base['parentName'] ?? ''),
+          parentContact: String(base['parentContact'] ?? ''),
+          parentMail: String(base['parentMail'] ?? ''),
+          parentId: base['parentId'] ? String(base['parentId']) : undefined,
+          allergies: base['allergies'] ? String(base['allergies']) : undefined,
+          group: base['group'] ? String(base['group']) : undefined,
+          present: presentIds.has(String(base['id'] ?? '')),
+          newThisMonth: Boolean(base['newThisMonth'] ?? false),
+          cotisationPaidUntil: base['cotisationPaidUntil'] ? String(base['cotisationPaidUntil']) : undefined,
+        };
+        return typedChild;
+      }) : [];
+      setChildren(childrenData);
     } catch {
       setChildren([]);
     } finally {
@@ -108,6 +143,25 @@ export default function Children() {
 
   useEffect(() => {
     fetchChildren();
+    const fetchParents = async () => {
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/api/parent/admin`, { credentials: 'include' });
+        if (!res.ok) return setParentsList([]);
+        const data = await res.json() as { parents?: Array<Record<string, unknown>> } | null;
+        const parents = Array.isArray(data?.parents) ? data.parents.map((p) => {
+          const id = String(p.id ?? '');
+          const rawName = p.name ?? `${p.firstName ?? ''} ${p.lastName ?? ''}`;
+          const name = String(rawName).trim() || id;
+          const email = typeof p.email === 'string' ? p.email : undefined;
+          const phone = typeof p.phone === 'string' ? p.phone : undefined;
+          return { id, name, email, phone };
+        }) : [];
+        setParentsList(parents);
+      } catch {
+        setParentsList([]);
+      }
+    };
+    fetchParents();
     const fetchBillings = async () => {
       try {
         const todayMonth = getCurrentMonth();
@@ -264,7 +318,42 @@ export default function Children() {
             <option value="">Groupe</option>
             {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
           </select>
-          <input name="parentName" value={form.parentName} onChange={handleChange} placeholder="Nom du parent" required className="border rounded px-3 py-2" />
+          <div className="relative w-full">
+            <input name="parentName" value={form.parentName} onChange={(e) => {
+              const val = e.target.value;
+              setForm(f => ({ ...f, parentName: val }));
+              // only autofill when the entered value exactly matches a parent name
+              const lower = val.toLowerCase();
+              const exact = parentsList.find(p => p.name.toLowerCase() === lower);
+              if (exact) {
+                setForm(f => ({ ...f, parentMail: exact.email || '', parentContact: exact.phone || '', parentId: exact.id }));
+              } else {
+                setForm(f => ({ ...f, parentId: undefined }));
+              }
+              setShowParentsDropdown(true);
+            }} onFocus={() => setShowParentsDropdown(true)} onBlur={() => {
+              // hide dropdown on blur after a short delay to allow click handlers
+              setTimeout(() => setShowParentsDropdown(false), 150);
+            }} placeholder="Nom du parent" required className="border rounded px-3 py-2 w-full" />
+
+            {showParentsDropdown && (() => {
+              const lower = form.parentName.trim().toLowerCase();
+              const filtered = lower ? parentsList.filter(p => p.name.toLowerCase().includes(lower)) : parentsList;
+              if (filtered.length === 0) return null;
+              return (
+                <ul className="absolute left-0 right-0 bg-white border rounded shadow max-h-56 overflow-auto z-50 mt-1">
+                  {filtered.slice(0, 12).map(p => (
+                    <li key={p.id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm" onMouseDown={(ev) => {
+                      // select before blur
+                      ev.preventDefault();
+                      setForm(f => ({ ...f, parentName: p.name, parentMail: p.email || '', parentContact: p.phone || '', parentId: p.id }));
+                      setShowParentsDropdown(false);
+                    }}>{p.name}</li>
+                  ))}
+                </ul>
+              );
+            })()}
+          </div>
           <input name="parentContact" value={form.parentContact} onChange={handleChange} placeholder="Téléphone parent" required className="border rounded px-3 py-2" />
           <input name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder="Email parent" required className="border rounded px-3 py-2" />
           <input name="allergies" value={form.allergies} onChange={handleChange} placeholder="Allergies (optionnel)" className="border rounded px-3 py-2 md:col-span-2" />

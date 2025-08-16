@@ -1,3 +1,23 @@
+model Parent {
+  id        String   @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  phone     String?
+  user      User?    @relation("UserParent")
+  children  ParentChild[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ParentChild {
+  id        String   @id @default(uuid())
+  parent    Parent   @relation(fields: [parentId], references: [id])
+  parentId  String
+  child     Child    @relation(fields: [childId], references: [id])
+  childId   String
+  createdAt DateTime @default(now())
+}
 enum Sexe {
   masculin
   feminin
@@ -43,6 +63,8 @@ model User {
   role          String   
   nanny         Nanny?   @relation("NannyUser", fields: [nannyId], references: [id])
   nannyId       String?  @unique
+  parent        Parent?  @relation("UserParent", fields: [parentId], references: [id])
+  parentId      String?  @unique
   refreshTokens RefreshToken[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -79,9 +101,7 @@ model Child {
   age        Int
   sexe       Sexe     @default(masculin)
   group      ChildGroup @default(G1)
-  parentName String
-  parentContact String
-  parentMail   String?
+  parents   ParentChild[]
   allergies  String?
   cotisationPaidUntil DateTime?
   assignments Assignment[]
