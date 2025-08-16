@@ -12,7 +12,7 @@ type Parent = {
   children?: ChildRef[];
 };
 
-export default function ParentCard({ parent, color }: { parent: Parent; color?: string }) {
+export default function ParentCard({ parent, color, onChildClick }: { parent: Parent; color?: string; onChildClick?: (child: { id: string; name: string; group?: string }) => void }) {
   const navigate = useNavigate();
   const initials = ((parent.firstName && parent.lastName) ? `${parent.firstName[0] || ''}${parent.lastName[0] || ''}` : (parent.name || 'U')).toUpperCase().slice(0,2);
   return (
@@ -39,7 +39,7 @@ export default function ParentCard({ parent, color }: { parent: Parent; color?: 
             {(parent.children || []).map(c => (
               <button
                 key={c.child.id}
-                onClick={() => navigate(`/parent/child/${c.child.id}/reports`)}
+                onClick={() => { console.debug('[ParentCard] child click', c.child); if (onChildClick) { onChildClick(c.child); } else navigate(`/parent/child/${c.child.id}/reports`); }}
                 className="px-3 py-2 bg-gray-100 text-blue-700 rounded text-sm border text-left focus:outline-none hover:bg-gray-50 cursor-pointer hover:underline"
                 aria-label={`Voir les rapports de ${c.child.name}`}>
                 <div className="font-medium">{c.child.name}</div>

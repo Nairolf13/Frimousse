@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
-const { PrismaClient } = require('../generated/prisma');
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 router.get('/', auth, async (req, res) => {
@@ -19,7 +19,35 @@ router.get('/', auth, async (req, res) => {
   }
   const assignments = await prisma.assignment.findMany({
     where,
-    include: { child: true, nanny: true }
+    select: {
+      id: true,
+      date: true,
+      childId: true,
+      nannyId: true,
+      createdAt: true,
+        child: {
+          select: {
+            id: true,
+            name: true,
+            age: true,
+            sexe: true,
+            group: true,
+            allergies: true,
+            createdAt: true,
+            updatedAt: true,
+            parents: {
+              select: {
+                parent: {
+                  select: { id: true, firstName: true, lastName: true, email: true, phone: true }
+                }
+              }
+            }
+          }
+        },
+      nanny: {
+        select: { id: true, name: true }
+      }
+    }
   });
   res.json(assignments);
 });

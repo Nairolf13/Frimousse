@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 import ParentCard from '../components/ParentCard';
+import ChildOptionsModal from '../components/ChildOptionsModal';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 function getApiUrl(): string {
@@ -13,7 +14,6 @@ function getApiUrl(): string {
   }
 }
 const API_URL = getApiUrl();
-// Ensure we have an absolute URL. If API_URL is empty or relative, fallback to the frontend host with port 4000.
 const resolvedApi = (() => {
   if (API_URL && /https?:\/\//.test(API_URL)) return API_URL.replace(/\/$/, '');
   try {
@@ -38,6 +38,8 @@ const ParentDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [adminData, setAdminData] = useState<AdminData>(null);
+  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+  const [showChildModal, setShowChildModal] = useState(false);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [formError, setFormError] = useState<string | null>(null);
@@ -134,8 +136,6 @@ const ParentDashboard: React.FC = () => {
                 return;
               }
                 try {
-                // Build payload for admin endpoint. Password is optional: if omitted, backend will
-                // create the parent and send an invitation token by email.
                 type CreateParentPayload = { name: string; email: string; phone?: string; password?: string };
                 const payload: CreateParentPayload = { name: `${form.firstName} ${form.lastName}`, email: form.email, phone: form.phone };
                 if (form.password) payload.password = form.password;
@@ -186,12 +186,13 @@ const ParentDashboard: React.FC = () => {
                 return parents.map((p, idx) => {
                   const color = cardColors[idx % cardColors.length];
                   return (
-                    <ParentCard key={p.id} parent={p} color={color} />
+                    <ParentCard key={p.id} parent={p} color={color} onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }} />
                   );
                 });
               })()}
             </div>
           </div>
+          {showChildModal && <ChildOptionsModal child={selectedChild} onClose={() => { setShowChildModal(false); setSelectedChild(null); }} />}
         </div>
       </div>
     );
@@ -210,7 +211,7 @@ const ParentDashboard: React.FC = () => {
             <div key={child.id} className="p-4 border rounded shadow-sm">
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="font-medium cursor-pointer hover:underline" onClick={() => navigate(`/parent/child/${child.id}/reports`)}>{child.name}</div>
+                  <button type="button" className="font-medium cursor-pointer hover:underline text-left" onClick={(e) => { e.stopPropagation(); console.debug('[ParentDashboard] child click', child); setSelectedChild(child); setShowChildModal(true); }}>{child.name}</button>
                   <div className="text-sm text-gray-500">Groupe: {child.group}</div>
                 </div>
                 <div className="flex space-x-2">
@@ -227,6 +228,7 @@ const ParentDashboard: React.FC = () => {
         </div>
       )}
       </div>
+      {showChildModal && <ChildOptionsModal child={selectedChild} onClose={() => { setShowChildModal(false); setSelectedChild(null); }} />}
     </div>
   );
 };

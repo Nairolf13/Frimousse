@@ -1,4 +1,3 @@
-// Prefer explicit VITE_API_URL; fallback to backend running on localhost:4000 during dev
 function getApiBase(): string {
   try {
     const meta = import.meta as unknown as { env?: { VITE_API_URL?: string } };
@@ -14,7 +13,6 @@ async function handleRes<T>(res: Response): Promise<T> {
     const text = await res.text();
     throw new Error(text || 'API error');
   }
-  // cast the parsed JSON to the requested generic type
   return (await res.json()) as T;
 }
 
@@ -29,7 +27,6 @@ type Child = {
   name: string;
   birthDate?: string;
   group?: string;
-  // Add other relevant fields as needed
 };
 
 type Schedule = {
@@ -58,7 +55,6 @@ type Report = {
   nanny?: Nanny | null;
 };
 
-// Admin / parent listing types returned by the admin endpoint
 type ParentItem = {
   id: string;
   name: string;
@@ -93,5 +89,10 @@ export default {
   async getChildReports(childId: string): Promise<Report[]> {
     const res = await fetch(`${apiBase}/api/parent/child/${childId}/reports`, { credentials: 'include' });
     return handleRes<Report[]>(res);
+  }
+  ,
+  async getChild(childId: string): Promise<Child> {
+    const res = await fetch(`${apiBase}/api/children/${childId}`, { credentials: 'include' });
+    return handleRes<Child>(res);
   }
 };

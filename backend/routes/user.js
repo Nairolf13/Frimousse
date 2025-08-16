@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
-const { PrismaClient } = require('../generated/prisma');
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 router.get('/me', auth, async (req, res) => {
@@ -13,8 +13,6 @@ router.get('/me', auth, async (req, res) => {
   res.json(user);
 });
 
-
-// Endpoint pour récupérer tous les utilisateurs (admin inclus)
 router.get('/all', async (req, res) => {
   try {
     const users = await prisma.user.findMany({ select: { id: true, role: true } });

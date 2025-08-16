@@ -23,6 +23,46 @@ export default function ParentChildReports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
+  const [childName, setChildName] = useState<string | null>(null);
+
+  const formatReportDate = (dateStr?: string, timeStr?: string) => {
+    if (!dateStr) return '';
+    try {
+      let dateOnly = dateStr.split(/[T ]/)[0];
+      let iso = dateOnly;
+
+      let normalizedTime: string | null = null;
+      if (timeStr) {
+        const t = timeStr.includes('h') ? timeStr.replace(/h/, ':').replace(/[^0-9:]/g, '') : timeStr;
+        const parts = t.split(':');
+        const hh = (parts[0] || '00').padStart(2, '0');
+        const mm = (parts[1] || '00').padStart(2, '0');
+        normalizedTime = `${hh}:${mm}:00`;
+      } else {
+        const rest = dateStr.includes('T') ? dateStr.split('T')[1] : (dateStr.includes(' ') ? dateStr.split(' ')[1] : undefined);
+        if (rest) {
+          const parts = rest.split(':');
+          const hh = (parts[0] || '00').padStart(2, '0');
+          const mm = (parts[1] || '00').padStart(2, '0');
+          normalizedTime = `${hh}:${mm}:00`;
+        }
+      }
+
+      iso = normalizedTime ? `${dateOnly}T${normalizedTime}` : `${dateOnly}T00:00:00`;
+
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return `${dateStr}${timeStr ? ' à ' + timeStr : ''}`;
+
+      const datePart = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(d);
+      if (!normalizedTime) return datePart;
+
+      const hours = d.getHours().toString().padStart(2, '0');
+      const minutes = d.getMinutes().toString().padStart(2, '0');
+      return `${datePart} à ${hours}h${minutes}`;
+    } catch (err) {
+      return `${dateStr}${timeStr ? ' à ' + timeStr : ''}`;
+    }
+  };
 
   useEffect(() => {
     if (!childId) return;
@@ -39,14 +79,36 @@ export default function ParentChildReports() {
     load();
   }, [childId]);
 
+  useEffect(() => {
+    if (!childId) return;
+    (async () => {
+      try {
+        const child = await parentService.getChild(childId);
+        setChildName(child?.name || null);
+      } catch (err) {
+        console.error('Failed to load child name', err);
+      }
+    })();
+  }, [childId]);
+
   return (
     <div className="min-h-screen bg-[#f7f8fa] flex flex-col md:flex-row">
       <Sidebar />
       <main className="flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-2 md:ml-64">
         <div className="w-full max-w-5xl mx-auto">
-          <button className="mb-4 btn cursor-pointer" onClick={() => navigate(-1)}>← Retour</button>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Rapports de l'enfant</h1>
-          <div className="text-base md:text-lg text-gray-500 font-medium mb-4 md:mb-6">Consultez les rapports liés à cet enfant.</div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <button className="mb-4 btn cursor-pointer flex items-center gap-2" onClick={() => navigate(-1)}>
+                <span className="text-lg">←</span>
+                <span>Retour</span>
+              </button>
+            </div>
+            <div className="flex-1 text-center">
+              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Rapports de {childName ?? "l'enfant"}</h1>
+              <div className="text-base md:text-lg text-gray-500 font-medium mb-4 md:mb-6">Consultez les rapports liés à cet enfant.</div>
+            </div>
+            <div style={{ width: 120 }} />
+          </div>
 
           <div className="flex flex-col gap-4 md:gap-6">
             {loading ? (
@@ -70,7 +132,7 @@ export default function ParentChildReports() {
                     <div className="text-gray-700 text-sm md:text-base mb-2">{report.summary}</div>
                     <div className="text-sm text-gray-500 mt-2">{report.details}</div>
                     <div className="flex flex-col items-end mt-4">
-                      <span className="text-xs text-gray-500">{report.date}{report.time ? ' à ' + report.time : ''}</span>
+                      <span className="text-xs text-gray-500">{formatReportDate(report.date, report.time)}</span>
                     </div>
                   </div>
                 </div>
