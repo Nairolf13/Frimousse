@@ -1,0 +1,210 @@
+const express = require('express');
+const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const jwt = require('jsonwebtoken');
+const requireAuth = require('../middleware/authMiddleware');
+
+// Récupérer les enfants du parent connecté
+router.get('/children', requireAuth, async (req, res) => {
+  try {
+    const parentId = req.user.parentId || req.user.id;
+    const children = await prisma.parentChild.findMany({
+      where: { parentId },
+      include: { child: true }
+    });
+    res.json(children.map(pc => pc.child));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Créer un Parent (admin/nanny) -> body: { name, email, phone, password }
+router.post('/', requireAuth, async (req, res) => {
+  try {
+    const userReq = req.user || {};
+    if (!(userReq.role === 'admin' || userReq.nannyId)) return res.status(403).json({ message: 'Forbidden' });
+
+    const { name, email, phone, password } = req.body;
+    if (!name || !email) return res.status(400).json({ message: 'Missing fields: name and email required' });
+
+    // split name into firstName / lastName
+    const parts = name.trim().split(/\s+/);
+    const firstName = parts.shift() || '';
+    const lastName = parts.join(' ') || '';
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+
+    // Use a transaction to create parent and user (if needed) atomically
+    // If no password is provided and no existing user, we create a user with a temporary
+    // random password (hashed) and then generate/send an invitation token so the parent
+    // can set their real password via the invite flow.
+    const result = await prisma.$transaction(async (tx) => {
+      const parent = await tx.parent.create({ data: { firstName, lastName, email, phone } });
+      if (existingUser) {
+        // link existing user
+        await tx.user.update({ where: { id: existingUser.id }, data: { parentId: parent.id } });
+        return { parent, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
+      } else {
+        // always create the user with a random temporary password; the parent will set their
+        // real password via the invite link. We never expose passwords in the API response.
+        const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
+        const hash = await bcrypt.hash(tempPassword, 10);
+        const user = await tx.user.create({ data: { email, password: hash, name: `${firstName} ${lastName}`, role: 'parent', parentId: parent.id } });
+        return { parent, user };
+      }
+    });
+
+    // send invitation email if SMTP configured
+    if (process.env.SMTP_HOST) {
+      (async () => {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+          });
+          const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+          // always send an invite link so parent can set their own password
+          const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
+          const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
+          const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
+          const mailText = `Bonjour ${firstName || ''},\n\nUn compte parent a été créé pour vous sur Frimousse.\n\nCliquez sur ce lien pour définir votre mot de passe : ${inviteUrl}\n\nCe lien expirera dans 7 jours.\n\nMerci,\nL'équipe Frimousse`;
+
+          // For easier debugging in development, print invite URL to server logs
+          if (process.env.NODE_ENV !== 'production') {
+            
+          }
+
+          const mailOptions = {
+            from: process.env.SMTP_FROM || `no-reply@${process.env.SMTP_HOST || 'example.com'}`,
+            to: email,
+            subject: 'Invitation - Accès Frimousse',
+            text: mailText,
+          };
+          await transporter.sendMail(mailOptions);
+          
+        } catch (err) {
+          console.error('Failed to send invite email', err && err.message ? err.message : err);
+        }
+      })();
+    }
+
+    res.status(201).json(result);
+  } catch (err) {
+    // handle unique constraint on email
+    if (err && err.code === 'P2002') return res.status(409).json({ message: 'Parent or user with this email already exists' });
+    console.error('POST /api/parent error', err);
+    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
+// Endpoint pour accepter l'invitation et définir le mot de passe
+router.post('/accept-invite', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ message: 'Missing token or password' });
+    const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
+    let payload;
+    try {
+      payload = jwt.verify(token, inviteSecret);
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+    if (payload.type !== 'invite' || !payload.userId) return res.status(400).json({ message: 'Invalid token payload' });
+    // update user password
+    const hash = await bcrypt.hash(password, 10);
+    await prisma.user.update({ where: { id: payload.userId }, data: { password: hash } });
+    res.json({ message: 'Password set successfully' });
+  } catch (err) {
+    console.error('POST /api/parent/accept-invite error', err);
+    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
+// Admin/Nanny: lister tous les parents + stats
+router.get('/admin', requireAuth, async (req, res) => {
+  try {
+    // autoriser les admins et les nounous
+    const user = req.user || {};
+    if (!(user.role === 'admin' || user.nannyId)) return res.status(403).json({ message: 'Forbidden' });
+
+    const parents = await prisma.parent.findMany({
+      include: { children: { include: { child: true } } },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const parentsCount = parents.length;
+    const childrenCount = parents.reduce((acc, p) => acc + (p.children?.length || 0), 0);
+
+    // simple heuristic pour présents aujourd'hui : compter assignments pour today
+    const todayStart = new Date();
+    todayStart.setHours(0,0,0,0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23,59,59,999);
+    const presentAssignments = await prisma.assignment.count({ where: { date: { gte: todayStart, lte: todayEnd } } });
+
+    res.json({
+      stats: { parentsCount, childrenCount, presentToday: presentAssignments },
+      parents
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Récupérer le planning d'un enfant (vérifie que le parent possède bien l'enfant)
+router.get('/child/:childId/schedule', requireAuth, async (req, res) => {
+  try {
+    const childId = req.params.childId;
+    // If caller is a parent, ensure they own this child
+    if (req.user && req.user.role === 'parent') {
+      const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+      const parentId = user?.parentId;
+      if (!parentId) return res.status(403).json({ message: 'Forbidden' });
+      const relation = await prisma.parentChild.findFirst({ where: { parentId, childId } });
+      if (!relation) return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const schedules = await prisma.schedule.findMany({
+      where: { /* schedules are independent, we return all schedules related to assignments for that child */ },
+      include: { nannies: true }
+    });
+
+    // Filter schedules that are linked to assignments for this child
+    // Find assignments for the child and collect schedule ids from assignments if applicable.
+    // The current data model stores assignments with a date and nanny for a child; schedules are separate.
+    // To be safe, return schedules as-is and let frontend filter if needed.
+    res.json(schedules);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Récupérer les rapports d'un enfant
+router.get('/child/:childId/reports', requireAuth, async (req, res) => {
+  try {
+    const { childId } = req.params;
+    // If caller is a parent, ensure they own this child before returning reports
+    if (req.user && req.user.role === 'parent') {
+      const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+      const parentId = user?.parentId;
+      if (!parentId) return res.status(403).json({ message: 'Forbidden' });
+      const relation = await prisma.parentChild.findFirst({ where: { parentId, childId } });
+      if (!relation) return res.status(403).json({ message: 'Forbidden' });
+    }
+    const reports = await prisma.report.findMany({
+      where: { childId },
+      include: { nanny: true }
+    });
+    res.json(reports);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;

@@ -5,6 +5,7 @@ import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalenda
 const navLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
   { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+  { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
   { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
   { to: '/activites', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
   { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },

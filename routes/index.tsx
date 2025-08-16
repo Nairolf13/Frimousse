@@ -16,6 +16,9 @@ import MonPlanning from '../pages/MonPlanning';
 import Activites from '../pages/Activites';
 import ReportsPage from '../pages/ReportsPage';
 import Settings from '../pages/Settings';
+import ParentDashboard from '../pages/ParentDashboard';
+import ParentChildSchedule from '../pages/ParentChildSchedule';
+import ParentChildReports from '../pages/ParentChildReports';
 
 
 import AboutPage from '../pages/AboutPage';
@@ -53,6 +56,9 @@ export default function AppRoutes() {
           <Route path="/nannies" element={<Nannies />} />
           <Route path="/mon-planning" element={<MonPlanning />} />
           <Route path="/activites" element={<Activites />} />
+          <Route path="/parent" element={<ParentDashboard />} />
+          <Route path="/parent/child/:childId/schedule" element={<ParentChildSchedule />} />
+          <Route path="/parent/child/:childId/reports" element={<ParentChildReports />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<Settings />} />
         </Route>

@@ -17,6 +17,7 @@ const meRoutes = require('./routes/me');
 const nanniesRoutes = require('./routes/nannies');
 const childrenRoutes = require('./routes/children');
 const reportsRoutes = require('./routes/reports');
+const parentRoutes = require('./routes/parent');
 
 
 app.use(cors({
@@ -46,6 +47,7 @@ app.use('/api/user/me', meRoutes);
 app.use('/api/nannies', nanniesRoutes);
 app.use('/api/children', childrenRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/parent', parentRoutes);
 
 
 const userRoutes = require('./routes/user');
