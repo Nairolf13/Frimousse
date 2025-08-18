@@ -35,6 +35,8 @@ exports.register = async (req, res) => {
     userData.centerId = center.id;
   }
 
+  console.log('register userData:', userData);
+
   const user = await prisma.user.create({ data: userData });
   res.status(201).json({ id: user.id, email: user.email, name: user.name, role: user.role, nannyId: user.nannyId, centerId: user.centerId || null });
 };

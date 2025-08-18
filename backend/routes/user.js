@@ -33,4 +33,27 @@ router.get('/all', async (req, res) => {
   }
 });
 
+router.delete('/', auth, async (req, res) => {
+  try {
+    // Supprimer les refresh tokens
+    await prisma.refreshToken.deleteMany({ where: { userId: req.user.id } });
+
+    // Si le user est une nanny, supprimer la nanny associée
+    if (req.user.role === 'nanny' && req.user.nannyId) {
+      await prisma.nanny.delete({ where: { id: req.user.nannyId } });
+    }
+
+    // Si le user est un parent, supprimer le parent associé
+    if (req.user.role === 'parent' && req.user.parentId) {
+      await prisma.parent.delete({ where: { id: req.user.parentId } });
+    }
+
+    // Supprimer le user
+    await prisma.user.delete({ where: { id: req.user.id } });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(400).json({ error: e && e.message ? e.message : String(e) });
+  }
+});
+
 module.exports = router;

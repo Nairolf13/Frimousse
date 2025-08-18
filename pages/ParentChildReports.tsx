@@ -28,7 +28,7 @@ export default function ParentChildReports() {
   const formatReportDate = (dateStr?: string, timeStr?: string) => {
     if (!dateStr) return '';
     try {
-      let dateOnly = dateStr.split(/[T ]/)[0];
+      const dateOnly = dateStr.split(/[T ]/)[0];
       let iso = dateOnly;
 
       let normalizedTime: string | null = null;
@@ -59,7 +59,7 @@ export default function ParentChildReports() {
       const hours = d.getHours().toString().padStart(2, '0');
       const minutes = d.getMinutes().toString().padStart(2, '0');
       return `${datePart} à ${hours}h${minutes}`;
-    } catch (err) {
+    } catch {
       return `${dateStr}${timeStr ? ' à ' + timeStr : ''}`;
     }
   };
@@ -69,9 +69,13 @@ export default function ParentChildReports() {
     const load = async () => {
       try {
         const res = await parentService.getChildReports(childId);
-        setReports(res || []);
-      } catch (err) {
-        console.error(err);
+        if (Array.isArray(res)) {
+          setReports(res.filter(r => r && typeof r === 'object' && 'id' in r));
+        } else {
+          setReports([]);
+        }
+      } catch {
+        // noop
       } finally {
         setLoading(false);
       }
@@ -84,9 +88,9 @@ export default function ParentChildReports() {
     (async () => {
       try {
         const child = await parentService.getChild(childId);
-        setChildName(child?.name || null);
-      } catch (err) {
-        console.error('Failed to load child name', err);
+        setChildName(child && typeof child === 'object' && 'name' in child ? (child as { name?: string }).name || null : null);
+      } catch {
+        // noop
       }
     })();
   }, [childId]);

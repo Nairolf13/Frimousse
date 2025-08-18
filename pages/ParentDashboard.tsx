@@ -73,29 +73,31 @@ const ParentDashboard: React.FC = () => {
           try {
             const now = new Date();
             const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const parentsList = (json && typeof json === 'object' && 'parents' in (json as any)) ? (json as any).parents : [];
+            const payload = (json && typeof json === 'object') ? (json as AdminData) : null;
+            const parentsList: Parent[] = payload?.parents ?? [];
             const billingMap: Record<string, number> = {};
-            await Promise.all((parentsList || []).map(async (p: any) => {
+            type ChildRef = { child?: Child; id?: string };
+            await Promise.all(parentsList.map(async (p: Parent) => {
               let total = 0;
               const childrenArr = Array.isArray(p.children) ? p.children : [];
-              await Promise.all(childrenArr.map(async (ci: any) => {
+              await Promise.all(childrenArr.map(async (ci: ChildRef) => {
                 const childId = ci?.child?.id || ci?.id;
                 if (!childId) return;
                 try {
                   const res = await fetchWithRefresh(`${resolvedApi}/api/children/${childId}/billing?month=${month}`, { credentials: 'include' });
                   if (!res.ok) return;
                   const data = await res.json();
-                  if (data && typeof data.amount === 'number') total += data.amount;
-                } catch (e) {
-                  // ignore per-child failure
+                  if (data && typeof (data as Record<string, unknown>).amount === 'number') total += (data as { amount: number }).amount;
+                } catch {
+                  /* noop - ignore per-child failure */
                 }
               }));
-              billingMap[String(p.id)] = total;
+              billingMap[String((p as Parent).id)] = total;
             }));
             setParentBilling(billingMap);
-          } catch (e) {
-            // ignore billing errors
-          }
+            } catch {
+              /* noop - ignore billing errors */
+            }
         } else {
           const res = await fetchWithRefresh(`${resolvedApi}/api/parent/children`, { credentials: 'include' });
           const text = await res.text();
@@ -182,7 +184,7 @@ const ParentDashboard: React.FC = () => {
                   method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload)
                 });
                 let resBody: unknown = null;
-                try { resBody = await res.json(); } catch (e) { }
+                try { resBody = await res.json(); } catch { /* noop */ }
                 if (!res.ok) {
                   const bodyText = typeof resBody === 'object' && resBody !== null && 'message' in (resBody as Record<string, unknown>) ? String((resBody as Record<string, unknown>).message) : (await res.text());
                   throw new Error(bodyText || 'Erreur création parent');
@@ -250,8 +252,8 @@ const ParentDashboard: React.FC = () => {
                     try {
                       const res = await fetchWithRefresh(`${resolvedApi}/api/parent/${deletingParentId}`, { method: 'DELETE', credentials: 'include' });
                       const respText = await res.text();
-                      let respBody: any = null;
-                      try { respBody = respText ? JSON.parse(respText) : null; } catch { respBody = respText; }
+                      let respBody: Record<string, unknown> | null = null;
+                      try { respBody = respText ? JSON.parse(respText) : null; } catch { respBody = respText as unknown as Record<string, unknown>; }
                       if (!res.ok) {
                         const message = respBody && typeof respBody === 'object' && ('message' in respBody || 'error' in respBody)
                           ? (respBody.message || respBody.error)

@@ -41,7 +41,30 @@ export default function ParentChildSchedule() {
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
-  const [activityModalData, setActivityModalData] = useState<{ activities: any[] } | null>(null);
+  type LocalActivity = { id: string; date: string; startTime?: string | null; endTime?: string | null; name?: string | null; comment?: string | null; nannies?: { id: string; name: string }[]; nannyId?: string | null };
+  type ActivityModal = { id: string; date: string; startTime: string; endTime: string; name: string; comment?: string | null; nannies?: { id: string; name: string }[] };
+  const [activityModalData, setActivityModalData] = useState<{ activities: ActivityModal[] } | null>(null);
+  const getStringFrom = (obj: Record<string, unknown>, keys: string[]) => {
+    for (const k of keys) {
+      if (typeof obj[k] === 'string') return obj[k] as string;
+    }
+    return '';
+  };
+  const toModalActivities = (arr: LocalActivity[] | null): ActivityModal[] => {
+    if (!arr) return [];
+  return arr.map(a => {
+      const raw = a as unknown as Record<string, unknown>;
+      return {
+        id: a.id,
+        date: a.date,
+        startTime: getStringFrom(raw, ['startTime', 'start']),
+        endTime: getStringFrom(raw, ['endTime', 'end']),
+    name: typeof a.name === 'string' ? a.name : '',
+        comment: typeof a.comment === 'string' ? a.comment : null,
+        nannies: Array.isArray(a.nannies) ? a.nannies : undefined,
+      };
+    });
+  };
   const [childName, setChildName] = useState<string | null>(null);
 
   const API_URL = (() => {
@@ -71,7 +94,7 @@ export default function ParentChildSchedule() {
       try {
         const res = await fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' });
         const data = await res.json();
-        const found = Array.isArray(data) ? data.find((c: any) => String(c.id) === String(childId)) : null;
+  const found = Array.isArray(data) ? data.find((c: unknown) => { const obj = c as Record<string, unknown>; return String(obj.id) === String(childId); }) : null;
         setChildName(found ? (found.name || `${found.firstName || ''} ${found.lastName || ''}`.trim()) : null);
       } catch (err) {
         console.error('Failed to load child name', err);
@@ -94,7 +117,7 @@ export default function ParentChildSchedule() {
         setLoading(false);
       }
     })();
-  }, [childId, currentDate, fetchAssignments]);
+  }, [childId, currentDate, fetchAssignments, API_URL]);
 
   const monthGrid = getMonthGrid(currentDate);
 
@@ -169,10 +192,18 @@ export default function ParentChildSchedule() {
                                           try {
                                             const nannyId = a.nanny!.id;
                                             const dateYmd = toLocalYMD(a.date);
-                                            const res = await fetch(`${API_URL}/api/nannies/${encodeURIComponent(nannyId)}/schedules`);
+                                            const res = await fetchWithRefresh(`${API_URL}/api/nannies/${encodeURIComponent(nannyId)}/schedules`, { credentials: 'include' });
                                             const data = await res.json();
-                                            const filtered = Array.isArray(data) ? data.filter((s: any) => s.date.split('T')[0] === dateYmd) : [];
-                                            setActivityModalData({ activities: filtered });
+                                            console.log('Activités reçues pour la nounou:', data, 'dateYmd:', dateYmd);
+                                            const filtered = Array.isArray(data)
+                                              ? data.filter((s: unknown) => {
+                                                  const obj = s as Record<string, unknown>;
+                                                  const date = typeof obj.date === 'string' ? toLocalYMD(obj.date) : '';
+                                                  return date === dateYmd;
+                                                }) as LocalActivity[]
+                                              : [];
+                                            console.log('Activités filtrées:', filtered);
+                                            setActivityModalData({ activities: toModalActivities(filtered) });
                                           } catch (err) {
                                             console.error('Failed to fetch activities', err);
                                             setActivityModalData({ activities: [] });
@@ -204,10 +235,16 @@ export default function ParentChildSchedule() {
                           try {
                             const nannyId = a.nanny!.id;
                             const dateYmd = toLocalYMD(a.date);
-                            const res = await fetch(`${API_URL}/api/nannies/${encodeURIComponent(nannyId)}/schedules`);
+                            const res = await fetchWithRefresh(`${API_URL}/api/nannies/${encodeURIComponent(nannyId)}/schedules`, { credentials: 'include' });
                             const data = await res.json();
-                            const filtered = Array.isArray(data) ? data.filter((s: any) => s.date.split('T')[0] === dateYmd) : [];
-                            setActivityModalData({ activities: filtered });
+                                            const filtered = Array.isArray(data)
+                                              ? data.filter((s: unknown) => {
+                                                  const obj = s as Record<string, unknown>;
+                                                  const date = typeof obj.date === 'string' ? toLocalYMD(obj.date) : '';
+                                                  return date === dateYmd;
+                                                }) as LocalActivity[]
+                                              : [];
+                                            setActivityModalData({ activities: toModalActivities(filtered) });
                           } catch (err) {
                             console.error('Failed to fetch activities', err);
                             setActivityModalData({ activities: [] });

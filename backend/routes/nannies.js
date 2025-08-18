@@ -9,12 +9,6 @@ const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
-function generateAccessToken(user) {
-  return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '15m' });
-}
-function generateRefreshToken(user) {
-  return jwt.sign({ id: user.id }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-}
 
 router.get('/', auth, async (req, res) => {
   const where = {};
@@ -38,6 +32,7 @@ router.post('/', auth, async (req, res) => {
           experience: parsedExperience,
           contact,
           email,
+          centerId: req.user.centerId || null,
         }
       });
       const authController = require('../controllers/authController');
@@ -47,7 +42,8 @@ router.post('/', auth, async (req, res) => {
           password,
           name,
           role: 'nanny',
-          nannyId: nanny.id
+          nannyId: nanny.id,
+          centerId: req.user.centerId || null
         },
         cookies: req.cookies
       };
@@ -59,28 +55,14 @@ router.post('/', auth, async (req, res) => {
         };
         authController.register(fakeReq, fakeRes).catch(reject);
       });
-      const user = await prisma.user.findUnique({ where: { email } });
-      const jwt = require('jsonwebtoken');
-      const JWT_SECRET = process.env.JWT_SECRET;
-      const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
-      function generateAccessToken(user) {
-        return jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '15m' });
-      }
-      function generateRefreshToken(user) {
-        return jwt.sign({ id: user.id }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-      }
-      const accessToken = generateAccessToken(user);
-      const refreshToken = generateRefreshToken(user);
-      await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-      res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000 });
-      res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000 });
-      res.status(201).json({ nanny, user });
+  const user = await prisma.user.findUnique({ where: { email } });
+  // Ne pas connecter automatiquement le compte créé
+  res.status(201).json({ nanny, user });
     } catch (e) {
       res.status(400).json({ error: e.message });
     }
   } else {
-  const nannyData = { name, availability, experience: parsedExperience, contact, email };
-  if (!isSuperAdmin(req.user) && req.user.centerId) nannyData.centerId = req.user.centerId;
+  const nannyData = { name, availability, experience: parsedExperience, contact, email, centerId: req.user.centerId || null };
   const nanny = await prisma.nanny.create({ data: nannyData });
     res.status(201).json(nanny);
   }

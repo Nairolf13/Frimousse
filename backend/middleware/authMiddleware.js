@@ -8,7 +8,6 @@ module.exports = async function (req, res, next) {
   if (!token) return res.status(401).json({ message: 'No token' });
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    // Fetch fresh user data to get centerId and any updates to role
     const user = await prisma.user.findUnique({ where: { id: payload.id } });
     if (!user) return res.status(401).json({ message: 'Invalid token - user not found' });
     req.user = {
