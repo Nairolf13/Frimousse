@@ -1,6 +1,7 @@
 import React from 'react';
 import '../styles/filter-responsive.css';
 import NannyCalendar from '../components/NannyCalendar';
+import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 
@@ -36,6 +37,7 @@ interface Nanny {
   status?: 'Disponible' | 'En congé';
   contact?: string;
   email?: string;
+  cotisationPaidUntil?: string | null;
 }
 
 const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; password?: string } = {
@@ -52,7 +54,10 @@ const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; pass
 const avatarEmojis = ['🦁', '🐻', '🐱', '🐶', '🦊', '🐼', '🐵', '🐯'];
 
 export default function Nannies() {
+  const { user } = useAuth();
   const [nannies, setNannies] = useState<Nanny[]>([]);
+  const [cotisationStatus, setCotisationStatus] = useState<Record<string, { paidUntil: string | null; loading: boolean }>>({});
+  const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number>>({});
   interface Assignment {
     id: string;
     date: string;
@@ -73,20 +78,74 @@ export default function Nannies() {
   const [availabilityFilter, setAvailabilityFilter] = useState('');
   const [experienceFilter, setExperienceFilter] = useState('');
 
-  const fetchNannies = () => {
+  const fetchCotisation = async (nannyId: string) => {
+    setCotisationStatus(s => ({ ...s, [nannyId]: { ...s[nannyId], loading: true } }));
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/api/nannies/${nannyId}/cotisation`, { credentials: 'include' });
+      const data = await res.json();
+      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: data.cotisationPaidUntil, loading: false } }));
+      if (data.lastCotisationAmount) {
+        setCotisationAmounts(prev => ({ ...prev, [nannyId]: Number(data.lastCotisationAmount) }));
+      }
+    } catch {
+      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: null, loading: false } }));
+    }
+  };
+
+  const [messages, setMessages] = useState<Record<string, { text: string; type: 'success' | 'error' } | null>>({});
+  const [confirmPayment, setConfirmPayment] = useState<{ nannyId: string; amount: number } | null>(null);
+
+  const payCotisation = async (nannyId: string, amount?: number) => {
+    setCotisationStatus(s => ({ ...s, [nannyId]: { ...s[nannyId], loading: true } }));
+    try {
+      const body = amount ? JSON.stringify({ amount }) : undefined;
+      const res = await fetchWithRefresh(`${API_URL}/api/nannies/${nannyId}/cotisation`, { method: 'PUT', credentials: 'include', headers: body ? { 'Content-Type': 'application/json' } : undefined, body });
+      const data = await res.json();
+      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: data.cotisationPaidUntil, loading: false } }));
+      setMessages(m => ({ ...m, [nannyId]: { text: 'Paiement enregistré', type: 'success' } }));
+      if (data.lastCotisationAmount) setCotisationAmounts(prev => ({ ...prev, [nannyId]: Number(data.lastCotisationAmount) }));
+      setTimeout(() => setMessages(m => ({ ...m, [nannyId]: null })), 3000);
+      // Rafraîchir la cotisation pour afficher le compte à rebours immédiatement
+      await fetchCotisation(nannyId);
+      } catch {
+      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: null, loading: false } }));
+      setMessages(m => ({ ...m, [nannyId]: { text: 'Erreur lors du paiement', type: 'error' } }));
+      setTimeout(() => setMessages(m => ({ ...m, [nannyId]: null })), 4000);
+    }
+  };
+
+  const requestPay = (nannyId: string) => {
+    const amount = cotisationAmounts[nannyId] || 10;
+    setConfirmPayment({ nannyId, amount });
+  };
+
+  const confirmPay = async () => {
+    if (!confirmPayment) return;
+    const { nannyId, amount } = confirmPayment;
+    setConfirmPayment(null);
+    await payCotisation(nannyId, amount);
+  };
+
+  const fetchNannies = React.useCallback(() => {
     setLoading(true);
     fetchWithRefresh(`${API_URL}/api/nannies`, { credentials: 'include' })
       .then(res => res.json())
-      .then(setNannies)
+      .then((nannies: Nanny[]) => {
+  setNannies(nannies);
+  // initialize default cotisation amount to 10 for each nanny
+  const amounts: Record<string, number> = {};
+  nannies.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); });
+  setCotisationAmounts(amounts);
+      })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   useEffect(() => {
     fetchNannies();
     fetchWithRefresh(`${API_URL}/api/assignments`, { credentials: 'include' })
       .then(res => res.json())
       .then(setAssignments);
-  }, []);
+  }, [fetchNannies]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -249,8 +308,10 @@ export default function Nannies() {
         {loading ? (
           <div>Chargement...</div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 w-full">
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full children-responsive-grid">
             {filtered.map((nanny, idx) => {
+              const cotisation = cotisationStatus[nanny.id];
+              const daysRemaining = cotisation && cotisation.paidUntil ? Math.max(0, Math.floor((new Date(cotisation.paidUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0;
               const avatar = avatarEmojis[idx % avatarEmojis.length];
               const cardColors = [
                 'bg-blue-50',
@@ -265,17 +326,17 @@ export default function Nannies() {
               return (
                 <div
                   key={nanny.id}
-                  className={`rounded-2xl shadow-lg ${color} relative flex flex-col min-h-[320px] h-full transition-transform duration-500 perspective-1000 max-w-xs w-full`}
+                  className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[440px] h-full transition-transform duration-500 perspective-1000 overflow-hidden`}
                   style={{ height: '100%', perspective: '1000px' }}
                 >
                   <span
-                    className={`absolute text-xs font-bold px-3 py-1 rounded-full shadow border whitespace-nowrap
+                    className={`absolute text-xs font-bold px-3 py-1 rounded-full shadow border whitespace-nowrap transform
                       ${nanny.availability === 'Disponible'
                         ? 'bg-green-100 text-green-700 border-green-200'
                         : nanny.availability === 'En_congé'
                         ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
                         : 'bg-red-100 text-red-700 border-red-200'}
-                      right-4 top-4
+                      left-1/2 -translate-x-1/2 top-3
                       `}
                     style={{zIndex:2}}
                   >
@@ -286,35 +347,31 @@ export default function Nannies() {
                     style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
                   >
                     <div
-                      className={`absolute inset-0 w-full h-full p-0 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
+                      className={`absolute inset-0 w-full h-full p-6 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
                       style={{ backfaceVisibility: 'hidden' }}
                     >
-                      <div className="w-full flex flex-col items-center relative pt-6 pb-2">
-                        <div className="relative w-16 h-16 mb-2 flex items-center justify-center">
-                          <span className="rounded-full bg-white flex items-center justify-center text-3xl shadow border-2 border-gray-100 w-16 h-16">{avatar}</span>
-                        </div>
-                        <span className="mt-1 text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">{nanny.experience} ans</span>
+                      <div className="flex items-center gap-3 mb-2 min-w-0 pt-12 pb-2">
+                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{avatar}</div>
+                        <span className="font-semibold text-lg text-gray-900 ml-2 truncate max-w-[120px] min-w-0" title={nanny.name}>{nanny.name}</span>
+                        <span className="ml-auto text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100 whitespace-nowrap">{nanny.experience} ans</span>
                       </div>
-                      <div className="flex flex-col items-center mb-2">
-                        <span className="font-semibold text-base md:text-lg text-gray-900">{nanny.name}</span>
-                        <div className="flex flex-col gap-1 items-center mt-1 w-full">
-                          <span className="flex items-center gap-2 w-full justify-center">
-                            <span role="img" aria-label="Téléphone">📞</span>
-                            {nanny.contact ? (
-                              <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
-                            ) : (
-                              <span className="text-gray-400 text-xs md:text-sm">—</span>
-                            )}
-                          </span>
-                          <span className="flex items-center gap-2 w-full justify-center">
-                            <span role="img" aria-label="Email">✉️</span>
-                            {nanny.email ? (
-                              <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
-                            ) : (
-                              <span className="text-gray-400 text-xs md:text-sm">—</span>
-                            )}
-                          </span>
-                        </div>
+                      <div className="flex flex-col gap-3 text-sm text-gray-700 mb-4">
+                        <span className="flex items-center gap-2 w-full justify-center">
+                          <span role="img" aria-label="Téléphone">📞</span>
+                          {nanny.contact ? (
+                            <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
+                          ) : (
+                            <span className="text-gray-400 text-xs md:text-sm">—</span>
+                          )}
+                        </span>
+                        <span className="flex items-center gap-2 w-full justify-center">
+                          <span role="img" aria-label="Email">✉️</span>
+                          {nanny.email ? (
+                            <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
+                          ) : (
+                            <span className="text-gray-400 text-xs md:text-sm">—</span>
+                          )}
+                        </span>
                       </div>
                       {nanny.specializations && nanny.specializations.length > 0 && (
                         <div className="flex flex-wrap justify-center gap-2 mb-2 w-full px-4">
@@ -339,19 +396,72 @@ export default function Nannies() {
                           );
                         })()}
                       </div>
-                      <div className="flex flex-row flex-wrap justify-center gap-2 mt-auto mb-4 w-full min-w-0">
-                        <button
-                          onClick={() => setPlanningNanny(nanny)}
-                          className="w-[90px] min-w-[80px] max-w-[100px] bg-cyan-100 text-cyan-700 px-2 py-1 rounded-full font-semibold border border-cyan-200 shadow-sm hover:bg-cyan-200 transition text-xs text-center"
-                        >Planning</button>
-                        <button
-                          onClick={() => handleEdit(nanny)}
-                          className="w-[90px] min-w-[80px] max-w-[100px] bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold border border-yellow-200 shadow-sm hover:bg-yellow-200 transition text-xs text-center"
-                        >Éditer</button>
-                        <button
-                          onClick={() => setDeleteId(nanny.id)}
-                          className="w-[90px] min-w-[80px] max-w-[100px] bg-red-100 text-red-600 px-2 py-1 rounded-full font-semibold border border-red-200 shadow-sm hover:bg-red-200 transition text-xs text-center"
-                        >Supprimer</button>
+                      <div className="flex flex-col gap-2 mt-auto mb-4 w-full min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs font-semibold text-gray-700">Cotisation annuelle&nbsp;:</span>
+                                    {daysRemaining > 0 ? (
+                                      <span className="text-base font-bold text-green-700">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
+                                    ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
+                                      <input
+                                        type="number"
+                                        className="w-20 px-2 py-1 border rounded text-sm"
+                                        value={cotisationAmounts[nanny.id] ?? 10}
+                                        onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
+                                      />
+                                    ) : (
+                                      <span className="text-base font-bold text-green-700">10€</span>
+                                    )}
+                          {daysRemaining > 0 ? (
+                            <span className="text-green-500 text-xl">✔️</span>
+                          ) : (
+                            <span className="text-red-500 text-xl">❌</span>
+                          )}
+                          <div className="flex flex-col items-center">
+                            <button
+                              className="text-blue-500 text-xs font-semibold px-2 py-1 rounded bg-blue-100 hover:bg-green-100 transition ml-2"
+                              disabled={cotisation?.loading}
+                              onClick={() => requestPay(nanny.id)}
+                            >
+                              {cotisation?.loading ? "Paiement..." : "Payer"}
+                            </button>
+                            {messages[nanny.id] && (
+                              <div className={`mt-2 text-xs ${messages[nanny.id]?.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                                {messages[nanny.id]?.text}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-xs text-gray-500 ml-2">
+                            {cotisation && cotisation.paidUntil ? (() => {
+                              const paidDate = new Date(cotisation.paidUntil);
+                              const now = new Date();
+                              const diff = paidDate.getTime() - now.getTime();
+                              const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+                              return days > 0 ? `${days} jours restants` : 'Cotisation à renouveler';
+                            })() : 'Cotisation à renouveler'}
+                          </span>
+                        </div>
+                        <div className="flex flex-col items-center gap-2 mt-2">
+                          <button
+                            onClick={() => setPlanningNanny(nanny)}
+                            className="w-[120px] min-w-[100px] bg-cyan-100 text-cyan-700 px-3 py-2 rounded-full font-semibold border border-cyan-200 shadow-sm hover:bg-cyan-200 transition text-xs text-center mx-auto"
+                          >Planning</button>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleEdit(nanny)}
+                              className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm"
+                              title="Éditer"
+                            >
+                              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
+                            </button>
+                            <button
+                              onClick={() => setDeleteId(nanny.id)}
+                              className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm"
+                              title="Supprimer"
+                            >
+                              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div
@@ -379,6 +489,25 @@ export default function Nannies() {
           </div>
         )}
       </div>
+      {confirmPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-2">Confirmer le paiement</h3>
+            <p className="mb-4">Voulez-vous enregistrer le paiement de <span className="font-semibold">{confirmPayment.amount}€</span> pour cette nounou ?</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmPayment(null)}
+                className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2"
+              >Annuler</button>
+              <button
+                onClick={confirmPay}
+                className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2"
+              >Confirmer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {planningNanny && (
         <PlanningModal nanny={planningNanny} onClose={() => setPlanningNanny(null)} />
       )}

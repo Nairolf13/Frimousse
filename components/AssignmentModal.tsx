@@ -58,7 +58,7 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
               {nannies.map(nanny => <option key={nanny.id} value={nanny.id}>{nanny.name}</option>)}
             </select>
           </label>
-          <button type="submit" className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">{initial ? 'Modifier' : 'Ajouter'}</button>
+          <button type="submit" className="bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">{initial ? 'Ajouter' : 'Modifier'}</button>
         </form>
       </div>
     </div>

@@ -178,13 +178,13 @@ export default function WeeklyActivityCalendar() {
       <div className="w-full max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Weekly Activity Schedule</h1>
+            <h1 className="text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Planning des activités</h1>
             <div className="text-lg text-gray-500 font-medium">{weekLabel}</div>
           </div>
           <div className="flex items-center gap-2 mt-2 md:mt-0">
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#60;</button>
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#62;</button>
-            <button onClick={() => setAdding(true)} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition text-base ml-2">+ Add Activity</button>
+            <button onClick={() => setAdding(true)} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition text-base ml-2">+ Ajouter une activité</button>
           </div>
         </div>
         <div className="hidden lg:block max-w-5xl mx-auto">

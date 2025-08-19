@@ -145,13 +145,11 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// Supprimer un Parent (admin/nanny)
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
   const userReq = req.user || {};
   if (!(userReq.role === 'admin' || userReq.nannyId || isSuperAdmin(userReq))) return res.status(403).json({ message: 'Forbidden' });
     const { id } = req.params;
-    // In a transaction, unlink any users and delete parent (ensure center match)
     if (!isSuperAdmin(userReq)) {
       const existing = await prisma.parent.findUnique({ where: { id } });
       if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent not found' });

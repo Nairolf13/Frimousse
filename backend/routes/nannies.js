@@ -120,4 +120,53 @@ router.get('/:id', auth, async (req, res) => {
   res.json(nanny);
 });
 
+// Cotisation mensuelle pour une nanny
+router.get('/:id/cotisation', auth, async (req, res) => {
+  try {
+    // Sécurité multi-centre : super-admin accès global, sinon centreId doit correspondre
+    const where = { id: req.params.id };
+    if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+  const nanny = await prisma.nanny.findFirst({ where, select: { cotisationPaidUntil: true, lastCotisationAmount: true } });
+  if (!nanny) return res.status(404).json({ error: 'Nanny not found' });
+  res.json({ cotisationPaidUntil: nanny.cotisationPaidUntil, lastCotisationAmount: nanny.lastCotisationAmount || null });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Paiement de la cotisation mensuelle
+router.put('/:id/cotisation', auth, async (req, res) => {
+  try {
+    // Sécurité multi-centre : super-admin accès global, sinon centreId doit correspondre
+    const where = { id: req.params.id };
+    if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+    const nanny = await prisma.nanny.findFirst({ where });
+    if (!nanny) return res.status(404).json({ error: 'Nanny not found' });
+    const now = new Date();
+    let newDate;
+    if (nanny.cotisationPaidUntil && new Date(nanny.cotisationPaidUntil) > now) {
+      newDate = new Date(nanny.cotisationPaidUntil);
+    } else {
+      newDate = now;
+    }
+    newDate.setMonth(newDate.getMonth() + 1);
+
+    const updateData = { cotisationPaidUntil: newDate };
+    // If amount provided and user is admin or super-admin, persist it
+    const { amount } = req.body || {};
+    const isAdmin = req.user && (req.user.role === 'admin' || isSuperAdmin(req.user));
+    if (amount && isAdmin) {
+      updateData.lastCotisationAmount = Number(amount);
+    }
+
+    await prisma.nanny.update({
+      where: { id: req.params.id },
+      data: updateData
+    });
+    res.json({ cotisationPaidUntil: newDate, lastCotisationAmount: updateData.lastCotisationAmount || null });
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

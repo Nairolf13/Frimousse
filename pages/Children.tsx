@@ -12,6 +12,7 @@ interface Billing {
 }
 
 import { useEffect, useState } from 'react';
+import { useAuth } from '../src/context/AuthContext';
 import '../styles/filter-responsive.css';
 import '../styles/children-responsive.css';
 
@@ -78,6 +79,8 @@ export default function Children() {
   const [showForm, setShowForm] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
+  const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number | undefined>>({});
+  const { user } = useAuth();
 
   function handleEdit(child: Child) {
     setForm({
@@ -133,7 +136,11 @@ export default function Children() {
         };
         return typedChild;
       }) : [];
-      setChildren(childrenData);
+  setChildren(childrenData);
+  // initialize default cotisation amount to 15 for each child
+  const amounts: Record<string, number | undefined> = {};
+  childrenData.forEach(c => { amounts[c.id] = 15; });
+  setCotisationAmounts(amounts);
     } catch {
       setChildren([]);
     } finally {
@@ -381,7 +388,8 @@ export default function Children() {
             const isDeleting = deleteId === child.id;
             const now = new Date();
             const paidUntil = child.cotisationPaidUntil ? new Date(child.cotisationPaidUntil) : null;
-            const cotisationOk = paidUntil && paidUntil > now;
+            const daysRemaining = paidUntil ? Math.max(0, Math.floor((paidUntil.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+            const cotisationOk = daysRemaining > 0;
             let countdown = '';
             if (paidUntil) {
               const diff = paidUntil.getTime() - now.getTime();
@@ -394,6 +402,7 @@ export default function Children() {
             }
             const handleCotisation = async () => {
               setCotisationLoadingId(child.id);
+              const amount = cotisationAmounts[child.id] ?? 15;
               await fetchWithRefresh(`/api/children/${child.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -405,7 +414,8 @@ export default function Children() {
                   parentName: child.parentName,
                   parentContact: child.parentContact,
                   allergies: child.allergies || '',
-                  payCotisation: true
+                  payCotisation: true,
+                  amount
                 })
               });
               await fetchChildren();
@@ -443,7 +453,20 @@ export default function Children() {
                       <div className="flex flex-col gap-2 mt-2 mb-0" style={{marginBottom: 0}}>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-gray-700">Cotisation annuelle&nbsp;:</span>
-                          <span className="text-base font-bold text-green-700">15€</span>
+                          {daysRemaining > 0 ? (
+                            <span className="text-base font-bold text-green-700">{(cotisationAmounts[child.id] ?? 15)}€</span>
+                          ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
+                            <input
+                              type="number"
+                              min={0}
+                              className="w-24 px-2 py-1 border rounded text-sm"
+                              value={cotisationAmounts[child.id] ?? ''}
+                              placeholder="€"
+                              onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [child.id]: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                            />
+                          ) : (
+                            <span className="text-base font-bold text-green-700">{(cotisationAmounts[child.id] ?? 15)}€</span>
+                          )}
                           {cotisationOk ? (
                             <span className="text-green-500 text-xl">✔️</span>
                           ) : (

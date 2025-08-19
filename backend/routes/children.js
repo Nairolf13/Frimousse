@@ -58,7 +58,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 router.post('/', auth, async (req, res) => {
-  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies } = req.body;
+  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group } = req.body;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
     return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
@@ -74,6 +74,9 @@ router.post('/', auth, async (req, res) => {
         sexe,
         allergies,
       };
+      if (group) {
+        childData.group = group;
+      }
       // assign centerId for non-super-admins
       if (!isSuperAdmin(req.user) && req.user.centerId) {
         childData.centerId = req.user.centerId;
@@ -116,7 +119,7 @@ router.post('/', auth, async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, cotisationPaidUntil, payCotisation } = req.body;
+  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group, cotisationPaidUntil, payCotisation } = req.body;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
     return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
@@ -137,15 +140,17 @@ router.put('/:id', auth, async (req, res) => {
     if (!isSuperAdmin(req.user) && existingChild.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
 
     const result = await prisma.$transaction(async (tx) => {
+      const updateData = {
+        name,
+        age: parsedAge,
+        sexe,
+        allergies,
+        cotisationPaidUntil: cotisationDate,
+      };
+      if (group !== undefined) updateData.group = group;
       const child = await tx.child.update({
         where: { id },
-        data: {
-          name,
-          age: parsedAge,
-          sexe,
-          allergies,
-          cotisationPaidUntil: cotisationDate,
-        }
+        data: updateData
       });
 
       if (parentId) {
