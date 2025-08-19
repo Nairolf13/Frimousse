@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bienvenue sur Frimousse</title>
+    <style>
+      body { font-family: Arial, Helvetica, sans-serif; background:#f8fafc; color:#111827; }
+      .container { max-width:600px; margin:32px auto; background:#ffffff; padding:24px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
+      .brand { color:#059669; font-weight:700; font-size:20px; }
+      .btn { display:inline-block; padding:10px 16px; background:#059669; color:#fff; border-radius:6px; text-decoration:none; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Bienvenue {{name}}</h1>
+      <p>Bonjour {{name}},</p>
+      <p>Merci d'avoir créé un compte sur Frimousse. Vous pouvez vous connecter avec votre adresse email.</p>
+      <p style="text-align:center"><a class="btn" href="{{loginUrl}}">Se connecter à Frimousse</a></p>
+      <p style="font-size:13px;color:#6b7280">Si vous n'avez pas créé ce compte, ignorez ce message.</p>
+      <p style="font-size:12px;color:#9ca3af">&copy; Frimousse</p>
+    </div>
+  </body>
+</html>
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bienvenue sur Frimousse</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; background:#f3f4f6; color:#0f172a; margin:0; padding:20px; }
+      .container { max-width:640px; margin:28px auto; background:#ffffff; padding:28px; border-radius:12px; box-shadow:0 10px 30px rgba(2,6,23,0.08); }
+      .brand { color:#059669; font-weight:800; font-size:20px; letter-spacing:0.4px; }
+      h1 { font-size:20px; margin:14px 0; }
+      p { color:#334155; line-height:1.45; }
+      .btn { display:inline-block; padding:12px 18px; background:#059669; color:#fff; border-radius:8px; text-decoration:none; font-weight:600; }
+      .footer { font-size:12px; color:#94a3b8; margin-top:18px; }
+    </style>
+  </head>
+  <body>
+    <div class="container" role="article" aria-label="Email de bienvenue">
+      <div class="brand">Frimousse</div>
+      <h1>Bienvenue {{name}}</h1>
+      <p>Bonjour {{name}},</p>
+      <p>Merci d'avoir rejoint Frimousse. Votre compte a été créé — cliquez sur le bouton ci-dessous pour vous connecter et compléter votre profil.</p>
+      <p style="text-align:center; margin:20px 0;"><a class="btn" href="{{loginUrl}}">Se connecter à Frimousse</a></p>
+      <p class="footer">Si vous n'avez pas créé ce compte, vous pouvez ignorer cet email.</p>
+      <p class="footer">© Frimousse</p>
+    </div>
+  </body>
+</html>

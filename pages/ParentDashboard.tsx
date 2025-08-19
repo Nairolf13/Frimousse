@@ -69,7 +69,6 @@ const ParentDashboard: React.FC = () => {
             throw new Error(message);
           }
           setAdminData(json as AdminData);
-          // compute billing totals per parent for current month
           try {
             const now = new Date();
             const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;

@@ -70,17 +70,25 @@ router.post('/', requireAuth, async (req, res) => {
           const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
           const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
           const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
-          const mailText = `Bonjour ${firstName || ''},\n\nUn compte parent a été créé pour vous sur Frimousse.\n\nCliquez sur ce lien pour définir votre mot de passe : ${inviteUrl}\n\nCe lien expirera dans 7 jours.\n\nMerci,\nL'équipe Frimousse`;
-
-          if (process.env.NODE_ENV !== 'production') {
-            
+          const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
+          const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+          const templatePath = `${__dirname}/../emailTemplates/welcome_parent_${lang}.html`;
+          const fs = require('fs');
+          let html = null;
+          try {
+            html = fs.readFileSync(templatePath, 'utf8');
+            html = html.replace(/{{name}}/g, firstName || '').replace(/{{inviteUrl}}/g, inviteUrl);
+          } catch (e) {
+            html = null;
           }
 
+          const subjects = { fr: 'Invitation - Accès Frimousse', en: 'Invitation - Access Frimousse' };
           const mailOptions = {
             from: process.env.SMTP_FROM || `no-reply@${process.env.SMTP_HOST || 'example.com'}`,
             to: email,
-            subject: 'Invitation - Accès Frimousse',
-            text: mailText,
+            subject: subjects[lang] || subjects.fr,
+            text: `Bonjour ${firstName || ''},\n\nUn compte parent a été créé pour vous sur Frimousse.\n\nCliquez ici pour définir votre mot de passe : ${inviteUrl}\n\nCe lien expirera dans 7 jours.\n\nMerci,\nL'équipe Frimousse`,
+            html: html || undefined,
           };
           await transporter.sendMail(mailOptions);
           

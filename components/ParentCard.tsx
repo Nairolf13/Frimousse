@@ -13,7 +13,7 @@ type Parent = {
   children?: ChildRef[];
 };
 
-export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void }) {
+export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete, annualPerChild }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; annualPerChild?: number }) {
   const navigate = useNavigate();
   const initials = ((parent.firstName && parent.lastName) ? `${parent.firstName[0] || ''}${parent.lastName[0] || ''}` : (parent.name || 'U')).toUpperCase().slice(0,2);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -54,7 +54,10 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
           </div>
 
           <div className="mt-auto flex items-center justify-between">
-            <div className="text-sm text-gray-700">À payer ce mois: <span className="font-bold text-blue-700">{(parentDue || 0)}€</span></div>
+            <div className="text-sm text-gray-700">
+              <div>À payer ce mois: <span className="font-bold text-blue-700">{(parentDue || 0)}€</span></div>
+              <div className="text-xs text-gray-500">Cotisation annuelle totale: <span className="font-bold text-gray-900">{((parent.children?.length || 0) * (annualPerChild ?? 15))}€</span></div>
+            </div>
             <div className="flex gap-2">
               <button onClick={() => { if (onEdit) onEdit(parent); }} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm" title="Éditer">
                 <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>

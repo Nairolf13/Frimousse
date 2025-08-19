@@ -5,6 +5,8 @@ function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
@@ -18,52 +20,106 @@ router.get('/', auth, async (req, res) => {
 });
 
 router.post('/', auth, async (req, res) => {
-  const { name, availability, experience, contact, email, password } = req.body;
-  const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
-  if (isNaN(parsedExperience)) {
-    return res.status(400).json({ error: 'Le champ "experience" doit être un nombre.' });
-  }
-  if (email && password) {
-    try {
-      const nanny = await prisma.nanny.create({
-        data: {
-          name,
-          availability,
-          experience: parsedExperience,
-          contact,
-          email,
-          centerId: req.user.centerId || null,
-        }
-      });
-      const authController = require('../controllers/authController');
-      const fakeReq = {
-        body: {
-          email,
-          password,
-          name,
-          role: 'nanny',
-          nannyId: nanny.id,
-          centerId: req.user.centerId || null
-        },
-        cookies: req.cookies
-      };
-      await new Promise((resolve, reject) => {
-        const fakeRes = {
-          status: (code) => { fakeRes.statusCode = code; return fakeRes; },
-          json: (data) => { fakeRes.data = data; resolve(fakeRes); },
-          cookie: (...args) => {},
-        };
-        authController.register(fakeReq, fakeRes).catch(reject);
-      });
-  const user = await prisma.user.findUnique({ where: { email } });
-  res.status(201).json({ nanny, user });
-    } catch (e) {
-      res.status(400).json({ error: e.message });
+  try {
+    const userReq = req.user || {};
+    // Only admins or nannies themselves (or super-admin) can create nannies
+    if (!(userReq.role === 'admin' || userReq.nannyId || userReq.role === 'super-admin')) return res.status(403).json({ message: 'Forbidden' });
+    const { name, availability, experience, contact, email } = req.body;
+    const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
+    if (isNaN(parsedExperience)) {
+      return res.status(400).json({ error: 'Le champ "experience" doit être un nombre.' });
     }
-  } else {
-  const nannyData = { name, availability, experience: parsedExperience, contact, email, centerId: req.user.centerId || null };
-  const nanny = await prisma.nanny.create({ data: nannyData });
-    res.status(201).json(nanny);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const nannyData = { name, availability, experience: parsedExperience, contact, email, centerId: req.user.centerId || null };
+      const nanny = await tx.nanny.create({ data: nannyData });
+
+      if (!email) return { nanny, user: null };
+
+      const existingUser = await tx.user.findUnique({ where: { email } });
+      if (existingUser) {
+        // Attach existing user to this nanny
+        await tx.user.update({ where: { id: existingUser.id }, data: { nannyId: nanny.id } });
+        return { nanny, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
+      }
+
+      // Create a temporary password and user record, then send invite email
+      const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
+      const hash = await bcrypt.hash(tempPassword, 10);
+      const userData = { email, password: hash, name, role: 'nanny', nannyId: nanny.id };
+      if (userReq.centerId) userData.centerId = userReq.centerId;
+      const user = await tx.user.create({ data: userData });
+      return { nanny, user };
+    });
+
+    // Send invite email if we created a new user with email
+    if (result.user && process.env.SMTP_HOST) {
+      (async () => {
+        try {
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
+            secure: process.env.SMTP_SECURE === 'true',
+            auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
+          });
+          const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+          const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
+          const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
+          const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
+          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+          const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
+          const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+          const templatePath = `${__dirname}/../emailTemplates/welcome_nanny_${lang}.html`;
+          const fs = require('fs');
+          let html = null;
+          try {
+            html = fs.readFileSync(templatePath, 'utf8');
+            html = html.replace(/{{name}}/g, result.user.name || '').replace(/{{inviteUrl}}/g, inviteUrl);
+          } catch (e) {
+            html = null;
+          }
+          const subjects = { fr: 'Invitation - Accès Frimousse', en: 'Invitation - Access Frimousse' };
+          const mailOptions = {
+            from: process.env.SMTP_FROM || `no-reply@${process.env.SMTP_HOST || 'example.com'}`,
+            to: result.user.email,
+            subject: subjects[lang] || subjects.fr,
+            text: `Bonjour ${(result.user.name || '').split(/\s+/)[0] || ''},\n\nVous avez reçu une invitation pour rejoindre Frimousse. Connectez-vous ici: ${inviteUrl}`,
+            html: html || undefined,
+          };
+          await transporter.sendMail(mailOptions);
+        } catch (err) {
+          console.error('Failed to send nanny invite email', err && err.message ? err.message : err);
+        }
+      })();
+    }
+
+    res.status(201).json(result);
+  } catch (e) {
+    console.error('POST /api/nannies error', e);
+    if (e && e.code === 'P2002') return res.status(409).json({ message: 'Nanny or user with this email already exists' });
+    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+  }
+});
+
+// Accept invite to set password (for nanny)
+router.post('/accept-invite', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ message: 'Missing token or password' });
+    const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
+    let payload;
+    try {
+      payload = jwt.verify(token, inviteSecret);
+    } catch (err) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+    if (payload.type !== 'invite' || !payload.userId) return res.status(400).json({ message: 'Invalid token payload' });
+    const hash = await bcrypt.hash(password, 10);
+    await prisma.user.update({ where: { id: payload.userId }, data: { password: hash } });
+    res.json({ message: 'Password set successfully' });
+  } catch (err) {
+    console.error('POST /api/nannies/accept-invite error', err);
+    res.status(500).json({ error: err && err.message ? err.message : String(err) });
   }
 });
 
