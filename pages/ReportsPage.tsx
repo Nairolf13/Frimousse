@@ -48,9 +48,9 @@ interface Report {
 
 
 const priorityStyles = {
-  haute: 'bg-red-50 border-red-100',
-  moyenne: 'bg-yellow-50 border-yellow-100',
-  basse: 'bg-green-50 border-green-100',
+  haute: 'bg-[#ffeaea] border-[#ffdddd]',
+  moyenne: 'bg-[#fff7e6] border-[#fff1d6]',
+  basse: 'bg-[#a9ddf2] border-[#cfeef9]',
 };
 const priorityLabel = {
   haute: 'PRIORITÉ HAUTE',
@@ -207,12 +207,12 @@ export default function ReportsPage() {
       <Sidebar />
       <main className="flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-2 md:ml-64">
         <div className="w-full max-w-5xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Rapports d'Incidents</h1>
-          <div className="text-base md:text-lg text-gray-500 font-medium mb-4 md:mb-6">Consultez tous les signalements des nounous concernant les incidents, comportements et observations quotidiennes des enfants.</div>
+          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>Rapports d'Incidents</h1>
+          <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>Consultez tous les signalements des nounous concernant les incidents, comportements et observations quotidiennes des enfants.</div>
           <div className="flex flex-col md:flex-row flex-wrap gap-2 mb-4 md:mb-6 items-stretch md:items-center">
             <div className="flex gap-2 flex-wrap">
               <button
-                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg border text-sm md:text-base font-medium ${filterLast30Days ? 'bg-red-100 border-red-300 text-red-700' : 'bg-white border-gray-100 text-gray-500'}`}
+                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg border text-sm md:text-base font-medium ${filterLast30Days ? 'bg-[#a9ddf2] border-[#fcdcdf] text-[#0b5566]' : 'bg-white border-gray-100 text-gray-500'}`}
                 onClick={e => {e.preventDefault(); setFilterLast30Days(v => !v);}}
               >
                 <span>📅</span> 30 derniers jours
@@ -235,15 +235,15 @@ export default function ReportsPage() {
                 className="px-3 md:px-4 py-2 rounded-lg border border-gray-100 bg-white text-sm md:text-base w-full md:w-64"
               />
             </div>
-            <button className="bg-red-500 text-white px-4 md:px-5 py-2 rounded-lg font-bold shadow hover:bg-red-600 transition text-sm md:text-base mt-2 md:mt-0 md:ml-2 w-full md:w-auto" onClick={() => setModalOpen(true)}>Nouveau Rapport</button>
+            <button className="bg-[#0b5566] text-white px-4 md:px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-sm md:text-base mt-2 md:mt-0 md:ml-2 w-full md:w-auto" onClick={() => setModalOpen(true)}>Nouveau Rapport</button>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-4 md:mb-6">
             <div className="bg-white rounded-xl shadow border border-gray-100 p-3 md:p-4 flex flex-col items-center">
-              <div className="text-2xl md:text-3xl font-extrabold text-red-500">{total}</div>
+              <div className="text-2xl md:text-3xl font-extrabold" style={{ color: '#0b5566' }}>{total}</div>
               <div className="text-xs text-gray-500 mt-1">Total Rapports</div>
             </div>
             <div className="bg-white rounded-xl shadow border border-gray-100 p-3 md:p-4 flex flex-col items-center">
-              <div className="text-xl md:text-2xl font-extrabold text-blue-500">{week}</div>
+              <div className="text-xl md:text-2xl font-extrabold" style={{ color: '#08323a' }}>{week}</div>
               <div className="text-xs text-gray-500 mt-1">Cette Semaine</div>
             </div>
           </div>
@@ -251,19 +251,18 @@ export default function ReportsPage() {
           {filteredReports.map(report => {
             const childInitials = report.child?.initials || (report.child?.name ? report.child.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : '');
             const nannyInitials = report.nanny?.initials || (report.nanny?.name ? report.nanny.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : '');
-            return (
-              <div key={report.id} className={`rounded-xl shadow border-2 ${priorityStyles[report.priority as keyof typeof priorityStyles] || ''} p-0 overflow-hidden`}
-                style={{ minWidth: 0 }}>
-                <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 md:px-6 py-2 ${report.priority === 'haute' ? 'bg-red-50' : report.priority === 'moyenne' ? 'bg-yellow-50' : 'bg-green-50'}`}> 
+              return (
+              <div key={report.id} className={`rounded-xl shadow border-2 ${priorityStyles[report.priority as keyof typeof priorityStyles] || ''} p-0 overflow-hidden`} style={{ minWidth: 0 }}>
+                <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 md:px-6 py-2`}> 
                   <div className="flex items-center gap-2 md:gap-3 mb-2 sm:mb-0">
-                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs ${report.type === 'incident' ? 'bg-red-100 text-red-700' : report.type === 'comportement' ? 'bg-yellow-100 text-yellow-700' : report.type === 'soin' ? 'bg-green-100 text-green-700' : ''}`}>{typeLabel[report.type as keyof typeof typeLabel] || report.type}</span>
-                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs ${report.priority === 'haute' ? 'bg-red-500 text-white' : report.priority === 'moyenne' ? 'bg-yellow-400 text-white' : report.priority === 'basse' ? 'bg-green-400 text-white' : ''}`}>{priorityLabel[report.priority as keyof typeof priorityLabel] || report.priority}</span>
+                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.type === 'incident' ? '#ffeaea' : report.type === 'comportement' ? '#fff7e6' : '#a9ddf2', color: report.type === 'incident' ? '#7a2a2a' : report.type === 'comportement' ? '#856400' : '#08323a' }}>{typeLabel[report.type as keyof typeof typeLabel] || report.type}</span>
+                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.priority === 'haute' ? '#dc2626' : report.priority === 'moyenne' ? '#f59e0b' : '#0b5566', color: '#ffffff' }}>{priorityLabel[report.priority as keyof typeof priorityLabel] || report.priority}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs md:text-sm font-bold text-blue-700 border border-blue-100">{childInitials}</span>
-                    <span className="font-bold text-blue-700 text-xs md:text-sm ml-1">{report.child?.name}</span>
-                    <span className="w-8 h-8 rounded-full bg-yellow-50 flex items-center justify-center text-xs md:text-sm font-bold text-yellow-700 border border-yellow-100">{nannyInitials}</span>
-                    <span className="font-bold text-yellow-700 text-xs md:text-sm ml-1">{report.nanny?.name}</span>
+                    <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold border" style={{ background: '#a9ddf2', color: '#08323a', borderColor: '#cfeef9' }}>{childInitials}</span>
+                    <span className="font-bold text-xs md:text-sm ml-1" style={{ color: '#08323a' }}>{report.child?.name}</span>
+                    <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold border" style={{ background: '#fff7e6', color: '#856400', borderColor: '#fff1d6' }}>{nannyInitials}</span>
+                    <span className="font-bold text-xs md:text-sm ml-1" style={{ color: '#856400' }}>{report.nanny?.name}</span>
                   </div>
                 </div>
                 <div className="px-4 md:px-6 pb-4">
@@ -276,8 +275,8 @@ export default function ReportsPage() {
                     </div>
                   )}
                   <div className="flex flex-col items-end mt-4">
-                    <span className="text-xs text-gray-500 italic">
-                      Rapport établi par <span className="font-bold text-yellow-700">{report.nanny?.name}</span> concernant <span className="font-bold text-blue-700">{report.child?.name}</span>
+                    <span className="text-xs italic" style={{ color: '#08323a' }}>
+                      Rapport établi par <span className="font-bold" style={{ color: '#856400' }}>{report.nanny?.name}</span> concernant <span className="font-bold" style={{ color: '#08323a' }}>{report.child?.name}</span>
                     </span>
                     <span className="text-xs text-gray-500">
                       {(() => {
@@ -303,10 +302,10 @@ export default function ReportsPage() {
           })}
         </div>
         {modalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative border-4 border-pink-100 flex flex-col gap-6 animate-fade-in">
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative flex flex-col gap-6 animate-fade-in" style={{ border: '4px solid #fcdcdf' }}>
               <button onClick={() => setModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-              <h2 className="text-2xl font-extrabold mb-2 text-center text-pink-700">Nouveau Rapport</h2>
+              <h2 className="text-2xl font-extrabold mb-2 text-center" style={{ color: '#0b5566' }}>Nouveau Rapport</h2>
               <form className="space-y-3" onSubmit={handleAddReport}>
                 <div className="flex gap-2">
                   <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as 'haute' | 'moyenne' | 'basse' }))} className="border rounded px-3 py-2 w-1/2">
@@ -374,7 +373,7 @@ export default function ReportsPage() {
                   </div>
                 )}
                 <div className="flex gap-2 mt-2">
-                  <button type="submit" className="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 transition">Créer</button>
+                  <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">Créer</button>
                   <button type="button" onClick={() => setModalOpen(false)} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
                 </div>
               </form>

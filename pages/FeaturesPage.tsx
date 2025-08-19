@@ -52,7 +52,7 @@ const jsonLd = {
 export default function FeaturesPage() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white p-0 m-0">
+    <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
       <Helmet>
         <title>Fonctionnalités | Frimousse Association</title>
         <meta name="description" content="Découvrez toutes les fonctionnalités de l’application Frimousse : gestion des enfants, familles, nounous, planning, rapports, sécurité, accessibilité et plus encore." />
@@ -63,12 +63,14 @@ export default function FeaturesPage() {
         <meta property="og:image" content="/frimousse-cover.png" />
         <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
       </Helmet>
-      <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between py-2 px-4">
-          <div className="flex items-center gap-2">
-            <span className="bg-green-100 rounded-full p-1"><span className="text-xl">🧒</span></span>
+      <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
+              <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
+            </div>
             <div className="w-full text-center">
-              <span className="font-bold text-base text-gray-800">Les petites Frimousse</span>
+              <span className="font-bold text-base text-[#08323a]">Les Frimousses</span>
             </div>
           </div>
         </div>
@@ -78,29 +80,29 @@ export default function FeaturesPage() {
           <div className="max-w-4xl mx-auto text-center">
             <button
               onClick={() => navigate('/')} 
-              className="mb-8 px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
+              className="mb-8 px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
               aria-label="Retour à l'accueil"
             >
               ← Retour à l'accueil
             </button>
-            <h1 className="text-3xl md:text-4xl font-bold text-green-700 mb-6">Fonctionnalités de l’application</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-[#0b5566] mb-6">Fonctionnalités de l’application</h1>
             <p className="text-gray-700 text-base sm:text-lg mb-6">
               Découvrez toutes les fonctionnalités de Frimousse, conçues pour simplifier la gestion de votre association de garde d’enfants, améliorer la communication et garantir la sécurité des données.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
               {features.map((feature, idx) => (
-                <div key={idx} className="bg-green-50 rounded-lg shadow p-5 border border-green-100">
-                  <h2 className="text-lg font-semibold mb-2 text-green-700">{feature.title}</h2>
-                  <p className="text-gray-700">{feature.description}</p>
+                <div key={idx} className="bg-[#f7f4d7] rounded-lg shadow p-5 border border-[#fcdcdf]">
+                  <h2 className="text-lg font-semibold mb-2 text-[#0b5566]">{feature.title}</h2>
+                  <p className="text-[#08323a]">{feature.description}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
-        <div className="max-w-4xl mx-auto text-center mt-10 mb-8">
+        <div className="bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2]max-w-4xl mx-auto text-center mt-10 mb-8">
           <button
             onClick={() => navigate('/')}
-            className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
+            className="px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
             aria-label="Retour à l'accueil (bas de page)"
           >
             ← Retour à l'accueil

@@ -13,9 +13,9 @@ const typeLabel: Record<string, string> = {
 };
 
 const priorityStyles: Record<string, string> = {
-  haute: 'bg-red-50 border-red-100',
-  moyenne: 'bg-yellow-50 border-yellow-100',
-  basse: 'bg-green-50 border-green-100',
+  haute: 'bg-[#ffeaea] border-[#ffdddd]',
+  moyenne: 'bg-[#fff7e6] border-[#fff1d6]',
+  basse: 'bg-[#a9ddf2] border-[#cfeef9]',
 };
 
 export default function ParentChildReports() {
@@ -102,9 +102,9 @@ export default function ParentChildReports() {
         <div className="w-full max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <button className="mb-4 btn cursor-pointer flex items-center gap-2" onClick={() => navigate(-1)}>
+              <button className="mb-4 flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-[#a9ddf2] text-[#0b5566] hover:bg-[#cfeef9] cursor-pointer" onClick={() => navigate(-1)}>
                 <span className="text-lg">←</span>
-                <span>Retour</span>
+                <span className="font-medium">Retour</span>
               </button>
             </div>
             <div className="flex-1 text-center">
@@ -122,15 +122,15 @@ export default function ParentChildReports() {
             ) : (
               reports.map(report => (
                 <div key={report.id} className={`rounded-xl shadow border-2 ${priorityStyles[report.priority] || ''} p-0 overflow-hidden`} style={{ minWidth: 0 }}>
-                  <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 md:px-6 py-2 ${report.priority === 'haute' ? 'bg-red-50' : report.priority === 'moyenne' ? 'bg-yellow-50' : 'bg-green-50'}`}>
-                    <div className="flex items-center gap-2 md:gap-3 mb-2 sm:mb-0">
-                      <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs ${report.type === 'incident' ? 'bg-red-100 text-red-700' : report.type === 'comportement' ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>{typeLabel[report.type] || report.type}</span>
-                      <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs ${report.priority === 'haute' ? 'bg-red-500 text-white' : report.priority === 'moyenne' ? 'bg-yellow-400 text-white' : 'bg-green-400 text-white'}`}>{report.priority?.toUpperCase()}</span>
+                  <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 md:px-6 py-2`} style={{ background: report.priority === 'haute' ? '#ffeaea' : report.priority === 'moyenne' ? '#fff7e6' : '#a9ddf2' }}>
+                      <div className="flex items-center gap-2 md:gap-3 mb-2 sm:mb-0">
+                        <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.type === 'incident' ? '#ffeaea' : report.type === 'comportement' ? '#fff7e6' : '#a9ddf2', color: report.type === 'incident' ? '#7a2a2a' : report.type === 'comportement' ? '#856400' : '#08323a' }}>{typeLabel[report.type] || report.type}</span>
+                        <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.priority === 'haute' ? '#dc2626' : report.priority === 'moyenne' ? '#f59e0b' : '#0b5566', color: '#ffffff' }}>{report.priority?.toUpperCase()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs md:text-sm ml-1" style={{ color: '#08323a' }}>{report.nanny?.name ?? '—'}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-blue-700 text-xs md:text-sm ml-1">{report.nanny?.name ?? '—'}</span>
-                    </div>
-                  </div>
                   <div className="px-4 md:px-6 pb-4">
                     <div className="font-bold text-gray-700 mb-1 text-sm md:text-base">Résumé</div>
                     <div className="text-gray-700 text-sm md:text-base mb-2">{report.summary}</div>

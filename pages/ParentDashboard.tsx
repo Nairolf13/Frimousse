@@ -135,7 +135,7 @@ const ParentDashboard: React.FC = () => {
               <div className="text-gray-400 text-base">Gérez les comptes parents, contacts et enfants associés.</div>
             </div>
             <div className="flex gap-2 items-center">
-              <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className="bg-green-500 text-black font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-green-600 transition h-[60px]">Ajouter un parent</button>
+              <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition h-[60px]">Ajouter un parent</button>
             </div>
           </div>
 
@@ -146,15 +146,15 @@ const ParentDashboard: React.FC = () => {
             <div className="flex gap-2 items-center">
               <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] h-[60px] justify-center">
                 <div className="text-xs text-gray-400">Total</div>
-                <div className="text-lg font-bold text-gray-900">{stats.parentsCount}</div>
+                <div className="text-lg font-bold text-[#0b5566]">{stats.parentsCount}</div>
               </div>
               <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] h-[60px] justify-center">
                 <div className="text-xs text-gray-400">Enfants</div>
-                <div className="text-lg font-bold text-gray-900">{stats.childrenCount}</div>
+                <div className="text-lg font-bold text-[#0b5566]">{stats.childrenCount}</div>
               </div>
               <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] h-[60px] justify-center">
                 <div className="text-xs text-gray-400">Présents</div>
-                <div className="text-lg font-bold text-gray-900">{stats.presentToday}</div>
+                <div className="text-lg font-bold text-[#0b5566]">{stats.presentToday}</div>
               </div>
             </div>
           </div>
@@ -211,18 +211,18 @@ const ParentDashboard: React.FC = () => {
               <input name="password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Mot de passe (laisser vide pour envoyer une invitation)" className="border rounded px-3 py-2 text-xs md:text-base" />
               <input name="confirmPassword" type="password" value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Confirmer le mot de passe" className="border rounded px-3 py-2 text-xs md:text-base" />
               <div className="md:col-span-2 flex gap-2">
-                <button type="submit" className="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600 transition">{editingParent ? 'Enregistrer' : 'Ajouter'}</button>
+                <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingParent ? 'Enregistrer' : 'Ajouter'}</button>
                 <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); setFormError(null); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
               </div>
               {formError && <div className="text-red-600 md:col-span-2">{formError}</div>}
-              {successMessage && <div className="text-green-600 md:col-span-2">{successMessage}</div>}
+              {successMessage && <div className="md:col-span-2 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMessage}</div>}
             </form>
           )}
 
           <div>
             <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full">
               {(() => {
-                const cardColors = ['bg-blue-50','bg-yellow-50','bg-purple-50','bg-green-50','bg-pink-50','bg-orange-50'];
+                const cardColors = ['bg-blue-50','bg-yellow-50','bg-purple-50','bg-[#a9ddf2]','bg-pink-50','bg-orange-50'];
                 return parents.map((p, idx) => {
                   const color = cardColors[idx % cardColors.length];
                   return (
@@ -296,17 +296,17 @@ const ParentDashboard: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {children.map(child => (
-            <div key={child.id} className="p-4 border rounded shadow-sm">
+            <div key={child.id} className="p-4 border rounded shadow-sm" style={{ borderColor: '#fcdcdf' }}>
               <div className="flex justify-between items-center">
                 <div>
-                  <button type="button" className="font-medium cursor-pointer hover:underline text-left" onClick={(e) => { e.stopPropagation(); console.debug('[ParentDashboard] child click', child); setSelectedChild(child); setShowChildModal(true); }}>{child.name}</button>
+                  <button type="button" className="font-medium cursor-pointer text-[#08323a] hover:text-[#0b5566] text-left" onClick={(e) => { e.stopPropagation(); console.debug('[ParentDashboard] child click', child); setSelectedChild(child); setShowChildModal(true); }}>{child.name}</button>
                   <div className="text-sm text-gray-500">Groupe: {child.group}</div>
                 </div>
                 <div className="flex space-x-2">
-                  <button className="btn" onClick={() => navigate(`/parent/child/${child.id}/schedule`)}>
+                  <button className="btn bg-[#a9ddf2] text-[#0b5566] hover:bg-[#f7f4d7]" onClick={() => navigate(`/parent/child/${child.id}/schedule`)}>
                     Planning
                   </button>
-                  <button className="btn" onClick={() => navigate(`/parent/child/${child.id}/reports`)}>
+                  <button className="btn bg-[#a9ddf2] text-[#0b5566] hover:bg-[#f7f4d7]" onClick={() => navigate(`/parent/child/${child.id}/reports`)}>
                     Rapports
                   </button>
                 </div>

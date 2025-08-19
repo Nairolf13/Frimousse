@@ -25,7 +25,7 @@ interface AssignmentForm {
   nannyId: string;
 }
 
-const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const weekDays = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
 function getMonthGrid(date: Date) {
   const year = date.getFullYear();
@@ -58,6 +58,8 @@ export default function Dashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [childrenCount, setChildrenCount] = useState<number>(0);
   const [activeCaregivers, setActiveCaregivers] = useState<number>(0);
+  const [childrenChangePercent, setChildrenChangePercent] = useState<number | null>(null);
+  const [weeklyChangePercent, setWeeklyChangePercent] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalInitial, setModalInitial] = useState<AssignmentForm | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -91,7 +93,71 @@ export default function Dashboard() {
     const month = currentDate.getMonth();
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
-    fetchAssignments(first, last);
+
+    fetchWithRefresh(`${API_URL}/api/assignments?start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
+      .then(res => res.json())
+      .then((data: Assignment[]) => {
+        setAssignments(data);
+        const uniqueThis = new Set((data || []).map(a => a.child.id)).size;
+
+        const prevFirst = new Date(year, month - 1, 1);
+        const prevLast = new Date(year, month, 0);
+        fetchWithRefresh(`${API_URL}/api/assignments?start=${prevFirst.toISOString()}&end=${prevLast.toISOString()}`, { credentials: 'include' })
+          .then(r => r.json())
+          .then((prevData: Assignment[]) => {
+            const uniquePrev = new Set((prevData || []).map(a => a.child.id)).size;
+            if (uniquePrev === 0) {
+              setChildrenChangePercent(null);
+            } else {
+              const diff = Math.round(((uniqueThis - uniquePrev) / uniquePrev) * 100);
+              setChildrenChangePercent(diff);
+            }
+          })
+          .catch(() => setChildrenChangePercent(null));
+
+        const today = new Date();
+        const last7Days: string[] = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(today.getDate() - i);
+          const dayOfWeek = d.getDay();
+          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+            last7Days.push(d.toISOString().split('T')[0]);
+          }
+        }
+        const totalChildrenLocal = Array.isArray(data) ? Array.from(new Set(data.map(a => a.child.id))).length : 0;
+        const dailyRates = last7Days.map(dateStr => {
+          const present = new Set((data || []).filter(a => a.date.split('T')[0] === dateStr).map(a => a.child.id)).size;
+          return totalChildrenLocal > 0 ? (present / totalChildrenLocal) * 100 : 0;
+        });
+        const currentWeeklyAvg = dailyRates.length > 0 ? Math.round(dailyRates.reduce((a, b) => a + b, 0) / dailyRates.length) : 0;
+
+        const prevWeekDays = last7Days.map(d => {
+          const nd = new Date(d);
+          nd.setDate(nd.getDate() - 7);
+          return nd.toISOString().split('T')[0];
+        });
+        const prevStart = new Date(prevWeekDays[0]);
+        const prevEnd = new Date(prevWeekDays[prevWeekDays.length - 1]);
+        fetchWithRefresh(`${API_URL}/api/assignments?start=${new Date(prevStart).toISOString()}&end=${new Date(prevEnd).toISOString()}`, { credentials: 'include' })
+          .then(r => r.json())
+          .then((prevWeekData: Assignment[]) => {
+            const prevDailyRates = prevWeekDays.map(dateStr => {
+              const present = new Set((prevWeekData || []).filter(a => a.date.split('T')[0] === dateStr).map(a => a.child.id)).size;
+              return totalChildrenLocal > 0 ? (present / totalChildrenLocal) * 100 : 0;
+            });
+            const prevWeeklyAvg = prevDailyRates.length > 0 ? Math.round(prevDailyRates.reduce((a, b) => a + b, 0) / prevDailyRates.length) : 0;
+            if (prevWeeklyAvg === 0) {
+              setWeeklyChangePercent(null);
+            } else {
+              const wdiff = Math.round(((currentWeeklyAvg - prevWeeklyAvg) / prevWeeklyAvg) * 100);
+              setWeeklyChangePercent(wdiff);
+            }
+          })
+          .catch(() => setWeeklyChangePercent(null));
+
+      })
+      .catch(() => setAssignments([]));
 
     fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' })
       .then(res => res.json())
@@ -139,6 +205,8 @@ export default function Dashboard() {
   }
 
   const monthGrid = getMonthGrid(currentDate);
+
+  const presentRate = totalChildren > 0 ? Math.round((presentToday / totalChildren) * 100) : 0;
 
   const handlePrevMonth = () => {
     const prev = new Date(currentDate);
@@ -219,33 +287,33 @@ export default function Dashboard() {
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">Tableau de bord</h1>
           <div className="text-gray-400 text-base text-left">Bienvenue ! Voici ce qui se passe aujourd'hui.</div>
         </div>
-        <div className="flex items-center gap-2 self-start md:self-end">
+          <div className="flex items-center gap-2 self-start md:self-end">
           <input type="date" value={currentDate.toISOString().split('T')[0]} onChange={e => setCurrentDate(new Date(e.target.value))}
             className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-[120px] sm:w-auto" />
-          <button onClick={() => handleQuickAdd(new Date())} className="bg-green-500 text-black font-semibold rounded-lg px-4 py-2 text-base shadow hover:bg-green-600 transition whitespace-nowrap">+ Ajouter</button>
+          <button onClick={() => handleQuickAdd(new Date())} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 text-base shadow hover:opacity-95 transition whitespace-nowrap">+ Ajouter</button>
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 mb-8 w-full">
         <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
-          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{totalChildren}</span>
-            <span className="bg-blue-50 text-blue-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg></span>
+            <span className="rounded-full p-2" style={{ background: '#a9ddf2', color: '#08323a' }}><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg></span>
           </div>
           <div className="text-gray-500 font-medium text-sm sm:text-base">Enfants inscrits</div>
-          <div className="text-green-500 text-xs sm:text-sm font-semibold flex items-center gap-1">+12% depuis le mois dernier</div>
+          <div className={`${childrenChangePercent !== null && childrenChangePercent < 0 ? 'text-red-500' : 'text-[#0b5566]'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{childrenChangePercent === null ? '—' : `${childrenChangePercent > 0 ? '+' : ''}${childrenChangePercent}%`} depuis le mois dernier</div>
         </div>
         <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{presentToday}</span>
-            <span className="bg-green-50 text-green-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+            <span className="bg-[#a9ddf2] text-[#0b5566] rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
           </div>
           <div className="text-gray-500 font-medium text-sm sm:text-base">Présents aujourd'hui</div>
-          <div className="text-green-500 text-xs sm:text-sm font-semibold flex items-center gap-1">Taux de présence 75%</div>
+          <div className="text-[#0b5566] text-xs sm:text-sm font-semibold flex items-center gap-1">Taux de présence {presentRate}%</div>
         </div>
         <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
-          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{activeCaregivers}</span>
-            <span className="bg-yellow-50 text-yellow-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21C7 21 2 17 2 12V7a5 5 0 0 1 10 0v5c0 5-5 9-10 9z"/></svg></span>
+            <span className="rounded-full p-2" style={{ background: '#f7f4d7', color: '#08323a' }}><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21C7 21 2 17 2 12V7a5 5 0 0 1 10 0v5c0 5-5 9-10 9z"/></svg></span>
           </div>
           <div className="text-gray-500 font-medium text-sm sm:text-base">Intervenants actifs</div>
           <div className="text-gray-400 text-xs sm:text-sm font-medium flex items-center gap-1">— Pas de changement</div>
@@ -253,10 +321,10 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{weeklyAverage}%</span>
-            <span className="bg-purple-50 text-purple-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 17l4-4 4 4"/></svg></span>
+            <span className="rounded-full p-2" style={{ background: '#fcdcdf', color: '#08323a' }}><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 17l4-4 4 4"/></svg></span>
           </div>
           <div className="text-gray-500 font-medium text-sm sm:text-base">Moyenne hebdomadaire</div>
-          <div className="text-green-500 text-xs sm:text-sm font-semibold flex items-center gap-1">+5% depuis la semaine dernière</div>
+          <div className={`${weeklyChangePercent !== null && weeklyChangePercent < 0 ? 'text-red-500' : 'text-[#0b5566]'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{weeklyChangePercent === null ? '—' : `${weeklyChangePercent > 0 ? '+' : ''}${weeklyChangePercent}%`} depuis la semaine dernière</div>
         </div>
       </div>
       <div className="bg-white rounded-2xl shadow p-4 md:p-6 border border-[#f3f3fa] w-full mx-auto">
@@ -286,7 +354,7 @@ export default function Dashboard() {
               return (
                 <div key={idx} className={
                   "align-top p-1 h-full flex flex-col " +
-                  (isToday ? 'border-2 border-green-400 rounded-xl ' : 'border border-gray-100 ') +
+                  (isToday ? 'border-2 border-[#0b5566] rounded-xl ' : 'border border-gray-100 ') +
                   (isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60') +
                   " relative"
                 }>
@@ -302,14 +370,14 @@ export default function Dashboard() {
                     >
                       {day.getDate()}
                     </span>
-                    <button onClick={() => handleQuickAdd(day)} className="text-green-500 hover:text-green-700 text-lg font-bold">+</button>
+                          <button onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
                   </div>
                   {assigns.length === 0 ? (
                     <div className="text-gray-300 text-xs">—</div>
                   ) : (
                     assigns.slice(0, 2).map((a, j) => (
-                      <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-green-50' : 'bg-yellow-50') + " shadow-sm group"}>
-                        <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-green-400' : 'bg-yellow-400')}></span>
+                      <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-[#a9ddf2]' : 'bg-[#fff7e6]') + " shadow-sm group"}>
+                        <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-[#08323a]' : 'bg-[#856400]')}></span>
                         <span
                           className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]"
                           title={a.child.name}
@@ -356,7 +424,7 @@ export default function Dashboard() {
                     return (
                       <td key={dIdx} className={
                         "align-top p-2 h-28 " +
-                        (isToday ? 'border-2 border-green-400 rounded-xl ' : 'border border-gray-100 ') +
+                        (isToday ? 'border-2 border-[#0b5566] rounded-xl ' : 'border border-gray-100 ') +
                         (isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60') +
                         " relative"
                       }>
@@ -372,15 +440,15 @@ export default function Dashboard() {
                           >
                             {day.getDate()}
                           </span>
-                          <button onClick={() => handleQuickAdd(day)} className="text-green-500 hover:text-green-700 text-lg font-bold">+</button>
+                          <button onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
                         </div>
                         {assigns.length === 0 ? (
                           <div className="text-gray-300 text-sm">—</div>
                         ) : (
                           <>
                             {assigns.slice(0, 2).map((a, j) => (
-                              <div key={a.id} className={"flex items-center gap-2 mb-2 px-2 py-1 rounded-lg " + (j === 0 ? 'bg-green-50' : 'bg-yellow-50') + " shadow-sm group"}>
-                                <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-green-400' : 'bg-yellow-400')}></span>
+                            <div key={a.id} className={"flex items-center gap-2 mb-2 px-2 py-1 rounded-lg " + (j === 0 ? 'bg-[#a9ddf2]' : 'bg-[#f7f4d7]') + " shadow-sm group"}>
+                                      <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-[#08323a]' : 'bg-[#856400]')}></span>
                                 <span
                                   className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600"
                                   title="Supprimer cette affectation"

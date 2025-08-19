@@ -184,7 +184,7 @@ export default function WeeklyActivityCalendar() {
           <div className="flex items-center gap-2 mt-2 md:mt-0">
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#60;</button>
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#62;</button>
-            <button onClick={() => setAdding(true)} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition text-base ml-2">+ Ajouter une activité</button>
+            <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base ml-2">+ Ajouter une activité</button>
           </div>
         </div>
         <div className="hidden lg:block max-w-5xl mx-auto">
@@ -192,9 +192,9 @@ export default function WeeklyActivityCalendar() {
             <table className="min-w-[600px] w-full border-separate border-spacing-0 bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 rounded-2xl shadow-xl border border-blue-100" style={{ tableLayout: 'fixed' }}>
               <thead>
                 <tr>
-                  <th className="bg-blue-50 text-blue-700 font-bold text-xs md:text-base p-2 md:p-3 border-b border-blue-100 w-16 md:w-20">Heure</th>
+                  <th className="font-bold text-xs md:text-base p-2 md:p-3 border-b w-16 md:w-20" style={{ background: '#f7f4d7', color: '#08323a', borderColor: '#cfeef9' }}>Heure</th>
                   {weekDates.map((date, i) => (
-                    <th key={i} className="bg-blue-50 text-blue-700 font-bold p-2 md:p-3 text-center border-b border-blue-100" style={{ width: '12.5%' }}>
+                    <th key={i} className="font-bold p-2 md:p-3 text-center border-b" style={{ width: '12.5%', background: '#f7f4d7', color: '#08323a', borderColor: '#cfeef9' }}>
                       <div className="text-xs md:text-base">{weekDays[i].label}</div>
                       <div className="text-[10px] md:text-xs text-gray-400">{date.toLocaleDateString()}</div>
                     </th>
@@ -352,7 +352,7 @@ export default function WeeklyActivityCalendar() {
                     <span className="font-semibold">Nounous :</span>
                     <div className="flex flex-wrap gap-2 min-h-[40px]">
                       {selectedActivity.nannies.map(nanny => (
-                        <span key={nanny.id} className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm shadow border border-blue-200 flex items-center justify-center text-center min-w-[80px]">
+                        <span key={nanny.id} className="px-3 py-1 rounded-full font-semibold text-sm shadow flex items-center justify-center text-center min-w-[80px]" style={{ background: '#a9ddf2', color: '#08323a', border: '1px solid #cfeef9' }}>
                           {nanny.name}
                         </span>
                       ))}
@@ -368,7 +368,7 @@ export default function WeeklyActivityCalendar() {
                       {selectedActivity.nannyIds.map(id => {
                         const nanny = nannies.find(n => String(n.id) === String(id));
                         return (
-                          <span key={id} className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold text-sm shadow border border-blue-200 flex items-center justify-center text-center min-w-[80px]">
+                          <span key={id} className="px-3 py-1 rounded-full font-semibold text-sm shadow flex items-center justify-center text-center min-w-[80px]" style={{ background: '#a9ddf2', color: '#08323a', border: '1px solid #cfeef9' }}>
                             {nanny ? nanny.name : `ID: ${id}`}
                           </span>
                         );
@@ -377,16 +377,18 @@ export default function WeeklyActivityCalendar() {
                   </div>
                 ) : null}
               </div>
-              <div className="flex flex-col gap-4 w-full mt-2">
+                <div className="flex flex-col gap-4 w-full mt-2">
                 <button
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-100 text-blue-700 font-bold text-lg shadow hover:bg-blue-200 transition-transform hover:scale-105 active:scale-95"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-lg shadow transition-transform hover:scale-105 active:scale-95"
                   onClick={() => handleEditActivity(selectedActivity)}
+                  style={{ background: '#a9ddf2', color: '#08323a', border: '1px solid #cfeef9' }}
                 >
                   <span className="text-2xl">✏️</span> Modifier
                 </button>
                 <button
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-100 text-red-700 font-bold text-lg shadow hover:bg-red-200 transition-transform hover:scale-105 active:scale-95"
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-lg shadow transition-transform hover:scale-105 active:scale-95"
                   onClick={() => handleDeleteActivity(selectedActivity.id)}
+                  style={{ background: '#fcdcdf', color: '#7a2a2a', border: '1px solid #fbd5d8' }}
                 >
                   <span className="text-2xl">🗑️</span> Supprimer
                 </button>
@@ -396,9 +398,9 @@ export default function WeeklyActivityCalendar() {
         )}
       {adding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 rounded-2xl shadow-2xl p-8 w-full max-w-md relative border border-blue-100">
+    <div className="rounded-2xl shadow-2xl p-8 w-full max-w-md relative bg-white border border-gray-100">
             <button onClick={() => setAdding(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-            <h2 className="text-2xl font-extrabold mb-4 text-center text-blue-700">{selectedActivity ? 'Modifier une activité' : 'Ajouter une activité'}</h2>
+            <h2 className="text-2xl font-extrabold mb-4 text-center" style={{ color: '#0b5566' }}>{selectedActivity ? 'Modifier une activité' : 'Ajouter une activité'}</h2>
             <form className="space-y-4 mb-2" onSubmit={e => { e.preventDefault(); handleAddActivity(); }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -409,24 +411,25 @@ export default function WeeklyActivityCalendar() {
                     min={weekDates[0].toISOString().split('T')[0]}
                     max={weekDates[6].toISOString().split('T')[0]}
                     onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                    className="border border-blue-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
+                    className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]"
+                    style={{ borderColor: '#cfeef9' }}
                     required
                   />
                 </div>
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Début</label>
-                    <input type="time" min="07:00" max="19:00" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="border border-blue-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400" required />
+          <input type="time" min="07:00" max="19:00" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm font-semibold text-gray-700 mb-1">Fin</label>
-                    <input type="time" min="07:00" max="19:00" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="border border-blue-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400" required />
+          <input type="time" min="07:00" max="19:00" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
                   </div>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Nom de l'activité</label>
-                <input type="text" placeholder="Nom de l'activité" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="border border-blue-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400" required />
+        <input type="text" placeholder="Nom de l'activité" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">Commentaire (optionnel)</label>
@@ -452,7 +455,7 @@ export default function WeeklyActivityCalendar() {
                 />
               </div>
               <div className="flex gap-2 mt-4">
-                <button type="submit" className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700 transition">{selectedActivity ? 'Modifier' : 'Ajouter'}</button>
+                <button type="submit" className="flex-1 bg-[#0b5566] text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition">{selectedActivity ? 'Modifier' : 'Ajouter'}</button>
                 <button type="button" onClick={() => setAdding(false)} className="flex-1 bg-gray-300 px-4 py-2 rounded-lg font-bold">Annuler</button>
               </div>
             </form>

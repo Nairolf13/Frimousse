@@ -17,35 +17,52 @@ export default function Settings() {
   const [deleteError, setDeleteError] = useState('');
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6 text-gray-900">Paramètres</h1>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between bg-white rounded-xl shadow p-4">
-          <div>
-            <div className="font-semibold text-gray-800">Notifications par email</div>
-            <div className="text-gray-500 text-sm">Recevoir un email pour chaque nouveau rapport ou affectation</div>
+    <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
+      <div className="max-w-7xl mx-auto w-full">
+        <div className="max-w-3xl mx-auto p-6">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-6 text-gray-900">Paramètres</h1>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
+              <div>
+                <div className="font-semibold text-gray-800">Notifications par email</div>
+                <div className="text-gray-500 text-sm">Recevoir un email pour chaque nouveau rapport ou affectation</div>
+              </div>
+              <div className="mt-4">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={emailNotifications} onChange={e => setEmailNotifications(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow p-4 flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-gray-800">Langue</div>
+                <div className="text-gray-500 text-sm">Choisissez la langue de l'interface</div>
+              </div>
+              <select value={language} onChange={e => setLanguage(e.target.value)} className="border rounded-lg px-3 py-2 bg-white text-gray-700">
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow p-4 md:col-span-2">
+              <div className="font-semibold text-gray-800 mb-4">Gestion du compte</div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button className="flex-1 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white font-semibold rounded-lg px-4 py-2 shadow hover:from-[#08323a]" onClick={() => setShowPasswordModal(true)}>Changer le mot de passe</button>
+                <button className="flex-1 bg-[#fcdcdf] text-[#7a2a2a] font-semibold rounded-lg px-4 py-2 shadow hover:bg-[#fbd5d8]" onClick={() => setShowDeleteModal(true)}>Supprimer le compte</button>
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <button className="w-full bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" style={{marginTop: '8px'}} onClick={async () => {
+                await fetchWithRefresh(`${API_URL}/api/logout`, { method: 'POST', credentials: 'include' });
+                window.location.href = '/login';
+              }}>Se déconnecter</button>
+            </div>
           </div>
-          <input type="checkbox" checked={emailNotifications} onChange={e => setEmailNotifications(e.target.checked)} className="w-5 h-5" />
         </div>
-        <div className="flex items-center justify-between bg-white rounded-xl shadow p-4">
-          <div>
-            <div className="font-semibold text-gray-800">Langue</div>
-            <div className="text-gray-500 text-sm">Choisissez la langue de l'interface</div>
-          </div>
-          <select value={language} onChange={e => setLanguage(e.target.value)} className="border rounded px-2 py-1">
-            <option value="fr">Français</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-        <div className="flex flex-col bg-white rounded-xl shadow p-4">
-          <div className="font-semibold text-gray-800 mb-2">Gestion du compte</div>
-          <button className="bg-blue-500 text-white px-4 py-2 rounded mb-2" onClick={() => setShowPasswordModal(true)}>Changer le mot de passe</button>
-          <button className="bg-red-700 text-white px-4 py-2 rounded mb-2" onClick={() => setShowDeleteModal(true)}>Supprimer le compte</button>
-        </div>
-        <button className="bg-gray-300 text-gray-700 px-4 py-2 rounded w-full" style={{marginTop: '8px'}} onClick={async () => {
-          await fetchWithRefresh(`${API_URL}/api/logout`, { method: 'POST', credentials: 'include' });
-          window.location.href = '/login';
-        }}>Se déconnecter</button>
         {showPasswordModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <form

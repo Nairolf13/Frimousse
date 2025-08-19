@@ -56,7 +56,7 @@ export default function PricingPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white p-0 m-0">
+    <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
       <Helmet>
         <title>Tarifs | Frimousse Association</title>
         <meta name="description" content="Découvrez les tarifs de Frimousse pour crèches associatives, micro-crèches, garderies, centres de loisirs et MAM. Abonnement mensuel, offre gratuite, options modulaires." />
@@ -69,12 +69,14 @@ export default function PricingPage() {
         {/* Stripe Buy Button script */}
         <script async src="https://js.stripe.com/v3/buy-button.js"></script>
       </Helmet>
-      <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between py-2 px-4">
-          <div className="flex items-center gap-2">
-            <span className="bg-green-100 rounded-full p-1"><span className="text-xl">🧒</span></span>
+      <header className="w-full bg-gradient-to-r from-[#a9ddf2] to-[#f7f4d7] border-b border-[#fcdcdf] sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
+              <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
+            </div>
             <div className="w-full text-center">
-              <span className="font-bold text-base text-gray-800">Les petites Frimousse</span>
+              <span className="font-bold text-base text-[#08323a]">Les Frimousses</span>
             </div>
           </div>
         </div>
@@ -84,12 +86,12 @@ export default function PricingPage() {
           <div className="max-w-4xl mx-auto text-center">
             <button
               onClick={() => navigate('/')} 
-              className="mb-8 px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
+              className="mb-8 px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
               aria-label="Retour à l'accueil"
             >
               ← Retour à l'accueil
             </button>
-            <h1 className="text-3xl md:text-4xl font-bold text-green-700 mb-6">Tarifs</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-[#0b5566] mb-6">Tarifs</h1>
             <p className="text-gray-700 text-base sm:text-lg mb-10">
               Des forfaits simples et transparents, adaptés à toutes les structures d’accueil d’enfants : crèches associatives, micro-crèches, garderies, centres de loisirs, MAM…
             </p>
@@ -97,16 +99,16 @@ export default function PricingPage() {
               {plans.map((plan, idx) => (
                 <div
                   key={idx}
-                  className={`rounded-lg border shadow p-6 flex flex-col items-center bg-white ${plan.highlight ? 'border-green-600 shadow-lg' : 'border-gray-100'} h-full min-w-0 w-full max-w-md mx-auto md:max-w-[420px] md:w-full md:h-auto`}
+                  className={`rounded-lg border shadow p-6 flex flex-col items-center bg-[#f7f4d7] ${plan.highlight ? 'border-[#0b5566] shadow-lg' : 'border-[#fcdcdf]'} h-full min-w-0 w-full max-w-md mx-auto md:max-w-[420px] md:w-full md:h-auto`}
                   style={{width: '100%', maxWidth: '420px', margin: '0 auto'}}
                 >
-                  <h2 className={`text-xl font-bold mb-2 ${plan.highlight ? 'text-green-700' : 'text-gray-800'}`}>{plan.name}</h2>
+                  <h2 className={`text-xl font-bold mb-2 ${plan.highlight ? 'text-[#0b5566]' : 'text-[#08323a]'}`}>{plan.name}</h2>
                   <div className="text-3xl font-extrabold mb-2">{plan.price}</div>
-                  <div className="mb-4 text-gray-600 text-center">{plan.description}</div>
+                  <div className="mb-4 text-[#08323a] text-center">{plan.description}</div>
                   <div className="flex-1 w-full flex flex-col">
-                    <ul className="mb-6 text-left space-y-2 text-gray-700 flex-1">
+                    <ul className="mb-6 text-left space-y-2 text-[#08323a] flex-1">
                       {plan.features.map((f, i) => (
-                        <li key={i} className="flex items-center gap-2"><span className="text-green-600">✔</span> {f}</li>
+                        <li key={i} className="flex items-center gap-2"><span className="text-[#0b5566]">✔</span> {f}</li>
                       ))}
                     </ul>
                   </div>
@@ -124,9 +126,9 @@ export default function PricingPage() {
                   ) : (
                     <div className="w-full flex justify-center mt-2 relative" style={{position: 'relative'}}>
                       <button
-                        className="BuyButton-Button is-cardLayout h-[44px] px-6 py-0 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 flex items-center justify-center cursor-pointer mt-0"
+                        className="BuyButton-Button is-cardLayout h-[44px] px-6 py-0 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-pointer mt-0"
                         type="button"
-                        style={{borderRadius: 0, backgroundColor: '#00a63e', color: '#fff', position: 'absolute', top: '-122px', left: 0, right: 0, margin: 'auto', zIndex: 20, height: '44px'}}
+                        style={{borderRadius: 0, backgroundColor: '#0b5566', color: '#fff', position: 'absolute', top: '-122px', left: 0, right: 0, margin: 'auto', zIndex: 20, height: '44px'}}
                         onClick={() => navigate('/register')}
                       >
                         <span className="BuyButton-ButtonText Text Text-color--default Text-fontWeight--500 Text--truncate" data-testid="hosted-buy-button-text">
@@ -147,7 +149,7 @@ export default function PricingPage() {
         <div className="max-w-4xl mx-auto text-center mt-10 mb-8">
           <button
             onClick={() => navigate('/')}
-            className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
+            className="px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
             aria-label="Retour à l'accueil (bas de page)"
           >
             ← Retour à l'accueil

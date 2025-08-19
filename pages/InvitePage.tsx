@@ -13,7 +13,6 @@ const InvitePage: React.FC = () => {
   const navigate = useNavigate();
   function getApiUrl(): string {
     try {
-      // ImportMeta type is declared in src/vite-env.d.ts; cast to unknown then to ImportMeta to be safe
       const meta = import.meta as unknown as { env?: { VITE_API_URL?: string } };
   return (meta.env && meta.env.VITE_API_URL) ? meta.env.VITE_API_URL : 'http://localhost:4000';
     } catch {

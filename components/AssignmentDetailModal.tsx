@@ -29,17 +29,17 @@ export default function AssignmentDetailModal({ assignment, onClose }: { assignm
   return (
     <div className="fixed inset-0 z-60 bg-white/40 backdrop-blur-[2px] flex items-center justify-center" role="dialog" aria-modal="true">
       <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md relative border border-gray-100">
-        <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="Fermer">✕</button>
-        <h3 className="text-lg font-semibold mb-2">Détail de l'activité</h3>
-        <div className="text-sm text-gray-700 mb-3">
+        <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-[#08323a]" aria-label="Fermer">✕</button>
+        <h3 className="text-lg font-semibold mb-2 text-[#08323a]">Détail de l'activité</h3>
+        <div className="text-sm text-[#08323a] mb-3">
           <div><strong>Enfant :</strong> {assignment.child?.name ?? '—'}</div>
           <div><strong>Date :</strong> {formatLocal(assignment.date)}</div>
           <div><strong>Nounou :</strong> {assignment.nanny?.name ?? '—'}</div>
         </div>
 
         <div className="flex gap-2 mt-4">
-          <button className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50" onClick={onClose}>Fermer</button>
-          <button className="flex-1 bg-blue-600 text-white rounded-xl px-4 py-2" onClick={() => { onClose(); navigate(`/assignments/${assignment.id}`); }}>Voir l'affectation</button>
+          <button className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2 hover:bg-gray-50 text-[#0b5566]" onClick={onClose}>Fermer</button>
+          <button className="flex-1 bg-[#0b5566] text-white rounded-xl px-4 py-2 hover:bg-[#08323a]" onClick={() => { onClose(); navigate(`/assignments/${assignment.id}`); }}>Voir l'affectation</button>
         </div>
       </div>
     </div>

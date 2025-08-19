@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 export default function AboutPage() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white p-0 m-0">
+  <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
       <Helmet>
         <title>À propos de Frimousse | Application de gestion de garde d’enfants, sécurité, RGPD, avantages</title>
         <meta name="description" content="Frimousse, la solution digitale complète pour la gestion des associations de garde d’enfants : sécurité, RGPD, communication, planning, témoignages, FAQ, et bien plus." />
@@ -67,12 +67,14 @@ export default function AboutPage() {
           })
         }}
       />
-      <header className="w-full bg-white/80 backdrop-blur border-b border-gray-100 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between py-2 px-4">
-          <div className="flex items-center gap-2">
-            <span className="bg-green-100 rounded-full p-1"><span className="text-xl">🧒</span></span>
+      <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden flex items-center justify-center">
+              <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
+            </div>
             <div className="w-full text-center">
-              <span className="font-bold text-base text-gray-800">Les petites Frimousse</span>
+              <span className="font-bold text-base text-[#08323a]">Les Frimousse</span>
             </div>
           </div>
         </div>
@@ -82,18 +84,18 @@ export default function AboutPage() {
           <div className="max-w-4xl mx-auto text-center">
             <button
               onClick={() => navigate('/')}
-              className="mb-8 px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
+              className="mb-8 px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
               aria-label="Retour à l'accueil"
             >
               ← Retour à l'accueil
             </button>
-            <h1 className="text-3xl md:text-4xl font-bold text-green-700 mb-6">À propos de Frimousse</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-[#0b5566] mb-6">À propos de Frimousse</h1>
             <p className="text-gray-700 text-base sm:text-lg mb-6">
               Frimousse est une application web moderne dédiée à la gestion des associations de garde d’enfants. Notre mission est de simplifier le quotidien des responsables, des intervenants et des familles en centralisant toutes les informations et outils nécessaires à un accueil de qualité.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
               <div>
-                <h2 className="font-bold text-lg mb-2 text-green-700">Pourquoi choisir une solution digitale pour la garde d’enfants&nbsp;?</h2>
+                <h2 className="font-bold text-lg mb-2 text-[#0b5566]">Pourquoi choisir une solution digitale pour la garde d’enfants&nbsp;?</h2>
                 <ul className="list-disc list-inside text-gray-600 space-y-2">
                   <li>Centralisation des dossiers enfants, informations médicales et autorisations parentales.</li>
                   <li>Gestion simplifiée des présences, plannings et affectations des intervenants.</li>
@@ -103,7 +105,7 @@ export default function AboutPage() {
                 </ul>
               </div>
               <div>
-                <h2 className="font-bold text-lg mb-2 text-green-700">Les avantages de Frimousse pour votre association</h2>
+                <h2 className="font-bold text-lg mb-2 text-[#0b5566]">Les avantages de Frimousse pour votre association</h2>
                 <ul className="list-disc list-inside text-gray-600 space-y-2">
                   <li>Gain de temps pour les équipes grâce à une interface intuitive et collaborative.</li>
                   <li>Meilleure organisation des activités, sorties et événements.</li>
@@ -118,7 +120,7 @@ export default function AboutPage() {
             </div>
 
             <div className="mt-12 text-left max-w-3xl mx-auto">
-              <h2 className="text-2xl font-bold text-green-700 mb-4">Pourquoi digitaliser la gestion de la garde d’enfants&nbsp;?</h2>
+              <h2 className="text-2xl font-bold text-[#0b5566] mb-4">Pourquoi digitaliser la gestion de la garde d’enfants&nbsp;?</h2>
               <p className="mb-4">La gestion de la garde d’enfants implique de nombreux défis&nbsp;: suivi des présences, gestion des plannings, communication avec les familles, respect des normes administratives et sanitaires, sécurité des données, etc. La digitalisation permet de centraliser toutes ces tâches, d’automatiser les processus répétitifs et de garantir une traçabilité optimale pour chaque enfant accueilli.</p>
               <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
                 <li>Réduction des erreurs humaines et des oublis grâce à des rappels et des notifications automatiques.</li>
@@ -129,7 +131,7 @@ export default function AboutPage() {
             </div>
 
             <div className="mt-12 text-left max-w-3xl mx-auto">
-              <h2 className="text-2xl font-bold text-green-700 mb-4">Sécurité, confidentialité et conformité RGPD</h2>
+              <h2 className="text-2xl font-bold text-[#0b5566] mb-4">Sécurité, confidentialité et conformité RGPD</h2>
               <p className="mb-4">La sécurité des données des enfants et des familles est une priorité absolue. Frimousse met en œuvre&nbsp;:</p>
               <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
                 <li>Des accès personnalisés et sécurisés pour chaque intervenant, parent ou administrateur.</li>
@@ -140,7 +142,7 @@ export default function AboutPage() {
             </div>
 
             <div className="mt-12 text-left max-w-3xl mx-auto">
-              <h2 className="text-2xl font-bold text-green-700 mb-4">Quels bénéfices pour les familles et les intervenants&nbsp;?</h2>
+              <h2 className="text-2xl font-bold text-[#0b5566] mb-4">Quels bénéfices pour les familles et les intervenants&nbsp;?</h2>
               <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
                 <li>Les familles accèdent à un espace personnel pour consulter les plannings, recevoir des notifications, télécharger des documents et échanger avec l’équipe encadrante.</li>
                 <li>Les intervenants disposent d’outils pour organiser les activités, suivre les présences, rédiger des rapports et communiquer facilement avec les parents.</li>
@@ -149,7 +151,7 @@ export default function AboutPage() {
             </div>
 
             <div className="mt-12 text-left max-w-3xl mx-auto">
-              <h2 className="text-2xl font-bold text-green-700 mb-4">L’impact de Frimousse sur la qualité de l’accueil</h2>
+              <h2 className="text-2xl font-extrabold text-[#0b5566] mb-4">Impact social</h2>
               <p className="mb-4">En centralisant toutes les informations et en fluidifiant la communication, Frimousse permet aux équipes de se concentrer sur l’essentiel&nbsp;: le bien-être, l’éveil et la sécurité des enfants. L’application favorise l’implication des familles, la personnalisation de l’accueil et l’amélioration continue des pratiques professionnelles.</p>
               <ul className="list-disc list-inside text-gray-600 space-y-2 mb-4">
                 <li>Suivi individualisé du parcours de chaque enfant.</li>
@@ -162,7 +164,7 @@ export default function AboutPage() {
         <div className="max-w-4xl mx-auto text-center mt-8 mb-8">
           <button
             onClick={() => navigate('/')}
-            className="mt-8 px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
+            className="mt-8 px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
             aria-label="Retour à l'accueil"
           >
             ← Retour à l'accueil

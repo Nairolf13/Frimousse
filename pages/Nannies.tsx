@@ -239,7 +239,7 @@ export default function Nannies() {
             <button
               type="button"
               onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
-              className="bg-green-500 text-black font-semibold rounded-lg px-4 md:px-5 py-2 md:py-4 text-xs md:text-base shadow hover:bg-green-600 transition flex items-center h-[56px] md:h-[60px]"
+              className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 md:px-5 py-2 md:py-4 text-xs md:text-base shadow hover:bg-[#08323a] transition flex items-center h-[56px] md:h-[60px]"
             >
               Ajouter une nounou
             </button>
@@ -247,15 +247,15 @@ export default function Nannies() {
           <div className="flex gap-2 flex-wrap justify-start w-full">
             <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px]">
               <div className="text-xs text-gray-400">Total</div>
-              <div className="text-base md:text-lg font-bold text-gray-900">{totalNannies}</div>
+              <div className="text-base md:text-lg font-bold text-[#0b5566]">{totalNannies}</div>
             </div>
             <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px]">
               <div className="text-xs text-gray-400">Disponibles</div>
-              <div className="text-base md:text-lg font-bold text-gray-900">{availableToday}</div>
+              <div className="text-base md:text-lg font-bold text-[#0b5566]">{availableToday}</div>
             </div>
             <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px]">
               <div className="text-xs text-gray-400">En congé</div>
-              <div className="text-base md:text-lg font-bold text-gray-900">{onLeave}</div>
+              <div className="text-base md:text-lg font-bold text-[#0b5566]">{onLeave}</div>
             </div>
           </div>
         </div>
@@ -296,7 +296,7 @@ export default function Nannies() {
               <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
             </div>
             <div className="md:col-span-2 flex gap-2">
-              <button type="submit" className="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600 transition text-xs md:text-base">
+              <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition text-xs md:text-base">
                 {editingId ? 'Modifier' : 'Ajouter'}
               </button>
               <button type="button" onClick={() => { setForm(emptyForm); setConfirmPassword(''); setEditingId(null); setAdding(false); }} className="bg-gray-300 px-4 py-2 rounded text-xs md:text-base">Annuler</button>
@@ -330,15 +330,8 @@ export default function Nannies() {
                   style={{ height: '100%', perspective: '1000px' }}
                 >
                   <span
-                    className={`absolute text-xs font-bold px-3 py-1 rounded-full shadow border whitespace-nowrap transform
-                      ${nanny.availability === 'Disponible'
-                        ? 'bg-green-100 text-green-700 border-green-200'
-                        : nanny.availability === 'En_congé'
-                        ? 'bg-yellow-100 text-yellow-700 border-yellow-200'
-                        : 'bg-red-100 text-red-700 border-red-200'}
-                      left-1/2 -translate-x-1/2 top-3
-                      `}
-                    style={{zIndex:2}}
+                    className={`absolute text-xs font-bold px-3 py-1 rounded-full shadow border whitespace-nowrap transform left-1/2 -translate-x-1/2 top-3`}
+                    style={{zIndex:2, background: nanny.availability === 'Disponible' ? '#a9ddf2' : nanny.availability === 'En_congé' ? '#fff4d6' : '#ffeaea', color: nanny.availability === 'Disponible' ? '#08323a' : nanny.availability === 'En_congé' ? '#856400' : '#7a2a2a', borderColor: nanny.availability === 'Disponible' ? '#a9ddf2' : nanny.availability === 'En_congé' ? '#fff4d6' : '#ffeaea'}}
                   >
                     {nanny.availability === 'En_congé' ? 'En congé' : nanny.availability}
                   </span>
@@ -350,10 +343,10 @@ export default function Nannies() {
                       className={`absolute inset-0 w-full h-full p-6 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
                       style={{ backfaceVisibility: 'hidden' }}
                     >
-                      <div className="flex items-center gap-3 mb-2 min-w-0 pt-12 pb-2">
+                        <div className="flex items-center gap-3 mb-2 min-w-0 pt-12 pb-2">
                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{avatar}</div>
-                        <span className="font-semibold text-lg text-gray-900 ml-2 truncate max-w-[120px] min-w-0" title={nanny.name}>{nanny.name}</span>
-                        <span className="ml-auto text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100 whitespace-nowrap">{nanny.experience} ans</span>
+                        <span className="font-semibold text-lg text-[#08323a] ml-2 truncate max-w-[120px] min-w-0" title={nanny.name}>{nanny.name}</span>
+                        <span className="ml-auto text-xs font-bold bg-white text-[#08323a] px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{nanny.experience} ans</span>
                       </div>
                       <div className="flex flex-col gap-3 text-sm text-gray-700 mb-4">
                         <span className="flex items-center gap-2 w-full justify-center">
@@ -400,7 +393,7 @@ export default function Nannies() {
                                   <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xs font-semibold text-gray-700">Cotisation annuelle&nbsp;:</span>
                                     {daysRemaining > 0 ? (
-                                      <span className="text-base font-bold text-green-700">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
+                                      <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
                                     ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
                                       <input
                                         type="number"
@@ -409,23 +402,23 @@ export default function Nannies() {
                                         onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
                                       />
                                     ) : (
-                                      <span className="text-base font-bold text-green-700">10€</span>
+                                      <span className="text-base font-bold text-[#08323a]">10€</span>
                                     )}
                           {daysRemaining > 0 ? (
-                            <span className="text-green-500 text-xl">✔️</span>
+                            <span className="text-[#0b5566] text-xl">✔️</span>
                           ) : (
                             <span className="text-red-500 text-xl">❌</span>
                           )}
                           <div className="flex flex-col items-center">
                             <button
-                              className="text-blue-500 text-xs font-semibold px-2 py-1 rounded bg-blue-100 hover:bg-green-100 transition ml-2"
+                              className="text-[#0b5566] text-xs font-semibold px-2 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition ml-2"
                               disabled={cotisation?.loading}
                               onClick={() => requestPay(nanny.id)}
                             >
                               {cotisation?.loading ? "Paiement..." : "Payer"}
                             </button>
                             {messages[nanny.id] && (
-                              <div className={`mt-2 text-xs ${messages[nanny.id]?.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                              <div className={`mt-2 text-xs ${messages[nanny.id]?.type === 'success' ? 'text-[#0b5566]' : 'text-red-600'}`}>
                                 {messages[nanny.id]?.text}
                               </div>
                             )}
@@ -443,12 +436,12 @@ export default function Nannies() {
                         <div className="flex flex-col items-center gap-2 mt-2">
                           <button
                             onClick={() => setPlanningNanny(nanny)}
-                            className="w-[120px] min-w-[100px] bg-cyan-100 text-cyan-700 px-3 py-2 rounded-full font-semibold border border-cyan-200 shadow-sm hover:bg-cyan-200 transition text-xs text-center mx-auto"
+                            className="w-[120px] min-w-[100px] bg-[#a9ddf2] text-[#0b5566] px-3 py-2 rounded-full font-semibold border border-[#a9ddf2] shadow-sm hover:bg-[#f7f4d7] transition text-xs text-center mx-auto"
                           >Planning</button>
                           <div className="flex gap-1">
                             <button
                               onClick={() => handleEdit(nanny)}
-                              className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm"
+                              className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
                               title="Éditer"
                             >
                               <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>

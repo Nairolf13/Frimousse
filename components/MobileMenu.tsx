@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX } from 'react-icons/hi';
+import { useAuth } from '../src/context/AuthContext';
 
 const navLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
@@ -15,6 +16,37 @@ const navLinks = [
 export default function MobileMenu() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
+  const [centerName, setCenterName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadCenter() {
+      try {
+        if (user && user.centerId) {
+          const res = await fetch(`/api/centers/${user.centerId}`, { credentials: 'include' });
+          if (!mounted) return;
+          if (res.ok) {
+            const data = await res.json();
+            setCenterName(data.name || null);
+            return;
+          }
+        }
+      } catch {
+        // ignore network errors
+      }
+      if (mounted) setCenterName(null);
+    }
+    loadCenter();
+    return () => { mounted = false; };
+  }, [user]);
+
+  function displayCenterName(name: string | null) {
+    if (!name) return 'Frimousse';
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return 'Frimousse';
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }
 
   return (
     <>
@@ -28,10 +60,10 @@ export default function MobileMenu() {
       {open && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           <div className="flex items-center gap-3 px-6 pt-8 pb-6">
-            <div className="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center text-2xl">
-              <span role="img" aria-label="maison">🏡</span>
+            <div className="w-12 h-12 rounded-full overflow-hidden bg-white flex items-center justify-center">
+              <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
             </div>
-            <span className="font-extrabold text-xl text-gray-900">Frimousse</span>
+            <span className="font-extrabold text-xl text-gray-900">{displayCenterName(centerName)}</span>
             <button
               className="ml-auto bg-gray-100 rounded-full p-2 border border-gray-200"
               onClick={() => setOpen(false)}

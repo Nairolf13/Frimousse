@@ -131,7 +131,7 @@ export default function ParentChildSchedule() {
       <div className="max-w-7xl mx-auto w-full">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <button className="mr-2 btn cursor-pointer flex items-center gap-2" onClick={() => navigate(-1)}>
+            <button className="mr-2 cursor-pointer flex items-center gap-2 bg-[#a9ddf2] text-[#0b5566] px-3 py-1 rounded" onClick={() => navigate(-1)}>
               <span className="text-lg">←</span>
               <span>Retour</span>
             </button>
@@ -140,9 +140,9 @@ export default function ParentChildSchedule() {
             <div className="text-2xl font-semibold">Planning de {childName ?? "l'enfant"}</div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white">‹</button>
-            <div className="text-lg font-bold">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
-            <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white">›</button>
+            <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full border" style={{ borderColor: '#fcdcdf', background: '#ffffff', color: '#0b5566' }}>‹</button>
+            <div className="text-lg font-bold text-[#0b5566]">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
+            <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border" style={{ borderColor: '#fcdcdf', background: '#ffffff', color: '#0b5566' }}>›</button>
           </div>
         </div>
 
@@ -155,13 +155,13 @@ export default function ParentChildSchedule() {
         {loading ? (
           <div>Chargement...</div>
         ) : (
-          <div className="bg-white rounded-2xl shadow p-4">
+          <div className="bg-white rounded-2xl shadow p-4" style={{ border: '1px solid #fcdcdf' }}>
             <div className="hidden sm:block w-full">
-              <table className="w-full table-fixed bg-white rounded-lg">
+              <table className="w-full table-fixed bg-white rounded-lg" style={{ borderCollapse: 'separate', borderSpacing: 0, border: '1px solid transparent' }}>
                 <thead>
                   <tr>
-                    {['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map(d => (
-                      <th key={d} className="p-2 text-center text-gray-500 font-semibold text-base">{d}</th>
+                    {['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map(d => (
+                      <th key={d} className="p-2 text-center font-semibold text-base" style={{ color: '#08323a' }}>{d}</th>
                     ))}
                   </tr>
                 </thead>
@@ -176,19 +176,18 @@ export default function ParentChildSchedule() {
                         const isToday = day.toDateString() === new Date().toDateString();
                         const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                         return (
-                          <td key={dIdx} className={"align-top p-2 h-28 " + (isToday ? 'border-2 border-green-400 rounded-xl ' : 'border border-gray-100 ') + (isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60') + " relative"}>
+                          <td key={dIdx} className={"align-top p-2 h-28 " + (isToday ? 'border-2 border-[#a9ddf2] rounded-xl ' : 'border border-gray-100 ') + (isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60') + " relative"}>
                             <div className="flex items-center justify-between mb-1">
-                              <span className={"text-xs font-bold " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}>{day.getDate()}</span>
+                              <span className={"text-xs font-bold " + (isCurrentMonth ? '' : 'text-gray-400')} style={isCurrentMonth ? { color: '#08323a' } : undefined}>{day.getDate()}</span>
                             </div>
                             {dayAssignments.length === 0 ? (
                               <div className="text-gray-300 text-sm">—</div>
                             ) : (
                               <div className="space-y-2">
                                 {dayAssignments.map(a => (
-                                  <div key={a.id} className="bg-green-50 rounded px-2 py-1 text-gray-800 text-sm shadow-sm">
+                                  <div key={a.id} className="rounded px-2 py-1 text-sm shadow-sm" style={{ background: '#a9ddf2', color: '#08323a' }}>
                                       {a.nanny ? (
-                                        <button className="font-semibold" onClick={async () => {
-                                          // fetch schedules for nanny and filter by date
+                                        <button className="font-semibold" style={{ color: '#0b5566' }} onClick={async () => {
                                           try {
                                             const nannyId = a.nanny!.id;
                                             const dateYmd = toLocalYMD(a.date);
@@ -229,9 +228,9 @@ export default function ParentChildSchedule() {
                   const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                   return (
                     <div key={idx} className={(isCurrentMonth ? 'bg-white' : 'bg-gray-50 opacity-60') + ' p-1 rounded'}>
-                      <div className="text-xs font-bold mb-1">{day.getDate()}</div>
+                      <div className="text-xs font-bold mb-1" style={{ color: isCurrentMonth ? '#08323a' : undefined }}>{day.getDate()}</div>
                       {dayAssignments.length === 0 ? <div className="text-gray-300 text-xs">—</div> : (
-                        dayAssignments.map(a => <div key={a.id} className="text-sm bg-green-50 rounded px-2 py-1">{a.nanny ? <button onClick={async () => {
+                        dayAssignments.map(a => <div key={a.id} className="text-sm rounded px-2 py-1" style={{ background: '#a9ddf2', color: '#08323a' }}>{a.nanny ? <button onClick={async () => {
                           try {
                             const nannyId = a.nanny!.id;
                             const dateYmd = toLocalYMD(a.date);
@@ -249,7 +248,7 @@ export default function ParentChildSchedule() {
                             console.error('Failed to fetch activities', err);
                             setActivityModalData({ activities: [] });
                           }
-                        }} className="font-semibold">{a.nanny.name}</button> : 'Affectation'}</div>)
+                        }} className="font-semibold" style={{ color: '#0b5566' }}>{a.nanny.name}</button> : 'Affectation'}</div>)
                       )}
                     </div>
                   );

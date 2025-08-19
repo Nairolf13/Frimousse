@@ -282,7 +282,7 @@ export default function Children() {
             <button
               type="button"
               onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
-              className="bg-green-500 text-black font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-green-600 transition h-[60px] min-h-[60px] flex items-center"
+              className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition h-[60px] min-h-[60px] flex items-center"
             >
               Ajouter un enfant
             </button>
@@ -365,7 +365,7 @@ export default function Children() {
           <input name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder="Email parent" required className="border rounded px-3 py-2" />
           <input name="allergies" value={form.allergies} onChange={handleChange} placeholder="Allergies (optionnel)" className="border rounded px-3 py-2 md:col-span-2" />
           <div className="md:col-span-2 flex gap-2">
-            <button type="submit" className="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600 transition">
+            <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">
               {editingId ? 'Modifier' : 'Ajouter'}
             </button>
             <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(false); setError(''); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
@@ -374,7 +374,7 @@ export default function Children() {
         </form>
       )}
       {successMsg && (
-        <div className="mb-4 text-green-600 font-semibold text-center bg-green-50 border border-green-200 rounded-lg py-2">{successMsg}</div>
+        <div className="mb-4 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMsg}</div>
       )}
 
       {loading ? (
@@ -435,10 +435,10 @@ export default function Children() {
                     className={`absolute inset-0 w-full h-full p-5 flex flex-col ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
                     style={{backfaceVisibility: 'hidden'}}
                   >
-                    <div className="flex items-center gap-3 mb-2 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{emoji}</div>
                       <span className="font-semibold text-lg text-gray-900 ml-2 truncate max-w-[120px] min-w-0" title={child.name}>{child.name}</span>
-                      <span className="ml-auto text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100 whitespace-nowrap">{child.age} ans</span>
+                      <span className="ml-auto text-xs font-bold bg-white text-[#08323a] px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{child.age} ans</span>
                       <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap" title="Sexe">{child.sexe === 'masculin' ? 'Garçon' : 'Fille'}</span>
                     </div>
                     <span className="block text-xs text-yellow-700 flex items-center gap-1 mb-2">
@@ -454,7 +454,7 @@ export default function Children() {
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-gray-700">Cotisation annuelle&nbsp;:</span>
                           {daysRemaining > 0 ? (
-                            <span className="text-base font-bold text-green-700">{(cotisationAmounts[child.id] ?? 15)}€</span>
+                            <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[child.id] ?? 15)}€</span>
                           ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
                             <input
                               type="number"
@@ -468,19 +468,19 @@ export default function Children() {
                             <span className="text-base font-bold text-green-700">{(cotisationAmounts[child.id] ?? 15)}€</span>
                           )}
                           {cotisationOk ? (
-                            <span className="text-green-500 text-xl">✔️</span>
+                            <span className="text-[#0b5566] text-xl">✔️</span>
                           ) : (
                             cotisationLoadingId === child.id ? (
                               <span className="text-gray-400 text-xs ml-2 animate-pulse">Mise à jour...</span>
                             ) : (
-                              <button onClick={handleCotisation} className="text-blue-500 text-xs font-semibold px-2 py-1 rounded bg-blue-100 hover:bg-green-100 transition" title="Payer la cotisation">Payer</button>
+                              <button onClick={handleCotisation} className="text-[#0b5566] text-xs font-semibold px-2 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition" title="Payer la cotisation">Payer</button>
                             )
                           )}
                           <span className="text-xs text-gray-500 ml-2">{countdown}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-gray-700">À payer ce mois-ci&nbsp;:</span>
-                          <span className="text-base font-bold text-blue-700">{billing ? `${billing.amount}€` : '...'}</span>
+                          <span className="text-base font-bold text-[#08323a]">{billing ? `${billing.amount}€` : '...'}</span>
                           <span className="text-xs text-gray-500">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
                         </div>
                       </div>
@@ -488,7 +488,7 @@ export default function Children() {
                     <div className="flex items-center gap-2 justify-between mt-2">
                       <div className="flex items-center gap-2">
                         {child.present ? (
-                          <span className="text-green-600 text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Présent aujourd'hui</span>
+                          <span className="text-[#08323a] text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#a9ddf2] inline-block"></span>Présent aujourd'hui</span>
                         ) : (
                           <span className="text-red-500 text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Absent aujourd'hui</span>
                         )}
@@ -497,7 +497,7 @@ export default function Children() {
                         )}
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
+                        <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
                         <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                       </div>
                     </div>
