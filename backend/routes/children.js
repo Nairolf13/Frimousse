@@ -77,7 +77,6 @@ router.post('/', auth, async (req, res) => {
       if (group) {
         childData.group = group;
       }
-      // assign centerId for non-super-admins
       if (!isSuperAdmin(req.user) && req.user.centerId) {
         childData.centerId = req.user.centerId;
       } else if (req.body.centerId) {
@@ -134,7 +133,6 @@ router.put('/:id', auth, async (req, res) => {
     cotisationDate = nextYear;
   }
   try {
-    // verify ownership / center
     const existingChild = await prisma.child.findUnique({ where: { id } });
     if (!existingChild) return res.status(404).json({ error: 'Child not found' });
     if (!isSuperAdmin(req.user) && existingChild.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });

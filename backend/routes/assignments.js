@@ -55,7 +55,6 @@ router.get('/', auth, async (req, res) => {
 
 router.post('/', auth, async (req, res) => {
   const { date, childId, nannyId } = req.body;
-  // creation: ensure child/nanny are in same center (unless super-admin)
   if (!isSuperAdmin(req.user)) {
     const child = await prisma.child.findUnique({ where: { id: childId } });
     if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ message: 'Child not found' });

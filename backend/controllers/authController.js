@@ -7,7 +7,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
 function generateAccessToken(user) {
-  // include centerId for scoping; may be undefined for super-admin
   return jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
 }
 function generateRefreshToken(user) {
@@ -23,11 +22,9 @@ exports.register = async (req, res) => {
   const userData = { email, password: hash, name, role };
   if (nannyId) userData.nannyId = nannyId;
 
-  // If a centerId was provided use it, otherwise if a centerName was provided create or reuse a Center
   if (centerId) {
     userData.centerId = centerId;
   } else if (centerName) {
-    // try to reuse an existing center with the same name, otherwise create it
     let center = await prisma.center.findFirst({ where: { name: centerName } });
     if (!center) {
       center = await prisma.center.create({ data: { name: centerName } });

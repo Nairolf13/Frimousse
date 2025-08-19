@@ -56,7 +56,6 @@ router.post('/', auth, async (req, res) => {
         authController.register(fakeReq, fakeRes).catch(reject);
       });
   const user = await prisma.user.findUnique({ where: { email } });
-  // Ne pas connecter automatiquement le compte créé
   res.status(201).json({ nanny, user });
     } catch (e) {
       res.status(400).json({ error: e.message });
@@ -71,7 +70,6 @@ router.post('/', auth, async (req, res) => {
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
   const { name, availability, experience, contact, email } = req.body;
-  // ensure center match
   if (!isSuperAdmin(req.user)) {
     const existing = await prisma.nanny.findUnique({ where: { id } });
     if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
@@ -83,17 +81,14 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   const { id } = req.params;
   try {
-    // ensure center match
     if (!isSuperAdmin(req.user)) {
       const existing = await prisma.nanny.findUnique({ where: { id } });
       if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
     }
-    // Use a transaction: remove assignments, reports, disconnect schedules, delete related users, then delete nanny
     await prisma.$transaction(async (tx) => {
       await tx.assignment.deleteMany({ where: { nannyId: id } });
       await tx.report.deleteMany({ where: { nannyId: id } });
 
-      // find schedules that reference this nanny and disconnect the relation
       const schedules = await tx.schedule.findMany({ where: { nannies: { some: { id } } }, select: { id: true } });
       for (const s of schedules) {
         await tx.schedule.update({ where: { id: s.id }, data: { nannies: { disconnect: { id } } } });
@@ -120,10 +115,8 @@ router.get('/:id', auth, async (req, res) => {
   res.json(nanny);
 });
 
-// Cotisation mensuelle pour une nanny
 router.get('/:id/cotisation', auth, async (req, res) => {
   try {
-    // Sécurité multi-centre : super-admin accès global, sinon centreId doit correspondre
     const where = { id: req.params.id };
     if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
   const nanny = await prisma.nanny.findFirst({ where, select: { cotisationPaidUntil: true, lastCotisationAmount: true } });
@@ -134,10 +127,8 @@ router.get('/:id/cotisation', auth, async (req, res) => {
   }
 });
 
-// Paiement de la cotisation mensuelle
 router.put('/:id/cotisation', auth, async (req, res) => {
   try {
-    // Sécurité multi-centre : super-admin accès global, sinon centreId doit correspondre
     const where = { id: req.params.id };
     if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
     const nanny = await prisma.nanny.findFirst({ where });
@@ -152,7 +143,6 @@ router.put('/:id/cotisation', auth, async (req, res) => {
     newDate.setMonth(newDate.getMonth() + 1);
 
     const updateData = { cotisationPaidUntil: newDate };
-    // If amount provided and user is admin or super-admin, persist it
     const { amount } = req.body || {};
     const isAdmin = req.user && (req.user.role === 'admin' || isSuperAdmin(req.user));
     if (amount && isAdmin) {

@@ -24,7 +24,6 @@ router.post('/', auth, async (req, res) => {
       isoDate = new Date(date + 'T' + (time || '00:00') + ':00.000Z').toISOString();
     }
     console.log('Valeur isoDate utilisée pour la création du rapport :', isoDate);
-    // validate center membership
     if (!isSuperAdmin(req.user)) {
       if (childId) {
         const child = await prisma.child.findUnique({ where: { id: childId } });
