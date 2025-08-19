@@ -1,0 +1,39 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      .container { font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; }
+      .header { text-align: center; padding: 24px 0; }
+      .btn { display:inline-block; padding:10px 16px; background:#2563eb; color:#fff; border-radius:6px; text-decoration:none }
+      .card { background:#fff; border-radius:8px; padding:18px; box-shadow:0 2px 6px rgba(0,0,0,0.05); margin-bottom:16px }
+      .muted { color:#6b7280; font-size:14px }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <img src="{{logoUrl}}" alt="Frimousse" width="72" style="display:block; margin: 0 auto 12px;" />
+        <h2>Assignment update</h2>
+        <p class="muted">This is to inform you about a change regarding your child.</p>
+      </div>
+
+      <div class="card">
+        <p>Hello,</p>
+        <p>Your child <strong>{{childName}}</strong> has an assignment:</p>
+        <ul>
+          <li><strong>Nanny:</strong> {{nannyName}}</li>
+          <li><strong>Date:</strong> {{date}}</li>
+        </ul>
+        <div style="margin-top:12px;">
+          <h4>Activity details</h4>
+          {{activitiesHtml}}
+        </div>
+        <p><a class="btn" href="{{link}}">View schedule</a></p>
+      </div>
+
+      <p class="muted">If you have questions, reply to this email or contact your center.</p>
+      <p class="muted">Regards,<br/>The Frimousse team</p>
+    </div>
+  </body>
+</html>

@@ -1,17 +1,13 @@
 
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
+import type { User as AuthUser } from '../src/context/AuthContext';
+import { useEffect, useState } from 'react';
 import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog } from 'react-icons/hi';
 import MobileMenu from './MobileMenu';
 
 
-type User = {
-  name?: string;
-  role?: string;
-  nannyId?: string;
-};
-
-function getNavLinks(user: User | null) {
+function getNavLinks(user: AuthUser | null) {
   if (user && user.nannyId) {
     return [
       { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
@@ -36,6 +32,34 @@ function getNavLinks(user: User | null) {
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
+  const [centerName, setCenterName] = useState<string | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    async function loadCenter() {
+      try {
+        if (user && user.centerId) {
+          const res = await fetch(`/api/centers/${user.centerId}`, { credentials: 'include' });
+          if (!mounted) return;
+          if (res.ok) {
+            const data = await res.json();
+            setCenterName(data.name || null);
+            return;
+          }
+        }
+      } catch {
+        // ignore network errors
+      }
+      if (mounted) setCenterName(null);
+    }
+    loadCenter();
+    return () => { mounted = false; };
+  }, [user]);
+  function displayCenterName(name: string | null) {
+    if (!name) return 'Frimousse';
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return 'Frimousse';
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  }
   let userName = 'Utilisateur';
   let userRole = 'Utilisateur';
   let userInitials = 'UT';
@@ -57,10 +81,10 @@ export default function Sidebar() {
       <MobileMenu />
       <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white shadow-lg flex-col p-0 border-r border-gray-100 z-30">
          <div className="flex items-center gap-3 px-6 pt-8 pb-6">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-white flex items-center justify-center">
-            <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-cover" />
+          <div className="w-20 h-16 rounded-full overflow-hidden bg-white flex items-center justify-center">
+            <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
           </div>
-         <span className="font-extrabold text-xl text-gray-900">Frimousse</span>
+         <span className="font-extrabold text-xl text-gray-900">{displayCenterName(centerName)}</span>
         </div>
         <nav className="flex-1 px-2">
           <ul className="space-y-1">
