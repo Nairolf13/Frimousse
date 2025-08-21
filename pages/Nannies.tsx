@@ -229,7 +229,7 @@ export default function Nannies() {
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full">
           <div>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">Gestion des nannies</h1>
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1">Gestion des nounous</h1>
             <div className="text-gray-400 text-sm md:text-base">Gérez les profils, plannings, qualifications et affectations des intervenants.</div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const { sendTemplatedMail } = require('../lib/email');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -124,11 +125,22 @@ exports.registerSubscribeInit = async (req, res) => {
     // create SetupIntent for this customer
     const setupIntent = await stripe.setupIntents.create({ customer: customer.id, payment_method_types: ['card'] });
 
-  // create a short-lived subscribe token so we can start a Checkout session without being logged in
-  const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
+    // Fire-and-forget welcome email (like register does)
+    (async () => {
+      try {
+        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
+        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+        await sendTemplatedMail({ templateName: 'welcome', lang, to: user.email, subject: lang === 'fr' ? 'Bienvenue sur Frimousse' : 'Welcome to Frimousse', substitutions: { name: user.name, loginUrl: process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/login` : 'http://localhost:5173/login' } });
+      } catch (e) {
+        console.error('Failed to send welcome email (registerSubscribeInit)', e && e.message ? e.message : e);
+      }
+    })();
 
-  // return client secret, temporary user id and subscribe token to start Checkout from the frontend
-  res.status(201).json({ clientSecret: setupIntent.client_secret, userId: user.id, subscribeToken });
+    // create a short-lived subscribe token so we can start a Checkout session without being logged in
+    const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
+
+    // return client secret, temporary user id and subscribe token to start Checkout from the frontend
+    res.status(201).json({ clientSecret: setupIntent.client_secret, userId: user.id, subscribeToken });
   } catch (err) {
     console.error('registerSubscribeInit error', err);
     res.status(500).json({ error: 'Erreur lors de la création du compte' });

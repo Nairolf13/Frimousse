@@ -15,14 +15,14 @@
       .footer { font-size:12px; color:#94a3b8; margin-top:18px; }
     </style>
   </head>
-  <body>
-    <div class="container" role="article" aria-label="Welcome email">
-      <h1>Welcome to Frimousse</h1>
-      <p>Hello {{name}},</p>
-      <p>Thanks for joining Frimousse. Your account has been created — click the button below to sign in and complete your profile.</p>
-      <p style="text-align:center; margin:20px 0;"><a class="btn" href="{{loginUrl}}">Sign in to Frimousse</a></p>
-      <p class="footer">If you didn't create this account, you can safely ignore this email.</p>
-      <p class="footer">© Frimousse</p>
+  <body style="margin:0;padding:20px;background:#f3f4f6;font-family:Inter, system-ui, -apple-system,'Segoe UI', Roboto, 'Helvetica Neue', Arial;">
+    <div role="article" aria-label="Welcome email" style="max-width:640px;margin:28px auto;background:#ffffff;padding:28px;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.08);">
+      <h1 style="font-size:20px;margin:14px 0;color:#0f172a;">Welcome to Frimousse</h1>
+      <p style="color:#334155;line-height:1.45;margin:8px 0;">Hello {{name}},</p>
+      <p style="color:#334155;line-height:1.45;margin:8px 0;">Thanks for joining Frimousse. Your account has been created — click the button below to sign in and complete your profile.</p>
+      <p style="text-align:center;margin:20px 0;"><a href="{{loginUrl}}" style="display:inline-block;padding:12px 18px;background:#059669;color:#ffffff;border-radius:8px;text-decoration:none;font-weight:600;">Sign in to Frimousse</a></p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:18px;">If you didn't create this account, you can safely ignore this email.</p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:6px;">© Frimousse</p>
     </div>
   </body>
 </html>

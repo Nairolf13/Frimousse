@@ -1,30 +1,23 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>Activity notification</title>
-    <style>
-      body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial; color: #333 }
-      .container { max-width: 600px; margin: 0 auto; padding: 20px }
-      .logo { text-align: center }
-      .btn { display:inline-block; background:#2563eb; color:#fff; padding:10px 14px; border-radius:6px; text-decoration:none }
-      .activity { background:#f8fafc; padding:12px; border-radius:8px; margin-top:12px }
-    </style>
   </head>
-  <body>
-    <div class="container">
-      <div class="logo"><img src="{{logoUrl}}" alt="logo" width="120"/></div>
-      <h2>New activity planned</h2>
-      <p>Hello,</p>
-      <p>An activity has been planned for {{date}}. Below are the details:</p>
-      <div class="activity">
-        <p><strong>{{activityName}}</strong></p>
-        <p>{{comment}}</p>
-        <p><strong>When:</strong> {{startTime}} — {{endTime}}</p>
+  <body style="margin:0;padding:20px;background:#f3f4f6;font-family:Inter, system-ui, -apple-system,'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#333;">
+    <div style="max-width:640px;margin:0 auto;padding:20px;">
+      <div style="text-align:center;margin-bottom:8px;"><img src="{{logoUrl}}" alt="logo" width="120" style="display:inline-block;"/></div>
+      <h2 style="margin:8px 0;color:#0f172a;">New activity planned</h2>
+      <p style="margin:6px 0;">Hello,</p>
+      <p style="margin:6px 0;">An activity has been planned for {{date}}. Below are the details:</p>
+      <div style="background:#f8fafc;padding:12px;border-radius:8px;margin-top:12px;">
+        <p style="margin:0 0 6px;"><strong>{{activityName}}</strong></p>
+        <p style="margin:0 0 6px;">{{comment}}</p>
+        <p style="margin:0 0 6px;"><strong>When:</strong> {{startTime}} — {{endTime}}</p>
       </div>
-      <p>You can view the schedule and details here:</p>
-      <p><a class="btn" href="{{link}}">View schedule</a></p>
-      <p>— The team</p>
+      <p style="margin:12px 0 6px;">You can view the schedule and details here:</p>
+      <p style="margin:0 0 12px;"><a href="{{link}}" style="display:inline-block;padding:10px 14px;background:#059669;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">View schedule</a></p>
+      <p style="margin:6px 0;">— The team</p>
     </div>
   </body>
 </html>

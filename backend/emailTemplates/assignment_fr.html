@@ -12,30 +12,38 @@
   </head>
   <body>
     <div class="container">
-      <div class="header">
-        <img src="{{logoUrl}}" alt="Frimousse" width="72" style="display:block; margin: 0 auto 12px;" />
-        <h2>Mise à jour de planning</h2>
-        <p class="muted">Nous vous informons d'une mise à jour concernant votre enfant.</p>
-      </div>
-
       <div class="card">
-        <p>Bonjour,</p>
-        <p>Votre enfant <strong>{{childName}}</strong> a une affectation :</p>
-        <ul>
-          <li><strong>Nounou :</strong> {{nannyName}}</li>
-          <li><strong>Date :</strong> {{date}}</li>
-        </ul>
-          <!-- Détails d'activité (peut contenir plusieurs activités) -->
-          <div style="margin-top:12px;">
-            <h4>Détails de l'activité</h4>
-            <!-- activitiesHtml contiendra un ou plusieurs blocs d'activités formatés en HTML -->
-            {{activitiesHtml}}
-          </div>
-        <p><a class="btn" href="{{link}}">Voir le planning</a></p>
-      </div>
+        <!doctype html>
+        <html lang="fr">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width,initial-scale=1" />
+            <title>Mise à jour de planning</title>
+          </head>
+          <body style="margin:0;padding:20px;background:#f3f4f6;font-family:Inter, system-ui, -apple-system,'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#1f2937;">
+            <div style="max-width:640px;margin:0 auto;padding:20px;">
+              <div style="text-align:center;padding:24px 0;">
+                <img src="{{logoUrl}}" alt="Frimousse" width="72" style="display:block;margin:0 auto 12px;" />
+                <h2 style="margin:0;color:#0f172a;">Mise à jour de planning</h2>
+                <p style="color:#6b7280;margin:6px 0;">Nous vous informons d'une mise à jour concernant votre enfant.</p>
+              </div>
 
-      <p class="muted">Si vous avez des questions, répondez à cet e-mail ou contactez votre centre.</p>
-      <p class="muted">Cordialement,<br/>L'équipe Frimousse</p>
-    </div>
-  </body>
-</html>
+              <div style="background:#ffffff;border-radius:8px;padding:18px;box-shadow:0 2px 6px rgba(0,0,0,0.05);margin-bottom:16px;color:#1f2937;">
+                <p style="margin:0 0 8px;">Bonjour,</p>
+                <p style="margin:0 0 8px;">Votre enfant <strong>{{childName}}</strong> a une affectation :</p>
+                <ul style="margin:0 0 12px;padding-left:18px;">
+                  <li><strong>Nounou :</strong> {{nannyName}}</li>
+                  <li><strong>Date :</strong> {{date}}</li>
+                </ul>
+                <div style="margin-top:12px;">
+                  <h4 style="margin:0 0 8px;color:#0f172a;">Détails de l'activité</h4>
+                  {{activitiesHtml}}
+                </div>
+                <p style="margin-top:16px;"><a href="{{link}}" style="display:inline-block;padding:10px 16px;background:#059669;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;">Voir le planning</a></p>
+              </div>
+
+              <p style="color:#6b7280;margin:8px 0;">Si vous avez des questions, répondez à cet e-mail ou contactez votre centre.</p>
+              <p style="color:#6b7280;margin:4px 0;">Cordialement,<br/>L'équipe Frimousse</p>
+            </div>
+          </body>
+        </html>

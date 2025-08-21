@@ -1,39 +1,34 @@
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-      .container { font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; }
-      .header { text-align: center; padding: 24px 0; }
-      .btn { display:inline-block; padding:10px 16px; background:#2563eb; color:#fff; border-radius:6px; text-decoration:none }
-      .card { background:#fff; border-radius:8px; padding:18px; box-shadow:0 2px 6px rgba(0,0,0,0.05); margin-bottom:16px }
-      .muted { color:#6b7280; font-size:14px }
-    </style>
+    <title>Assignment update</title>
   </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <img src="{{logoUrl}}" alt="Frimousse" width="72" style="display:block; margin: 0 auto 12px;" />
-        <h2>Assignment update</h2>
-        <p class="muted">This is to inform you about a change regarding your child.</p>
+  <body style="margin:0;padding:20px;background:#f3f4f6;font-family:Inter, system-ui, -apple-system,'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#1f2937;">
+    <div style="max-width:640px;margin:0 auto;padding:20px;">
+      <div style="text-align:center;padding:24px 0;">
+        <img src="{{logoUrl}}" alt="Frimousse" width="72" style="display:block;margin:0 auto 12px;" />
+        <h2 style="margin:0;color:#0f172a;">Assignment update</h2>
+        <p style="color:#6b7280;margin:6px 0;">This is to inform you about a change regarding your child.</p>
       </div>
 
-      <div class="card">
-        <p>Hello,</p>
-        <p>Your child <strong>{{childName}}</strong> has an assignment:</p>
-        <ul>
+      <div style="background:#ffffff;border-radius:8px;padding:18px;box-shadow:0 2px 6px rgba(0,0,0,0.05);margin-bottom:16px;color:#1f2937;">
+        <p style="margin:0 0 8px;">Hello,</p>
+        <p style="margin:0 0 8px;">Your child <strong>{{childName}}</strong> has an assignment:</p>
+        <ul style="margin:0 0 12px;padding-left:18px;">
           <li><strong>Nanny:</strong> {{nannyName}}</li>
           <li><strong>Date:</strong> {{date}}</li>
         </ul>
         <div style="margin-top:12px;">
-          <h4>Activity details</h4>
+          <h4 style="margin:0 0 8px;color:#0f172a;">Activity details</h4>
           {{activitiesHtml}}
         </div>
-        <p><a class="btn" href="{{link}}">View schedule</a></p>
+        <p style="margin-top:16px;"><a href="{{link}}" style="display:inline-block;padding:10px 16px;background:#059669;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;">View schedule</a></p>
       </div>
 
-      <p class="muted">If you have questions, reply to this email or contact your center.</p>
-      <p class="muted">Regards,<br/>The Frimousse team</p>
+      <p style="color:#6b7280;margin:8px 0;">If you have questions, reply to this email or contact your center.</p>
+      <p style="color:#6b7280;margin:4px 0;">Regards,<br/>The Frimousse team</p>
     </div>
   </body>
 </html>
