@@ -8,6 +8,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [needsSubscription, setNeedsSubscription] = useState(false);
+  const [prefillEmail, setPrefillEmail] = useState('');
+  const [subscribeToken, setSubscribeToken] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +22,18 @@ export default function LoginPage() {
         credentials: 'include',
         body: JSON.stringify({ email, password })
       });
-      if (!res.ok) throw new Error('Identifiants invalides');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        // If server indicates subscription required, show that message and a CTA
+        if (res.status === 402 && data && data.error) {
+          setError(data.error);
+          setNeedsSubscription(true);
+          setPrefillEmail(email);
+          setSubscribeToken(data.subscribeToken || null);
+          return;
+        }
+        throw new Error(data?.message || data?.error || 'Identifiants invalides');
+      }
       window.location.href = '/dashboard';
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -39,6 +53,22 @@ export default function LoginPage() {
         <h2 className="text-2xl font-bold mb-2 text-[#0b5566] text-center">Connexion</h2>
         <p className="mb-6 text-[#08323a] text-center">Connectez-vous à votre espace Frimousse</p>
         {error && <div className="mb-4 text-red-600 w-full text-center">{error}</div>}
+        {needsSubscription && (
+          <div className="mb-4 w-full text-center">
+            <button
+              type="button"
+              onClick={() => {
+                const qs = new URLSearchParams();
+                if (prefillEmail) qs.set('prefillEmail', prefillEmail);
+                if (subscribeToken) qs.set('subscribeToken', subscribeToken);
+                window.location.href = `/tarifs?${qs.toString()}`;
+              }}
+              className="bg-[#0b5566] text-white px-4 py-2 rounded"
+            >
+              S'abonner
+            </button>
+          </div>
+        )}
         <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Email
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>

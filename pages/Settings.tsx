@@ -57,9 +57,23 @@ export default function Settings() {
 
             <div className="md:col-span-2">
               <button className="w-full bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" style={{marginTop: '8px'}} onClick={async () => {
-                await fetchWithRefresh(`${API_URL}/api/logout`, { method: 'POST', credentials: 'include' });
+                try { await fetchWithRefresh(`${API_URL}/api/logout`, { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
+                // Clear client storage
+                try { localStorage.clear(); } catch { /* ignore */ }
+                try { sessionStorage.clear(); } catch { /* ignore */ }
+                // Clear non-httpOnly cookies accessible from JS
+                try {
+                  document.cookie.split(';').forEach(function(c) {
+                    const name = c.split('=')[0].trim();
+                    // expire cookie for current path
+                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                    // also try to clear for domain
+                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname;
+                  });
+                } catch { /* ignore */ }
+                // Redirect to login
                 window.location.href = '/login';
-              }}>Se déconnecter</button>
+               }}>Se déconnecter</button>
             </div>
           </div>
         </div>

@@ -163,7 +163,6 @@ router.delete('/:id', auth, async (req, res) => {
     await prisma.assignment.delete({ where: { id } });
     res.json({ message: 'Assignment deleted' });
 
-    // background notify parents about deletion
     (async () => {
       try {
         const { sendTemplatedMail } = require('../lib/email');

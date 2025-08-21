@@ -1,6 +1,12 @@
-require('dotenv').config({
-  path: process.env.NODE_ENV === 'production' ? '.env.production' : '.env'
-});
+const path = require('path');
+// Load root .env first, then backend/.env to allow backend-specific overrides
+require('dotenv').config({ path: path.resolve(process.cwd(), process.env.NODE_ENV === 'production' ? '.env.production' : '.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+
+// Normalize STRIPE_SECRET_KEY: remove surrounding quotes and trim whitespace
+if (process.env.STRIPE_SECRET_KEY) {
+  process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY.trim().replace(/^"|"$/g, '');
+}
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -8,7 +14,10 @@ const app = express();
 
 // Stripe integration
 if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('La clé STRIPE_SECRET_KEY doit être définie dans le fichier .env ou l’environnement.');
+  throw new Error('La clé STRIPE_SECRET_KEY doit être définie dans backend/.env ou dans les variables d\'environnement.');
+}
+if (!process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+  throw new Error('La clé STRIPE_SECRET_KEY ne semble pas valide (doit commencer par sk_). Vérifiez backend/.env');
 }
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
@@ -66,6 +75,9 @@ app.use('/api/assignments', assignmentsRoutes);
 const schedulesRoutes = require('./routes/schedules');
 app.use('/api', schedulesRoutes);
 
+const subscriptionsRoutes = require('./routes/subscriptions');
+app.use('/api/subscriptions', subscriptionsRoutes);
+
 app.get('/', (req, res) => {
   res.send('API is running');
 });
@@ -85,28 +97,7 @@ app.post('/create-payment-intent', async (req, res) => {
 });
 
 // Endpoint webhook Stripe
-app.post('/webhook', express.raw({type: 'application/json'}), (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_...';
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
-  } catch (err) {
-    return res.status(400).send(`Erreur de webhook: ${err.message}`);
-  }
-  switch (event.type) {
-    case 'payment_intent.succeeded':
-      const paymentIntent = event.data.object;
-      console.log('Paiement réussi:', paymentIntent.id);
-      break;
-    case 'payment_intent.payment_failed':
-      console.log('Échec du paiement');
-      break;
-    default:
-      console.log(`Événement non traité: ${event.type}`);
-  }
-  res.send();
-});
+// Note: subscription-related webhooks are handled in /api/subscriptions/webhook
 
 
 const PORT = process.env.PORT || 4000;

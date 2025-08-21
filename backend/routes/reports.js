@@ -3,9 +3,10 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const auth = require('../middleware/authMiddleware');
+const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, requireActiveSubscription, async (req, res) => {
   try {
   const where = {};
   if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
@@ -16,7 +17,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, requireActiveSubscription, async (req, res) => {
   try {
     const { priority, type, status, childId, nannyId, summary, details, date, time, duration, childrenInvolved } = req.body;
     let isoDate = date;

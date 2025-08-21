@@ -62,7 +62,8 @@ model User {
   email         String   @unique
   password      String
   name          String
-  role          String   
+  role          String  
+  stripeCustomerId String?
   nanny         Nanny?   @relation("NannyUser", fields: [nannyId], references: [id])
   nannyId       String?  @unique
   parent        Parent?  @relation("UserParent", fields: [parentId], references: [id])
@@ -178,4 +179,33 @@ model Center {
   schedules Schedule[]
   reports   Report[]
   createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id                   String   @id @default(uuid())
+  userId               String
+  stripeSubscriptionId String?  @unique
+  plan                 String
+  status               String
+  trialStart           DateTime?
+  trialEnd             DateTime?
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean  @default(false)
+  canceledAt           DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model AbandonedSignupReminder {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  sentCount  Int      @default(0)
+  lastSentAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
 }

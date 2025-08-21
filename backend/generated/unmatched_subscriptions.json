@@ -1,0 +1,18 @@
+[
+  {
+    "stripeSubscriptionId": "sub_1RyKWaExeKKlzm3UtuAtzlGt",
+    "status": "trialing",
+    "customer": "cus_Su8o2F09W5SgsL",
+    "customer_email": "e2e_create_with_token_1755729030610@example.com",
+    "metadata": {},
+    "created": "2025-08-20T22:30:32.000Z"
+  },
+  {
+    "stripeSubscriptionId": "sub_1RyFIJExeKKlzm3Uh1fMmnrv",
+    "status": "trialing",
+    "customer": "cus_Su3POEIqHHOr0X",
+    "customer_email": "e2e_create_with_token_1755708925542@example.com",
+    "metadata": {},
+    "created": "2025-08-20T16:55:27.000Z"
+  }
+]

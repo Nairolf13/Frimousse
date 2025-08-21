@@ -1,5 +1,7 @@
 import { Helmet } from 'react-helmet-async';
+import { useEffect, useState} from 'react';
 import { useNavigate } from 'react-router-dom';
+// Stripe Checkout redirect only: no Elements or inline card collection
 
 
 const plans = [
@@ -54,6 +56,72 @@ const plans = [
 
 export default function PricingPage() {
   const navigate = useNavigate();
+  const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams('');
+  const subscribeTokenFromQs = search.get('subscribeToken');
+  const prefillEmailFromQs = search.get('prefillEmail');
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<string | null>(null);
+  const [globalMessage, setGlobalMessage] = useState<null | { type: 'success' | 'error' | 'info'; text: string }>(null);
+  const [userRoleLoading, setUserRoleLoading] = useState(true);
+
+  useEffect(() => {
+    setUserRoleLoading(true);
+    fetch('/api/me', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => setUserRole(data?.role || null))
+      .catch(() => setUserRole(null))
+      .finally(() => setUserRoleLoading(false));
+    // if prefillEmail present, optionally set a message
+    if (prefillEmailFromQs) setGlobalMessage({ type: 'info', text: `Continuer l'abonnement pour ${prefillEmailFromQs}` });
+  }, [prefillEmailFromQs, subscribeTokenFromQs]);
+
+  async function startDiscovery(planKey: string) {
+    // show discovery chooser so user chooses Essentiel or Pro
+    setPendingPlan(planKey);
+  }
+
+  async function startDirect(planKey: string, selPlan?: string) {
+    try {
+      const effectivePlan = planKey;
+      const endpoint = subscribeTokenFromQs ? '/api/subscriptions/create-checkout-with-token' : '/api/subscriptions/create-checkout';
+      const body: { plan: string; mode: 'direct' | 'discovery'; selectedPlan?: string; subscribeToken?: string } = { plan: effectivePlan, mode: 'direct' };
+      if (selPlan) body.selectedPlan = selPlan;
+      if (subscribeTokenFromQs) body.subscribeToken = subscribeTokenFromQs;
+      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: subscribeTokenFromQs ? 'omit' : 'include', body: JSON.stringify(body) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error || 'Impossible de créer la session de paiement');
+      window.location.href = data.url;
+    } catch (err) {
+      const message = err && (err as Error).message ? (err as Error).message : String(err);
+      setGlobalMessage({ type: 'error', text: message || 'Erreur lors de la création de l’abonnement.' });
+    } finally {
+      // nothing to cleanup
+    }
+  }
+
+  // No modal state to close; discovery chooser uses setPendingPlan(null)
+
+  // No inline card collection: Checkout handles payment. CardModal removed.
+
+  // New: Discovery choice modal (if user clicks Découverte) - asks to choose Essentiel or Pro
+  function DiscoveryChooser({ onClose }: { onClose: () => void }) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <div className="bg-white rounded p-6 w-full max-w-md">
+          <h3 className="text-lg font-bold mb-4">Choisir un abonnement après l'essai</h3>
+          <p className="mb-4 text-sm text-gray-700">L'essai Découverte démarre pendant 15 jours. Choisissez ensuite l'abonnement auquel vous souhaitez souscrire :</p>
+          <div className="flex gap-3">
+            <button className="flex-1 px-4 py-2 border rounded" onClick={() => { onClose(); startDirect('decouverte', 'essentiel'); }}>Essentiel — 29,99€ / mois</button>
+            <button className="flex-1 px-4 py-2 border rounded bg-[#0b5566] text-white" onClick={() => { onClose(); startDirect('decouverte', 'pro'); }}>Pro — 59,99€ / mois</button>
+          </div>
+          <div className="mt-4 text-right">
+            <button className="px-3 py-1 text-sm" onClick={onClose}>Annuler</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
@@ -66,8 +134,6 @@ export default function PricingPage() {
         <meta property="og:url" content="https://frimousse-asso.fr/tarifs" />
         <meta property="og:image" content="/frimousse-cover.png" />
   <script async src="https://js.stripe.com/v3/buy-button.js"></script>
-        {/* Stripe Buy Button script */}
-        <script async src="https://js.stripe.com/v3/buy-button.js"></script>
       </Helmet>
       <header className="w-full bg-gradient-to-r from-[#a9ddf2] to-[#f7f4d7] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
@@ -82,6 +148,12 @@ export default function PricingPage() {
         </div>
       </header>
       <main className="flex-1 w-full">
+        {/* Global message banner */}
+        {globalMessage && (
+          <div className={`max-w-4xl mx-auto mt-6 p-3 rounded ${globalMessage.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : globalMessage.type === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-blue-50 border border-blue-200 text-blue-800'}`} role="status">
+            {globalMessage.text}
+          </div>
+        )}
         <section className="w-full py-12 px-6 bg-white border-b border-gray-100">
           <div className="max-w-4xl mx-auto text-center">
             <button
@@ -113,23 +185,35 @@ export default function PricingPage() {
                     </ul>
                   </div>
                   {plan.buyButtonId ? (
-                    <>
-                      <script async src="https://js.stripe.com/v3/buy-button.js"></script>
-                      <div
-                        className="w-full flex justify-center mt-2"
-                        style={{overflow: 'hidden'}}
-                        dangerouslySetInnerHTML={{
-                          __html: `<div style='max-width:140px;width:100%;display:flex;justify-content:center;margin:0 auto;'><stripe-buy-button buy-button-id="${plan.buyButtonId}" publishable-key="pk_test_51RtxT0ExeKKlzm3UmxayzpTJm1VnNuLMeyq0QAhTaJxVf7Yid5Ec5UpBgSk27T018lVDFBvBPReDOBgHfTSmMsZ70032QMqtZW"></stripe-buy-button></div>`
+                    // Use our controlled Checkout flow instead of embedded buy-button
+                    <div className="w-full flex justify-center mt-2">
+                      <button
+                        className="px-4 py-2 bg-[#0b5566] text-white rounded"
+                        type="button"
+                        onClick={() => {
+                          if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
+                          if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
+                          // For Essentiel/Pro use direct mode (30 days trial)
+                          return startDirect(plan.name.toLowerCase());
                         }}
-                      />
-                    </>
+                      >
+                        {plan.cta}
+                      </button>
+                    </div>
                   ) : (
                     <div className="w-full flex justify-center mt-2 relative" style={{position: 'relative'}}>
                       <button
                         className="BuyButton-Button is-cardLayout h-[44px] px-6 py-0 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-pointer mt-0"
                         type="button"
                         style={{borderRadius: 0, backgroundColor: '#0b5566', color: '#fff', position: 'absolute', top: '-122px', left: 0, right: 0, margin: 'auto', zIndex: 20, height: '44px'}}
-                        onClick={() => navigate('/register')}
+                        onClick={() => {
+                          if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
+                          if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
+                          // Découverte plan has cta 'Essai gratuit' and price '0€'
+                          if (plan.name === 'Découverte') return startDiscovery('decouverte');
+                          // For Essentiel/Pro use direct mode (30 days trial)
+                          return startDirect(plan.name.toLowerCase());
+                        }}
                       >
                         <span className="BuyButton-ButtonText Text Text-color--default Text-fontWeight--500 Text--truncate" data-testid="hosted-buy-button-text">
                           {plan.cta}
@@ -146,6 +230,9 @@ export default function PricingPage() {
             </div>
           </div>
         </section>
+        {pendingPlan === 'decouverte' && (
+          <DiscoveryChooser onClose={() => setPendingPlan(null)} />
+        )}
         <div className="max-w-4xl mx-auto text-center mt-10 mb-8">
           <button
             onClick={() => navigate('/')}
