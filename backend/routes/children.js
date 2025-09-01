@@ -6,6 +6,7 @@ const auth = require('../middleware/authMiddleware');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 
 router.get('/count', async (req, res) => {
   try {
@@ -57,7 +58,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, discoveryLimit('child'), async (req, res) => {
   const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group } = req.body;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {

@@ -1,12 +1,6 @@
-function getApiBase(): string {
-  try {
-    const meta = import.meta as unknown as { env?: { VITE_API_URL?: string } };
-    return (meta.env && meta.env.VITE_API_URL) ? meta.env.VITE_API_URL : 'http://localhost:4000';
-  } catch {
-    return 'http://localhost:4000';
-  }
-}
-const apiBase = getApiBase();
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+
+// Use relative endpoints so the browser origin (and dev proxy) are respected
 
 async function handleRes<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -75,24 +69,23 @@ type AdminData = {
 
 export default {
   async getChildren(): Promise<Child[]> {
-    const res = await fetch(`${apiBase}/api/parent/children`, { credentials: 'include' });
+    const res = await fetchWithRefresh(`/api/parent/children`, { credentials: 'include' });
     return handleRes<Child[]>(res);
   },
   async getAdminList(): Promise<AdminData> {
-    const res = await fetch(`${apiBase}/api/parent/admin`, { credentials: 'include' });
+    const res = await fetchWithRefresh(`/api/parent/admin`, { credentials: 'include' });
     return handleRes<AdminData>(res);
   },
   async getChildSchedule(childId: string): Promise<Schedule[]> {
-    const res = await fetch(`${apiBase}/api/parent/child/${childId}/schedule`, { credentials: 'include' });
+    const res = await fetchWithRefresh(`/api/parent/child/${childId}/schedule`, { credentials: 'include' });
     return handleRes<Schedule[]>(res);
   },
   async getChildReports(childId: string): Promise<Report[]> {
-    const res = await fetch(`${apiBase}/api/parent/child/${childId}/reports`, { credentials: 'include' });
+    const res = await fetchWithRefresh(`/api/parent/child/${childId}/reports`, { credentials: 'include' });
     return handleRes<Report[]>(res);
-  }
-  ,
+  },
   async getChild(childId: string): Promise<Child> {
-    const res = await fetch(`${apiBase}/api/children/${childId}`, { credentials: 'include' });
+    const res = await fetchWithRefresh(`/api/children/${childId}`, { credentials: 'include' });
     return handleRes<Child>(res);
   }
 };

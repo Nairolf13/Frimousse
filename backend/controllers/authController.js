@@ -17,7 +17,7 @@ function generateRefreshToken(user) {
 }
 
 exports.register = async (req, res) => {
-  const { email, password, name, role, nannyId, centerId, centerName } = req.body;
+  const { email, password, name, role, nannyId, centerId, centerName, plan } = req.body;
   if (!email || !password || !name || !role) return res.status(400).json({ message: 'Missing fields' });
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ message: 'User already exists' });
@@ -55,8 +55,33 @@ exports.register = async (req, res) => {
   }
 
   console.log('register userData:', userData);
+  let user;
+  try {
+    user = await prisma.user.create({ data: userData });
+  } catch (err) {
+    // Handle unique constraint race (email already created)
+    if (err && err.code === 'P2002') return res.status(409).json({ message: 'User already exists' });
+    console.error('Error creating user in register', err);
+    return res.status(500).json({ error: 'Erreur lors de la création du compte' });
+  }
 
-  const user = await prisma.user.create({ data: userData });
+  // If client asked for a 'decouverte' free trial, create a trialing subscription record
+  try {
+    if (plan && String(plan).toLowerCase() === 'decouverte') {
+      const trialDays = 15;
+      const trialEnd = new Date(Date.now() + trialDays * 24 * 3600 * 1000);
+      await prisma.subscription.create({ data: {
+        userId: user.id,
+        stripeSubscriptionId: null,
+        plan: 'decouverte',
+        status: 'trialing',
+        trialStart: new Date(),
+        trialEnd
+      }});
+    }
+  } catch (e) {
+    console.error('Failed to create decouverte subscription record', e);
+  }
 
   (async () => {
     try {
@@ -116,7 +141,14 @@ exports.registerSubscribeInit = async (req, res) => {
       userData.centerId = center.id;
     }
 
-    const user = await prisma.user.create({ data: userData });
+    let user;
+    try {
+      user = await prisma.user.create({ data: userData });
+    } catch (err) {
+      if (err && err.code === 'P2002') return res.status(409).json({ message: 'User already exists' });
+      console.error('registerSubscribeInit user create error', err);
+      return res.status(500).json({ error: 'Erreur lors de la création du compte' });
+    }
 
     // create stripe customer
     const customer = await stripe.customers.create({ email: user.email, name: user.name });
@@ -279,7 +311,6 @@ exports.login = async (req, res) => {
   if (user.role !== 'super-admin') {
     const sub = await prisma.subscription.findFirst({ where: { userId: user.id } });
     if (!sub) {
-      // Generate a short-lived token that allows completing subscription for this user (5 minutes)
       const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
       return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.', subscribeToken });
     }
@@ -292,8 +323,8 @@ exports.login = async (req, res) => {
   const refreshToken = generateRefreshToken(user);
   await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
   await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-  res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000 });
-  res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000 });
+  res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production' });
+  res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production' });
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });
 };
 
@@ -317,8 +348,8 @@ exports.refresh = async (req, res) => {
     const newRefreshToken = generateRefreshToken(user);
     await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
     const accessToken = generateAccessToken(user);
-    res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000 });
-    res.cookie('refreshToken', newRefreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000 });
+  res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production' });
+  res.cookie('refreshToken', newRefreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production' });
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });
   } catch (err) {
     return res.status(403).json({ message: 'Invalid refresh token' });

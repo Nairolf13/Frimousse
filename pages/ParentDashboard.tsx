@@ -5,25 +5,7 @@ import ParentCard from '../components/ParentCard';
 import ChildOptionsModal from '../components/ChildOptionsModal';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
-function getApiUrl(): string {
-  try {
-    const meta = import.meta as unknown as { env?: { VITE_API_URL?: string } };
-    return (meta.env && meta.env.VITE_API_URL) ? meta.env.VITE_API_URL : 'http://localhost:4000';
-  } catch {
-    return 'http://localhost:4000';
-  }
-}
-const API_URL = getApiUrl();
-const resolvedApi = (() => {
-  if (API_URL && /https?:\/\//.test(API_URL)) return API_URL.replace(/\/$/, '');
-  try {
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}:4000`;
-  } catch {
-    return 'http://localhost:4000';
-  }
-})();
-// debug: API base logged only during development when needed
+// Using relative /api/* endpoints so requests go through the dev proxy and use the browser origin
 
 type Child = { id: string; name: string; group?: string };
 type Parent = { id: string; name?: string | null; firstName?: string | null; lastName?: string | null; email?: string | null; phone?: string | null; children?: { child: Child }[]; createdAt?: string | null };
@@ -60,11 +42,25 @@ const ParentDashboard: React.FC = () => {
       setError(null);
       try {
         if (isAdminView(authUser)) {
-          const res = await fetchWithRefresh(`${resolvedApi}/api/parent/admin`, { credentials: 'include' });
+          const res = await fetchWithRefresh(`/api/parent/admin`, { credentials: 'include' });
           const text = await res.text();
           let json: unknown = null;
           try { json = text ? JSON.parse(text) : null; } catch { json = text; }
           if (!res.ok) {
+            // If the user isn't authorized to access the admin endpoint, fall back to the parent view
+            if (res.status === 403) {
+              const res2 = await fetchWithRefresh(`/api/parent/children`, { credentials: 'include' });
+              const text2 = await res2.text();
+              let json2: unknown = null;
+              try { json2 = text2 ? JSON.parse(text2) : null; } catch { json2 = text2; }
+              if (!res2.ok) {
+                const message2 = typeof json2 === 'string' ? json2 : (json2 && typeof json2 === 'object' && 'error' in (json2 as Record<string, unknown>) ? String((json2 as Record<string, unknown>).error) : 'Erreur serveur');
+                throw new Error(message2);
+              }
+              setChildren(json2 as Child[]);
+              setLoading(false);
+              return;
+            }
             const message = typeof json === 'string' ? json : (json && typeof json === 'object' && 'error' in (json as Record<string, unknown>) ? String((json as Record<string, unknown>).error) : 'Erreur serveur');
             throw new Error(message);
           }
@@ -83,7 +79,7 @@ const ParentDashboard: React.FC = () => {
                 const childId = ci?.child?.id || ci?.id;
                 if (!childId) return;
                 try {
-                  const res = await fetchWithRefresh(`${resolvedApi}/api/children/${childId}/billing?month=${month}`, { credentials: 'include' });
+                  const res = await fetchWithRefresh(`/api/children/${childId}/billing?month=${month}`, { credentials: 'include' });
                   if (!res.ok) return;
                   const data = await res.json();
                   if (data && typeof (data as Record<string, unknown>).amount === 'number') total += (data as { amount: number }).amount;
@@ -98,7 +94,7 @@ const ParentDashboard: React.FC = () => {
               /* noop - ignore billing errors */
             }
         } else {
-          const res = await fetchWithRefresh(`${resolvedApi}/api/parent/children`, { credentials: 'include' });
+          const res = await fetchWithRefresh(`/api/parent/children`, { credentials: 'include' });
           const text = await res.text();
           let json: unknown = null;
           try { json = text ? JSON.parse(text) : null; } catch { json = text; }
@@ -176,7 +172,7 @@ const ParentDashboard: React.FC = () => {
                 const payload: CreateParentPayload = { name: `${form.firstName} ${form.lastName}`, email: form.email, phone: form.phone };
                 if (form.password) payload.password = form.password;
 
-                const url = editingParent ? `${resolvedApi}/api/parent/${editingParent.id}` : `${resolvedApi}/api/parent`;
+                const url = editingParent ? `/api/parent/${editingParent.id}` : `/api/parent`;
                 const method = editingParent ? 'PUT' : 'POST';
 
                 const res = await fetchWithRefresh(url, {
@@ -189,7 +185,7 @@ const ParentDashboard: React.FC = () => {
                   throw new Error(bodyText || 'Erreur création parent');
                 }
                 setSuccessMessage(form.password ? (editingParent ? 'Parent modifié.' : 'Parent créé avec mot de passe.') : (editingParent ? 'Parent modifié.' : 'Parent créé — une invitation a été envoyée.'));
-                const reload = await fetchWithRefresh(`${resolvedApi}/api/parent/admin`, { credentials: 'include' });
+                const reload = await fetchWithRefresh(`/api/parent/admin`, { credentials: 'include' });
                 const reloadText = await reload.text();
                 let json: unknown = null;
                 try { json = reloadText ? JSON.parse(reloadText) : null; } catch { json = reloadText; }
@@ -249,7 +245,7 @@ const ParentDashboard: React.FC = () => {
                   <button onClick={() => setDeletingParentId(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2">Annuler</button>
                   <button onClick={async () => {
                     try {
-                      const res = await fetchWithRefresh(`${resolvedApi}/api/parent/${deletingParentId}`, { method: 'DELETE', credentials: 'include' });
+                      const res = await fetchWithRefresh(`/api/parent/${deletingParentId}`, { method: 'DELETE', credentials: 'include' });
                       const respText = await res.text();
                       let respBody: Record<string, unknown> | null = null;
                       try { respBody = respText ? JSON.parse(respText) : null; } catch { respBody = respText as unknown as Record<string, unknown>; }
@@ -259,7 +255,7 @@ const ParentDashboard: React.FC = () => {
                           : (typeof respBody === 'string' ? respBody : 'Erreur suppression');
                         throw new Error(String(message));
                       }
-                      const reload = await fetchWithRefresh(`${resolvedApi}/api/parent/admin`, { credentials: 'include' });
+                      const reload = await fetchWithRefresh(`/api/parent/admin`, { credentials: 'include' });
                       const text = await reload.text();
                       let json: unknown = null;
                       try { json = text ? JSON.parse(text) : null; } catch { json = text; }

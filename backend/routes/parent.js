@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -12,6 +13,17 @@ function isSuperAdmin(user) {
   if (!user || !user.role) return false;
   const r = String(user.role).toLowerCase();
   return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super');
+}
+
+function isAdminRole(user) {
+  if (!user || !user.role) return false;
+  const r = String(user.role).toLowerCase();
+  // accept common variants and be case-insensitive
+  return r === 'admin' || r === 'administrator' || r.includes('admin');
+}
+
+function canManageParents(user) {
+  return isAdminRole(user) || !!user.nannyId || isSuperAdmin(user);
 }
 
 router.get('/children', requireAuth, async (req, res) => {
@@ -27,10 +39,10 @@ router.get('/children', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
   try {
   const userReq = req.user || {};
-  if (!(userReq.role === 'admin' || userReq.nannyId || isSuperAdmin(userReq))) return res.status(403).json({ message: 'Forbidden' });
+  if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
 
     const { name, email, phone, password } = req.body;
     if (!name || !email) return res.status(400).json({ message: 'Missing fields: name and email required' });
@@ -109,7 +121,7 @@ router.post('/', requireAuth, async (req, res) => {
 router.put('/:id', requireAuth, async (req, res) => {
   try {
   const userReq = req.user || {};
-  if (!(userReq.role === 'admin' || userReq.nannyId || isSuperAdmin(userReq))) return res.status(403).json({ message: 'Forbidden' });
+  if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
     const { id } = req.params;
     const { name, email, phone, firstName, lastName } = req.body;
     let data = {};
@@ -140,7 +152,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
   const userReq = req.user || {};
-  if (!(userReq.role === 'admin' || userReq.nannyId || isSuperAdmin(userReq))) return res.status(403).json({ message: 'Forbidden' });
+  if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
     const { id } = req.params;
     if (!isSuperAdmin(userReq)) {
       const existing = await prisma.parent.findUnique({ where: { id } });
@@ -183,7 +195,7 @@ router.post('/accept-invite', async (req, res) => {
 router.get('/admin', requireAuth, async (req, res) => {
   try {
   const user = req.user || {};
-  if (!(user.role === 'admin' || user.nannyId || isSuperAdmin(user))) return res.status(403).json({ message: 'Forbidden' });
+  if (!canManageParents(user)) return res.status(403).json({ message: 'Forbidden' });
 
     let parents = [];
     if (prisma.parent && typeof prisma.parent.findMany === 'function') {

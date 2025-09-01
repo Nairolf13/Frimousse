@@ -4,6 +4,7 @@ const auth = require('../middleware/authMiddleware');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -19,7 +20,7 @@ router.get('/', auth, async (req, res) => {
   res.json(nannies);
 });
 
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
   try {
     const userReq = req.user || {};
     // Only admins or nannies themselves (or super-admin) can create nannies
@@ -38,6 +39,11 @@ router.post('/', auth, async (req, res) => {
 
       const existingUser = await tx.user.findUnique({ where: { email } });
       if (existingUser) {
+        // Do not attach existing users who are not nounous. This prevents admins being assigned a nannyId.
+        if (existingUser.role !== 'nanny') {
+          // Signal conflict to outer scope by returning a marker
+          return { nanny, user: null, existingUserConflict: true };
+        }
         // Attach existing user to this nanny
         await tx.user.update({ where: { id: existingUser.id }, data: { nannyId: nanny.id } });
         return { nanny, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
@@ -51,6 +57,11 @@ router.post('/', auth, async (req, res) => {
       const user = await tx.user.create({ data: userData });
       return { nanny, user };
     });
+
+    // If the email belonged to a non-nanny existing user, return conflict
+    if (result && result.existingUserConflict) {
+      return res.status(409).json({ message: 'Un utilisateur avec cet email existe déjà et n\'est pas une nounou.' });
+    }
 
     // Send invite email if we created a new user with email
     if (result.user && process.env.SMTP_HOST) {

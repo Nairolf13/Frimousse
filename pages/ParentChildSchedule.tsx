@@ -67,32 +67,23 @@ export default function ParentChildSchedule() {
   };
   const [childName, setChildName] = useState<string | null>(null);
 
-  const API_URL = (() => {
-    try {
-      const meta = import.meta as unknown as { env?: { VITE_API_URL?: string } };
-      return (meta.env && meta.env.VITE_API_URL) ? meta.env.VITE_API_URL : 'http://localhost:4000';
-    } catch {
-      return 'http://localhost:4000';
-    }
-  })();
-
   const fetchAssignments = useCallback(async (start?: Date, end?: Date) => {
-    let url = `${API_URL}/api/assignments`;
+    let url = `/api/assignments`;
     const params: string[] = [];
     if (start && end) {
       params.push(`start=${start.toISOString()}`);
       params.push(`end=${end.toISOString()}`);
     }
-    if (params.length) url += `?${params.join('&')}`;
-    const res = await fetchWithRefresh(url, { credentials: 'include' });
+  if (params.length) url += `?${params.join('&')}`;
+  const res = await fetchWithRefresh(url, { credentials: 'include' });
     return res.ok ? res.json() : [];
-  }, [API_URL]);
+  }, []);
 
   useEffect(() => {
     if (!childId) return;
-    (async () => {
+        (async () => {
       try {
-        const res = await fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' });
+        const res = await fetchWithRefresh(`/api/children`, { credentials: 'include' });
         const data = await res.json();
   const found = Array.isArray(data) ? data.find((c: unknown) => { const obj = c as Record<string, unknown>; return String(obj.id) === String(childId); }) : null;
         setChildName(found ? (found.name || `${found.firstName || ''} ${found.lastName || ''}`.trim()) : null);
@@ -117,7 +108,7 @@ export default function ParentChildSchedule() {
         setLoading(false);
       }
     })();
-  }, [childId, currentDate, fetchAssignments, API_URL]);
+  }, [childId, currentDate, fetchAssignments]);
 
   const monthGrid = getMonthGrid(currentDate);
 
@@ -191,7 +182,7 @@ export default function ParentChildSchedule() {
                                           try {
                                             const nannyId = a.nanny!.id;
                                             const dateYmd = toLocalYMD(a.date);
-                                            const res = await fetchWithRefresh(`${API_URL}/api/nannies/${encodeURIComponent(nannyId)}/schedules`, { credentials: 'include' });
+                                            const res = await fetchWithRefresh(`/api/nannies/${encodeURIComponent(nannyId)}/schedules`, { credentials: 'include' });
                                             const data = await res.json();
                                             console.log('Activités reçues pour la nounou:', data, 'dateYmd:', dateYmd);
                                             const filtered = Array.isArray(data)
@@ -234,7 +225,7 @@ export default function ParentChildSchedule() {
                           try {
                             const nannyId = a.nanny!.id;
                             const dateYmd = toLocalYMD(a.date);
-                            const res = await fetchWithRefresh(`${API_URL}/api/nannies/${encodeURIComponent(nannyId)}/schedules`, { credentials: 'include' });
+                            const res = await fetchWithRefresh(`/api/nannies/${encodeURIComponent(nannyId)}/schedules`, { credentials: 'include' });
                             const data = await res.json();
                                             const filtered = Array.isArray(data)
                                               ? data.filter((s: unknown) => {

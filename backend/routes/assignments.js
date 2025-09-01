@@ -3,14 +3,15 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
+function isSuperAdmin(user) { if (!user || !user.role) return false; const r = String(user.role).toLowerCase(); return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super'); }
 
 router.get('/', auth, async (req, res) => {
   try {
     const { nannyId, start, end } = req.query;
     const where = {};
     if (nannyId) where.nannyId = nannyId;
-    if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+  // Only filter by centerId when the authenticated user has a centerId set.
+  if (!isSuperAdmin(req.user) && req.user && req.user.centerId) where.centerId = req.user.centerId;
     if (start && end) {
       const startDate = new Date(start);
       const endDate = new Date(end);

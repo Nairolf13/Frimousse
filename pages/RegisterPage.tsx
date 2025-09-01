@@ -11,12 +11,11 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   // initialPlan = what the user selected on the radio (decouverte|essentiel|pro)
-  // billingPlan = the concrete billing plan used to create the subscription (essentiel|pro)
   const [initialPlan, setInitialPlan] = useState<'decouverte' | 'essentiel' | 'pro'>('decouverte');
-  const [billingPlan, setBillingPlan] = useState<'essentiel' | 'pro' | null>(null);
-  const [showChooser, setShowChooser] = useState(false);
   const [initLoading, setInitLoading] = useState(false);
   const [completeLoading] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     if (e.target.name === 'role') return;
@@ -32,16 +31,46 @@ export default function RegisterPage() {
       return;
     }
     try {
-      // If user chose Découverte, require them to pick a concrete billing plan (essentiel|pro)
-      if (initialPlan === 'decouverte' && !billingPlan) {
-        setShowChooser(true);
+    // If user chose Découverte, perform a normal register + login flow (no Checkout)
+      if (initialPlan === 'decouverte') {
+        setInitLoading(true);
+        // call register endpoint
+        const regRes = await fetch(`${API_URL}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+      body: JSON.stringify({ ...form, plan: initialPlan })
+        });
+        const regData = await regRes.json().catch(() => ({}));
+        if (!regRes.ok) throw new Error(regData?.message || regData?.error || 'Erreur lors de l\'inscription');
+
+        // login to get cookies
+        const loginRes = await fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email: form.email, password: form.password })
+        });
+        if (loginRes.status === 402) {
+          const loginData = await loginRes.json().catch(() => ({}));
+          setUpgradeMessage(loginData?.error || 'Votre compte nécessite un abonnement pour continuer.');
+          setShowUpgradeModal(true);
+          setInitLoading(false);
+          return;
+        }
+        const loginData = await loginRes.json().catch(() => ({}));
+        if (!loginRes.ok) throw new Error(loginData?.message || loginData?.error || 'Erreur lors de la connexion après inscription');
+
+        // Redirect to dashboard/home
+        window.location.href = '/';
         return;
       }
-      // Start the secure register + subscribe init which creates the user and returns a subscribeToken to start Checkout
+      // For paid plans (essentiel/pro) use the existing register + Checkout flow
       setInitLoading(true);
       const res = await fetch(`${API_URL}/api/auth/register-subscribe/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ ...form, plan: initialPlan })
       });
       const data = await res.json();
@@ -50,13 +79,7 @@ export default function RegisterPage() {
       }
       // Immediately redirect to Checkout using the token
       const endpoint = '/api/subscriptions/create-checkout-with-token';
-      const body: { plan: string; mode: 'direct' | 'discovery'; selectedPlan?: string; subscribeToken?: string } = { plan: initialPlan, mode: initialPlan === 'decouverte' ? 'discovery' : 'direct', subscribeToken: data.subscribeToken };
-      // If Découverte and billing plan not yet chosen, show chooser instead of immediate redirect
-      if (initialPlan === 'decouverte' && !billingPlan) {
-        setShowChooser(true);
-        return;
-      }
-      if (initialPlan === 'decouverte' && billingPlan) body.selectedPlan = billingPlan;
+      const body: { plan: string; mode: 'direct' | 'discovery'; selectedPlan?: string; subscribeToken?: string } = { plan: initialPlan, mode: 'direct', subscribeToken: data.subscribeToken };
       // call create-checkout-with-token and redirect
       const res2 = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data2 = await res2.json().catch(() => ({}));
@@ -140,7 +163,7 @@ export default function RegisterPage() {
           {/* Découverte */}
           <button
             type="button"
-            onClick={() => { setInitialPlan('decouverte'); setBillingPlan(null); }}
+            onClick={() => { setInitialPlan('decouverte'); }}
             className={`p-3 rounded-lg border text-sm focus:outline-none flex flex-col items-center text-center min-h-[140px] ${initialPlan === 'decouverte' ? 'border-[#0b5566] bg-[#f7f4d7]' : 'border-gray-200 bg-white hover:shadow-sm'}`}
           >
             <div>
@@ -154,7 +177,7 @@ export default function RegisterPage() {
           {/* Essentiel */}
           <button
             type="button"
-            onClick={() => { setInitialPlan('essentiel'); setBillingPlan('essentiel'); }}
+            onClick={() => { setInitialPlan('essentiel'); }}
             className={`p-3 rounded-lg border text-sm focus:outline-none flex flex-col items-center text-center min-h-[140px] ${initialPlan === 'essentiel' ? 'border-[#0b5566] bg-white shadow' : 'border-gray-200 bg-white hover:shadow-sm'}`}
           >
             <div>
@@ -168,7 +191,7 @@ export default function RegisterPage() {
           {/* Pro */}
           <button
             type="button"
-            onClick={() => { setInitialPlan('pro'); setBillingPlan('pro'); }}
+            onClick={() => { setInitialPlan('pro'); }}
             className={`p-3 rounded-lg border text-sm focus:outline-none flex flex-col items-center text-center min-h-[140px] ${initialPlan === 'pro' ? 'border-[#0b5566] bg-white shadow' : 'border-gray-200 bg-white hover:shadow-sm'}`}
           >
             <div>
@@ -181,73 +204,27 @@ export default function RegisterPage() {
         </div>
       </div>
 
-      <button type="submit" disabled={initLoading || completeLoading} className="w-full bg-[#0b5566] text-white py-2 rounded-full font-semibold hover:opacity-95 transition focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]">{initLoading || completeLoading ? 'Patientez…' : 'S’inscrire et payer'}</button>
+  <button type="submit" disabled={initLoading || completeLoading} className="w-full bg-[#0b5566] text-white py-2 rounded-full font-semibold hover:opacity-95 transition focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]">{initLoading || completeLoading ? 'Patientez…' : (initialPlan === 'decouverte' ? 'S’inscrire' : 'S’inscrire et payer')}</button>
     <div className="mt-4 text-sm text-[#08323a]">Déjà un compte ? <a href="/login" className="text-[#0b5566] hover:underline">Se connecter</a></div>
   {/* Inline card collection removed: registration uses Stripe Checkout redirect */}
       </form>
 
-      {/* If user chose Découverte but hasn't selected a billing plan yet, show chooser modal (backdrop blurs the page) */}
-      {showChooser && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 px-4">
-          <div role="dialog" aria-modal="true" aria-labelledby="chooser-title" className="max-w-3xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b">
-              <div>
-                <h3 id="chooser-title" className="text-lg font-bold text-[#0b5566]">Choisir l'abonnement après l'essai</h3>
-                <p className="text-sm text-gray-600 mt-1">Votre essai Découverte dure 15 jours. Choisissez ensuite l'offre qui vous convient.</p>
-              </div>
-              <button aria-label="Fermer" className="text-gray-400 hover:text-gray-700 p-2 rounded-full focus:outline-none" onClick={() => setShowChooser(false)}>
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-                  <path d="M4 4L16 16M16 4L4 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Essentiel card */}
-                <div className="flex flex-col rounded-lg border p-4">
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-[#0b5566]">Essentiel</div>
-                    <div className="mt-2 text-xs text-gray-600">Pour les petites structures ,tout l'essentiel pour fonctionner.</div>
-                    <ul className="mt-3 space-y-1 text-sm text-gray-700">
-                      <li className="flex items-center gap-2"><span className="text-[#0b5566]">✓</span> Jusqu’à 10 enfants</li>
-                      <li className="flex items-center gap-2"><span className="text-[#0b5566]">✓</span> Gestions des plannings</li>
-                      <li className="flex items-center gap-2"><span className="text-[#0b5566]">✓</span> Notifications email</li>
-                    </ul>
-                  </div>
-                  <div className="mt-4 flex items-end justify-between">
-                    <div className="text-lg font-extrabold text-[#0b5566]">29,99€ <span className="text-sm font-normal text-gray-500">/ mois</span></div>
-                    <button className="ml-4 px-4 py-2 bg-white border border-[#0b5566] text-[#0b5566] rounded-lg hover:bg-[#f0fdfa] font-medium" onClick={() => { setBillingPlan('essentiel'); setShowChooser(false); }}>Choisir</button>
-                  </div>
-                </div>
-
-                {/* Pro card */}
-                <div className="flex flex-col rounded-lg border-2 border-[#0b5566] p-4 bg-gradient-to-b from-white to-[#f0fbfd]">
-                  <div className="flex-1">
-                    <div className="text-sm font-semibold text-[#0b5566]">Premium</div>
-                    <div className="mt-2 text-xs text-gray-600">Pour crèches et structures avancées ,plus de puissance et options.</div>
-                    <ul className="mt-3 space-y-1 text-sm text-gray-700">
-                      <li className="flex items-center gap-2"><span className="text-[#0b5566]">✓</span> Enfants illimités</li>
-                      <li className="flex items-center gap-2"><span className="text-[#0b5566]">✓</span> Accès pour les parents</li>
-                      <li className="flex items-center gap-2"><span className="text-[#0b5566]">✓</span> Support prioritaire</li>
-                    </ul>
-                  </div>
-                  <div className="mt-4 flex items-end justify-between">
-                    <div className="text-lg font-extrabold text-[#0b5566]">59,99€ <span className="text-sm font-normal text-gray-500">/ mois</span></div>
-                    <button className="ml-4 px-4 py-2 bg-[#0b5566] text-white rounded-lg hover:opacity-95 font-medium" onClick={() => { setBillingPlan('pro'); setShowChooser(false); }}>Choisir</button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 text-center text-sm text-gray-600">Vous pourrez changer ou résilier votre abonnement à tout moment depuis les paramètres.</div>
-            </div>
-
-            <div className="px-6 py-4 border-t text-right">
-              <button className="text-sm text-gray-600 hover:underline" onClick={() => setShowChooser(false)}>Annuler</button>
+      {/* Upgrade modal — shown when backend returns 402 (quota / subscription required) */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div role="dialog" aria-modal="true" className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+            <h3 className="text-lg font-bold text-[#0b5566] mb-2">Abonnement requis</h3>
+            <p className="text-sm text-gray-700 mb-4">{upgradeMessage || 'Cette action nécessite un abonnement. Passez à un plan supérieur pour continuer.'}</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => { window.location.href = '/pricing'; }} className="px-4 py-2 bg-[#0b5566] text-white rounded-md">Aller aux offres</button>
+              <button onClick={() => setShowUpgradeModal(false)} className="px-4 py-2 border rounded-md">Fermer</button>
             </div>
           </div>
         </div>
       )}
+      {/* Chooser removed: Découverte now signs up without selecting a paid plan */}
     </div>
   );
 }
+
+// Upgrade modal component JSX inserted after main export (kept in same file for simplicity)

@@ -105,7 +105,6 @@ export default function Nannies() {
       setMessages(m => ({ ...m, [nannyId]: { text: 'Paiement enregistré', type: 'success' } }));
       if (data.lastCotisationAmount) setCotisationAmounts(prev => ({ ...prev, [nannyId]: Number(data.lastCotisationAmount) }));
       setTimeout(() => setMessages(m => ({ ...m, [nannyId]: null })), 3000);
-      // Rafraîchir la cotisation pour afficher le compte à rebours immédiatement
       await fetchCotisation(nannyId);
       } catch {
       setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: null, loading: false } }));
@@ -132,7 +131,6 @@ export default function Nannies() {
       .then(res => res.json())
       .then((nannies: Nanny[]) => {
   setNannies(nannies);
-  // initialize default cotisation amount to 10 for each nanny
   const amounts: Record<string, number> = {};
   nannies.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); });
   setCotisationAmounts(amounts);
@@ -165,13 +163,41 @@ export default function Nannies() {
       };
       if (!payload.email) delete payload.email;
       if (!payload.password) delete payload.password;
-      const res = await fetch(editingId ? `${API_URL}/api/nannies/${editingId}` : `${API_URL}/api/nannies`, {
+      const res = await fetchWithRefresh(editingId ? `${API_URL}/api/nannies/${editingId}` : `${API_URL}/api/nannies`, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error('Erreur lors de la sauvegarde');
+      if (res.status === 402) {
+        try {
+          const body = await res.json().catch(() => ({}));
+          setError(body && body.error ? String(body.error) : 'Limite atteinte pour votre plan.');
+        } catch {
+          setError('Limite atteinte pour votre plan.');
+        }
+        return;
+      }
+      if (res.status === 409) {
+        try {
+          const body = await res.json().catch(() => ({}));
+          const msg = body && (body.message || body.error) ? String(body.message || body.error) : 'Un utilisateur avec cet email existe déjà.';
+          setError(msg);
+        } catch {
+          setError('Un utilisateur avec cet email existe déjà.');
+        }
+        return;
+      }
+      if (!res.ok) {
+        try {
+          const body = await res.json().catch(() => ({}));
+          const msg = body && (body.message || body.error) ? String(body.message || body.error) : 'Erreur lors de la sauvegarde';
+          setError(msg);
+        } catch {
+          setError('Erreur lors de la sauvegarde');
+        }
+        return;
+      }
       setForm(emptyForm);
       setConfirmPassword('');
       setEditingId(null);
