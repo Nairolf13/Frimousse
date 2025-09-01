@@ -16,6 +16,13 @@ function generateRefreshToken(user) {
   return jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 }
 
+function cookieOptions() {
+  const base = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production' };
+  // prefer strict sameSite in production, lax during dev for local testing
+  base.sameSite = process.env.NODE_ENV === 'production' ? 'Strict' : 'lax';
+  return base;
+}
+
 exports.register = async (req, res) => {
   const { email, password, name, role, nannyId, centerId, centerName, plan } = req.body;
   if (!email || !password || !name || !role) return res.status(400).json({ message: 'Missing fields' });
@@ -252,10 +259,10 @@ exports.registerSubscribeComplete = async (req, res) => {
       const refreshToken = generateRefreshToken(user);
       await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
       await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-      const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production' };
-      const refreshOpts = { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production' };
-      res.cookie('accessToken', accessToken, cookieOpts);
-      res.cookie('refreshToken', refreshToken, refreshOpts);
+  const cookieOpts = Object.assign({ maxAge: 15*60*1000 }, cookieOptions());
+  const refreshOpts = Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions());
+  res.cookie('accessToken', accessToken, cookieOpts);
+  res.cookie('refreshToken', refreshToken, refreshOpts);
       return res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null, subscription: stripeSub || existing });
     }
 
@@ -323,8 +330,8 @@ exports.login = async (req, res) => {
   const refreshToken = generateRefreshToken(user);
   await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
   await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-  res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production' });
-  res.cookie('refreshToken', refreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production' });
+  res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
+  res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });
 };
 
@@ -348,8 +355,8 @@ exports.refresh = async (req, res) => {
     const newRefreshToken = generateRefreshToken(user);
     await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
     const accessToken = generateAccessToken(user);
-  res.cookie('accessToken', accessToken, { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production' });
-  res.cookie('refreshToken', newRefreshToken, { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production' });
+  res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
+  res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });
   } catch (err) {
     return res.status(403).json({ message: 'Invalid refresh token' });

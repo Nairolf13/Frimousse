@@ -457,10 +457,9 @@ router.post('/create-with-token', async (req, res) => {
   const refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
   await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
   await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-  const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production' };
-  const refreshOpts = { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production' };
-  res.cookie('accessToken', accessToken, cookieOpts);
-  res.cookie('refreshToken', refreshToken, refreshOpts);
+  const baseCookie = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'lax' };
+  res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, baseCookie));
+  res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, baseCookie));
       return res.json({ subscription: stripeSub || existing });
     }
 

@@ -22,6 +22,8 @@ dist-ssr
 *.sln
 *.sw?
 
+backend/uploads/
+
 .env
 .env.productionbackend/.env
 backend/.env.production

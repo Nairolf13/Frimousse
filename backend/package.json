@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
-  "start": "node index.js",
-  "send:abandoned-reminders": "node scripts/sendAbandonedSignupReminders.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "send:abandoned-reminders": "node scripts/sendAbandonedSignupReminders.js"
   },
   "keywords": [],
   "author": "",
@@ -14,14 +14,21 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^6.13.0",
+    "@supabase/supabase-js": "^2.14.0",
     "bcryptjs": "^3.0.2",
+    "concat-map": "^0.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "es-errors": "^1.3.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^7.0.0",
+    "helmet": "^7.0.0",
     "jsonwebtoken": "^9.0.2",
-    "react-router-dom": "^7.7.1"
+    "multer": "^2.0.0",
+    "nodemailer": "^7.0.6",
+    "react-router-dom": "^7.7.1",
+    "sharp": "^0.32.1"
   },
   "devDependencies": {
     "@types/react-router-dom": "^5.3.3",

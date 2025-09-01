@@ -6,6 +6,7 @@ model Parent {
   phone     String?
   user      User?    @relation("UserParent")
   children  ParentChild[]
+  photoConsents PhotoConsent[] @relation("ParentPhotoConsents")
   center    Center?  @relation(fields: [centerId], references: [id])
   centerId  String?
   createdAt DateTime @default(now())
@@ -73,6 +74,9 @@ model User {
   refreshTokens RefreshToken[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  feedPosts      FeedPost[]
+  feedLikes      FeedLike[]
+  feedComments   FeedComment[]
 }
 
 model RefreshToken {
@@ -119,6 +123,8 @@ model Child {
   centerId   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  feedPosts   FeedPost[]
+  photoConsents PhotoConsent[] @relation("ChildPhotoConsents")
 }
 
 model Assignment {
@@ -178,6 +184,7 @@ model Center {
   assignments Assignment[]
   schedules Schedule[]
   reports   Report[]
+  feedPosts FeedPost[]
   createdAt DateTime @default(now())
 }
 
@@ -208,4 +215,72 @@ model AbandonedSignupReminder {
   updatedAt  DateTime @updatedAt
 
   @@index([userId])
+}
+
+// Feed & media for announcements / photos
+model FeedPost {
+  id         String     @id @default(uuid())
+  author     User       @relation(fields: [authorId], references: [id])
+  authorId   String
+  center     Center?    @relation(fields: [centerId], references: [id])
+  centerId   String?
+  childId    String?
+  child      Child?     @relation(fields: [childId], references: [id])
+  text       String?
+  visibility FeedVisibility @default(CENTER)
+  medias     FeedMedia[]
+  likes      FeedLike[]
+  comments   FeedComment[]
+  createdAt  DateTime   @default(now())
+}
+
+model FeedMedia {
+  id           String   @id @default(uuid())
+  post         FeedPost @relation(fields: [postId], references: [id])
+  postId       String
+  type         String
+  url          String
+  thumbnailUrl String?
+  size         Int?
+  createdAt    DateTime @default(now())
+}
+
+model FeedLike {
+  id        String   @id @default(uuid())
+  post      FeedPost @relation(fields: [postId], references: [id])
+  postId    String
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+}
+
+model FeedComment {
+  id        String   @id @default(uuid())
+  post      FeedPost @relation(fields: [postId], references: [id])
+  postId    String
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+  text      String
+  createdAt DateTime @default(now())
+}
+
+model PhotoConsent {
+  id        String   @id @default(uuid())
+  child     Child    @relation("ChildPhotoConsents", fields: [childId], references: [id])
+  childId   String
+  parent    Parent   @relation("ParentPhotoConsents", fields: [parentId], references: [id])
+  parentId  String
+  consent   Boolean  @default(false)
+  grantedAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@unique([childId, parentId])
+}
+
+enum FeedVisibility {
+  CENTER
+  PARENTS
+  PUBLIC
 }

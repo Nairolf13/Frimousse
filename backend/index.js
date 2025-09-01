@@ -10,7 +10,19 @@ if (process.env.STRIPE_SECRET_KEY) {
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+// Security middlewares
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const app = express();
+
+// Ensure critical secrets are present early
+const requiredEnvs = ['JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'STRIPE_SECRET_KEY'];
+for (const e of requiredEnvs) {
+  if (!process.env[e]) {
+    console.error(`Missing required env var: ${e}. Please set it in backend/.env or environment variables.`);
+    process.exit(1);
+  }
+}
 
 // Stripe integration
 if (!process.env.STRIPE_SECRET_KEY) {
@@ -28,6 +40,12 @@ const childrenRoutes = require('./routes/children');
 const reportsRoutes = require('./routes/reports');
 const parentRoutes = require('./routes/parent');
 
+
+// Security headers
+app.use(helmet());
+
+// Basic rate limiter
+app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -77,6 +95,9 @@ app.use('/api', schedulesRoutes);
 
 const subscriptionsRoutes = require('./routes/subscriptions');
 app.use('/api/subscriptions', subscriptionsRoutes);
+
+const feedRoutes = require('./routes/feed');
+app.use('/api/feed', feedRoutes);
 
 app.get('/', (req, res) => {
   res.send('API is running');
