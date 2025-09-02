@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run start",
+  "dev": "npm run start",
+  "build": "vite build",
     "prod": "npm run start:prod",
     "start": "npm-run-all --parallel start:front start:back",
     "start:front": "vite",

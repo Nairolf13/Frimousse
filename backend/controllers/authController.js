@@ -17,9 +17,9 @@ function generateRefreshToken(user) {
 }
 
 function cookieOptions() {
+  // For cross-site auth (frontend on a different origin) we must use SameSite=None and Secure in production.
   const base = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production' };
-  // prefer strict sameSite in production, lax during dev for local testing
-  base.sameSite = process.env.NODE_ENV === 'production' ? 'Strict' : 'lax';
+  base.sameSite = process.env.NODE_ENV === 'production' ? 'None' : 'lax';
   return base;
 }
 
@@ -296,10 +296,8 @@ exports.registerSubscribeComplete = async (req, res) => {
     const refreshToken = generateRefreshToken(user);
     await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
     await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-    const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production' };
-    const refreshOpts = { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production' };
-    res.cookie('accessToken', accessToken, cookieOpts);
-    res.cookie('refreshToken', refreshToken, refreshOpts);
+  res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
+  res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
 
     res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null, subscription: subRecord });
   } catch (err) {

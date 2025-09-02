@@ -35,7 +35,7 @@ export default function RegisterPage() {
       if (initialPlan === 'decouverte') {
         setInitLoading(true);
         // call register endpoint
-        const regRes = await fetch(`${API_URL}/auth/register`, {
+        const regRes = await fetch(`${API_URL}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -45,7 +45,7 @@ export default function RegisterPage() {
         if (!regRes.ok) throw new Error(regData?.message || regData?.error || 'Erreur lors de l\'inscription');
 
         // login to get cookies
-        const loginRes = await fetch(`${API_URL}/auth/login`, {
+        const loginRes = await fetch(`${API_URL}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -67,7 +67,7 @@ export default function RegisterPage() {
       }
       // For paid plans (essentiel/pro) use the existing register + Checkout flow
       setInitLoading(true);
-      const res = await fetch(`${API_URL}/auth/register-subscribe/init`, {
+      const res = await fetch(`${API_URL}/api/auth/register-subscribe/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

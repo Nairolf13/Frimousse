@@ -47,10 +47,33 @@ app.use(helmet());
 // Basic rate limiter
 app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
 
-app.use(cors({
-  origin: true, // Allow all origins
-  credentials: true
-}));app.use(express.json());
+// CORS: restrict origins in production, allow localhost during development
+const isProd = process.env.NODE_ENV === 'production';
+const allowedOrigins = isProd
+  ? [
+      'https://lesfrimousses.com',
+      'https://www.lesfrimousses.com',
+    ]
+  : [
+      'http://localhost:5173',
+      'http://127.0.0.1:5173',
+      'https://lesfrimousses.com',
+      'https://www.lesfrimousses.com',
+    ];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. same-origin server-to-server requests, curl, Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('CORS: origine non autorisée'), false);
+    },
+    credentials: true,
+  })
+);
+
+app.use(express.json());
 app.use(cookieParser());
 
 app.use('/api/me', meRoutes);

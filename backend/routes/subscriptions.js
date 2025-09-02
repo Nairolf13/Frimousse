@@ -151,8 +151,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
               const refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
               await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
               await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-              const cookieOpts = { httpOnly: true, sameSite: 'lax', maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production' };
-              const refreshOpts = { httpOnly: true, sameSite: 'lax', maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production' };
+              const cookieOpts = { httpOnly: true, maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax' };
+              const refreshOpts = { httpOnly: true, maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax' };
               // Note: webhook handlers cannot directly set cookies for the browser that initiated the Checkout
               // but we store refresh token in DB so after redirect the frontend can call refresh endpoint to get tokens.
               // Alternatively, if desired, you can create a one-time link for the user to complete login.

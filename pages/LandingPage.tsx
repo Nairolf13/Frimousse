@@ -57,7 +57,7 @@
                       <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex items-center justify-center">
                         <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
                       </div>
-                      <div className="w-full text-left">
+                      <div className="w-full text-center md:text-left">
                         <span className="font-extrabold text-xl text-[#0b5566]">Les Frimousses</span>
                       </div>
                     </div>
@@ -217,7 +217,7 @@
               <footer className="w-full text-[#08323a] py-10 px-6 mt-auto">
                 <div className="max-w-5xl mx-auto border-t border-gray-100 py-8">
                   <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-start gap-6">
-                    <div className="flex flex-col items-start text-left justify-self-start">
+                    <div className="flex flex-col items-center text-center sm:items-start sm:text-left justify-self-start">
                       <h4 className="font-semibold text-[#08323a] mb-2">Liens utiles</h4>
                       <ul className="text-sm text-[#08323a] space-y-1">
                         <li>
@@ -241,7 +241,7 @@
                       <div className="mt-4 text-xs text-gray-500">© Les Frimousses {new Date().getFullYear()}</div>
                     </div>
 
-                    <div className="flex flex-col items-center text-center justify-self-end">
+                    <div className="flex flex-col items-center text-center sm:items-end sm:text-right justify-self-end">
                       <h4 className="font-semibold text-[#08323a] mb-2">Contact</h4>
                       <div className="text-[#08323a] text-sm">contact@frimousse-asso.fr</div>
                       <div className="text-[#08323a] text-sm">+33 1 23 45 67 89</div>
