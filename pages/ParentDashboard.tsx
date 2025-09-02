@@ -12,6 +12,18 @@ type Parent = { id: string; name?: string | null; firstName?: string | null; las
 type AdminStats = { parentsCount: number; childrenCount: number; presentToday: number };
 type AdminData = { stats: AdminStats; parents: Parent[] } | null;
 type AuthUser = { role?: string | null; nannyId?: string | null } | null;
+// more detailed user shape used in this page
+type UserInfo = {
+  id?: string | null;
+  parentId?: string | null;
+  name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  role?: string | null;
+  nannyId?: string | null;
+} | null;
 
 const ParentDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -114,6 +126,18 @@ const ParentDashboard: React.FC = () => {
     };
     load();
   }, [authUser]);
+
+      // Build a parent object for the connected parent user so we can reuse ParentCard UI
+      const userInfo = (user as UserInfo) ?? null;
+      const parentForCard: Parent | null = userInfo ? {
+        id: (userInfo.parentId ?? userInfo.id ?? 'me') as string,
+        name: (userInfo.name ?? `${(userInfo.firstName ?? '')} ${(userInfo.lastName ?? '')}`.trim()) ?? null,
+        firstName: userInfo.firstName ?? null,
+        lastName: userInfo.lastName ?? null,
+        email: userInfo.email ?? null,
+        phone: userInfo.phone ?? null,
+        children: children.map(c => ({ child: c }))
+      } : null;
 
   if (loading) return <div className="p-6">Chargement...</div>;
   if (error) return <div className="p-6 text-red-600">Erreur: {error}</div>;
@@ -287,7 +311,19 @@ const ParentDashboard: React.FC = () => {
     <div className="min-h-screen bg-[#fcfcff] p-2 sm:p-4 md:pl-64 w-full">
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <h1 className="text-2xl font-semibold mb-4">Espace Parent</h1>
-      {children.length === 0 ? (
+      {parentForCard ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ParentCard
+            parent={parentForCard}
+            color={'bg-white'}
+            parentDue={parentBilling[String(parentForCard.id)] || 0}
+            onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }}
+            onEdit={undefined}
+            onDelete={undefined}
+            annualPerChild={15}
+          />
+        </div>
+      ) : children.length === 0 ? (
         <div>Aucun enfant trouvé.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

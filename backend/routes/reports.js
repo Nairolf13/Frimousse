@@ -11,6 +11,17 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
   try {
   const where = {};
   if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+  // If parent, limit to reports where child is linked to this parent
+  if (req.user && req.user.role === 'parent') {
+    let parentId = req.user.parentId;
+    if (!parentId && req.user.email) {
+      const emailTrim = String(req.user.email).trim();
+      const parentRec = await prisma.parent.findFirst({ where: { email: { equals: emailTrim, mode: 'insensitive' } } });
+      if (parentRec) parentId = parentRec.id;
+    }
+    if (!parentId) return res.json([]);
+    where.child = { parents: { some: { parentId } } };
+  }
   const reports = await prisma.report.findMany({ include: { child: true, nanny: true }, where, orderBy: { date: 'desc' } });
     res.json(reports);
   } catch (err) {
@@ -25,11 +36,21 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('report'), asyn
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
       isoDate = new Date(date + 'T' + (time || '00:00') + ':00.000Z').toISOString();
     }
-    console.log('Valeur isoDate utilisée pour la création du rapport :', isoDate);
     if (!isSuperAdmin(req.user)) {
       if (childId) {
         const child = await prisma.child.findUnique({ where: { id: childId } });
         if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ message: 'Child not found' });
+        // if authenticated user is a parent, ensure the child belongs to them
+        if (req.user && req.user.role === 'parent') {
+          let parentId = req.user.parentId;
+          if (!parentId && req.user.email) {
+            const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
+            if (parentRec) parentId = parentRec.id;
+          }
+          if (!parentId) return res.status(403).json({ message: 'Forbidden' });
+          const link = await prisma.parentChild.findFirst({ where: { childId, parentId } });
+          if (!link) return res.status(403).json({ message: 'Forbidden' });
+        }
       }
       if (nannyId) {
         const nanny = await prisma.nanny.findUnique({ where: { id: nannyId } });

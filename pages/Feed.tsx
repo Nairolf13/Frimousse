@@ -472,6 +472,8 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
   const role = currentUser?.role || '';
   const canEdit = !!currentUser && (currentUser.id === post.authorId || ['admin', 'super-admin'].includes(role));
 
+  const mediaCount = post.medias ? post.medias.length : 0;
+
   async function save() {
     const trimmed = val.trim();
     if (!trimmed) return alert('Le post ne peut pas être vide');
@@ -581,11 +583,12 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
         </div>
       )}
       {/* medias display + controls */}
-      {post.medias && post.medias.length > 0 && (
-        <div className={`mt-3 grid gap-2 ${post.medias.length === 1 ? 'grid-cols-1' : post.medias.length === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-          {post.medias.map(m => (
-            <div key={m.id} className="relative w-full h-32 sm:h-40 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
-              <img src={m.thumbnailUrl || m.url} alt="media" className="w-full h-full object-contain" />
+      {mediaCount > 0 && (
+        <div className={`mt-3 grid gap-2 ${mediaCount === 1 ? 'grid-cols-1' : mediaCount === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+          {post.medias!.map(m => (
+            <div key={m.id} className={`relative w-full ${mediaCount === 1 ? 'h-64 sm:h-80' : mediaCount === 2 ? 'h-56 sm:h-64' : 'h-48 sm:h-56'} bg-gray-100 rounded overflow-hidden flex items-center justify-center`}>
+              {/* Use original media URL (not thumbnail) and show full image without cropping */}
+              <img src={m.url} alt={post.text ? post.text.slice(0, 80) : 'photo'} className="max-w-full max-h-full object-contain" />
               {canEdit && editing && (
                 <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-2 right-2 bg-white rounded-full p-1 text-red-600 shadow">✕</button>
               )}

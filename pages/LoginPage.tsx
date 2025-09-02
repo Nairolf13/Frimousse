@@ -8,6 +8,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotMessage, setForgotMessage] = useState('');
   const [needsSubscription, setNeedsSubscription] = useState(false);
   const [prefillEmail, setPrefillEmail] = useState('');
   const [subscribeToken, setSubscribeToken] = useState<string | null>(null);
@@ -92,9 +95,41 @@ export default function LoginPage() {
             </button>
           </div>
         </label>
+  <div className="w-full text-center text-sm mt-3 mb-4">
+          <button type="button" onClick={() => setForgotOpen(true)} className="text-[#0b5566] hover:underline">Mot de passe oublié ?</button>
+        </div>
         <button type="submit" className="w-full bg-[#0b5566] text-white py-2 rounded-full font-semibold hover:opacity-95 transition">Se connecter</button>
         <div className="mt-4 text-sm text-[#08323a]">Pas encore de compte ? <a href="/register" className="text-[#0b5566] hover:underline">Créer un compte</a></div>
       </form>
+      {forgotOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+            <h3 className="text-lg font-semibold mb-2">Réinitialiser le mot de passe</h3>
+            {forgotMessage ? <div className="mb-2 text-green-600">{forgotMessage}</div> : null}
+            <label className="block mb-3">Email
+              <input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2" />
+            </label>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setForgotOpen(false)} className="px-3 py-1">Annuler</button>
+              <button type="button" onClick={async () => {
+                setForgotMessage('');
+                try {
+                  const res = await fetch(`${API_URL}/api/auth/forgot`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: forgotEmail }) });
+                  if (res.ok) {
+                    setForgotMessage('Si un compte existe, un email de réinitialisation a été envoyé.');
+                  } else {
+                    const d = await res.json().catch(() => ({}));
+                    setForgotMessage(d?.error || 'Erreur');
+                  }
+                } catch (err) {
+                  console.error('forgot request error', err);
+                  setForgotMessage('Erreur réseau');
+                }
+              }} className="bg-[#0b5566] text-white px-3 py-1 rounded">Envoyer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

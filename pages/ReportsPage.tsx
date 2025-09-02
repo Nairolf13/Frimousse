@@ -80,7 +80,7 @@ export default function ReportsPage() {
   useEffect(() => {
     fetchWithRefresh(`${API_URL}/api/reports`)
       .then(res => res.json())
-      .then(data => setReports(data))
+      .then(data => setReports(Array.isArray(data) ? data : []))
       .catch(() => setReports([]));
   }, []);
   const total = reports.length;

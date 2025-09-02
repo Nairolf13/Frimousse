@@ -314,17 +314,40 @@ exports.login = async (req, res) => {
   if (!user) return res.status(401).json({ message: 'Invalid credentials' });
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
-  // Enforce subscription: super-admin bypass
-  if (user.role !== 'super-admin') {
-    const sub = await prisma.subscription.findFirst({ where: { userId: user.id } });
-    if (!sub) {
-      const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
-      return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.', subscribeToken });
+  // Enforce subscription: super-admin bypass. For admin users, require their own subscription.
+  // For parent/nanny/other non-admin users, allow access when their center has an admin with an active/trialing subscription.
+  async function hasValidSubscription(u) {
+    if (!u) return false;
+    if (u.role === 'super-admin') return true;
+    // Admins must have their own subscription
+    if (u.role === 'admin') {
+      const sub = await prisma.subscription.findFirst({ where: { userId: u.id } });
+      return !!sub && ['trialing', 'active'].includes(sub.status);
     }
-    if (!['trialing', 'active'].includes(sub.status)) {
-      const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
-      return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.', subscribeToken });
+    // Non-admins: determine centerId (user may be linked to a parent record)
+    let centerId = u.centerId;
+    if (!centerId && u.parentId) {
+      const parent = await prisma.parent.findUnique({ where: { id: u.parentId } });
+      if (parent) centerId = parent.centerId;
     }
+    if (centerId) {
+      // fetch potential admins in that center and check their subscriptions
+      const admins = await prisma.user.findMany({ where: { centerId }, select: { id: true, role: true } });
+      const adminIds = admins.filter(a => {
+        const r = String(a.role || '').toLowerCase();
+        return r.includes('admin') || r.includes('super');
+      }).map(a => a.id);
+      if (adminIds.length === 0) return false;
+      const sub = await prisma.subscription.findFirst({ where: { userId: { in: adminIds }, status: { in: ['trialing', 'active'] } } });
+      return !!sub;
+    }
+    return false;
+  }
+
+  const allowed = await hasValidSubscription(user);
+  if (!allowed) {
+    const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
+    return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.', subscribeToken });
   }
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
@@ -345,12 +368,35 @@ exports.refresh = async (req, res) => {
     await prisma.refreshToken.deleteMany({ where: { userId: payload.id } });
     const user = await prisma.user.findUnique({ where: { id: payload.id } });
     if (!user) return res.status(404).json({ message: 'User not found' });
-    // Enforce subscription on refresh as well (super-admin bypass)
-    if (user.role !== 'super-admin') {
-      const sub = await prisma.subscription.findFirst({ where: { userId: user.id } });
-      if (!sub || !['trialing', 'active'].includes(sub.status)) {
-        return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
+    // Enforce subscription on refresh using same rules as login
+    async function hasValidSubscriptionForRefresh(u) {
+      if (!u) return false;
+      if (u.role === 'super-admin') return true;
+      if (u.role === 'admin') {
+        const sub = await prisma.subscription.findFirst({ where: { userId: u.id } });
+        return !!sub && ['trialing', 'active'].includes(sub.status);
       }
+      let centerId = u.centerId;
+      if (!centerId && u.parentId) {
+        const parent = await prisma.parent.findUnique({ where: { id: u.parentId } });
+        if (parent) centerId = parent.centerId;
+      }
+      if (centerId) {
+        const admins = await prisma.user.findMany({ where: { centerId }, select: { id: true, role: true } });
+        const adminIds = admins.filter(a => {
+          const r = String(a.role || '').toLowerCase();
+          return r.includes('admin') || r.includes('super');
+        }).map(a => a.id);
+        if (adminIds.length === 0) return false;
+        const sub = await prisma.subscription.findFirst({ where: { userId: { in: adminIds }, status: { in: ['trialing', 'active'] } } });
+        return !!sub;
+      }
+      return false;
+    }
+
+    const ok = await hasValidSubscriptionForRefresh(user);
+    if (!ok) {
+      return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
     }
     const newRefreshToken = generateRefreshToken(user);
     await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
@@ -371,4 +417,47 @@ exports.logout = async (req, res) => {
   res.clearCookie('accessToken');
   res.clearCookie('refreshToken');
   res.json({ message: 'Logged out' });
+};
+
+// Forgot password: generate a short-lived token and send reset email
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email requis' });
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.json({ ok: true }); // don't reveal existence
+    const resetToken = jwt.sign({ id: user.id, type: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
+    // send templated email (lang detection)
+    const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
+    const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+    try {
+      await sendTemplatedMail({ templateName: 'reset', lang, to: user.email, subject: lang === 'fr' ? 'Réinitialiser votre mot de passe' : 'Reset your password', substitutions: { name: user.name || '', resetUrl } });
+    } catch (e) {
+      console.error('Failed to send reset email', e && e.message ? e.message : e);
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('forgotPassword error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// Reset password: verify token and update password
+exports.resetPassword = async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Token et mot de passe requis' });
+  try {
+    const payload = jwt.verify(token, REFRESH_TOKEN_SECRET || JWT_SECRET);
+    if (!payload || payload.type !== 'reset' || !payload.id) return res.status(400).json({ error: 'Token invalide' });
+    const user = await prisma.user.findUnique({ where: { id: payload.id } });
+    if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    const hash = await bcrypt.hash(password, 10);
+    await prisma.user.update({ where: { id: user.id }, data: { password: hash } });
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('resetPassword error', err);
+    return res.status(400).json({ error: 'Token invalide ou expiré' });
+  }
 };

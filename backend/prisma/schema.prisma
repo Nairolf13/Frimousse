@@ -1,16 +1,16 @@
 model Parent {
-  id        String   @id @default(uuid())
-  firstName String
-  lastName  String
-  email     String   @unique
-  phone     String?
-  user      User?    @relation("UserParent")
-  children  ParentChild[]
+  id            String         @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String         @unique
+  phone         String?
+  user          User?          @relation("UserParent")
+  children      ParentChild[]
   photoConsents PhotoConsent[] @relation("ParentPhotoConsents")
-  center    Center?  @relation(fields: [centerId], references: [id])
-  centerId  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  center        Center?        @relation(fields: [centerId], references: [id])
+  centerId      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model ParentChild {
@@ -21,10 +21,12 @@ model ParentChild {
   childId   String
   createdAt DateTime @default(now())
 }
+
 enum Sexe {
   masculin
   feminin
 }
+
 enum Availability {
   Disponible
   En_congé
@@ -59,24 +61,24 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  password      String
-  name          String
-  role          String  
+  id               String         @id @default(uuid())
+  email            String         @unique
+  password         String
+  name             String
+  role             String
   stripeCustomerId String?
-  nanny         Nanny?   @relation("NannyUser", fields: [nannyId], references: [id])
-  nannyId       String?  @unique
-  parent        Parent?  @relation("UserParent", fields: [parentId], references: [id])
-  parentId      String?  @unique
-  center        Center?  @relation(fields: [centerId], references: [id])
-  centerId      String?
-  refreshTokens RefreshToken[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  feedPosts      FeedPost[]
-  feedLikes      FeedLike[]
-  feedComments   FeedComment[]
+  nanny            Nanny?         @relation("NannyUser", fields: [nannyId], references: [id])
+  nannyId          String?        @unique
+  parent           Parent?        @relation("UserParent", fields: [parentId], references: [id])
+  parentId         String?        @unique
+  center           Center?        @relation(fields: [centerId], references: [id])
+  centerId         String?
+  refreshTokens    RefreshToken[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  feedPosts        FeedPost[]
+  feedLikes        FeedLike[]
+  feedComments     FeedComment[]
 }
 
 model RefreshToken {
@@ -89,42 +91,42 @@ model RefreshToken {
 }
 
 model Nanny {
-  id         String   @id @default(uuid())
-  name       String
-  role       NannyRole @default(Nounou_Senior)
-  contact    String?
-  email      String?
-  availability Availability @default(Disponible)
-  experience Int
-  assignedChildren Assignment[]
-  schedules  Schedule[] @relation("NannySchedules")
-  user       User?     @relation("NannyUser")
-  reports    Report[]
-  center     Center?   @relation(fields: [centerId], references: [id])
-  centerId   String?
-  cotisationPaidUntil DateTime?
-  lastCotisationAmount  Float?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                   String       @id @default(uuid())
+  name                 String
+  role                 NannyRole    @default(Nounou_Senior)
+  contact              String?
+  email                String?
+  availability         Availability @default(Disponible)
+  experience           Int
+  assignedChildren     Assignment[]
+  schedules            Schedule[]   @relation("NannySchedules")
+  user                 User?        @relation("NannyUser")
+  reports              Report[]
+  center               Center?      @relation(fields: [centerId], references: [id])
+  centerId             String?
+  cotisationPaidUntil  DateTime?
+  lastCotisationAmount Float?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
 }
 
 model Child {
-  id         String   @id @default(uuid())
-  name       String
-  age        Int
-  sexe       Sexe     @default(masculin)
-  group      ChildGroup @default(G1)
-  parents   ParentChild[]
-  allergies  String?
+  id                  String         @id @default(uuid())
+  name                String
+  age                 Int
+  sexe                Sexe           @default(masculin)
+  group               ChildGroup     @default(G1)
+  parents             ParentChild[]
+  allergies           String?
   cotisationPaidUntil DateTime?
-  assignments Assignment[]
-  reports    Report[]
-  center     Center?  @relation(fields: [centerId], references: [id])
-  centerId   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  feedPosts   FeedPost[]
-  photoConsents PhotoConsent[] @relation("ChildPhotoConsents")
+  assignments         Assignment[]
+  reports             Report[]
+  center              Center?        @relation(fields: [centerId], references: [id])
+  centerId            String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  feedPosts           FeedPost[]
+  photoConsents       PhotoConsent[] @relation("ChildPhotoConsents")
 }
 
 model Assignment {
@@ -146,103 +148,106 @@ model Schedule {
   endTime   String
   name      String
   comment   String?
-  nannies   Nanny[] @relation("NannySchedules")
-  center    Center? @relation(fields: [centerId], references: [id])
+  nannies   Nanny[]  @relation("NannySchedules")
+  center    Center?  @relation(fields: [centerId], references: [id])
   centerId  String?
 }
 
 model Report {
   id               String   @id @default(uuid())
-  priority         String   
-  type             String  
-  status           String   
+  priority         String
+  type             String
+  status           String
   childId          String
   nannyId          String
   summary          String
   details          String
   date             DateTime
-  time             String   
-  duration         String?  
-  childrenInvolved Int?     
+  time             String
+  duration         String?
+  childrenInvolved Int?
 
-  child            Child    @relation(fields: [childId], references: [id])
-  nanny            Nanny    @relation(fields: [nannyId], references: [id])
-  center           Center?  @relation(fields: [centerId], references: [id])
-  centerId         String?
+  child    Child   @relation(fields: [childId], references: [id])
+  nanny    Nanny   @relation(fields: [nannyId], references: [id])
+  center   Center? @relation(fields: [centerId], references: [id])
+  centerId String?
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Center {
-  id        String   @id @default(uuid())
-  name      String
-  users     User[]
-  parents   Parent[]
-  children  Child[]
-  nannies   Nanny[]
+  id          String       @id @default(uuid())
+  name        String
+  users       User[]
+  parents     Parent[]
+  children    Child[]
+  nannies     Nanny[]
   assignments Assignment[]
-  schedules Schedule[]
-  reports   Report[]
-  feedPosts FeedPost[]
-  createdAt DateTime @default(now())
+  schedules   Schedule[]
+  reports     Report[]
+  feedPosts   FeedPost[]
+  createdAt   DateTime     @default(now())
 }
 
 model Subscription {
-  id                   String   @id @default(uuid())
+  id                   String    @id @default(uuid())
   userId               String
-  stripeSubscriptionId String?  @unique
+  stripeSubscriptionId String?   @unique
   plan                 String
   status               String
   trialStart           DateTime?
   trialEnd             DateTime?
   currentPeriodStart   DateTime?
   currentPeriodEnd     DateTime?
-  cancelAtPeriodEnd    Boolean  @default(false)
+  cancelAtPeriodEnd    Boolean   @default(false)
   canceledAt           DateTime?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   @@index([userId])
 }
 
 model AbandonedSignupReminder {
-  id         String   @id @default(uuid())
-  userId     String   @unique
-  sentCount  Int      @default(0)
+  id         String    @id @default(uuid())
+  userId     String    @unique
+  sentCount  Int       @default(0)
   lastSentAt DateTime?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([userId])
 }
 
 // Feed & media for announcements / photos
 model FeedPost {
-  id         String     @id @default(uuid())
-  author     User       @relation(fields: [authorId], references: [id])
+  id         String         @id @default(uuid())
+  author     User           @relation(fields: [authorId], references: [id])
   authorId   String
-  center     Center?    @relation(fields: [centerId], references: [id])
+  center     Center?        @relation(fields: [centerId], references: [id])
   centerId   String?
   childId    String?
-  child      Child?     @relation(fields: [childId], references: [id])
+  child      Child?         @relation(fields: [childId], references: [id])
   text       String?
   visibility FeedVisibility @default(CENTER)
   medias     FeedMedia[]
   likes      FeedLike[]
   comments   FeedComment[]
-  createdAt  DateTime   @default(now())
+  createdAt  DateTime       @default(now())
 }
 
 model FeedMedia {
-  id           String   @id @default(uuid())
-  post         FeedPost @relation(fields: [postId], references: [id])
-  postId       String
-  type         String
-  url          String
-  thumbnailUrl String?
-  size         Int?
-  createdAt    DateTime @default(now())
+  id            String   @id @default(uuid())
+  post          FeedPost @relation(fields: [postId], references: [id])
+  postId        String
+  type          String
+  url           String
+  thumbnailUrl  String?
+  size          Int?
+  hash          String? // MD5 hash of the original image content
+  storagePath   String? // storage path in Supabase bucket (for deletion)
+  thumbnailPath String? // storage path for the thumbnail
+  createdAt     DateTime @default(now())
 }
 
 model FeedLike {
@@ -267,14 +272,14 @@ model FeedComment {
 }
 
 model PhotoConsent {
-  id        String   @id @default(uuid())
-  child     Child    @relation("ChildPhotoConsents", fields: [childId], references: [id])
+  id        String    @id @default(uuid())
+  child     Child     @relation("ChildPhotoConsents", fields: [childId], references: [id])
   childId   String
-  parent    Parent   @relation("ParentPhotoConsents", fields: [parentId], references: [id])
+  parent    Parent    @relation("ParentPhotoConsents", fields: [parentId], references: [id])
   parentId  String
-  consent   Boolean  @default(false)
+  consent   Boolean   @default(false)
   grantedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@unique([childId, parentId])
 }

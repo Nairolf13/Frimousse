@@ -18,6 +18,20 @@ router.get('/', auth, async (req, res) => {
       endDate.setDate(endDate.getDate() + 1);
       where.date = { gte: startDate, lt: endDate };
     }
+    // If authenticated user is a parent, restrict assignments to children linked to that parent
+    if (req.user && req.user.role === 'parent') {
+      // resolve parentId from authenticated user or by matching email to Parent record (case-insensitive)
+      let parentId = req.user.parentId;
+      if (!parentId && req.user.email) {
+        const emailTrim = String(req.user.email).trim();
+        const parentRec = await prisma.parent.findFirst({ where: { email: { equals: emailTrim, mode: 'insensitive' } } });
+        if (parentRec) parentId = parentRec.id;
+      }
+      if (!parentId) return res.json([]);
+      // restrict where to assignments whose child has a parent link
+      where.child = { parents: { some: { parentId } } };
+    }
+
     const assignments = await prisma.assignment.findMany({ where,
       select: {
         id: true,
@@ -62,6 +76,8 @@ function schedulesToHtml(schedules) {
 router.post('/', auth, async (req, res) => {
   try {
     const { date, childId, nannyId } = req.body;
+    // Parents are not allowed to create assignments
+    if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
     if (!isSuperAdmin(req.user)) {
       const child = await prisma.child.findUnique({ where: { id: childId } });
       if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ message: 'Child not found' });
@@ -111,6 +127,8 @@ router.put('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     const { date, childId, nannyId } = req.body;
+    // Parents are not allowed to update assignments
+    if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
     if (!isSuperAdmin(req.user)) {
       const existing = await prisma.assignment.findUnique({ where: { id } });
       if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
@@ -156,6 +174,8 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
+    // Parents are not allowed to delete assignments
+    if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
     if (!isSuperAdmin(req.user)) {
       const existing = await prisma.assignment.findUnique({ where: { id } });
       if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });

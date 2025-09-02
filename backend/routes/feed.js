@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const sharp = require('sharp');
 const path = require('path');
+const crypto = require('crypto');
 
 const { createClient } = require('@supabase/supabase-js');
 // Robust Prisma client import: prefer generated client output, fall back to @prisma/client
@@ -66,6 +67,16 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
     for (const file of files) {
       if (!validateMime(file.mimetype)) continue;
 
+      // Calculate MD5 hash of the original file
+      const hash = crypto.createHash('md5').update(file.buffer).digest('hex');
+
+      // Check if a media with this hash already exists for this post (though post is new, but to be safe)
+      const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: post.id, hash: hash } });
+      if (existingMedia) {
+        // Skip this file as it's already uploaded for this post
+        continue;
+      }
+
       // Process main image (resize to max width 1600) and thumbnail (300)
       const mainBuffer = await sharp(file.buffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
       const thumbBuffer = await sharp(file.buffer).resize({ width: 300 }).toFormat('webp').toBuffer();
@@ -88,11 +99,11 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
         console.error('Supabase thumb upload error', thumbError);
       }
 
-  // Get signed temporary URLs (1 hour) instead of public URLs
-  const signedMain = await supabase.storage.from(SUPABASE_BUCKET).createSignedUrl(mainPath, 60 * 60);
-  const signedThumb = await supabase.storage.from(SUPABASE_BUCKET).createSignedUrl(thumbPath, 60 * 60);
-  const mainUrl = signedMain?.data?.signedUrl || null;
-  const thumbUrl = signedThumb?.data?.signedUrl || null;
+  // For public bucket: return public URLs and store storage paths so we can delete later
+  const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
+  const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
+  const mainUrl = publicMain?.data?.publicUrl || null;
+  const thumbUrl = publicThumb?.data?.publicUrl || null;
 
       const media = await prisma.feedMedia.create({
         data: {
@@ -101,6 +112,9 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
           url: mainUrl,
           thumbnailUrl: thumbUrl,
           size: file.size,
+          hash: hash,
+          storagePath: mainPath,
+          thumbnailPath: thumbPath,
         }
       });
       savedMedias.push(media);
@@ -309,6 +323,17 @@ router.post('/:postId/media', authMiddleware, upload.array('images', 6), async (
     const savedMedias = [];
     for (const file of files) {
       if (!validateMime(file.mimetype)) continue;
+
+      // Calculate MD5 hash of the original file
+      const hash = crypto.createHash('md5').update(file.buffer).digest('hex');
+
+      // Check if a media with this hash already exists for this post
+      const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: postId, hash: hash } });
+      if (existingMedia) {
+        // Skip this file as it's already uploaded for this post
+        continue;
+      }
+
       const mainBuffer = await sharp(file.buffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
       const thumbBuffer = await sharp(file.buffer).resize({ width: 300 }).toFormat('webp').toBuffer();
 
@@ -325,12 +350,13 @@ router.post('/:postId/media', authMiddleware, upload.array('images', 6), async (
       const { data: thumbData, error: thumbError } = await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false });
       if (thumbError) console.error('Supabase thumb upload error', thumbError);
 
-      const signedMain = await supabase.storage.from(SUPABASE_BUCKET).createSignedUrl(mainPath, 60 * 60);
-      const signedThumb = await supabase.storage.from(SUPABASE_BUCKET).createSignedUrl(thumbPath, 60 * 60);
-      const mainUrl = signedMain?.data?.signedUrl || null;
-      const thumbUrl = signedThumb?.data?.signedUrl || null;
+  // For public bucket: use public URLs and store storage paths
+  const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
+  const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
+  const mainUrl = publicMain?.data?.publicUrl || null;
+  const thumbUrl = publicThumb?.data?.publicUrl || null;
 
-      const media = await prisma.feedMedia.create({ data: { postId: postId, type: 'image', url: mainUrl, thumbnailUrl: thumbUrl, size: file.size } });
+  const media = await prisma.feedMedia.create({ data: { postId: postId, type: 'image', url: mainUrl, thumbnailUrl: thumbUrl, size: file.size, hash: hash, storagePath: mainPath, thumbnailPath: thumbPath } });
       savedMedias.push(media);
     }
     return res.status(201).json({ medias: savedMedias });
@@ -354,7 +380,18 @@ router.delete('/:postId/media/:mediaId', authMiddleware, async (req, res) => {
     if (post.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
       return res.status(403).json({ message: 'Forbidden' });
     }
-    // Note: we don't currently track storage paths in DB, so we cannot reliably remove the file from Supabase.
+    // If we have stored storage paths, remove files from Supabase too (public bucket)
+    try {
+      const toRemove = [];
+      if (media.storagePath) toRemove.push(media.storagePath);
+      if (media.thumbnailPath) toRemove.push(media.thumbnailPath);
+      if (toRemove.length) {
+        const { error: delErr } = await supabase.storage.from(SUPABASE_BUCKET).remove(toRemove);
+        if (delErr) console.error('Supabase remove error', delErr);
+      }
+    } catch (e) {
+      console.error('Error while removing files from Supabase', e);
+    }
     await prisma.feedMedia.delete({ where: { id: mediaId } });
     return res.json({ deleted: true });
   } catch (e) {

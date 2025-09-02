@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import Sidebar from './Sidebar';
 import { useNavigate, useOutlet } from 'react-router-dom';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
-import WelcomeModal from '../src/components/WelcomeModal';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -11,7 +10,7 @@ export default function ProtectedLayout() {
   const [authenticated, setAuthenticated] = useState(false);
   const navigate = useNavigate();
   const outlet = useOutlet();
-  const [showWelcome, setShowWelcome] = useState(false);
+  // tutorial/welcome modal disabled by default
 
   useEffect(() => {
     fetchWithRefresh(`${API_URL}/api/user/me`, { credentials: 'include' })
@@ -24,8 +23,8 @@ export default function ProtectedLayout() {
       navigate('/login', { replace: true });
     }
     if (!loading && authenticated) {
-      const shown = localStorage.getItem('welcomeShown');
-      if (!shown) setShowWelcome(true);
+      // mark welcome as shown to prevent tutorial modal from appearing
+  try { localStorage.setItem('welcomeShown', '1'); } catch { /* ignore */ }
     }
   }, [loading, authenticated, navigate]);
 
@@ -36,7 +35,7 @@ export default function ProtectedLayout() {
     <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 bg-gray-50 p-6">
-  {showWelcome && <WelcomeModal onClose={() => { localStorage.setItem('welcomeShown', '1'); setShowWelcome(false); }} />}
+  {/* Welcome/tutorial modal disabled */}
         {outlet}
       </main>
     </div>

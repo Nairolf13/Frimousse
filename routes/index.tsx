@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from '../pages/LandingPage';
 import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
+import InvitePage from '../pages/InvitePage';
+import ResetPassword from '../pages/ResetPassword';
 
 import Dashboard from '../pages/Dashboard';
 import Children from '../pages/Children';
@@ -39,6 +41,8 @@ export default function AppRoutes() {
         <Route path="/" element={<LandingPage />} />
   <Route path="/login" element={<LoginPage />} />
   <Route path="/register" element={<RegisterPage />} />
+  <Route path="/reset-password" element={<ResetPassword />} />
+  <Route path="/invite" element={<InvitePage />} />
   <Route path="/about" element={<AboutPage />} />
   <Route path="/fonctionnalites" element={<FeaturesPage />} />
   <Route path="/tarifs" element={<PricingPage />} />

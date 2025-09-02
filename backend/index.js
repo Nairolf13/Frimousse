@@ -48,25 +48,9 @@ app.use(helmet());
 app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
 
 app.use(cors({
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      process.env.API_URL,
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:4000',
-      'http://192.168.1.64:5173', 
-    ];
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Allow all origins
   credentials: true
-}));
-
-app.use(express.json());
+}));app.use(express.json());
 app.use(cookieParser());
 
 app.use('/api/me', meRoutes);
@@ -122,6 +106,6 @@ app.post('/create-payment-intent', async (req, res) => {
 
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });

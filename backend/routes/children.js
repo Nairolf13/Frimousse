@@ -26,7 +26,18 @@ router.get('/:id/billing', auth, async (req, res) => {
   const [year, mon] = month.split('-').map(Number);
   const startDate = new Date(year, mon - 1, 1);
   const endDate = new Date(year, mon, 1);
-  if (!isSuperAdmin(req.user)) {
+  // Parents may only access billing for their own children
+  if (req.user && req.user.role === 'parent') {
+    // resolve parentId from authenticated user or by matching email to Parent record
+    let parentId = req.user.parentId;
+    if (!parentId && req.user.email) {
+      const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
+      if (parentRec) parentId = parentRec.id;
+    }
+    if (!parentId) return res.status(404).json({ error: 'Child not found' });
+    const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
+    if (!link) return res.status(404).json({ error: 'Child not found' });
+  } else if (!isSuperAdmin(req.user)) {
     const child = await prisma.child.findUnique({ where: { id } });
     if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
   }
@@ -46,7 +57,23 @@ router.get('/:id/billing', auth, async (req, res) => {
 
 router.get('/', auth, async (req, res) => {
   try {
-    let where = {};
+    // If the authenticated user is a parent (or their email matches a Parent record),
+    // only return children linked to that Parent.
+    let resolvedParentId = null;
+    if (req.user) {
+      resolvedParentId = req.user.parentId || null;
+      if (!resolvedParentId && req.user.email) {
+        const emailTrim = String(req.user.email).trim();
+        const parentRec = await prisma.parent.findFirst({ where: { email: { equals: emailTrim, mode: 'insensitive' } } });
+        if (parentRec) resolvedParentId = parentRec.id;
+      }
+    }
+    if (resolvedParentId) {
+      const children = await prisma.child.findMany({ where: { parents: { some: { parentId: resolvedParentId } } }, include: { parents: { include: { parent: true } } } });
+      return res.json(children);
+    }
+
+    const where = {};
     if (!isSuperAdmin(req.user)) {
       where.centerId = req.user.centerId;
     }
@@ -59,6 +86,10 @@ router.get('/', auth, async (req, res) => {
 });
 
 router.post('/', auth, discoveryLimit('child'), async (req, res) => {
+  // Only admins, nannies, or super-admin can create children.
+  if (req.user && req.user.role === 'parent') {
+    return res.status(403).json({ error: 'Forbidden: parents cannot create children' });
+  }
   const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group } = req.body;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
@@ -86,7 +117,7 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
       const child = await tx.child.create({ data: childData });
 
       let linkedParent = null;
-    if (parentId) {
+      if (parentId) {
         const parent = await tx.parent.findUnique({ where: { id: parentId } });
         if (parent) {
           await tx.parentChild.create({ data: { parentId: parent.id, childId: child.id } });
@@ -95,12 +126,12 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
       } else if (parentMail) {
         let parent = await tx.parent.findUnique({ where: { email: parentMail } });
         if (!parent) {
-      const names = (parentName || '').trim().split(/\s+/);
-      const firstName = names.shift() || 'Parent';
-      const lastName = names.join(' ') || '';
-      const parentData = { firstName, lastName, email: parentMail, phone: parentContact || null };
-      if (!isSuperAdmin(req.user) && req.user.centerId) parentData.centerId = req.user.centerId;
-      parent = await tx.parent.create({ data: parentData });
+          const names = (parentName || '').trim().split(/\s+/);
+          const firstName = names.shift() || 'Parent';
+          const lastName = names.join(' ') || '';
+          const parentData = { firstName, lastName, email: parentMail, phone: parentContact || null };
+          if (!isSuperAdmin(req.user) && req.user.centerId) parentData.centerId = req.user.centerId;
+          parent = await tx.parent.create({ data: parentData });
         }
         await tx.parentChild.create({ data: { parentId: parent.id, childId: child.id } });
         linkedParent = parent;
@@ -119,6 +150,10 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
+  // Parents are not allowed to update child records
+  if (req.user && req.user.role === 'parent') {
+    return res.status(403).json({ error: 'Forbidden: parents cannot update children' });
+  }
   const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group, cotisationPaidUntil, payCotisation } = req.body;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
@@ -189,6 +224,10 @@ router.put('/:id', auth, async (req, res) => {
 
 router.delete('/:id', auth, async (req, res) => {
   const { id } = req.params;
+  // Parents are not allowed to delete child records
+  if (req.user && req.user.role === 'parent') {
+    return res.status(403).json({ error: 'Forbidden: parents cannot delete children' });
+  }
   try {
     const existingChild = await prisma.child.findUnique({ where: { id } });
     if (!existingChild) return res.status(404).json({ error: 'Child not found' });
@@ -217,6 +256,19 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const child = await prisma.child.findUnique({ where: { id }, include: { parents: { include: { parent: true } } } });
     if (!child) return res.status(404).json({ message: 'Not found' });
+    // Parents may only fetch their own child
+    if (req.user && req.user.role === 'parent') {
+      let parentId = req.user.parentId;
+      if (!parentId && req.user.email) {
+        const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
+        if (parentRec) parentId = parentRec.id;
+      }
+      if (!parentId) return res.status(404).json({ message: 'Not found' });
+      const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
+      if (!link) return res.status(404).json({ message: 'Not found' });
+    } else if (!isSuperAdmin(req.user) && child.centerId !== req.user.centerId) {
+      return res.status(404).json({ message: 'Not found' });
+    }
     res.json(child);
   } catch (error) {
     console.error('Error fetching child', error);

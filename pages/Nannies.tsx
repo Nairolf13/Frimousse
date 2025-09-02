@@ -417,7 +417,7 @@ export default function Nannies() {
                       </div>
                       <div className="flex flex-col gap-2 mt-auto mb-4 w-full min-w-0">
                                   <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-xs font-semibold text-gray-700">Cotisation annuelle&nbsp;:</span>
+                                    <span className="text-xs font-semibold text-gray-700">Cotisation mensuel &nbsp;:</span>
                                     {daysRemaining > 0 ? (
                                       <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
                                     ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (

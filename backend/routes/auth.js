@@ -8,5 +8,7 @@ router.post('/register-subscribe/complete', authController.registerSubscribeComp
 router.post('/login', authController.login);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
+router.post('/forgot', authController.forgotPassword);
+router.post('/reset', authController.resetPassword);
 
 module.exports = router;

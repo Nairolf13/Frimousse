@@ -279,13 +279,15 @@ export default function Children() {
             <div className="text-gray-400 text-base">Gérez les profils, informations médicales et contacts d'urgence.</div>
           </div>
           <div className="flex gap-2 items-center self-end children-responsive-btn">
-            <button
-              type="button"
-              onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
-              className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition h-[60px] min-h-[60px] flex items-center"
-            >
-              Ajouter un enfant
-            </button>
+            {user && user.role !== 'parent' && (
+              <button
+                type="button"
+                onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
+                className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition h-[60px] min-h-[60px] flex items-center"
+              >
+                Ajouter un enfant
+              </button>
+            )}
           </div>
         </div>
 
@@ -497,8 +499,12 @@ export default function Children() {
                         )}
                       </div>
                       <div className="flex gap-1">
-                        <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
-                        <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                        {(user && (user.role === 'admin' || user.role === 'super-admin' || user.nannyId)) ? (
+                          <>
+                            <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
+                            <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                          </>
+                        ) : null}
                       </div>
                     </div>
                   </div>

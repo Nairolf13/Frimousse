@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../src/context/AuthContext';
 import Select from 'react-select';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
@@ -173,6 +174,9 @@ export default function WeeklyActivityCalendar() {
   const weekDates = getWeekDates(currentDate);
   const weekLabel = `${weekDates[0].toLocaleDateString()} - ${weekDates[6].toLocaleDateString()}`;
 
+  const { user } = useAuth();
+  const isParent = !!user && String(user.role || '').toLowerCase() === 'parent';
+
   return (
     <div className="min-h-screen bg-[#f7f8fa] flex flex-col items-center py-8 px-2">
       <div className="w-full max-w-6xl mx-auto">
@@ -184,7 +188,9 @@ export default function WeeklyActivityCalendar() {
           <div className="flex items-center gap-2 mt-2 md:mt-0">
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#60;</button>
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#62;</button>
-            <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base ml-2">+ Ajouter une activité</button>
+            {!isParent && (
+              <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base ml-2">+ Ajouter une activité</button>
+            )}
           </div>
         </div>
         <div className="hidden lg:block max-w-5xl mx-auto">

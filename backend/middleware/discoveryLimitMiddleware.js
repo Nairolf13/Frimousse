@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const limits = {
-  nanny: 1,
+  nanny: 2,
   child: 2,
   parent: 2,
   report: 2,

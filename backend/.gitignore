@@ -3,5 +3,3 @@ node_modules
 
 /generated/prisma
 
-.env
-.env.production

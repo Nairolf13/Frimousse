@@ -70,7 +70,7 @@ export default function Dashboard() {
 
   const fetchAssignments = React.useCallback((start?: Date, end?: Date) => {
     let url = `${API_URL}/api/assignments`;
-    const params = [];
+    const params: string[] = [];
     if (start && end) {
       params.push(`start=${start.toISOString()}`);
       params.push(`end=${end.toISOString()}`);
@@ -199,7 +199,7 @@ export default function Dashboard() {
     }
     const dailyRates = last7Days.map(dateStr => {
       const present = new Set(assignments.filter(a => a.date.split('T')[0] === dateStr).map(a => a.child.id)).size;
-      return (present / totalChildren) * 100;
+      return (present / totalChildren) + 100;
     });
     weeklyAverage = dailyRates.length > 0 ? Math.round(dailyRates.reduce((a, b) => a + b, 0) / dailyRates.length) : 0;
   }
@@ -220,6 +220,8 @@ export default function Dashboard() {
   };
 
   const handleQuickAdd = (date: Date) => {
+    // Parents are not allowed to add assignments — prevent opening the modal
+    if (user && user.role === 'parent') return;
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
       .toISOString().split('T')[0];
     setModalInitial({ date: localDate, childId: '', nannyId: user && user.nannyId ? user.nannyId : '' });
@@ -290,7 +292,9 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 self-start md:self-end">
           <input type="date" value={currentDate.toISOString().split('T')[0]} onChange={e => setCurrentDate(new Date(e.target.value))}
             className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-[120px] sm:w-auto" />
-          <button onClick={() => handleQuickAdd(new Date())} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 text-base shadow hover:opacity-95 transition whitespace-nowrap">+ Ajouter</button>
+          {!(user && user.role === 'parent') && (
+            <button onClick={() => handleQuickAdd(new Date())} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 text-base shadow hover:opacity-95 transition whitespace-nowrap">+ Ajouter</button>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 mb-8 w-full">
@@ -370,7 +374,9 @@ export default function Dashboard() {
                     >
                       {day.getDate()}
                     </span>
-                          <button onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
+                          {!(user && user.role === 'parent') && (
+                            <button onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
+                          )}
                   </div>
                   {assigns.length === 0 ? (
                     <div className="text-gray-300 text-xs">—</div>
@@ -381,7 +387,7 @@ export default function Dashboard() {
                         <span
                           className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]"
                           title={a.child.name}
-                          onClick={() => setSelectedId(a.id)}
+                          onClick={() => { if (!(user && user.role === 'parent')) setSelectedId(a.id); }}
                         >
                           {a.child.name}
                         </span>
@@ -440,7 +446,9 @@ export default function Dashboard() {
                           >
                             {day.getDate()}
                           </span>
-                          <button onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
+                          {!(user && user.role === 'parent') && (
+                            <button onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
+                          )}
                         </div>
                         {assigns.length === 0 ? (
                           <div className="text-gray-300 text-sm">—</div>
@@ -452,7 +460,7 @@ export default function Dashboard() {
                                 <span
                                   className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600"
                                   title="Supprimer cette affectation"
-                                  onClick={() => setSelectedId(a.id)}
+                                  onClick={() => { if (!(user && user.role === 'parent')) setSelectedId(a.id); }}
                                 >
                                   {a.child.name}
                                 </span>
