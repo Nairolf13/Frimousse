@@ -34,12 +34,25 @@ router.get('/:id/billing', auth, async (req, res) => {
       const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
       if (parentRec) parentId = parentRec.id;
     }
-    if (!parentId) return res.status(404).json({ error: 'Child not found' });
+    if (!parentId) {
+      if (process.env.NODE_ENV !== 'production') console.debug('[billing] parentId not resolved for user', { userId: req.user && req.user.id, userEmail: req.user && req.user.email });
+      return res.status(403).json({ error: 'Access denied: parent not linked to any parent record' });
+    }
     const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
-    if (!link) return res.status(404).json({ error: 'Child not found' });
+    if (!link) {
+      if (process.env.NODE_ENV !== 'production') console.debug('[billing] parent not linked to child', { parentId, childId: id });
+      return res.status(403).json({ error: 'Access denied: child not linked to this parent' });
+    }
   } else if (!isSuperAdmin(req.user)) {
     const child = await prisma.child.findUnique({ where: { id } });
-    if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
+    if (!child) {
+      if (process.env.NODE_ENV !== 'production') console.debug('[billing] child not found', { childId: id });
+      return res.status(404).json({ error: 'Child not found' });
+    }
+    if (child.centerId !== req.user.centerId) {
+      if (process.env.NODE_ENV !== 'production') console.debug('[billing] center mismatch', { childId: id, childCenterId: child.centerId, userId: req.user && req.user.id, userCenterId: req.user && req.user.centerId });
+      return res.status(403).json({ error: 'Access denied: child belongs to a different center' });
+    }
   }
   const assignments = await prisma.assignment.findMany({
     where: {
@@ -57,10 +70,10 @@ router.get('/:id/billing', auth, async (req, res) => {
 
 router.get('/', auth, async (req, res) => {
   try {
-    // If the authenticated user is a parent (or their email matches a Parent record),
-    // only return children linked to that Parent.
+    // Parents may only see their own children. Other authenticated users
+    // (admins, nannies, etc.) should see all children for their center.
     let resolvedParentId = null;
-    if (req.user) {
+    if (req.user && req.user.role === 'parent') {
       resolvedParentId = req.user.parentId || null;
       if (!resolvedParentId && req.user.email) {
         const emailTrim = String(req.user.email).trim();
@@ -68,15 +81,22 @@ router.get('/', auth, async (req, res) => {
         if (parentRec) resolvedParentId = parentRec.id;
       }
     }
+
     if (resolvedParentId) {
       const children = await prisma.child.findMany({ where: { parents: { some: { parentId: resolvedParentId } } }, include: { parents: { include: { parent: true } } } });
       return res.json(children);
     }
 
+    // Non-parent users: require centerId unless super-admin
     const where = {};
     if (!isSuperAdmin(req.user)) {
+      if (!req.user || !req.user.centerId) {
+        // If a non-super-admin user has no centerId, it's a permissions/data issue.
+        return res.status(403).json({ error: 'Forbidden: user not linked to any center' });
+      }
       where.centerId = req.user.centerId;
     }
+
     const children = await prisma.child.findMany({ where, include: { parents: { include: { parent: true } } } });
     return res.json(children);
   } catch (error) {
