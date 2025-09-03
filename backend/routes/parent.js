@@ -53,17 +53,35 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     const result = await prisma.$transaction(async (tx) => {
       const data = { firstName, lastName, email, phone };
-      if (!isSuperAdmin(userReq) && userReq.centerId) data.centerId = userReq.centerId;
+      // Assign centerId:
+      // - if creator is super-admin allow explicit centerId in body
+      // - otherwise inherit creator's centerId when present
+      if (isSuperAdmin(userReq)) {
+        if (req.body.centerId) data.centerId = req.body.centerId;
+      } else if (userReq.centerId) {
+        data.centerId = userReq.centerId;
+      }
       const parent = await tx.parent.create({ data });
       if (existingUser) {
-        await tx.user.update({ where: { id: existingUser.id }, data: { parentId: parent.id } });
+        // Ensure existing user is linked to the created parent and centered correctly
+        const updateData = { parentId: parent.id };
+        if (isSuperAdmin(userReq)) {
+          if (req.body.centerId) updateData.centerId = req.body.centerId;
+        } else if (userReq.centerId) {
+          updateData.centerId = userReq.centerId;
+        }
+        await tx.user.update({ where: { id: existingUser.id }, data: updateData });
         return { parent, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
       } else {
 
         const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
         const hash = await bcrypt.hash(tempPassword, 10);
   const userData = { email, password: hash, name: `${firstName} ${lastName}`, role: 'parent', parentId: parent.id };
-  if (!isSuperAdmin(userReq) && userReq.centerId) userData.centerId = userReq.centerId;
+  if (isSuperAdmin(userReq)) {
+    if (req.body.centerId) userData.centerId = req.body.centerId;
+  } else if (userReq.centerId) {
+    userData.centerId = userReq.centerId;
+  }
   const user = await tx.user.create({ data: userData });
         return { parent, user };
       }
