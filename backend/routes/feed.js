@@ -150,7 +150,7 @@ router.get('/', authMiddleware, async (req, res) => {
     const postIds = posts.map(p => p.id);
     const userLikes = postIds.length ? await prisma.feedLike.findMany({ where: { postId: { in: postIds }, userId: user.id } }) : [];
     // normalize response shape
-    const mapped = posts.map(p => ({
+      const mapped = posts.map(p => ({
       id: p.id,
       text: p.text,
       createdAt: p.createdAt,
@@ -159,7 +159,8 @@ router.get('/', authMiddleware, async (req, res) => {
       medias: p.medias,
       likes: p._count?.likes || 0,
       commentsCount: p._count?.comments || 0,
-      comments: p.comments.map(c => ({ authorName: c.author.name, timeAgo: c.createdAt, text: c.text })),
+      // defensive: author may be null if the user was deleted; don't throw
+      comments: p.comments.map(c => ({ authorName: c.author?.name || 'Utilisateur', timeAgo: c.createdAt, text: c.text })),
       hasLiked: !!userLikes.find(l => l.postId === p.id),
     }));
     return res.json({ posts: mapped });
