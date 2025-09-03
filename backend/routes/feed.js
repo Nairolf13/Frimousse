@@ -61,6 +61,11 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
     });
 
     const files = req.files || [];
+    // If files were provided but Supabase isn't configured, fail early with clear message
+    if (files.length > 0 && (!SUPABASE_URL || !SUPABASE_KEY)) {
+      console.error('Supabase not configured but upload attempted');
+      return res.status(503).json({ message: 'Storage backend not configured on server' });
+    }
     if (files.length > 6) return res.status(400).json({ message: 'Too many files' });
     const savedMedias = [];
 
@@ -320,7 +325,12 @@ router.post('/:postId/media', authMiddleware, upload.array('images', 6), async (
     }
 
     const files = req.files || [];
+    // require storage when files are provided
     if (files.length === 0) return res.status(400).json({ message: 'No files provided' });
+    if (files.length > 0 && (!SUPABASE_URL || !SUPABASE_KEY)) {
+      console.error('Supabase not configured but media add attempted');
+      return res.status(503).json({ message: 'Storage backend not configured on server' });
+    }
     const savedMedias = [];
     for (const file of files) {
       if (!validateMime(file.mimetype)) continue;
