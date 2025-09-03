@@ -25,10 +25,10 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
 
   useEffect(() => {
     if (open) {
-      fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' })
+      fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' })
         .then(res => res.json())
         .then(setChildren);
-      fetchWithRefresh(`${API_URL}/api/nannies`, { credentials: 'include' })
+      fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
         .then(res => res.json())
         .then(setNannies);
       setForm(initial || { date: '', childId: '', nannyId: '' });

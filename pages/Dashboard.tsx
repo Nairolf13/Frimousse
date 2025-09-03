@@ -69,7 +69,7 @@ export default function Dashboard() {
   const [dayModalDate, setDayModalDate] = useState<string>('');
 
   const fetchAssignments = React.useCallback((start?: Date, end?: Date) => {
-    let url = `${API_URL}/api/assignments`;
+    let url = `${API_URL}/assignments`;
     const params: string[] = [];
     if (start && end) {
       params.push(`start=${start.toISOString()}`);
@@ -94,7 +94,7 @@ export default function Dashboard() {
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
 
-    fetchWithRefresh(`${API_URL}/api/assignments?start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/assignments?start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
       .then(res => res.json())
       .then((data: Assignment[]) => {
         setAssignments(data);
@@ -102,7 +102,7 @@ export default function Dashboard() {
 
         const prevFirst = new Date(year, month - 1, 1);
         const prevLast = new Date(year, month, 0);
-        fetchWithRefresh(`${API_URL}/api/assignments?start=${prevFirst.toISOString()}&end=${prevLast.toISOString()}`, { credentials: 'include' })
+        fetchWithRefresh(`${API_URL}/assignments?start=${prevFirst.toISOString()}&end=${prevLast.toISOString()}`, { credentials: 'include' })
           .then(r => r.json())
           .then((prevData: Assignment[]) => {
             const uniquePrev = new Set((prevData || []).map(a => a.child.id)).size;
@@ -139,7 +139,7 @@ export default function Dashboard() {
         });
         const prevStart = new Date(prevWeekDays[0]);
         const prevEnd = new Date(prevWeekDays[prevWeekDays.length - 1]);
-        fetchWithRefresh(`${API_URL}/api/assignments?start=${new Date(prevStart).toISOString()}&end=${new Date(prevEnd).toISOString()}`, { credentials: 'include' })
+        fetchWithRefresh(`${API_URL}/assignments?start=${new Date(prevStart).toISOString()}&end=${new Date(prevEnd).toISOString()}`, { credentials: 'include' })
           .then(r => r.json())
           .then((prevWeekData: Assignment[]) => {
             const prevDailyRates = prevWeekDays.map(dateStr => {
@@ -159,12 +159,12 @@ export default function Dashboard() {
       })
       .catch(() => setAssignments([]));
 
-    fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setChildrenCount(Array.isArray(data) ? data.length : 0))
       .catch(() => setChildrenCount(0));
 
-    fetch(`${API_URL}/api/nannies`, { credentials: 'include' })
+    fetch(`${API_URL}/nannies`, { credentials: 'include' })
       .then(res => res.json())
       .then((data: Nanny[]) => {
         if (Array.isArray(data)) {
@@ -243,7 +243,7 @@ export default function Dashboard() {
       return;
     }
     if (selectedId) {
-      await fetchWithRefresh(`${API_URL}/api/assignments/${selectedId}`, {
+      await fetchWithRefresh(`${API_URL}/assignments/${selectedId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -258,7 +258,7 @@ export default function Dashboard() {
       const last = new Date(year, monthIdx + 1, 0);
       fetchAssignments(first, last);
     } else {
-      const res = await fetchWithRefresh(`${API_URL}/api/assignments`, {
+      const res = await fetchWithRefresh(`${API_URL}/assignments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -510,7 +510,7 @@ export default function Dashboard() {
                 >Annuler</button>
                 <button
                   onClick={async () => {
-                    await fetchWithRefresh(`/api/assignments/${selectedId}`, {
+                    await fetchWithRefresh(`api/assignments/${selectedId}`, {
                       method: 'DELETE',
                       credentials: 'include',
                     });

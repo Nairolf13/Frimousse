@@ -44,7 +44,7 @@ export default function Feed() {
   async function loadComments(postId: string) {
     setCommentsLoading(true);
     try {
-      const res = await fetchWithRefresh(`/api/feed/${postId}/comments`);
+      const res = await fetchWithRefresh(`api/feed/${postId}/comments`);
       if (!res.ok) {
         setCommentsForPost(prev => ({ ...prev, [postId]: [] }));
         return;
@@ -71,7 +71,7 @@ export default function Feed() {
       try {
         const centerId = currentUser?.centerId;
         if (centerId) {
-          const res = await fetch(`/api/centers/${centerId}`, { credentials: 'include' });
+          const res = await fetch(`api/centers/${centerId}`, { credentials: 'include' });
           if (!mounted) return;
           if (res.ok) {
             const data = await res.json();
@@ -96,7 +96,7 @@ export default function Feed() {
 
   async function loadPosts() {
     try {
-      const res = await fetchWithRefresh('/api/feed');
+      const res = await fetchWithRefresh('api/feed');
       if (!res.ok) return;
       const body = await res.json();
       setPosts(body.posts || []);
@@ -107,7 +107,7 @@ export default function Feed() {
 
   async function toggleLike(postId: string) {
     try {
-      const res = await fetchWithRefresh(`/api/feed/${postId}/like`, { method: 'POST' });
+      const res = await fetchWithRefresh(`api/feed/${postId}/like`, { method: 'POST' });
       if (!res.ok) return;
       const body = await res.json();
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: (p.likes || 0) + (body.liked ? 1 : -1) } : p));
@@ -118,7 +118,7 @@ export default function Feed() {
 
   async function addComment(postId: string, text: string) {
     try {
-      const res = await fetchWithRefresh(`/api/feed/${postId}/comment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+      const res = await fetchWithRefresh(`api/feed/${postId}/comment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         alert(b.message || 'Erreur commentaire');
@@ -143,7 +143,7 @@ export default function Feed() {
       fd.append('text', text);
       for (const f of files) fd.append('images', f, f.name);
 
-      const res = await fetchWithRefresh('/api/feed', { method: 'POST', body: fd });
+      const res = await fetchWithRefresh('api/feed', { method: 'POST', body: fd });
       if (res.ok) {
         const created = await res.json();
         setPosts(prev => [created, ...prev]);
@@ -339,7 +339,7 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
     const trimmed = val.trim();
     if (!trimmed) return alert('Le commentaire ne peut pas être vide');
     try {
-      const res = await fetchWithRefresh(`/api/feed/comments/${comment.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: trimmed }) });
+      const res = await fetchWithRefresh(`api/feed/comments/${comment.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: trimmed }) });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         return alert(b.message || 'Échec de la modification');
@@ -363,7 +363,7 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
   async function doDelete() {
     if (!comment.id) return;
     try {
-      const res = await fetchWithRefresh(`/api/feed/comments/${comment.id}`, { method: 'DELETE' });
+      const res = await fetchWithRefresh(`api/feed/comments/${comment.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         return alert(b.message || 'Échec de la suppression');
@@ -478,7 +478,7 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
     const trimmed = val.trim();
     if (!trimmed) return alert('Le post ne peut pas être vide');
     try {
-      const res = await fetchWithRefresh(`/api/feed/${post.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: trimmed }) });
+      const res = await fetchWithRefresh(`api/feed/${post.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: trimmed }) });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         return alert(b.message || 'Échec de la modification');
@@ -494,7 +494,7 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
 
   async function doDelete() {
     try {
-      const res = await fetchWithRefresh(`/api/feed/${post.id}`, { method: 'DELETE' });
+      const res = await fetchWithRefresh(`api/feed/${post.id}`, { method: 'DELETE' });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         return alert(b.message || 'Échec de la suppression');
@@ -513,7 +513,7 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
     const fd = new FormData();
     for (const f of Array.from(files)) fd.append('images', f, f.name);
     try {
-      const res = await fetchWithRefresh(`/api/feed/${post.id}/media`, { method: 'POST', body: fd });
+      const res = await fetchWithRefresh(`api/feed/${post.id}/media`, { method: 'POST', body: fd });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         return alert(b.message || 'Échec de l\'upload');
@@ -529,7 +529,7 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
 
   async function handleDeleteMedia(mediaId: string) {
     try {
-      const res = await fetchWithRefresh(`/api/feed/${post.id}/media/${mediaId}`, { method: 'DELETE' });
+      const res = await fetchWithRefresh(`api/feed/${post.id}/media/${mediaId}`, { method: 'DELETE' });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
         return alert(b.message || 'Échec suppression media');

@@ -69,23 +69,23 @@ type AdminData = {
 
 export default {
   async getChildren(): Promise<Child[]> {
-    const res = await fetchWithRefresh(`/api/parent/children`, { credentials: 'include' });
+  const res = await fetchWithRefresh(`/api/parent/children`, { credentials: 'include' });
     return handleRes<Child[]>(res);
   },
   async getAdminList(): Promise<AdminData> {
-    const res = await fetchWithRefresh(`/api/parent/admin`, { credentials: 'include' });
+  const res = await fetchWithRefresh(`/api/parent/admin`, { credentials: 'include' });
     return handleRes<AdminData>(res);
   },
   async getChildSchedule(childId: string): Promise<Schedule[]> {
-    const res = await fetchWithRefresh(`/api/parent/child/${childId}/schedule`, { credentials: 'include' });
+  const res = await fetchWithRefresh(`/api/parent/child/${childId}/schedule`, { credentials: 'include' });
     return handleRes<Schedule[]>(res);
   },
   async getChildReports(childId: string): Promise<Report[]> {
-    const res = await fetchWithRefresh(`/api/parent/child/${childId}/reports`, { credentials: 'include' });
+  const res = await fetchWithRefresh(`/api/parent/child/${childId}/reports`, { credentials: 'include' });
     return handleRes<Report[]>(res);
   },
   async getChild(childId: string): Promise<Child> {
-    const res = await fetchWithRefresh(`/api/children/${childId}`, { credentials: 'include' });
+  const res = await fetchWithRefresh(`/api/children/${childId}`, { credentials: 'include' });
     return handleRes<Child>(res);
   }
 };

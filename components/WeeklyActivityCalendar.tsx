@@ -82,13 +82,13 @@ export default function WeeklyActivityCalendar() {
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchWithRefresh(`${API_URL}/api/nannies`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setNannies(data));
   }, []);
 
   useEffect(() => {
-    fetchWithRefresh(`${API_URL}/api/schedules`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/schedules`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setActivities(data));
   }, [currentDate]);
@@ -98,7 +98,7 @@ export default function WeeklyActivityCalendar() {
     if (!form.name || !form.startTime || !form.endTime || form.nannyIds.length === 0 || !form.date) return;
     let res;
     if (selectedActivity) {
-      res = await fetchWithRefresh(`${API_URL}/api/schedules/${selectedActivity.id}`, {
+      res = await fetchWithRefresh(`${API_URL}/schedules/${selectedActivity.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -112,7 +112,7 @@ export default function WeeklyActivityCalendar() {
         })
       });
     } else {
-      res = await fetchWithRefresh(`${API_URL}/api/schedules`, {
+      res = await fetchWithRefresh(`${API_URL}/schedules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -132,7 +132,7 @@ export default function WeeklyActivityCalendar() {
       alert('Erreur lors de la sauvegarde de l\'activité: ' + text);
       return;
     }
-    await fetchWithRefresh(`${API_URL}/api/schedules`, { credentials: 'include' })
+    await fetchWithRefresh(`${API_URL}/schedules`, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setActivities(data));
     setForm({ date: new Date().toISOString().split('T')[0], startTime: '07:00', endTime: '08:00', name: '', comment: '', nannyIds: [], showNannyDropdown: false });
@@ -149,8 +149,8 @@ export default function WeeklyActivityCalendar() {
   async function handleDeleteActivity(id: string) {
     setModalOpen(false);
     setSelectedActivity(null);
-    await fetchWithRefresh(`${API_URL}/api/schedules/${id}`, { method: 'DELETE', credentials: 'include' });
-    await fetchWithRefresh(`${API_URL}/api/schedules`, { credentials: 'include' })
+    await fetchWithRefresh(`${API_URL}/schedules/${id}`, { method: 'DELETE', credentials: 'include' });
+    await fetchWithRefresh(`${API_URL}/schedules`, { credentials: 'include' })
       .then(res => res.json())
       .then((data) => setActivities(data));
   }

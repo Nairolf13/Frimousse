@@ -21,7 +21,7 @@ export default function ResetPassword() {
     if (!password) return setMessage('Entrez un mot de passe');
     if (password !== confirm) return setMessage('Les mots de passe ne correspondent pas');
     try {
-      const res = await fetch(`${API_URL}/api/auth/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password }) });
+      const res = await fetch(`${API_URL}/auth/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password }) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setMessage(data?.error || 'Erreur');

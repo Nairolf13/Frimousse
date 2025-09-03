@@ -17,7 +17,7 @@ export default function CheckoutSuccessHandler() {
         const sessionId = qs.get('session_id');
         if (sessionId) {
           try {
-            await fetch('/api/subscriptions/complete-checkout-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) });
+            await fetch(`/subscriptions/complete-checkout-session`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) });
           } catch (e) {
             console.warn('complete-checkout-session failed', e);
           }

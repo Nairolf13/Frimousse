@@ -29,7 +29,7 @@ const InvitePage: React.FC = () => {
     if (password !== confirm) return setError('Les mots de passe ne correspondent pas');
     try {
   setLoading(true);
-  const res = await fetchWithRefresh(`${API_URL}/api/parent/accept-invite`, {
+  const res = await fetchWithRefresh(`${API_URL}/parent/accept-invite`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password })
       });
       const body = await res.json();

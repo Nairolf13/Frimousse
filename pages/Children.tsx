@@ -99,8 +99,8 @@ export default function Children() {
     try {
       const today = new Date().toISOString().split('T')[0];
       const [childrenRes, assignmentsRes] = await Promise.all([
-        fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' }),
-        fetchWithRefresh(`${API_URL}/api/assignments?start=${today}&end=${today}`, { credentials: 'include' })
+        fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' }),
+        fetchWithRefresh(`${API_URL}/assignments?start=${today}&end=${today}`, { credentials: 'include' })
       ]);
       const childrenDataRaw = await childrenRes.json();
       const assignmentsData: Assignment[] = await assignmentsRes.json();
@@ -152,7 +152,7 @@ export default function Children() {
     fetchChildren();
     const fetchParents = async () => {
       try {
-        const res = await fetchWithRefresh(`${API_URL}/api/parent/admin`, { credentials: 'include' });
+        const res = await fetchWithRefresh(`${API_URL}/parent/admin`, { credentials: 'include' });
         if (!res.ok) return setParentsList([]);
         const data = await res.json() as { parents?: Array<Record<string, unknown>> } | null;
         const parents = Array.isArray(data?.parents) ? data.parents.map((p) => {
@@ -172,11 +172,11 @@ export default function Children() {
     const fetchBillings = async () => {
       try {
         const todayMonth = getCurrentMonth();
-        const childrenRes = await fetchWithRefresh(`${API_URL}/api/children`, { credentials: 'include' });
+        const childrenRes = await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' });
         const childrenData: Child[] = await childrenRes.json();
         const billingData: Record<string, Billing> = {};
         await Promise.all(childrenData.map(async (child) => {
-          const res = await fetchWithRefresh(`${API_URL}/api/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
+          const res = await fetchWithRefresh(`${API_URL}/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
           if (res.ok) {
             const data = await res.json();
             billingData[child.id] = { days: data.days, amount: data.amount };
@@ -198,7 +198,7 @@ export default function Children() {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetchWithRefresh(editingId ? `${API_URL}/api/children/${editingId}` : `${API_URL}/api/children`, {
+      const res = await fetchWithRefresh(editingId ? `${API_URL}/children/${editingId}` : `${API_URL}/children`, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -226,7 +226,7 @@ export default function Children() {
     if (!deleteId) return;
     setDeleteLoading(true);
     try {
-      const res = await fetchWithRefresh(`${API_URL}/api/children/${deleteId}`, {
+      const res = await fetchWithRefresh(`${API_URL}/children/${deleteId}`, {
         method: 'DELETE',
         credentials: 'include',
       });
@@ -405,7 +405,7 @@ export default function Children() {
             const handleCotisation = async () => {
               setCotisationLoadingId(child.id);
               const amount = cotisationAmounts[child.id] ?? 15;
-              await fetchWithRefresh(`/api/children/${child.id}`, {
+              await fetchWithRefresh(`api/children/${child.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

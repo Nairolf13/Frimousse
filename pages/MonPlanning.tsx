@@ -9,7 +9,7 @@ export default function MonPlanning() {
   const [nannies, setNannies] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
-    fetchWithRefresh('/api/me')
+    fetchWithRefresh('api/me')
       .then(res => res.json())
       .then(async (user) => {
         if (user.role === 'nanny' && user.nannyId) {
@@ -20,7 +20,7 @@ export default function MonPlanning() {
         if (user.role === 'admin' || user.role === 'super-admin') {
           setIsAdmin(true);
           try {
-            const r = await fetchWithRefresh('/api/nannies');
+            const r = await fetchWithRefresh('api/nannies');
             if (r.ok) {
               const list = await r.json();
               type NannyFromApi = { id?: string; name?: string };

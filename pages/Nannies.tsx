@@ -81,7 +81,7 @@ export default function Nannies() {
   const fetchCotisation = async (nannyId: string) => {
     setCotisationStatus(s => ({ ...s, [nannyId]: { ...s[nannyId], loading: true } }));
     try {
-      const res = await fetchWithRefresh(`${API_URL}/api/nannies/${nannyId}/cotisation`, { credentials: 'include' });
+      const res = await fetchWithRefresh(`${API_URL}/nannies/${nannyId}/cotisation`, { credentials: 'include' });
       const data = await res.json();
       setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: data.cotisationPaidUntil, loading: false } }));
       if (data.lastCotisationAmount) {
@@ -99,7 +99,7 @@ export default function Nannies() {
     setCotisationStatus(s => ({ ...s, [nannyId]: { ...s[nannyId], loading: true } }));
     try {
       const body = amount ? JSON.stringify({ amount }) : undefined;
-      const res = await fetchWithRefresh(`${API_URL}/api/nannies/${nannyId}/cotisation`, { method: 'PUT', credentials: 'include', headers: body ? { 'Content-Type': 'application/json' } : undefined, body });
+      const res = await fetchWithRefresh(`${API_URL}/nannies/${nannyId}/cotisation`, { method: 'PUT', credentials: 'include', headers: body ? { 'Content-Type': 'application/json' } : undefined, body });
       const data = await res.json();
       setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: data.cotisationPaidUntil, loading: false } }));
       setMessages(m => ({ ...m, [nannyId]: { text: 'Paiement enregistré', type: 'success' } }));
@@ -127,7 +127,7 @@ export default function Nannies() {
 
   const fetchNannies = React.useCallback(() => {
     setLoading(true);
-    fetchWithRefresh(`${API_URL}/api/nannies`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
       .then(res => res.json())
       .then((nannies: Nanny[]) => {
   setNannies(nannies);
@@ -140,7 +140,7 @@ export default function Nannies() {
 
   useEffect(() => {
     fetchNannies();
-    fetchWithRefresh(`${API_URL}/api/assignments`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/assignments`, { credentials: 'include' })
       .then(res => res.json())
       .then(setAssignments);
   }, [fetchNannies]);
@@ -163,7 +163,7 @@ export default function Nannies() {
       };
       if (!payload.email) delete payload.email;
       if (!payload.password) delete payload.password;
-      const res = await fetchWithRefresh(editingId ? `${API_URL}/api/nannies/${editingId}` : `${API_URL}/api/nannies`, {
+      const res = await fetchWithRefresh(editingId ? `${API_URL}/nannies/${editingId}` : `${API_URL}/nannies`, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -220,7 +220,7 @@ export default function Nannies() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      const res = await fetchWithRefresh(`${API_URL}/api/nannies/${deleteId}`, {
+      const res = await fetchWithRefresh(`${API_URL}/nannies/${deleteId}`, {
         method: 'DELETE',
         credentials: 'include',
       });

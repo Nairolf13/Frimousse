@@ -13,7 +13,7 @@ export default function ProtectedLayout() {
   // tutorial/welcome modal disabled by default
 
   useEffect(() => {
-    fetchWithRefresh(`${API_URL}/api/user/me`, { credentials: 'include' })
+    fetchWithRefresh(`${API_URL}/user/me`, { credentials: 'include' })
       .then(res => setAuthenticated(res.ok))
       .finally(() => setLoading(false));
   }, []);

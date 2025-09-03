@@ -14,12 +14,12 @@
           const [adminCount, setAdminCount] = useState<number | null>(null);
 
           useEffect(() => {
-            fetch(`${API_URL}/api/children/count`)
+            fetch(`${API_URL}/children/count`)
               .then(res => (res.ok ? res.json() : { count: 0 }))
               .then(data => setChildrenCount(typeof data.count === 'number' ? data.count : 0))
               .catch(() => setChildrenCount(0));
 
-            fetch(`${API_URL}/api/user/all`, { credentials: 'include' })
+            fetch(`${API_URL}/user/all`, { credentials: 'include' })
               .then(res => (res.ok ? res.json() : []))
               .then(data =>
                 setAdminCount(Array.isArray(data) ? (data as User[]).filter((u: User) => u.role === 'admin').length : 0)
@@ -28,7 +28,7 @@
           }, []);
 
           return (
-            <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
+          <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0 relative pb-16 sm:pb-0">
               <Helmet>
                 <title>Frimousse | Gestion moderne d’associations de garde d’enfants</title>
                 <meta
@@ -50,16 +50,19 @@
                 <link rel="canonical" href="https://frimousse-asso.fr/" />
               </Helmet>
 
-              <section className="w-full bg-gradient-to-br from-[#a9ddf2] to-[#f7f4d7] pt-12 pb-20 px-4 flex flex-col items-center justify-center text-center">
+              <section className="w-full bg-gradient-to-br from-[#a9ddf2] to-[#f7f4d7] pt-6 sm:pt-12 pb-20 px-4 flex flex-col items-center justify-center text-center">
                 <header className="w-full sticky top-0 z-10">
-                  <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
-                    <div className="flex items-center gap-3">
+                  <div className="max-w-7xl mx-auto relative flex items-start justify-between py-2 md:py-3 px-4">
+                    <div className="flex items-center gap-3 w-full justify-start md:justify-start">
                       <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden flex items-center justify-center">
                         <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
                       </div>
                       <div className="w-full text-center md:text-left">
-                        <span className="font-extrabold text-xl text-[#0b5566]">Les Frimousses</span>
+                        <span className="hidden sm:inline-block font-extrabold text-xl text-[#0b5566]">Les Frimousses</span>
                       </div>
+                    </div>
+                    <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 sm:hidden pointer-events-none">
+                      <span className="font-extrabold text-xl text-[#0b5566]">Les Frimousses</span>
                     </div>
 
                     <div className="hidden md:flex gap-2">
@@ -216,8 +219,8 @@
 
               <footer className="w-full text-[#08323a] py-10 px-6 mt-auto">
                 <div className="max-w-5xl mx-auto border-t border-gray-100 py-8">
-                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-start gap-6">
-                    <div className="flex flex-col items-center text-center sm:items-start sm:text-left justify-self-start">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 justify-items-center items-center gap-6">
+                    <div className="flex flex-col items-center text-center">
                       <h4 className="font-semibold text-[#08323a] mb-2">Liens utiles</h4>
                       <ul className="text-sm text-[#08323a] space-y-1">
                         <li>
@@ -235,13 +238,13 @@
                       </ul>
                     </div>
 
-                    <div className="flex flex-col items-center text-center justify-self-center">
+                    <div className="flex flex-col items-center text-center">
                       <h4 className="font-bold text-lg text-[#08323a] mb-2">Les Frimousses</h4>
                       <p className="text-[#08323a] text-sm mt-2 max-w-md mx-auto">Gestion professionnelle et moderne pour les associations. Pensé avec bienveillance pour les enfants et les familles.</p>
-                      <div className="mt-4 text-xs text-gray-500">© Les Frimousses {new Date().getFullYear()}</div>
+                      <div className="mt-4 text-xs text-gray-500 hidden sm:block">© Les Frimousses {new Date().getFullYear()}</div>
                     </div>
 
-                    <div className="flex flex-col items-center text-center sm:items-end sm:text-right justify-self-end">
+                    <div className="flex flex-col items-center text-center">
                       <h4 className="font-semibold text-[#08323a] mb-2">Contact</h4>
                       <div className="text-[#08323a] text-sm">contact@frimousse-asso.fr</div>
                       <div className="text-[#08323a] text-sm">+33 1 23 45 67 89</div>
@@ -249,6 +252,10 @@
                   </div>
                 </div>
               </footer>
+
+              <div className="sm:hidden absolute left-0 right-0 bottom-0 text-center text-xs text-gray-500 pb-4 bg-transparent">
+                © Les Frimousses {new Date().getFullYear()}
+              </div>
             </div>
           );
         }

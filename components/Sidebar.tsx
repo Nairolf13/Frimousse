@@ -54,7 +54,7 @@ export default function Sidebar() {
     async function loadCenter() {
       try {
         if (user && user.centerId) {
-          const res = await fetch(`/api/centers/${user.centerId}`, { credentials: 'include' });
+          const res = await fetch(`/centers/${user.centerId}`, { credentials: 'include' });
           if (!mounted) return;
           if (res.ok) {
             const data = await res.json();

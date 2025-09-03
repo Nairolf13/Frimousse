@@ -14,7 +14,7 @@ export default function InvitePage() {
     if (!token) return setMessage('Token manquant');
     setLoading(true);
     try {
-      const res = await fetch('/api/nannies/accept-invite', {
+      const res = await fetch(`api/nannies/accept-invite`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),

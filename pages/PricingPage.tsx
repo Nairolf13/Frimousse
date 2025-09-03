@@ -66,7 +66,7 @@ export default function PricingPage() {
 
   useEffect(() => {
     setUserRoleLoading(true);
-    fetch('/api/me', { credentials: 'include' })
+    fetch('api/me', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(data => setUserRole(data?.role || null))
       .catch(() => setUserRole(null))
@@ -83,7 +83,7 @@ export default function PricingPage() {
   async function startDirect(planKey: string, selPlan?: string) {
     try {
       const effectivePlan = planKey;
-      const endpoint = subscribeTokenFromQs ? '/api/subscriptions/create-checkout-with-token' : '/api/subscriptions/create-checkout';
+      const endpoint = subscribeTokenFromQs ? '/subscriptions/create-checkout-with-token' : '/subscriptions/create-checkout';
       const body: { plan: string; mode: 'direct' | 'discovery'; selectedPlan?: string; subscribeToken?: string } = { plan: effectivePlan, mode: 'direct' };
       if (selPlan) body.selectedPlan = selPlan;
       if (subscribeTokenFromQs) body.subscribeToken = subscribeTokenFromQs;
@@ -171,7 +171,7 @@ export default function PricingPage() {
               {plans.map((plan, idx) => (
                 <div
                   key={idx}
-                  className={`rounded-lg border shadow p-6 flex flex-col items-center bg-[#f7f4d7] ${plan.highlight ? 'border-[#0b5566] shadow-lg' : 'border-[#fcdcdf]'} h-full min-w-0 w-full max-w-md mx-auto md:max-w-[420px] md:w-full md:h-auto`}
+                  className={`rounded-lg border shadow p-6 flex flex-col items-center bg-[#f7f4d7] ${plan.highlight ? 'border-[#0b5566] shadow-lg' : 'border-[#fcdcdf]'} h-full min-w-0 w-full max-w-md mx-auto md:max-w-[420px] md:w-full md:h-auto min-h-[380px] md:min-h-[420px]`}
                   style={{width: '100%', maxWidth: '420px', margin: '0 auto'}}
                 >
                   <h2 className={`text-xl font-bold mb-2 ${plan.highlight ? 'text-[#0b5566]' : 'text-[#08323a]'}`}>{plan.name}</h2>
@@ -186,10 +186,11 @@ export default function PricingPage() {
                   </div>
                   {plan.buyButtonId ? (
                     // Use our controlled Checkout flow instead of embedded buy-button
-                    <div className="w-full flex justify-center mt-2">
+                    <div className="w-full flex justify-center mt-4">
                       <button
-                        className="px-4 py-2 bg-[#0b5566] text-white rounded"
+                        className="w-full max-w-xs h-11 px-4 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-pointer rounded"
                         type="button"
+                        style={{ backgroundColor: '#0b5566', color: '#fff' }}
                         onClick={() => {
                           if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
                           if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
@@ -201,11 +202,11 @@ export default function PricingPage() {
                       </button>
                     </div>
                   ) : (
-                    <div className="w-full flex justify-center mt-2 relative" style={{position: 'relative'}}>
+                    <div className="w-full flex justify-center mt-4">
                       <button
-                        className="BuyButton-Button is-cardLayout h-[44px] px-6 py-0 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-pointer mt-0"
+                        className="w-full max-w-xs h-11 px-4 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-pointer rounded"
                         type="button"
-                        style={{borderRadius: 0, backgroundColor: '#0b5566', color: '#fff', position: 'absolute', top: '-122px', left: 0, right: 0, margin: 'auto', zIndex: 20, height: '44px'}}
+                        style={{ backgroundColor: '#0b5566', color: '#fff' }}
                         onClick={() => {
                           if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
                           if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
@@ -215,7 +216,7 @@ export default function PricingPage() {
                           return startDirect(plan.name.toLowerCase());
                         }}
                       >
-                        <span className="BuyButton-ButtonText Text Text-color--default Text-fontWeight--500 Text--truncate" data-testid="hosted-buy-button-text">
+                        <span className="Text Text-color--default Text-fontWeight--500 Text--truncate" data-testid="hosted-buy-button-text">
                           {plan.cta}
                         </span>
                       </button>

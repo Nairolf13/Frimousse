@@ -95,7 +95,7 @@ export default function LoginPage() {
             </button>
           </div>
         </label>
-  <div className="w-full text-center text-sm mt-3 mb-4">
+        <div className="w-full text-center text-sm mt-2">
           <button type="button" onClick={() => setForgotOpen(true)} className="text-[#0b5566] hover:underline">Mot de passe oublié ?</button>
         </div>
         <button type="submit" className="w-full bg-[#0b5566] text-white py-2 rounded-full font-semibold hover:opacity-95 transition">Se connecter</button>
@@ -114,7 +114,7 @@ export default function LoginPage() {
               <button type="button" onClick={async () => {
                 setForgotMessage('');
                 try {
-                  const res = await fetch(`${API_URL}/api/auth/forgot`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: forgotEmail }) });
+                  const res = await fetch(`${API_URL}/auth/forgot`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: forgotEmail }) });
                   if (res.ok) {
                     setForgotMessage('Si un compte existe, un email de réinitialisation a été envoyé.');
                   } else {
