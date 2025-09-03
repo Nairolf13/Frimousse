@@ -283,7 +283,7 @@ export default function Children() {
               <button
                 type="button"
                 onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
-                className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition h-[60px] min-h-[60px] flex items-center"
+                className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center"
               >
                 Ajouter un enfant
               </button>
@@ -304,11 +304,11 @@ export default function Children() {
             </select>
           </div>
           <div className="flex gap-2 items-center children-responsive-indicators">
-            <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] h-[60px] justify-center">
+            <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] min-h-[44px] md:h-[60px] justify-center">
               <div className="text-xs text-gray-400">Total</div>
               <div className="text-lg font-bold text-gray-900">{totalChildren}</div>
             </div>
-            <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] h-[60px] justify-center">
+            <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] min-h-[44px] md:h-[60px] justify-center">
               <div className="text-xs text-gray-400">Présents</div>
               <div className="text-lg font-bold text-gray-900">{presentToday}</div>
             </div>

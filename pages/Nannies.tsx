@@ -265,21 +265,21 @@ export default function Nannies() {
             <button
               type="button"
               onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
-              className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 md:px-5 py-2 md:py-4 text-xs md:text-base shadow hover:bg-[#08323a] transition flex items-center h-[56px] md:h-[60px]"
+              className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 md:px-5 py-2 md:py-4 text-xs md:text-base shadow hover:bg-[#08323a] transition flex items-center min-h-[44px] md:h-[60px]"
             >
               Ajouter une nounou
             </button>
           </div>
           <div className="flex gap-2 flex-wrap justify-start w-full">
-            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px]">
+            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
               <div className="text-xs text-gray-400">Total</div>
               <div className="text-base md:text-lg font-bold text-[#0b5566]">{totalNannies}</div>
             </div>
-            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px]">
+            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
               <div className="text-xs text-gray-400">Disponibles</div>
               <div className="text-base md:text-lg font-bold text-[#0b5566]">{availableToday}</div>
             </div>
-            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px]">
+            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
               <div className="text-xs text-gray-400">En congé</div>
               <div className="text-base md:text-lg font-bold text-[#0b5566]">{onLeave}</div>
             </div>

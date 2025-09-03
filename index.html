@@ -2,18 +2,64 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="icon" type="image/webp" href="/imgs/LogoFrimousse.webp" />
   <link rel="preload" href="/imgs/LogoFrimousse.webp" as="image" />
-  <meta property="og:title" content="Frimousse" />
-  <meta property="og:description" content="Gestion d'accueil de jeunes enfants" />
-  <meta property="og:image" content="/imgs/LogoFrimousse.webp" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Web App Manifest -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <!-- Theme color for Android / Chrome -->
+  <meta name="theme-color" content="#0b5566" />
+  <meta name="description" content="Frimousse — gestion complète d'accueil pour jeunes enfants : planning, rapports, gestion des parents et communications pour crèches et assistantes maternelles." />
+  <link rel="canonical" href="https://www.lesfrimousses.com/" />
+  <!-- iOS home screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Les Frimousses" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <!-- iOS icon (used when adding to home screen). If you have a PNG version, prefer that path for best compatibility -->
+  <link rel="apple-touch-icon" href="/imgs/LogoFrimousse-192.png" />
+  <!-- Safari pinned tab / mask icon (optional) -->
+  <link rel="mask-icon" href="/imgs/LogoFrimousse.webp" color="#0b5566" />
+    <meta property="og:title" content="Frimousse" />
+    <meta property="og:description" content="Gestion d'accueil de jeunes enfants" />
+    <meta property="og:image" content="/imgs/LogoFrimousse.webp" />
     <title>Les Frimousses</title>
+    <!-- JSON-LD structured data (Organization + WebSite) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "name": "Les Frimousses",
+          "url": "https://www.frimousse.example/",
+          "logo": "https://www.frimousse.example/imgs/LogoFrimousse.webp",
+          "sameAs": []
+        },
+        {
+          "@type": "WebSite",
+          "url": "https://www.lesfrimousses.com/",
+          "name": "Les Frimousses",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://www.lesfrimousses.com/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      (function(){
+        function setVh(){
+          document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
+        }
+        setVh();
+        window.addEventListener('resize', setVh);
+      })();
+    </script>
   </body>
 </html>
