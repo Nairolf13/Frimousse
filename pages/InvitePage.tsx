@@ -12,12 +12,8 @@ const InvitePage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const navigate = useNavigate();
   function getApiUrl(): string {
-    try {
-      const meta = import.meta as unknown as { env?: { VITE_API_URL?: string } };
-  return (meta.env && meta.env.VITE_API_URL) ? meta.env.VITE_API_URL : 'http://localhost:4000';
-    } catch {
-      return '';
-    }
+  const meta = import.meta as { env?: { VITE_API_URL?: string } };
+  return meta?.env?.VITE_API_URL ?? 'https://www.lesfrimousses.com/api';
   }
   const API_URL = getApiUrl();
 
