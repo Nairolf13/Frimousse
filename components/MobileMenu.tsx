@@ -90,10 +90,12 @@ export default function MobileMenu() {
             </ul>
           </nav>
           <div className="mt-auto flex items-center gap-3 px-6 py-6">
-            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-base font-bold text-blue-700 border border-blue-100">MD</div>
+            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-base font-bold text-blue-700 border border-blue-100">
+              {user ? (user.name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+            </div>
             <div>
-              <div className="font-semibold text-gray-900 leading-tight">Marie Dubois</div>
-              <div className="text-xs text-gray-400">Administratrice</div>
+              <div className="font-semibold text-gray-900 leading-tight">{user?.name || 'Utilisateur'}</div>
+              <div className="text-xs text-gray-400 capitalize">{user?.role ? user.role.replace('_', ' ') : 'Utilisateur'}</div>
             </div>
           </div>
         </div>

@@ -19,9 +19,9 @@ function timeAgo(dateStr: string) {
 function CommentBox({ postId, onSubmit }: { postId: string; onSubmit: (postId: string, text: string) => Promise<void> }) {
   const [val, setVal] = useState('');
   return (
-    <form onSubmit={e => { e.preventDefault(); if (val.trim()) { onSubmit(postId, val.trim()); setVal(''); } }} className="flex items-center gap-2">
-      <input value={val} onChange={e => setVal(e.target.value)} placeholder="Écrire un commentaire..." className="flex-1 border rounded px-3 py-2 text-sm" />
-      <button type="submit" className="text-indigo-600 px-3 py-2">Envoyer</button>
+    <form onSubmit={e => { e.preventDefault(); if (val.trim()) { onSubmit(postId, val.trim()); setVal(''); } }} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+      <input value={val} onChange={e => setVal(e.target.value)} placeholder="Écrire un commentaire..." className="flex-1 border rounded px-2 py-2 sm:px-3 sm:py-2 text-sm" />
+      <button type="submit" className="text-indigo-600 px-3 py-2 text-sm sm:text-base whitespace-nowrap">Envoyer</button>
     </form>
   );
 }
@@ -163,11 +163,14 @@ export default function Feed() {
 
   return (
     <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 md:p-8">
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h18" /></svg> Fil d'Actualité</h2>
-          <div className="flex items-center gap-2">
+      <div className="max-w-7xl mx-auto w-full">
+      <div className="mb-6 p-4 md:p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">Fil d'Actualité</h1>
+            <div className="text-gray-400 text-base text-left">{centerName ? `• ${centerName}` : "Actualités de votre centre"}</div>
+          </div>
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto sm:overflow-visible self-start md:self-end">
             <button onClick={() => setFilter('ALL')} className={`px-3 py-1 rounded-full ${filter === 'ALL' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Tout</button>
             <button onClick={() => setFilter('PHOTOS')} className={`px-3 py-1 rounded-full ${filter === 'PHOTOS' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Photos</button>
             <button onClick={() => setFilter('ACTIVITIES')} className={`px-3 py-1 rounded-full ${filter === 'ACTIVITIES' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Activités</button>
@@ -175,13 +178,13 @@ export default function Feed() {
         </div>
 
         {/* Composer */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-4 mb-6 border border-gray-100">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-3 md:p-6 mb-6 border border-gray-100">
           <div className="flex flex-col sm:flex-row gap-4">
-              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-700 flex-shrink-0">{currentUser ? (currentUser.name || 'U').split(' ').map(s => s[0]).join('').toUpperCase().slice(0,2) : 'U'}</div>
+              <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-700 flex-shrink-0">{currentUser ? (currentUser.name || 'U').split(' ').map(s => s[0]).join('').toUpperCase().slice(0,2) : 'U'}</div>
             <div className="flex-1">
-              <div className="text-sm font-semibold text-gray-700">{currentUser?.name || 'Utilisateur'}</div>
+              <div className="text-xs sm:text-sm font-semibold text-gray-700">{currentUser?.name || 'Utilisateur'}</div>
               <div className="text-xs text-gray-400 mb-2">{centerName ? `• ${centerName}` : ''}</div>
-              <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Partagez un moment avec les enfants..." className="w-full border rounded p-3 bg-gray-50 min-h-[80px]" />
+              <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Partagez un moment avec les enfants..." className="w-full border rounded p-2 sm:p-3 bg-gray-50 min-h-[60px] sm:min-h-[80px] text-sm sm:text-base" />
               <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   {/* Camera capture input (opens device camera on supported mobile) */}
@@ -200,7 +203,7 @@ export default function Feed() {
                         input.value = '';
                       }}
                     />
-                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">📷 Photo</span>
+                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">📷 Photo</span>
                   </label>
                   {/* Gallery input (choose existing images) */}
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -217,19 +220,19 @@ export default function Feed() {
                         input.value = '';
                       }}
                     />
-                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">🖼 Galerie</span>
+                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">🖼 Galerie</span>
                   </label>
                   <span className="text-xs text-gray-400">{files.length === 0 ? 'Aucune image sélectionnée' : `${files.length} image(s)`}</span>
                 </div>
-                <button disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-full">{loading ? 'Envoi...' : 'Publier'}</button>
+                <button disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-full w-full sm:w-auto">{loading ? 'Envoi...' : 'Publier'}</button>
               </div>
               {previews.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {previews.map((p, i) => (
-                    <div key={i} className="w-full h-28 sm:h-20 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
-                      <img src={p} className="w-full h-full object-contain" />
-                    </div>
-                  ))}
+                      {previews.map((p, i) => (
+                        <div key={i} className="w-full h-16 sm:h-20 md:h-24 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
+                          <img src={p} className="w-full h-full object-contain" />
+                        </div>
+                      ))}
                 </div>
               )}
             </div>
@@ -239,9 +242,9 @@ export default function Feed() {
         {/* Posts list */}
         <div className="space-y-6">
           {posts.map(post => (
-            <article key={post.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <article key={post.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 md:p-6 w-full">
               <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center font-bold text-green-700">{(post.author?.name || 'U').split(' ').map(s => s[0]).join('').slice(0,2)}</div>
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-100 flex items-center justify-center font-bold text-green-700">{(post.author?.name || 'U').split(' ').map(s => s[0]).join('').slice(0,2)}</div>
                 <div className="flex-1">
                   <PostItem post={post} currentUser={currentUser} onUpdatePost={async (id, newText) => {
                       setPosts(prev => prev.map(p => p.id === id ? { ...p, text: newText } : p));
@@ -254,9 +257,9 @@ export default function Feed() {
                   {/* media rendering moved inside PostItem to allow inline edit/delete */}
 
                   <div className="mt-4 flex items-center justify-start text-sm text-gray-500">
-                    <div className="flex items-center gap-6">
-                      <button onClick={() => toggleLike(post.id)} className="flex items-center gap-2">❤️ <span>{post.likes ?? 0}</span></button>
-                      <button onClick={async () => { setOpenCommentsFor(post.id); await loadComments(post.id); }} className="flex items-center gap-2">💬 <span>{post.commentsCount ?? 0}</span></button>
+                    <div className="flex items-center gap-4 sm:gap-6">
+                      <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">❤️ <span>{post.likes ?? 0}</span></button>
+                      <button onClick={async () => { setOpenCommentsFor(post.id); await loadComments(post.id); }} className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">💬 <span>{post.commentsCount ?? 0}</span></button>
                     </div>
                   </div>
                   <div className="mt-3">
@@ -283,8 +286,8 @@ export default function Feed() {
             }}
           />
         )}
+        </div>
       </div>
-      </main>
     </div>
   );
 }
@@ -412,9 +415,9 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
           </div>
         </div>
         {!editing ? (
-          <div className="mt-2 bg-white border border-gray-100 rounded-lg p-3 text-sm text-gray-800 shadow-sm">
-            {comment.text}
-          </div>
+          <div className="mt-2 bg-white border border-gray-100 rounded-lg p-3 text-sm text-gray-800 shadow-sm break-words">
+              {comment.text}
+            </div>
         ) : (
           <div className="mt-2">
             <textarea value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[64px]" />
@@ -546,7 +549,7 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
     <>
       <div className="flex items-center justify-between">
         <div>
-          <div className="font-semibold text-gray-800">{post.author?.name || 'Utilisateur'}</div>
+          <div className="font-semibold text-gray-800 text-sm sm:text-base">{post.author?.name || 'Utilisateur'}</div>
           <div className="text-xs text-gray-400">Il y a {timeAgo(post.createdAt)}</div>
         </div>
         <div className="relative">
@@ -572,7 +575,7 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
         </div>
       </div>
       {!editing ? (
-        <div className="mt-3 text-gray-800">{post.text}</div>
+  <div className="mt-3 text-gray-800 break-words text-sm sm:text-base">{post.text}</div>
       ) : (
         <div className="mt-3">
           <textarea value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[80px]" />
@@ -586,7 +589,7 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
       {mediaCount > 0 && (
         <div className={`mt-3 grid gap-2 ${mediaCount === 1 ? 'grid-cols-1' : mediaCount === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
           {post.medias!.map(m => (
-            <div key={m.id} className={`relative w-full ${mediaCount === 1 ? 'h-64 sm:h-80' : mediaCount === 2 ? 'h-56 sm:h-64' : 'h-48 sm:h-56'} bg-gray-100 rounded overflow-hidden flex items-center justify-center`}>
+            <div key={m.id} className={`relative w-full ${mediaCount === 1 ? 'h-32 sm:h-48 md:h-64' : mediaCount === 2 ? 'h-24 sm:h-32 md:h-40' : 'h-20 sm:h-24 md:h-32'} bg-gray-100 rounded overflow-hidden flex items-center justify-center`}>
               {/* Use original media URL (not thumbnail) and show full image without cropping */}
               <img src={m.url} alt={post.text ? post.text.slice(0, 80) : 'photo'} className="max-w-full max-h-full object-contain" />
               {canEdit && editing && (

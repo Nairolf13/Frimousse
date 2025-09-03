@@ -79,6 +79,8 @@
                   </div>
                 </header>
 
+                {/* Mobile-only pill login button removed from header/section; placed at root for true fixed positioning */}
+
                 <h1 className="text-5xl md:text-6xl font-extrabold text-[#0b5566] mb-4 leading-tight drop-shadow-sm">
                   Simplifiez la gestion de votre association
                   <br className="hidden md:block" /> de garde d’enfants
@@ -100,6 +102,15 @@
                     className="bg-[#f7f4d7] border border-[#fcdcdf] text-[#0b5566] rounded-full px-8 py-4 font-bold text-lg shadow hover:bg-[#fcdcdf] transition w-full sm:w-auto"
                   >
                     Voir les tarifs
+                  </a>
+                  {/* Mobile-only Connexion button as third CTA to match size/spacing */}
+                  <a
+                    href="/login"
+                    className="sm:hidden bg-[#0b5566] text-white rounded-full px-8 py-4 font-bold text-lg shadow hover:scale-105 transition w-full text-center"
+                    aria-label="Connexion"
+                    title="Connexion"
+                  >
+                    Connexion
                   </a>
                 </div>
               </section>
@@ -246,8 +257,8 @@
 
                     <div className="flex flex-col items-center text-center">
                       <h4 className="font-semibold text-[#08323a] mb-2">Contact</h4>
-                      <div className="text-[#08323a] text-sm">contact@frimousse-asso.fr</div>
-                      <div className="text-[#08323a] text-sm">+33 1 23 45 67 89</div>
+                      <div className="text-[#08323a] text-sm">bricchi.florian@outlook.com</div>
+                      <div className="text-[#08323a] text-sm">+33 6 47 48 67 34</div>
                     </div>
                   </div>
                 </div>
@@ -256,6 +267,8 @@
               <div className="sm:hidden absolute left-0 right-0 bottom-0 text-center text-xs text-gray-500 pb-4 bg-transparent">
                 © Les Frimousses {new Date().getFullYear()}
               </div>
+
+              
             </div>
           );
         }

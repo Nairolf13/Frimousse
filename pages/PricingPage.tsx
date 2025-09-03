@@ -10,8 +10,7 @@ const plans = [
     price: '0€',
     description: 'Pour tester Frimousse sans engagement (15 jours max)',
     features: [
-      'Jusqu’à 10 enfants',
-      'Gestion de base des plannings',
+      'Limite sur la création de compte',
       'Support par email',
       'Accès web responsive',
     ],
@@ -24,9 +23,7 @@ const plans = [
     price: '29€ / mois',
     description: 'Pour les MAM, micro-crèches et petites structures',
     features: [
-      'Jusqu’à 40 enfants',
-      'Gestion avancée des plannings',
-      'Exports PDF/Excel',
+      'Jusqu’à 10 enfants',
       'Notifications email',
       'Support prioritaire',
     ],
@@ -40,11 +37,8 @@ const plans = [
     price: '59€ / mois',
     description: 'Pour crèches, garderies, centres de loisirs',
     features: [
-      'Enfants illimités',
-      'Tous modules inclus',
-      'Gestion RH & facturation',
-      'Notifications SMS',
-      'Personnalisation logo/couleurs',
+      'Création de comptes illimités',
+      'facturations détaillées',
       'Support téléphonique',
     ],
     cta: 'Choisir Pro',
@@ -60,7 +54,7 @@ export default function PricingPage() {
   const subscribeTokenFromQs = search.get('subscribeToken');
   const prefillEmailFromQs = search.get('prefillEmail');
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [pendingPlan, setPendingPlan] = useState<string | null>(null);
+  // removed pending discovery modal state (Découverte now redirects to /register)
   const [globalMessage, setGlobalMessage] = useState<null | { type: 'success' | 'error' | 'info'; text: string }>(null);
   const [userRoleLoading, setUserRoleLoading] = useState(true);
 
@@ -71,14 +65,10 @@ export default function PricingPage() {
       .then(data => setUserRole(data?.role || null))
       .catch(() => setUserRole(null))
       .finally(() => setUserRoleLoading(false));
-    // if prefillEmail present, optionally set a message
     if (prefillEmailFromQs) setGlobalMessage({ type: 'info', text: `Continuer l'abonnement pour ${prefillEmailFromQs}` });
   }, [prefillEmailFromQs, subscribeTokenFromQs]);
 
-  async function startDiscovery(planKey: string) {
-    // show discovery chooser so user chooses Essentiel or Pro
-    setPendingPlan(planKey);
-  }
+  // startDiscovery removed: Découverte redirects to /register
 
   async function startDirect(planKey: string, selPlan?: string) {
     try {
@@ -103,24 +93,7 @@ export default function PricingPage() {
 
   // No inline card collection: Checkout handles payment. CardModal removed.
 
-  // New: Discovery choice modal (if user clicks Découverte) - asks to choose Essentiel or Pro
-  function DiscoveryChooser({ onClose }: { onClose: () => void }) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-        <div className="bg-white rounded p-6 w-full max-w-md">
-          <h3 className="text-lg font-bold mb-4">Choisir un abonnement après l'essai</h3>
-          <p className="mb-4 text-sm text-gray-700">L'essai Découverte démarre pendant 15 jours. Choisissez ensuite l'abonnement auquel vous souhaitez souscrire :</p>
-          <div className="flex gap-3">
-            <button className="flex-1 px-4 py-2 border rounded" onClick={() => { onClose(); startDirect('decouverte', 'essentiel'); }}>Essentiel — 29,99€ / mois</button>
-            <button className="flex-1 px-4 py-2 border rounded bg-[#0b5566] text-white" onClick={() => { onClose(); startDirect('decouverte', 'pro'); }}>Pro — 59,99€ / mois</button>
-          </div>
-          <div className="mt-4 text-right">
-            <button className="px-3 py-1 text-sm" onClick={onClose}>Annuler</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Discovery chooser removed — Découverte now redirects to registration
 
 
   return (
@@ -148,7 +121,6 @@ export default function PricingPage() {
         </div>
       </header>
       <main className="flex-1 w-full">
-        {/* Global message banner */}
         {globalMessage && (
           <div className={`max-w-4xl mx-auto mt-6 p-3 rounded ${globalMessage.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : globalMessage.type === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-blue-50 border border-blue-200 text-blue-800'}`} role="status">
             {globalMessage.text}
@@ -185,7 +157,6 @@ export default function PricingPage() {
                     </ul>
                   </div>
                   {plan.buyButtonId ? (
-                    // Use our controlled Checkout flow instead of embedded buy-button
                     <div className="w-full flex justify-center mt-4">
                       <button
                         className="w-full max-w-xs h-11 px-4 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-pointer rounded"
@@ -194,7 +165,6 @@ export default function PricingPage() {
                         onClick={() => {
                           if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
                           if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
-                          // For Essentiel/Pro use direct mode (30 days trial)
                           return startDirect(plan.name.toLowerCase());
                         }}
                       >
@@ -211,7 +181,7 @@ export default function PricingPage() {
                           if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
                           if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
                           // Découverte plan has cta 'Essai gratuit' and price '0€'
-                          if (plan.name === 'Découverte') return startDiscovery('decouverte');
+                          if (plan.name === 'Découverte') return navigate('/register');
                           // For Essentiel/Pro use direct mode (30 days trial)
                           return startDirect(plan.name.toLowerCase());
                         }}
@@ -231,9 +201,7 @@ export default function PricingPage() {
             </div>
           </div>
         </section>
-        {pendingPlan === 'decouverte' && (
-          <DiscoveryChooser onClose={() => setPendingPlan(null)} />
-        )}
+  {/* Discovery chooser removed */}
         <div className="max-w-4xl mx-auto text-center mt-10 mb-8">
           <button
             onClick={() => navigate('/')}

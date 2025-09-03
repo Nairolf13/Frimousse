@@ -44,9 +44,8 @@ export default function SupportPage() {
               <div className="bg-white rounded-2xl shadow p-6 border border-[#fcdcdf] h-full flex flex-col">
                 <h2 className="font-bold text-lg mb-3 text-[#0b5566]">Contact support</h2>
                 <ul className="text-[#08323a] space-y-3 flex-1">
-                  <li>Email : <a href="mailto:support@frimousse-asso.fr" className="text-[#0b5566] underline">support@frimousse-asso.fr</a></li>
-                  <li>Téléphone : <a href="tel:+33123456789" className="text-[#0b5566] underline">+33 1 23 45 67 89</a></li>
-                  <li>Formulaire : <a href="mailto:support@frimousse-asso.fr" className="text-[#0b5566] underline">Envoyer un message</a></li>
+                  <li>Email : <a href="mailto:bricchi.florian@outlook.com" className="text-[#0b5566] underline">bricchi.florian@outlook.com</a></li>
+                  <li>Téléphone : <a href="tel:+33647486734" className="text-[#0b5566] underline">+33 6 47 48 67 34</a></li>
                 </ul>
                 <div className="mt-6 bg-[#f7f4d7] rounded-lg p-4 border border-[#fcdcdf]">
                   <h3 className="font-semibold text-[#0b5566] mb-1">Support premium</h3>
