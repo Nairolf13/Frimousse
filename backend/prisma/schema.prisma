@@ -98,6 +98,7 @@ model Nanny {
   email                String?
   availability         Availability @default(Disponible)
   experience           Int
+  birthDate            DateTime?
   assignedChildren     Assignment[]
   schedules            Schedule[]   @relation("NannySchedules")
   user                 User?        @relation("NannyUser")
@@ -116,6 +117,7 @@ model Child {
   age                 Int
   sexe                Sexe           @default(masculin)
   group               ChildGroup     @default(G1)
+  birthDate           DateTime?
   parents             ParentChild[]
   allergies           String?
   cotisationPaidUntil DateTime?

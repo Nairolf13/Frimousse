@@ -29,7 +29,8 @@ interface Child {
   group?: string;
   present?: boolean;
   newThisMonth?: boolean;
-  cotisationPaidUntil?: string; 
+  cotisationPaidUntil?: string;
+  birthDate?: string;
 }
 
 interface Assignment {
@@ -48,6 +49,7 @@ const emptyForm: Omit<Child, 'id'> = {
   group: '',
   present: true,
   newThisMonth: false,
+  birthDate: undefined,
 };
 
 const groupLabels = [
@@ -133,6 +135,7 @@ export default function Children() {
           present: presentIds.has(String(base['id'] ?? '')),
           newThisMonth: Boolean(base['newThisMonth'] ?? false),
           cotisationPaidUntil: base['cotisationPaidUntil'] ? String(base['cotisationPaidUntil']) : undefined,
+          birthDate: base['birthDate'] ? String(base['birthDate']) : undefined,
         };
         return typedChild;
       }) : [];
@@ -319,6 +322,7 @@ export default function Children() {
         <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
           <input name="name" value={form.name} onChange={handleChange} placeholder="Nom" required className="border rounded px-3 py-2" />
           <input name="age" type="number" value={form.age} onChange={handleChange} placeholder="Âge" required className="border rounded px-3 py-2" />
+          <input name="birthDate" type="date" value={form.birthDate || ''} onChange={handleChange} placeholder="Date de naissance" className="border rounded px-3 py-2" />
           <select name="sexe" value={form.sexe} onChange={handleChange} required className="border rounded px-3 py-2">
             <option value="masculin">Garçon</option>
             <option value="feminin">Fille</option>
@@ -442,6 +446,15 @@ export default function Children() {
                       <span className="font-semibold text-lg text-gray-900 ml-2 truncate max-w-[120px] min-w-0" title={child.name}>{child.name}</span>
                       <span className="ml-auto text-xs font-bold bg-white text-[#08323a] px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{child.age} ans</span>
                       <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap" title="Sexe">{child.sexe === 'masculin' ? 'Garçon' : 'Fille'}</span>
+                      {child.birthDate ? (
+                        <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap" title="Date de naissance">
+                          🎂 {new Date(child.birthDate).toLocaleDateString('fr-FR')}
+                        </span>
+                      ) : (
+                        <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap" title="Date de naissance">
+                          🎂 Non définie
+                        </span>
+                      )}
                     </div>
                     <span className="block text-xs text-yellow-700 flex items-center gap-1 mb-2">
                       <span>⚠️ Allergies :</span>

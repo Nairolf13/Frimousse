@@ -83,7 +83,20 @@ router.get('/', auth, async (req, res) => {
     }
 
     if (resolvedParentId) {
-      const children = await prisma.child.findMany({ where: { parents: { some: { parentId: resolvedParentId } } }, include: { parents: { include: { parent: true } } } });
+      const children = await prisma.child.findMany({ 
+        where: { parents: { some: { parentId: resolvedParentId } } }, 
+        include: { parents: { include: { parent: true } } },
+        select: {
+          id: true,
+          name: true,
+          age: true,
+          sexe: true,
+          group: true,
+          birthDate: true,
+          allergies: true,
+          parents: { include: { parent: true } }
+        }
+      });
       return res.json(children);
     }
 
@@ -97,7 +110,20 @@ router.get('/', auth, async (req, res) => {
       where.centerId = req.user.centerId;
     }
 
-    const children = await prisma.child.findMany({ where, include: { parents: { include: { parent: true } } } });
+    const children = await prisma.child.findMany({ 
+      where, 
+      include: { parents: { include: { parent: true } } },
+      select: {
+        id: true,
+        name: true,
+        age: true,
+        sexe: true,
+        group: true,
+        birthDate: true,
+        allergies: true,
+        parents: { include: { parent: true } }
+      }
+    });
     return res.json(children);
   } catch (error) {
     console.error('Error fetching children', error);
@@ -110,7 +136,7 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
   if (req.user && req.user.role === 'parent') {
     return res.status(403).json({ error: 'Forbidden: parents cannot create children' });
   }
-  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group } = req.body;
+  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group, birthDate } = req.body;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
     return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
@@ -125,6 +151,7 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
         age: parsedAge,
         sexe,
         allergies,
+        birthDate,
       };
       if (group) {
         childData.group = group;
@@ -174,7 +201,7 @@ router.put('/:id', auth, async (req, res) => {
   if (req.user && req.user.role === 'parent') {
     return res.status(403).json({ error: 'Forbidden: parents cannot update children' });
   }
-  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group, cotisationPaidUntil, payCotisation } = req.body;
+  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group, cotisationPaidUntil, payCotisation, birthDate } = req.body;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
     return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
@@ -200,6 +227,7 @@ router.put('/:id', auth, async (req, res) => {
         sexe,
         allergies,
         cotisationPaidUntil: cotisationDate,
+        birthDate,
       };
       if (group !== undefined) updateData.group = group;
       const child = await tx.child.update({
@@ -274,7 +302,20 @@ router.delete('/:id', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   const { id } = req.params;
   try {
-    const child = await prisma.child.findUnique({ where: { id }, include: { parents: { include: { parent: true } } } });
+    const child = await prisma.child.findUnique({ 
+      where: { id }, 
+      include: { parents: { include: { parent: true } } },
+      select: {
+        id: true,
+        name: true,
+        age: true,
+        sexe: true,
+        group: true,
+        birthDate: true,
+        allergies: true,
+        parents: { include: { parent: true } }
+      }
+    });
     if (!child) return res.status(404).json({ message: 'Not found' });
     // Parents may only fetch their own child
     if (req.user && req.user.role === 'parent') {

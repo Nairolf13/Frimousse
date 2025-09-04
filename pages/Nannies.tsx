@@ -38,6 +38,7 @@ interface Nanny {
   contact?: string;
   email?: string;
   cotisationPaidUntil?: string | null;
+  birthDate?: string | null;
 }
 
 const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; password?: string } = {
@@ -49,6 +50,7 @@ const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; pass
   contact: '',
   email: '',
   password: '',
+  birthDate: null,
 };
 
 const avatarEmojis = ['🦁', '🐻', '🐱', '🐶', '🦊', '🐼', '🐵', '🐯'];
@@ -212,7 +214,7 @@ export default function Nannies() {
   };
 
   const handleEdit = (nanny: Nanny) => {
-    setForm({ name: nanny.name, availability: nanny.availability, experience: nanny.experience, specializations: nanny.specializations || [], status: nanny.status || 'Disponible' });
+    setForm({ name: nanny.name, availability: nanny.availability, experience: nanny.experience, specializations: nanny.specializations || [], status: nanny.status || 'Disponible', contact: nanny.contact, email: nanny.email, birthDate: nanny.birthDate });
     setEditingId(nanny.id);
   };
 
@@ -310,6 +312,7 @@ export default function Nannies() {
               <option value="Maladie">Maladie</option>
             </select>
             <input name="experience" type="number" value={form.experience} onChange={handleChange} placeholder="Expérience (années)" required className="border rounded px-3 py-2 text-xs md:text-base" />
+            <input name="birthDate" type="date" value={form.birthDate || ''} onChange={handleChange} placeholder="Date de naissance" className="border rounded px-3 py-2 text-xs md:text-base" />
             <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder="Spécialisations (séparées par virgule)" className="border rounded px-3 py-2 text-xs md:text-base md:col-span-2" />
             <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder="Téléphone" className="border rounded px-3 py-2 text-xs md:text-base" />
             <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder="Email " className="border rounded px-3 py-2 text-xs md:text-base" />
@@ -377,6 +380,11 @@ export default function Nannies() {
                         <span className="font-semibold text-base sm:text-lg text-[#08323a] ml-1 sm:ml-2 max-w-full sm:max-w-[120px] sm:truncate min-w-0" title={nanny.name}>{nanny.name}</span>
                         <span className="ml-auto text-xs font-bold bg-white text-[#08323a] px-2 sm:px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{nanny.experience} ans</span>
                       </div>
+                      {nanny.birthDate && (
+                        <div className="text-xs sm:text-sm text-gray-600 mb-1 text-center">
+                          Né(e) le {new Date(nanny.birthDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </div>
+                      )}
                       <div className="flex flex-col gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4">
                         <span className="flex items-center gap-2 w-full justify-center">
                           <span role="img" aria-label="Téléphone" className="text-sm sm:text-base">📞</span>

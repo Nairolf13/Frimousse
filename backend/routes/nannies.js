@@ -16,7 +16,23 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 router.get('/', auth, async (req, res) => {
   const where = {};
   if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
-  const nannies = await prisma.nanny.findMany({ where, include: { assignedChildren: true } });
+  const nannies = await prisma.nanny.findMany({ 
+    where, 
+    include: { assignedChildren: true },
+    select: {
+      id: true,
+      name: true,
+      availability: true,
+      experience: true,
+      specializations: true,
+      status: true,
+      contact: true,
+      email: true,
+      cotisationPaidUntil: true,
+      birthDate: true,
+      assignedChildren: true
+    }
+  });
   res.json(nannies);
 });
 
@@ -25,14 +41,14 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
     const userReq = req.user || {};
     // Only admins or nannies themselves (or super-admin) can create nannies
     if (!(userReq.role === 'admin' || userReq.nannyId || userReq.role === 'super-admin')) return res.status(403).json({ message: 'Forbidden' });
-    const { name, availability, experience, contact, email } = req.body;
+    const { name, availability, experience, contact, email, birthDate } = req.body;
     const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
     if (isNaN(parsedExperience)) {
       return res.status(400).json({ error: 'Le champ "experience" doit être un nombre.' });
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const nannyData = { name, availability, experience: parsedExperience, contact, email, centerId: req.user.centerId || null };
+      const nannyData = { name, availability, experience: parsedExperience, contact, email, birthDate, centerId: req.user.centerId || null };
       const nanny = await tx.nanny.create({ data: nannyData });
 
       if (!email) return { nanny, user: null };
@@ -136,12 +152,12 @@ router.post('/accept-invite', async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const { name, availability, experience, contact, email } = req.body;
+  const { name, availability, experience, contact, email, birthDate } = req.body;
   if (!isSuperAdmin(req.user)) {
     const existing = await prisma.nanny.findUnique({ where: { id } });
     if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
   }
-  const nanny = await prisma.nanny.update({ where: { id }, data: { name, availability, experience, contact, email } });
+  const nanny = await prisma.nanny.update({ where: { id }, data: { name, availability, experience, contact, email, birthDate } });
   res.json(nanny);
 });
 
@@ -177,7 +193,23 @@ router.delete('/:id', auth, async (req, res) => {
 
 router.get('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const nanny = await prisma.nanny.findUnique({ where: { id }, include: { assignedChildren: true } });
+  const nanny = await prisma.nanny.findUnique({ 
+    where: { id }, 
+    include: { assignedChildren: true },
+    select: {
+      id: true,
+      name: true,
+      availability: true,
+      experience: true,
+      specializations: true,
+      status: true,
+      contact: true,
+      email: true,
+      cotisationPaidUntil: true,
+      birthDate: true,
+      assignedChildren: true
+    }
+  });
   if (!nanny) return res.status(404).json({ message: 'Not found' });
   res.json(nanny);
 });

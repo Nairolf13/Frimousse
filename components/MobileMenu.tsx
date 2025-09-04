@@ -4,7 +4,7 @@ import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalenda
 import { useAuth } from '../src/context/AuthContext';
 
 const navLinks = [
-  { to: '/dashboard', label: 'Dashboard', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
+  { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
   { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
   { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
   { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
