@@ -27,7 +27,7 @@ exports.register = async (req, res) => {
   const { email, password, name, role, nannyId, centerId, centerName, plan } = req.body;
   if (!email || !password || !name || !role) return res.status(400).json({ message: 'Missing fields' });
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return res.status(409).json({ message: 'User already exists' });
+  if (existing) return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
   const hash = await bcrypt.hash(password, 10);
   const userData = { email, password: hash, name, role };
   if (nannyId) userData.nannyId = nannyId;
@@ -67,7 +67,7 @@ exports.register = async (req, res) => {
     user = await prisma.user.create({ data: userData });
   } catch (err) {
     // Handle unique constraint race (email already created)
-    if (err && err.code === 'P2002') return res.status(409).json({ message: 'User already exists' });
+    if (err && err.code === 'P2002') return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
     console.error('Error creating user in register', err);
     return res.status(500).json({ error: 'Erreur lors de la création du compte' });
   }
@@ -133,8 +133,8 @@ exports.registerSubscribeInit = async (req, res) => {
   try {
     const { email, password, name, role, centerName, plan } = req.body;
     if (!email || !password || !name || !role || !plan) return res.status(400).json({ message: 'Missing fields' });
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) return res.status(409).json({ message: 'User already exists' });
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
     const hash = await bcrypt.hash(password, 10);
     const userData = { email, password: hash, name, role };
     // center creation rules similar to register
@@ -152,19 +152,16 @@ exports.registerSubscribeInit = async (req, res) => {
     try {
       user = await prisma.user.create({ data: userData });
     } catch (err) {
-      if (err && err.code === 'P2002') return res.status(409).json({ message: 'User already exists' });
+      if (err && err.code === 'P2002') return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
       console.error('registerSubscribeInit user create error', err);
       return res.status(500).json({ error: 'Erreur lors de la création du compte' });
     }
 
-    // create stripe customer
     const customer = await stripe.customers.create({ email: user.email, name: user.name });
     await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer.id } });
 
-    // create SetupIntent for this customer
     const setupIntent = await stripe.setupIntents.create({ customer: customer.id, payment_method_types: ['card'] });
 
-    // Fire-and-forget welcome email (like register does)
     (async () => {
       try {
         const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
@@ -307,11 +304,12 @@ exports.registerSubscribeComplete = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-  const valid = await bcrypt.compare(password, user.password);
-  if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
+  try {
+    const { email, password } = req.body;
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return res.status(401).json({ message: "Adresse e-mail inconnue. Vérifiez l'adresse saisie." });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ message: "Mot de passe incorrect. Utilisez 'Mot de passe oublié' si nécessaire." });
   // Enforce subscription: super-admin bypass. For admin users, require their own subscription.
   // For parent/nanny/other non-admin users, allow access when their center has an admin with an active/trialing subscription.
   async function hasValidSubscription(u) {
@@ -354,6 +352,10 @@ exports.login = async (req, res) => {
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
   res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });
+  } catch (err) {
+    console.error('login error', err);
+    return res.status(500).json({ message: "Erreur serveur. Impossible de se connecter pour le moment, veuillez réessayer plus tard." });
+  }
 };
 
 exports.refresh = async (req, res) => {

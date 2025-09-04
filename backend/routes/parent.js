@@ -64,7 +64,12 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
       const parent = await tx.parent.create({ data });
       if (existingUser) {
         // Ensure existing user is linked to the created parent and centered correctly
+        // If the found user is not already an admin/super-admin, promote them to 'parent'.
         const updateData = { parentId: parent.id };
+        // Only change role when the existing user is not an admin or super-admin
+        if (!isSuperAdmin(existingUser) && !isAdminRole(existingUser)) {
+          updateData.role = 'parent';
+        }
         if (isSuperAdmin(userReq)) {
           if (req.body.centerId) updateData.centerId = req.body.centerId;
         } else if (userReq.centerId) {
