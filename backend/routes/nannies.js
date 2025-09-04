@@ -18,7 +18,6 @@ router.get('/', auth, async (req, res) => {
   if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
   const nannies = await prisma.nanny.findMany({ 
     where, 
-    include: { assignedChildren: true },
     select: {
       id: true,
       name: true,
@@ -30,7 +29,13 @@ router.get('/', auth, async (req, res) => {
       email: true,
       cotisationPaidUntil: true,
       birthDate: true,
-      assignedChildren: true
+      assignedChildren: {
+        select: {
+          id: true,
+          name: true,
+          birthDate: true
+        }
+      }
     }
   });
   res.json(nannies);
@@ -203,7 +208,6 @@ router.get('/:id', auth, async (req, res) => {
   const { id } = req.params;
   const nanny = await prisma.nanny.findUnique({ 
     where: { id }, 
-    include: { assignedChildren: true },
     select: {
       id: true,
       name: true,
@@ -215,7 +219,13 @@ router.get('/:id', auth, async (req, res) => {
       email: true,
       cotisationPaidUntil: true,
       birthDate: true,
-      assignedChildren: true
+      assignedChildren: {
+        select: {
+          id: true,
+          name: true,
+          birthDate: true
+        }
+      }
     }
   });
   if (!nanny) return res.status(404).json({ message: 'Not found' });

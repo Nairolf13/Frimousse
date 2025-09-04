@@ -85,7 +85,6 @@ router.get('/', auth, async (req, res) => {
     if (resolvedParentId) {
       const children = await prisma.child.findMany({ 
         where: { parents: { some: { parentId: resolvedParentId } } }, 
-        include: { parents: { include: { parent: true } } },
         select: {
           id: true,
           name: true,
@@ -94,7 +93,9 @@ router.get('/', auth, async (req, res) => {
           group: true,
           birthDate: true,
           allergies: true,
-          parents: { include: { parent: true } }
+          parents: { 
+            include: { parent: true } 
+          }
         }
       });
       return res.json(children);
@@ -112,7 +113,6 @@ router.get('/', auth, async (req, res) => {
 
     const children = await prisma.child.findMany({ 
       where, 
-      include: { parents: { include: { parent: true } } },
       select: {
         id: true,
         name: true,
@@ -121,7 +121,9 @@ router.get('/', auth, async (req, res) => {
         group: true,
         birthDate: true,
         allergies: true,
-        parents: { include: { parent: true } }
+        parents: { 
+          include: { parent: true } 
+        }
       }
     });
     return res.json(children);
@@ -304,7 +306,6 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const child = await prisma.child.findUnique({ 
       where: { id }, 
-      include: { parents: { include: { parent: true } } },
       select: {
         id: true,
         name: true,
@@ -313,7 +314,9 @@ router.get('/:id', auth, async (req, res) => {
         group: true,
         birthDate: true,
         allergies: true,
-        parents: { include: { parent: true } }
+        parents: { 
+          include: { parent: true } 
+        }
       }
     });
     if (!child) return res.status(404).json({ message: 'Not found' });
