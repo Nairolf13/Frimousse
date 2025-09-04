@@ -23,7 +23,6 @@ router.get('/', auth, async (req, res) => {
       name: true,
       availability: true,
       experience: true,
-      specializations: true,
       status: true,
       contact: true,
       email: true,
