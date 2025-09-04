@@ -25,7 +25,7 @@ interface AssignmentForm {
   nannyId: string;
 }
 
-const weekDays = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
 function getMonthGrid(date: Date) {
   const year = date.getFullYear();

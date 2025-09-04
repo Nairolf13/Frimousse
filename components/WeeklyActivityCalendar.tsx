@@ -58,7 +58,7 @@ export default function WeeklyActivityCalendar() {
     else if (/zoo|animal|ferme/i.test(name)) emoji = '🦁';
     else if (/repas|déjeuner|dîner|goûter|restauration/i.test(name)) emoji = '🍽️';
     else if (/lecture|histoire|conte|livre/i.test(name)) emoji = '📖';
-    else if (/musique|danse|chant|chanson/i.test(name)) emoji = '🎵';
+    else if (/musique|danse|chant|eveil|chanson/i.test(name)) emoji = '🎵';
     else if (/extérieur|jeux|sport|parc|cour/i.test(name)) emoji = '🏃';
     else if (/libre|autonome/i.test(name)) emoji = '🎮';
     const color = cardColors[idx % cardColors.length];
@@ -96,6 +96,16 @@ export default function WeeklyActivityCalendar() {
 
   const handleAddActivity = async () => {
     if (!form.name || !form.startTime || !form.endTime || form.nannyIds.length === 0 || !form.date) return;
+
+    // Vérifier que la date n'est pas dans le passé
+    const selectedDate = new Date(form.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (selectedDate < today) {
+      alert('Vous ne pouvez pas ajouter ou modifier une activité sur une date passée.');
+      return;
+    }
+
     let res;
     if (selectedActivity) {
       res = await fetchWithRefresh(`${API_URL}/schedules/${selectedActivity.id}`, {
@@ -242,7 +252,7 @@ export default function WeeklyActivityCalendar() {
                                 <td
                                   key={activity.id}
                                   rowSpan={span}
-                                  className={`align-top p-0 h-full bg-gradient-to-br from-white via-${visuals.bg.replace('bg-','')} to-${visuals.bg.replace('bg-','')} border-l-4 ${visuals.border} rounded-2xl shadow-lg cursor-pointer transition-transform hover:-translate-y-1 hover:shadow-2xl duration-200`}
+                                  className={`align-top p-0 h-full bg-gradient-to-br from-white via-${visuals.bg.replace('bg-','')} to-${visuals.bg.replace('bg-','')} border-l-4 ${visuals.border} rounded-2xl shadow-lg cursor-pointer transition-transform hover:-translate-y-1 hover:shadow-2xl duration-200 overflow-hidden`}
                                   style={{ verticalAlign: 'top', fontFamily: 'Inter, Arial, sans-serif' }}
                                   onClick={() => handleActivityCardClick(activity)}
                                   tabIndex={0}
@@ -250,7 +260,7 @@ export default function WeeklyActivityCalendar() {
                                   <div className="flex flex-col gap-2 h-full rounded-2xl px-4 py-3" style={{ minHeight: '90px', position: 'relative' }}>
                                     <div className="flex items-center gap-2 mb-1">
                                       <span className="text-2xl drop-shadow-sm">{visuals.emoji}</span>
-                                      <span className={`font-semibold text-lg ${visuals.text} tracking-tight`}>{activity.name}</span>
+                                      <span className={`font-semibold text-lg ${visuals.text} tracking-tight truncate`}>{activity.name}</span>
                                     </div>
                                   </div>
                                 </td>
@@ -275,14 +285,14 @@ export default function WeeklyActivityCalendar() {
               const dayActivities = activities.filter(a => a.date.split('T')[0] === dateStr);
               const slots = [
                 {
-                  label: 'Matin (7h-12h)',
+                  label: 'Matin ',
                   color: 'bg-yellow-50 border-yellow-200 text-yellow-800',
                   emoji: '🌞',
                   start: 7,
                   end: 12,
                 },
                 {
-                  label: 'Après-midi (12h-19h)',
+                  label: 'Après-midi ',
                   color: 'bg-blue-50 border-blue-200 text-blue-800',
                   emoji: '🌤️',
                   start: 12,
@@ -317,10 +327,13 @@ export default function WeeklyActivityCalendar() {
                                 return (
                                   <div
                                     key={activity.id}
-                                    className={`rounded-xl shadow border flex flex-col gap-1 ${visuals.bg} ${visuals.border} px-2 py-2 cursor-pointer transition-transform hover:scale-105 active:scale-95`}
+                                    className={`rounded-xl shadow border flex flex-col gap-1 ${visuals.bg} ${visuals.border} px-2 py-2 cursor-pointer transition-transform hover:scale-105 active:scale-95 overflow-hidden`}
                                     onClick={() => handleActivityCardClick(activity)}
                                   >
-                                    <span className={`font-bold text-base mb-1 ${visuals.text}`}>{activity.name}</span>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className={`font-bold text-base mb-1 ${visuals.text} truncate`}>{activity.name}</span>
+                                      <span className="text-xs text-gray-600">{activity.startTime} - {activity.endTime}</span>
+                                    </div>
                                     {activity.comment && (
                                       <span className="block text-sm text-gray-700 bg-gray-50 rounded px-2 py-1 mb-1 w-full whitespace-pre-line">{activity.comment}</span>
                                     )}
@@ -414,8 +427,7 @@ export default function WeeklyActivityCalendar() {
                   <input
                     type="date"
                     value={form.date}
-                    min={weekDates[0].toISOString().split('T')[0]}
-                    max={weekDates[6].toISOString().split('T')[0]}
+                    min={new Date().toISOString().split('T')[0]}
                     onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
                     className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]"
                     style={{ borderColor: '#cfeef9' }}

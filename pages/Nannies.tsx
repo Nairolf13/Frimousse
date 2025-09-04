@@ -337,7 +337,7 @@ export default function Nannies() {
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full children-responsive-grid">
             {filtered.map((nanny, idx) => {
               const cotisation = cotisationStatus[nanny.id];
-              const daysRemaining = cotisation && cotisation.paidUntil ? Math.max(0, Math.floor((new Date(cotisation.paidUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0;
+              const daysRemaining = cotisation && cotisation.paidUntil ? Math.max(0, Math.ceil((new Date(cotisation.paidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
               const avatar = avatarEmojis[idx % avatarEmojis.length];
               const cardColors = [
                 'bg-blue-50',
@@ -349,6 +349,9 @@ export default function Nannies() {
               ];
               const color = cardColors[idx % cardColors.length];
               const isDeleting = deleteId === nanny.id;
+              const todayStr = new Date().toISOString().split('T')[0];
+              const assignedTodayCount = assignments.filter(a => a.nanny && a.nanny.id === nanny.id && a.date.split('T')[0] === todayStr).length;
+              const isPaymentModalOpen = confirmPayment?.nannyId === nanny.id;
               return (
                 <div
                   key={nanny.id}
@@ -366,98 +369,94 @@ export default function Nannies() {
                     style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
                   >
                     <div
-                      className={`absolute inset-0 w-full h-full p-6 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
+                      className={`absolute inset-0 w-full h-full p-3 sm:p-4 md:p-6 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
                       style={{ backfaceVisibility: 'hidden' }}
                     >
-                        <div className="flex items-center gap-3 mb-2 min-w-0 pt-12 pb-2">
-                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{avatar}</div>
-                        <span className="font-semibold text-lg text-[#08323a] ml-2 truncate max-w-[120px] min-w-0" title={nanny.name}>{nanny.name}</span>
-                        <span className="ml-auto text-xs font-bold bg-white text-[#08323a] px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{nanny.experience} ans</span>
+                        <div className="flex items-center gap-2 sm:gap-3 mb-2 min-w-0 pt-8 sm:pt-10 md:pt-12 pb-2">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white flex items-center justify-center text-lg sm:text-2xl shadow border border-gray-100">{avatar}</div>
+                        <span className="font-semibold text-base sm:text-lg text-[#08323a] ml-1 sm:ml-2 max-w-full sm:max-w-[120px] sm:truncate min-w-0" title={nanny.name}>{nanny.name}</span>
+                        <span className="ml-auto text-xs font-bold bg-white text-[#08323a] px-2 sm:px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{nanny.experience} ans</span>
                       </div>
-                      <div className="flex flex-col gap-3 text-sm text-gray-700 mb-4">
+                      <div className="flex flex-col gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4">
                         <span className="flex items-center gap-2 w-full justify-center">
-                          <span role="img" aria-label="Téléphone">📞</span>
+                          <span role="img" aria-label="Téléphone" className="text-sm sm:text-base">📞</span>
                           {nanny.contact ? (
-                            <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
+                            <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
                           ) : (
-                            <span className="text-gray-400 text-xs md:text-sm">—</span>
+                            <span className="text-gray-400 text-xs sm:text-sm">—</span>
                           )}
                         </span>
                         <span className="flex items-center gap-2 w-full justify-center">
-                          <span role="img" aria-label="Email">✉️</span>
+                          <span role="img" aria-label="Email" className="text-sm sm:text-base">✉️</span>
                           {nanny.email ? (
-                            <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-xs md:text-sm" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
+                            <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
                           ) : (
-                            <span className="text-gray-400 text-xs md:text-sm">—</span>
+                            <span className="text-gray-400 text-xs sm:text-sm">—</span>
                           )}
                         </span>
                       </div>
                       {nanny.specializations && nanny.specializations.length > 0 && (
-                        <div className="flex flex-wrap justify-center gap-2 mb-2 w-full px-4">
+                        <div className="flex flex-wrap justify-center gap-1 sm:gap-2 mb-2 w-full px-2 sm:px-4">
                           {nanny.specializations.map((spec, i) => (
-                            <span key={i} className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-semibold border border-purple-200">{spec}</span>
+                            <span key={i} className="bg-purple-100 text-purple-700 px-1 sm:px-2 py-1 rounded-full text-xs font-semibold border border-purple-200 truncate max-w-[80px] sm:max-w-none">{spec}</span>
                           ))}
                         </div>
                       )}
-                      <div className="text-xs md:text-sm text-gray-700 mb-2 w-full flex flex-col items-center">
-                        {(() => {
-                          const todayStr = new Date().toISOString().split('T')[0];
-                          const assignedToday = assignments.filter(a =>
-                            a.nanny && a.nanny.id === nanny.id && a.date.split('T')[0] === todayStr
-                          );
-                          return (
-                            <span className="block font-medium mb-1">
-                              Affectations aujourd'hui
-                              <span className="inline-block bg-white text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 ml-1">
-                                {assignedToday.length}
-                              </span>
-                            </span>
-                          );
-                        })()}
+                      <div className="text-xs sm:text-sm text-gray-700 mb-2 w-full flex flex-col items-center">
+                        <span className="block font-medium mb-1 text-center">
+                          Affectations aujourd'hui
+                          <span className="inline-block bg-white text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 ml-1">
+                            {assignedTodayCount}
+                          </span>
+                        </span>
                       </div>
                       <div className="flex flex-col gap-2 mt-auto mb-4 w-full min-w-0">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-xs font-semibold text-gray-700">Cotisation mensuel &nbsp;:</span>
-                                    {daysRemaining > 0 ? (
-                                      <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
-                                    ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
-                                      <input
-                                        type="number"
-                                        className="w-20 px-2 py-1 border rounded text-sm"
-                                        value={cotisationAmounts[nanny.id] ?? 10}
-                                        onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
-                                      />
-                                    ) : (
-                                      <span className="text-base font-bold text-[#08323a]">10€</span>
-                                    )}
-                          {daysRemaining > 0 ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <span className="text-xs font-semibold text-gray-700">Cotisation mensuel :</span>
+                          {cotisation?.loading ? (
+                            <span className="text-sm text-gray-500">Chargement...</span>
+                          ) : daysRemaining > 0 ? (
+                            <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
+                          ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
+                            <input
+                              type="number"
+                              className="w-20 px-2 py-1 border rounded text-sm"
+                              value={cotisationAmounts[nanny.id] ?? 10}
+                              onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
+                            />
+                          ) : (
+                            <span className="text-base font-bold text-[#08323a]">10€</span>
+                          )}
+                          {cotisation?.loading ? (
+                            <span className="text-gray-400 text-xl">…</span>
+                          ) : daysRemaining > 0 ? (
                             <span className="text-[#0b5566] text-xl">✔️</span>
                           ) : (
                             <span className="text-red-500 text-xl">❌</span>
                           )}
-                          <div className="flex flex-col items-center">
+                          {daysRemaining <= 0 && (
                             <button
-                              className="text-[#0b5566] text-xs font-semibold px-2 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition ml-2"
-                              disabled={cotisation?.loading}
+                              className="text-[#0b5566] text-xs font-semibold px-2 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={cotisation?.loading || isPaymentModalOpen}
                               onClick={() => requestPay(nanny.id)}
                             >
-                              {cotisation?.loading ? "Paiement..." : "Payer"}
+                              {cotisation?.loading ? "Paiement..." : isPaymentModalOpen ? "Confirmation..." : "Payer"}
                             </button>
-                            {messages[nanny.id] && (
-                              <div className={`mt-2 text-xs ${messages[nanny.id]?.type === 'success' ? 'text-[#0b5566]' : 'text-red-600'}`}>
-                                {messages[nanny.id]?.text}
-                              </div>
-                            )}
-                          </div>
-                          <span className="text-xs text-gray-500 ml-2">
-                            {cotisation && cotisation.paidUntil ? (() => {
-                              const paidDate = new Date(cotisation.paidUntil);
-                              const now = new Date();
-                              const diff = paidDate.getTime() - now.getTime();
-                              const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
-                              return days > 0 ? `${days} jours restants` : 'Cotisation à renouveler';
-                            })() : 'Cotisation à renouveler'}
+                          )}
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs text-gray-500 text-center">
+                            {cotisation ? (
+                              cotisation.loading ? 'Chargement...' : (
+                                cotisation.paidUntil ? (daysRemaining > 0 ? `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} restants` : 'Cotisation à renouveler') : 'Cotisation à renouveler'
+                              )
+                            ) : '—'}
                           </span>
+                          {daysRemaining <= 0 && messages[nanny.id] && (
+                            <div className={`mt-1 text-xs ${messages[nanny.id]?.type === 'success' ? 'text-[#0b5566]' : 'text-red-600'}`}>
+                              {messages[nanny.id]?.text}
+                            </div>
+                          )}
                         </div>
                         <div className="flex flex-col items-center gap-2 mt-2">
                           <button

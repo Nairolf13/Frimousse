@@ -5,6 +5,13 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 function isSuperAdmin(user) { if (!user || !user.role) return false; const r = String(user.role).toLowerCase(); return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super'); }
 
+function isAdminRole(user) {
+  if (!user || !user.role) return false;
+  const r = String(user.role).toLowerCase();
+  // accept common variants and be case-insensitive
+  return r === 'admin' || r === 'administrator' || r.includes('admin');
+}
+
 router.get('/', auth, async (req, res) => {
   try {
     const { nannyId, start, end } = req.query;
@@ -78,6 +85,12 @@ router.post('/', auth, async (req, res) => {
     const { date, childId, nannyId } = req.body;
     // Parents are not allowed to create assignments
     if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
+
+    // Check if assignment date has passed and user is not admin or super-admin
+    if (!isSuperAdmin(req.user) && !isAdminRole(req.user) && new Date(date) < new Date()) {
+      return res.status(403).json({ message: 'Cannot create past assignments' });
+    }
+
     if (!isSuperAdmin(req.user)) {
       const child = await prisma.child.findUnique({ where: { id: childId } });
       if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ message: 'Child not found' });
@@ -111,6 +124,22 @@ router.post('/', auth, async (req, res) => {
         const text = (lang === 'fr') ? `Bonjour,\n\nVotre enfant ${child.name} a une affectation pour ${formattedDate}.\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nYour child ${child.name} has an assignment for ${formattedDate}.\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
 
         await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+
+        // Notify admins if created by nanny
+        if (req.user.role === 'nanny') {
+          const adminEmails = [];
+          // Get admins of the center
+          const centerAdmins = await prisma.user.findMany({ where: { role: 'admin', centerId: req.user.centerId } });
+          adminEmails.push(...centerAdmins.map(u => u.email));
+          // Get super-admins
+          const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
+          adminEmails.push(...superAdmins.map(u => u.email));
+          if (adminEmails.length) {
+            const adminSubject = (lang === 'fr' ? `Nouvelle affectation créée par ${req.user.name}` : `New assignment created by ${req.user.name}`);
+            const adminText = (lang === 'fr') ? `Bonjour,\n\nUne nouvelle affectation pour ${child.name} a été créée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nA new assignment for ${child.name} has been created by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
+            await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+          }
+        }
       } catch (err) {
         console.error('Failed to send assignment notification', err && err.message ? err.message : err);
       }
@@ -129,9 +158,15 @@ router.put('/:id', auth, async (req, res) => {
     const { date, childId, nannyId } = req.body;
     // Parents are not allowed to update assignments
     if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
-    if (!isSuperAdmin(req.user)) {
-      const existing = await prisma.assignment.findUnique({ where: { id } });
-      if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
+
+    const existing = await prisma.assignment.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ message: 'Assignment not found' });
+
+    if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
+
+    // Check if assignment date has passed and user is not admin or super-admin
+    if (!isSuperAdmin(req.user) && !isAdminRole(req.user) && existing.date < new Date()) {
+      return res.status(403).json({ message: 'Cannot modify past assignments' });
     }
     const assignment = await prisma.assignment.update({ where: { id }, data: { date: new Date(date), childId, nannyId } });
     res.json(assignment);
@@ -159,6 +194,22 @@ router.put('/:id', auth, async (req, res) => {
         const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été mise à jour pour ${formattedDate}.\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nThe assignment for ${child.name} has been updated for ${formattedDate}.\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
 
         await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+
+        // Notify admins if modified by nanny
+        if (req.user.role === 'nanny') {
+          const adminEmails = [];
+          // Get admins of the center
+          const centerAdmins = await prisma.user.findMany({ where: { role: 'admin', centerId: existing.centerId } });
+          adminEmails.push(...centerAdmins.map(u => u.email));
+          // Get super-admins
+          const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
+          adminEmails.push(...superAdmins.map(u => u.email));
+          if (adminEmails.length) {
+            const adminSubject = (lang === 'fr' ? `Modification d'affectation par ${req.user.name}` : `Assignment modified by ${req.user.name}`);
+            const adminText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été modifiée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nThe assignment for ${child.name} has been modified by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
+            await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+          }
+        }
       } catch (err) {
         console.error('Failed to send assignment update notification', err && err.message ? err.message : err);
       }
@@ -176,10 +227,17 @@ router.delete('/:id', auth, async (req, res) => {
     const { id } = req.params;
     // Parents are not allowed to delete assignments
     if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
-    if (!isSuperAdmin(req.user)) {
-      const existing = await prisma.assignment.findUnique({ where: { id } });
-      if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
+
+    const existing = await prisma.assignment.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ message: 'Assignment not found' });
+
+    if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
+
+    // Check if assignment date has passed and user is not admin or super-admin
+    if (!isSuperAdmin(req.user) && !isAdminRole(req.user) && existing.date < new Date()) {
+      return res.status(403).json({ message: 'Cannot delete past assignments' });
     }
+
     const fullExisting = await prisma.assignment.findUnique({ where: { id }, include: { child: { include: { parents: { include: { parent: true } } } }, nanny: true } });
     await prisma.assignment.delete({ where: { id } });
     res.json({ message: 'Assignment deleted' });
@@ -206,6 +264,22 @@ router.delete('/:id', auth, async (req, res) => {
         const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée.` : `Hello,\n\nThe assignment for ${child.name} has been removed.`;
 
         await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+
+        // Notify admins if deleted by nanny
+        if (req.user.role === 'nanny') {
+          const adminEmails = [];
+          // Get admins of the center
+          const centerAdmins = await prisma.user.findMany({ where: { role: 'admin', centerId: existing.centerId } });
+          adminEmails.push(...centerAdmins.map(u => u.email));
+          // Get super-admins
+          const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
+          adminEmails.push(...superAdmins.map(u => u.email));
+          if (adminEmails.length) {
+            const adminSubject = (lang === 'fr' ? `Suppression d'affectation par ${req.user.name}` : `Assignment deleted by ${req.user.name}`);
+            const adminText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nThe assignment for ${child.name} has been deleted by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
+            await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+          }
+        }
       } catch (err) {
         console.error('Failed to send assignment deletion notification', err && err.message ? err.message : err);
       }

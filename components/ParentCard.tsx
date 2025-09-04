@@ -53,19 +53,18 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
             </div>
           </div>
 
-          <div className="mt-auto flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              <div>À payer ce mois: <span className="font-bold text-blue-700">{(parentDue || 0)}€</span></div>
-              <div className="text-xs text-gray-500">Cotisation annuelle totale: <span className="font-bold text-gray-900">{((parent.children?.length || 0) * (annualPerChild ?? 15))}€</span></div>
+          <div className="flex-1 flex flex-col">
+            <div className="text-sm text-gray-700 mb-3 text-center">
+              <div className="mb-1">À payer ce mois: <span className="font-bold text-blue-700">{(parentDue || 0)}€</span></div>
+              <div className="text-xs">Cotisation annuelle totale: <span className="font-bold text-gray-900">{((parent.children?.length || 0) * (annualPerChild ?? 15))}€</span></div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => { if (onEdit) onEdit(parent); }} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-3 shadow-sm touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center" title="Éditer">
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
+            <div className="flex justify-center gap-2 mt-auto">
+              <button onClick={() => { if (onEdit) onEdit(parent); }} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center" title="Éditer">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
               </button>
-              <button onClick={() => setIsDeleting(true)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-3 shadow-sm touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center" title="Supprimer">
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              <button onClick={() => setIsDeleting(true)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center" title="Supprimer">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
               </button>
-              <button className="bg-white border border-gray-200 text-gray-500 hover:text-gray-700 rounded-full p-3 touch-manipulation min-w-[44px] min-h-[44px] flex items-center justify-center" title="Plus">⋯</button>
             </div>
           </div>
         </div>
