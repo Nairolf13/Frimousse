@@ -20,7 +20,6 @@ router.get('/', auth, async (req, res) => {
     where, 
     select: {
       id: true,
-      name: true,
       availability: true,
       experience: true,
       contact: true,
@@ -30,7 +29,6 @@ router.get('/', auth, async (req, res) => {
       assignedChildren: {
         select: {
           id: true,
-          name: true,
           birthDate: true
         }
       }
