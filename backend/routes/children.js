@@ -151,7 +151,7 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
         age: parsedAge,
         sexe,
         allergies,
-        birthDate,
+        birthDate: birthDate ? new Date(birthDate) : null,
       };
       if (group) {
         childData.group = group;
@@ -227,7 +227,7 @@ router.put('/:id', auth, async (req, res) => {
         sexe,
         allergies,
         cotisationPaidUntil: cotisationDate,
-        birthDate,
+        birthDate: birthDate ? new Date(birthDate) : null,
       };
       if (group !== undefined) updateData.group = group;
       const child = await tx.child.update({

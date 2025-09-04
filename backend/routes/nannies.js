@@ -48,7 +48,15 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      const nannyData = { name, availability, experience: parsedExperience, contact, email, birthDate, centerId: req.user.centerId || null };
+      const nannyData = { 
+        name, 
+        availability, 
+        experience: parsedExperience, 
+        contact, 
+        email, 
+        birthDate: birthDate ? new Date(birthDate) : null, 
+        centerId: req.user.centerId || null 
+      };
       const nanny = await tx.nanny.create({ data: nannyData });
 
       if (!email) return { nanny, user: null };
@@ -157,7 +165,7 @@ router.put('/:id', auth, async (req, res) => {
     const existing = await prisma.nanny.findUnique({ where: { id } });
     if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
   }
-  const nanny = await prisma.nanny.update({ where: { id }, data: { name, availability, experience, contact, email, birthDate } });
+  const nanny = await prisma.nanny.update({ where: { id }, data: { name, availability, experience, contact, email, birthDate: birthDate ? new Date(birthDate) : null } });
   res.json(nanny);
 });
 
