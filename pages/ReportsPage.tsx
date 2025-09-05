@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../src/context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
@@ -64,6 +65,8 @@ const typeLabel = {
 };
 
 export default function ReportsPage() {
+
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchWithRefresh(`${API_URL}/children`)
@@ -235,7 +238,9 @@ export default function ReportsPage() {
                 className="px-3 md:px-4 py-2 rounded-lg border border-gray-100 bg-white text-sm md:text-base w-full md:w-64"
               />
             </div>
-            <button className="bg-[#0b5566] text-white px-4 md:px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-sm md:text-base mt-2 md:mt-0 md:ml-2 w-full md:w-auto" onClick={() => setModalOpen(true)}>Nouveau Rapport</button>
+            {!(user && user.role === 'parent') && (
+              <button className="bg-[#0b5566] text-white px-4 md:px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-sm md:text-base mt-2 md:mt-0 md:ml-2 w-full md:w-auto" onClick={() => setModalOpen(true)}>Nouveau Rapport</button>
+            )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-4 md:mb-6">
             <div className="bg-white rounded-xl shadow border border-gray-100 p-3 md:p-4 flex flex-col items-center">

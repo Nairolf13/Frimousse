@@ -1,21 +1,17 @@
 const path = require('path');
-// Load root .env first, then backend/.env to allow backend-specific overrides
 require('dotenv').config({ path: path.resolve(process.cwd(), process.env.NODE_ENV === 'production' ? '.env.production' : '.env') });
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
-// Normalize STRIPE_SECRET_KEY: remove surrounding quotes and trim whitespace
 if (process.env.STRIPE_SECRET_KEY) {
   process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY.trim().replace(/^"|"$/g, '');
 }
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-// Security middlewares
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const app = express();
 
-// Ensure critical secrets are present early
 const requiredEnvs = ['JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'STRIPE_SECRET_KEY'];
 for (const e of requiredEnvs) {
   if (!process.env[e]) {
@@ -24,7 +20,6 @@ for (const e of requiredEnvs) {
   }
 }
 
-// Stripe integration
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('La clé STRIPE_SECRET_KEY doit être définie dans backend/.env ou dans les variables d\'environnement.');
 }
@@ -41,13 +36,10 @@ const reportsRoutes = require('./routes/reports');
 const parentRoutes = require('./routes/parent');
 
 
-// Security headers
 app.use(helmet());
 
-// Basic rate limiter
 app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
 
-// CORS: restrict origins in production, allow localhost during development
 const isProd = process.env.NODE_ENV === 'production';
 const allowedOrigins = isProd
   ? [
@@ -65,7 +57,6 @@ const allowedOrigins = isProd
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. same-origin server-to-server requests, curl, Postman)
       if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error('CORS: origine non autorisée'), false);
@@ -73,6 +64,8 @@ app.use(
     credentials: true,
   })
 );
+
+app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -111,11 +104,10 @@ app.get('/', (req, res) => {
   res.send('API is running');
 });
 
-// Endpoint pour créer un PaymentIntent
 app.post('/create-payment-intent', async (req, res) => {
   try {
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: 1000, // Montant en centimes (10€)
+      amount: 1000, 
       currency: 'eur',
       automatic_payment_methods: {enabled: true},
     });
@@ -124,9 +116,6 @@ app.post('/create-payment-intent', async (req, res) => {
     res.status(500).send({error: error.message});
   }
 });
-
-// Endpoint webhook Stripe
-// Note: subscription-related webhooks are handled in /api/subscriptions/webhook
 
 
 const PORT = process.env.PORT || 4000;

@@ -31,6 +31,10 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
 
 router.post('/', auth, requireActiveSubscription, discoveryLimit('report'), async (req, res) => {
   try {
+    // Parents are not allowed to create reports
+    if (req.user && req.user.role === 'parent') {
+      return res.status(403).json({ message: 'Forbidden: parents cannot create reports' });
+    }
     const { priority, type, status, childId, nannyId, summary, details, date, time, duration, childrenInvolved } = req.body;
     let isoDate = date;
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {

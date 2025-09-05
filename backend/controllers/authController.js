@@ -426,7 +426,9 @@ exports.forgotPassword = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.json({ ok: true }); // don't reveal existence
-    const resetToken = jwt.sign({ id: user.id, type: 'reset' }, JWT_SECRET, { expiresIn: '1h' });
+  // Use the refresh token secret if available to match verification in resetPassword
+  const resetSecret = REFRESH_TOKEN_SECRET || JWT_SECRET;
+  const resetToken = jwt.sign({ id: user.id, type: 'reset' }, resetSecret, { expiresIn: '1h' });
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
     // send templated email (lang detection)

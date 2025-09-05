@@ -26,9 +26,7 @@ router.get('/:id/billing', auth, async (req, res) => {
   const [year, mon] = month.split('-').map(Number);
   const startDate = new Date(year, mon - 1, 1);
   const endDate = new Date(year, mon, 1);
-  // Parents may only access billing for their own children
   if (req.user && req.user.role === 'parent') {
-    // resolve parentId from authenticated user or by matching email to Parent record
     let parentId = req.user.parentId;
     if (!parentId && req.user.email) {
       const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
@@ -70,8 +68,7 @@ router.get('/:id/billing', auth, async (req, res) => {
 
 router.get('/', auth, async (req, res) => {
   try {
-    // Parents may only see their own children. Other authenticated users
-    // (admins, nannies, etc.) should see all children for their center.
+   
     let resolvedParentId = null;
     if (req.user && req.user.role === 'parent') {
       resolvedParentId = req.user.parentId || null;
@@ -92,6 +89,7 @@ router.get('/', auth, async (req, res) => {
           sexe: true,
           group: true,
           birthDate: true,
+          cotisationPaidUntil: true,
           allergies: true,
           parents: { 
             include: { parent: true } 
@@ -101,11 +99,9 @@ router.get('/', auth, async (req, res) => {
       return res.json(children);
     }
 
-    // Non-parent users: require centerId unless super-admin
     const where = {};
     if (!isSuperAdmin(req.user)) {
       if (!req.user || !req.user.centerId) {
-        // If a non-super-admin user has no centerId, it's a permissions/data issue.
         return res.status(403).json({ error: 'Forbidden: user not linked to any center' });
       }
       where.centerId = req.user.centerId;
@@ -119,7 +115,8 @@ router.get('/', auth, async (req, res) => {
         age: true,
         sexe: true,
         group: true,
-        birthDate: true,
+  birthDate: true,
+  cotisationPaidUntil: true,
         allergies: true,
         parents: { 
           include: { parent: true } 
@@ -229,8 +226,11 @@ router.put('/:id', auth, async (req, res) => {
         sexe,
         allergies,
         cotisationPaidUntil: cotisationDate,
-        birthDate: birthDate ? new Date(birthDate) : null,
       };
+      // Only include birthDate in the update if the client explicitly provided the field
+      if (Object.prototype.hasOwnProperty.call(req.body, 'birthDate')) {
+        updateData.birthDate = birthDate ? new Date(birthDate) : null;
+      }
       if (group !== undefined) updateData.group = group;
       const child = await tx.child.update({
         where: { id },
@@ -274,7 +274,6 @@ router.put('/:id', auth, async (req, res) => {
 
 router.delete('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  // Parents are not allowed to delete child records
   if (req.user && req.user.role === 'parent') {
     return res.status(403).json({ error: 'Forbidden: parents cannot delete children' });
   }
@@ -312,7 +311,8 @@ router.get('/:id', auth, async (req, res) => {
         age: true,
         sexe: true,
         group: true,
-        birthDate: true,
+  birthDate: true,
+  cotisationPaidUntil: true,
         allergies: true,
         parents: { 
           include: { parent: true } 
@@ -320,7 +320,6 @@ router.get('/:id', auth, async (req, res) => {
       }
     });
     if (!child) return res.status(404).json({ message: 'Not found' });
-    // Parents may only fetch their own child
     if (req.user && req.user.role === 'parent') {
       let parentId = req.user.parentId;
       if (!parentId && req.user.email) {

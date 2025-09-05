@@ -155,6 +155,15 @@ export default function Children() {
     fetchChildren();
     const fetchParents = async () => {
       try {
+        // Only admins or staff (nanny) should request the admin parent list
+  const u = user as { role?: string | null; nannyId?: string | null } | null;
+  const isAdmin = (u && typeof u.role === 'string' && (u.role.toLowerCase() === 'admin' || u.role.toLowerCase().includes('super')));
+  const isNanny = !!(u && u.nannyId);
+        if (!isAdmin && !isNanny) {
+          // parents shouldn't request the admin endpoint — provide empty list silently
+          setParentsList([]);
+          return;
+        }
         const res = await fetchWithRefresh(`${API_URL}/parent/admin`, { credentials: 'include' });
         if (!res.ok) return setParentsList([]);
         const data = await res.json() as { parents?: Array<Record<string, unknown>> } | null;
@@ -191,7 +200,7 @@ export default function Children() {
       }
     };
     fetchBillings();
-  }, []);
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -409,28 +418,38 @@ export default function Children() {
             const handleCotisation = async () => {
               setCotisationLoadingId(child.id);
               const amount = cotisationAmounts[child.id] ?? 15;
-              await fetchWithRefresh(`api/children/${child.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                  name: child.name,
-                  age: child.age,
-                  sexe: child.sexe,
-                  parentName: child.parentName,
-                  parentContact: child.parentContact,
-                  allergies: child.allergies || '',
-                  payCotisation: true,
-                  amount
-                })
-              });
-              await fetchChildren();
-              setCotisationLoadingId(null);
+              try {
+                const res = await fetchWithRefresh(`${API_URL}/children/${child.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({
+                    name: child.name,
+                    age: child.age,
+                    sexe: child.sexe,
+                    parentName: child.parentName,
+                    parentContact: child.parentContact,
+                    allergies: child.allergies || '',
+                    payCotisation: true,
+                    amount
+                  })
+                });
+                if (!res.ok) {
+                  // log server error for debugging
+                  console.error('Failed to update cotisation', res.status);
+                } else {
+                  await fetchChildren();
+                }
+              } catch (err) {
+                console.error('Error while updating cotisation', err);
+              } finally {
+                setCotisationLoadingId(null);
+              }
             };
             return (
               <div
                 key={child.id}
-                className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[320px] h-full transition-transform duration-500 perspective-1000`}
+                className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[420px] h-full transition-transform duration-500 perspective-1000 overflow-hidden`}
                 style={{height:'100%', perspective: '1000px'}}
               >
                 <div
@@ -442,19 +461,25 @@ export default function Children() {
                     style={{backfaceVisibility: 'hidden'}}
                   >
                       <div className="flex items-center gap-3 mb-2 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{emoji}</div>
-                      <span className="font-semibold text-lg text-gray-900 ml-2 truncate max-w-[120px] min-w-0" title={child.name}>{child.name}</span>
-                      <span className="ml-auto text-xs font-bold bg-white text-[#08323a] px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{child.age} ans</span>
-                      <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap" title="Sexe">{child.sexe === 'masculin' ? 'Garçon' : 'Fille'}</span>
-                      {child.birthDate ? (
-                        <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap" title="Date de naissance">
-                          🎂 {new Date(child.birthDate).toLocaleDateString('fr-FR')}
-                        </span>
-                      ) : (
-                        <span className="ml-2 text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap" title="Date de naissance">
-                          🎂 Non définie
-                        </span>
-                      )}
+                      <div className="w-full min-w-0">
+                        <div className="flex items-center gap-3 mb-1">
+                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{emoji}</div>
+                          <span className="font-semibold text-lg text-gray-900 truncate" title={child.name}>{child.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-bold bg-white text-[#08323a] px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{child.age} ans</span>
+                          <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap" title="Sexe">{child.sexe === 'masculin' ? 'Garçon' : 'Fille'}</span>
+                          {child.birthDate ? (
+                            <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap" title="Date de naissance">
+                              🎂 {new Date(child.birthDate).toLocaleDateString('fr-FR')}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap" title="Date de naissance">
+                              🎂 Non définie
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <span className="block text-xs text-yellow-700 flex items-center gap-1 mb-2">
                       <span>⚠️ Allergies :</span>
@@ -511,15 +536,17 @@ export default function Children() {
                           <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Nouveau</span>
                         )}
                       </div>
-                      <div className="flex gap-1">
-                        {(user && (user.role === 'admin' || user.role === 'super-admin' || user.nannyId)) ? (
-                          <>
-                            <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
-                            <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                          </>
-                        ) : null}
-                      </div>
+                      <div />
                     </div>
+                  </div>
+                  {/* Bottom centered action buttons */}
+                  <div className="absolute left-0 right-0 bottom-4 flex justify-center z-10">
+                    {(user && (user.role === 'admin' || user.role === 'super-admin' || user.nannyId)) ? (
+                      <div className="flex gap-2">
+                        <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
+                        <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                      </div>
+                    ) : null}
                   </div>
                   <div
                     className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-8 ${isDeleting ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}

@@ -21,7 +21,7 @@ function CommentBox({ postId, onSubmit }: { postId: string; onSubmit: (postId: s
   return (
     <form onSubmit={e => { e.preventDefault(); if (val.trim()) { onSubmit(postId, val.trim()); setVal(''); } }} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
       <input value={val} onChange={e => setVal(e.target.value)} placeholder="Écrire un commentaire..." className="flex-1 border rounded px-2 py-2 sm:px-3 sm:py-2 text-sm" />
-      <button type="submit" className="text-indigo-600 px-3 py-2 text-sm sm:text-base whitespace-nowrap">Envoyer</button>
+      <button type="submit" className="text-indigo-600 px-3 py-2 text-sm sm:text-base whitespace-nowrap w-full sm:w-auto">Envoyer</button>
     </form>
   );
 }
@@ -32,7 +32,7 @@ export default function Feed() {
   const [previews, setPreviews] = useState<string[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<'ALL' | 'PHOTOS' | 'ACTIVITIES'>('ALL');
+  // filter removed - not used anymore
   const { user } = useAuth();
   // AuthContext's User may include extra runtime fields (id, centerId) returned by the API
   const currentUser = user as (AuthUser & { id?: string; centerId?: string }) | null;
@@ -40,6 +40,15 @@ export default function Feed() {
   const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsForPost, setCommentsForPost] = useState<Record<string, Comment[]>>({});
+
+  // palette used for posts (soft pastels similar to children cards)
+  const postBgPalette = [
+    'bg-[#fff1f0]', // soft red/pink
+    'bg-[#f0f9ff]', // soft blue
+    'bg-[#fffbeb]', // soft yellow
+    'bg-[#f0fff4]', // soft green
+    'bg-[#fff7ed]', // soft orange
+  ];
 
   async function loadComments(postId: string) {
     setCommentsLoading(true);
@@ -162,31 +171,27 @@ export default function Feed() {
   }
 
   return (
-    <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
-      <div className="max-w-7xl mx-auto w-full">
-      <div className="mb-6 p-4 md:p-6">
+    <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full max-w-full overflow-x-hidden box-border">
+      <div className="max-w-7xl mx-auto w-full max-w-full px-2 sm:px-4 md:px-6 overflow-x-hidden box-border children-responsive-row">
+          <div className="max-w-4xl mx-auto w-full">
+            <div className="mb-6 p-0">
+              <div className="bg-white/30 backdrop-blur-sm rounded-3xl p-4 md:p-6 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">Fil d'Actualité</h1>
             <div className="text-gray-400 text-base text-left">{centerName ? `• ${centerName}` : "Actualités de votre centre"}</div>
           </div>
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 overflow-x-auto sm:overflow-visible self-start md:self-end">
-            <button onClick={() => setFilter('ALL')} className={`px-3 py-1 rounded-full ${filter === 'ALL' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Tout</button>
-            <button onClick={() => setFilter('PHOTOS')} className={`px-3 py-1 rounded-full ${filter === 'PHOTOS' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Photos</button>
-            <button onClick={() => setFilter('ACTIVITIES')} className={`px-3 py-1 rounded-full ${filter === 'ACTIVITIES' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Activités</button>
-          </div>
         </div>
 
         {/* Composer */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-3 md:p-6 mb-6 border border-gray-100">
+  <form onSubmit={handleSubmit} className="bg-[#f0f9ff] rounded-2xl shadow p-3 md:p-6 mb-6 border border-gray-200">
           <div className="flex flex-col sm:flex-row gap-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-indigo-100 flex items-center justify-center font-bold text-indigo-700 flex-shrink-0">{currentUser ? (currentUser.name || 'U').split(' ').map(s => s[0]).join('').toUpperCase().slice(0,2) : 'U'}</div>
             <div className="flex-1">
               <div className="text-xs sm:text-sm font-semibold text-gray-700">{currentUser?.name || 'Utilisateur'}</div>
               <div className="text-xs text-gray-400 mb-2">{centerName ? `• ${centerName}` : ''}</div>
-              <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Partagez un moment avec les enfants..." className="w-full border rounded p-2 sm:p-3 bg-gray-50 min-h-[60px] sm:min-h-[80px] text-sm sm:text-base" />
-              <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center gap-2 text-sm text-gray-500">
+              <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Que voulez-vous partager aujourd'hui ?" className="w-full border rounded p-2 sm:p-3 bg-gray-50 min-h-[60px] sm:min-h-[80px] text-sm sm:text-base" />
+              <div className="flex flex-col sm:flex-row items-center justify-between mt-3 gap-2">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 w-full sm:w-auto">
                   {/* Camera capture input (opens device camera on supported mobile) */}
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -220,11 +225,11 @@ export default function Feed() {
                         input.value = '';
                       }}
                     />
-                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">🖼 Galerie</span>
+                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-xs sm:text-sm">🖼 Galerie</span>
                   </label>
                   <span className="text-xs text-gray-400">{files.length === 0 ? 'Aucune image sélectionnée' : `${files.length} image(s)`}</span>
                 </div>
-                <button disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-full w-full sm:w-auto">{loading ? 'Envoi...' : 'Publier'}</button>
+                <button disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-full w-full sm:w-auto max-w-full">{loading ? 'Envoi...' : 'Publier'}</button>
               </div>
               {previews.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -241,12 +246,11 @@ export default function Feed() {
 
         {/* Posts list */}
         <div className="space-y-6">
-          {posts.map(post => (
-            <article key={post.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 md:p-6 w-full">
-              <div className="flex items-start gap-4">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-100 flex items-center justify-center font-bold text-green-700">{(post.author?.name || 'U').split(' ').map(s => s[0]).join('').slice(0,2)}</div>
+          {posts.map((post, idx) => (
+            <article key={post.id} className={`${postBgPalette[idx % postBgPalette.length]} rounded-2xl border border-gray-100 shadow-sm p-3 md:p-6 w-full mx-auto`}>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:gap-4 items-center text-center sm:text-left">
                 <div className="flex-1">
-                  <PostItem post={post} currentUser={currentUser} onUpdatePost={async (id, newText) => {
+                  <PostItem post={post} bgClass={postBgPalette[idx % postBgPalette.length]} currentUser={currentUser} onUpdatePost={async (id, newText) => {
                       setPosts(prev => prev.map(p => p.id === id ? { ...p, text: newText } : p));
                     }} onDeletePost={async (id) => {
                       setPosts(prev => prev.filter(p => p.id !== id));
@@ -256,14 +260,14 @@ export default function Feed() {
 
                   {/* media rendering moved inside PostItem to allow inline edit/delete */}
 
-                  <div className="mt-4 flex items-center justify-start text-sm text-gray-500">
+                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center items-center justify-center text-sm text-gray-500 gap-2">
                     <div className="flex items-center gap-4 sm:gap-6">
                       <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">❤️ <span>{post.likes ?? 0}</span></button>
                       <button onClick={async () => { setOpenCommentsFor(post.id); await loadComments(post.id); }} className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">💬 <span>{post.commentsCount ?? 0}</span></button>
                     </div>
-                  </div>
-                  <div className="mt-3">
-                    <CommentBox postId={post.id} onSubmit={addComment} />
+                    <div className="w-full sm:w-auto mt-2 sm:mt-0">
+                      <CommentBox postId={post.id} onSubmit={addComment} />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -287,15 +291,17 @@ export default function Feed() {
           />
         )}
         </div>
-      </div>
+              </div>
+            </div>
+          </div>
     </div>
   );
 }
 
 function CommentsModal({ onClose, comments, loading, currentUser, onUpdateComment, onDeleteComment }: { onClose: () => void; comments: Comment[]; loading?: boolean; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdateComment: (commentId: string, newText: string) => Promise<void>; onDeleteComment: (commentId: string) => Promise<void>; }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full sm:w-[720px] max-h-[80vh] overflow-hidden ring-1 ring-indigo-50">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full sm:w-[720px] max-h-[90vh] overflow-hidden ring-1 ring-indigo-50">
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
             <h3 className="text-lg font-semibold text-indigo-700">Commentaires</h3>
@@ -311,7 +317,7 @@ function CommentsModal({ onClose, comments, loading, currentUser, onUpdateCommen
         {loading ? (
           <div className="p-6 text-center text-sm text-gray-500">Chargement des commentaires…</div>
         ) : (
-          <div className="p-4 overflow-auto max-h-[70vh]">
+          <div className="p-4 overflow-auto max-h-[80vh]">
             {comments.length === 0 ? (
               <div className="text-center text-gray-500 py-8">Aucun commentaire pour l'instant</div>
             ) : (
@@ -381,11 +387,6 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
 
   return (
     <div className="flex items-start gap-3">
-      <div className="flex-shrink-0">
-        <div className="w-10 h-10 bg-indigo-100 text-indigo-800 rounded-full flex items-center justify-center font-semibold shadow-sm">
-          {String(comment.authorName || 'U').split(' ').map(s => s[0]).join('').toUpperCase().slice(0,2)}
-        </div>
-      </div>
       <div className="flex-1">
         <div className="flex items-center justify-between">
           <div>
@@ -393,34 +394,36 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
             <div className="text-xs text-gray-400">{comment.timeAgo}</div>
           </div>
           <div className="relative">
-            <button onClick={() => setMenuOpen(s => !s)} className="text-gray-400 hover:text-gray-600 px-2 rounded bg-white hover:bg-gray-50 border border-transparent hover:border-gray-100">⋯</button>
+            <button onClick={() => setMenuOpen(s => !s)} className="text-gray-400 hover:text-gray-600 px-2">⋯</button>
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-44 bg-white border rounded-lg shadow-lg z-10 overflow-hidden">
-                <div className="px-2 py-1">
-                  {canEdit && (
-                    <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h6M11 12h6M11 19h6M5 5h.01M5 12h.01M5 19h.01"/></svg>
-                      Modifier
-                    </button>
-                  )}
-                  {canEdit && (
-                    <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 rounded">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 9a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4 0a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zM4 6a1 1 0 011-1h10l-.6 9.6A2 2 0 0112.4 17H7.6a2 2 0 01-1.99-1.99L5 5zM9 3a1 1 0 00-1 1v1h4V4a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
-                      Supprimer
-                    </button>
-                  )}
+              <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setMenuOpen(false)}>
+                <div className="bg-white w-72 rounded-lg shadow-lg ring-1 ring-gray-100" onClick={e => e.stopPropagation()}>
+                  <div className="px-2 py-1">
+                    {canEdit && (
+                      <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h6M11 12h6M11 19h6M5 5h.01M5 12h.01M5 19h.01"/></svg>
+                        Modifier
+                      </button>
+                    )}
+                    {canEdit && (
+                      <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 rounded">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 9a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4 0a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zM4 6a1 1 0 011-1h10l-.6 9.6A2 2 0 0112.4 17H7.6a2 2 0 01-1.99-1.99L5 5zM9 3a1 1 0 00-1 1v1h4V4a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
+                        Supprimer
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
         {!editing ? (
-          <div className="mt-2 bg-white border border-gray-100 rounded-lg p-3 text-sm text-gray-800 shadow-sm break-words">
+          <div className="mt-2 bg-gray-100 border border-gray-100 rounded-lg p-3 text-sm text-gray-800 shadow-sm break-words">
               {comment.text}
             </div>
         ) : (
           <div className="mt-2">
-            <textarea value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[64px]" />
+            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[64px]" />
             <div className="mt-2 flex gap-2 justify-end">
               <button onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1 rounded bg-gray-100">Annuler</button>
               <button onClick={save} className="px-3 py-1 rounded bg-indigo-600 text-white">Sauvegarder</button>
@@ -431,7 +434,7 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
       {showConfirm && (
         <ConfirmationModal
           title="Supprimer le commentaire"
-          description="Voulez-vous vraiment supprimer ce commentaire ? Cette action est irréversible."
+          description='Voulez-vous vraiment supprimer ce commentaire ?'
           onCancel={() => setShowConfirm(false)}
           onConfirm={doDelete}
         />
@@ -450,14 +453,28 @@ function ConfirmationModal({ title, description, onCancel, onConfirm }: { title:
       setLoading(false);
     }
   }
+  // split description on the first question mark to keep the '?' attached and move the rest to a new line
+  const idx = description.indexOf('?');
+  const first = idx !== -1 ? description.slice(0, idx).trim() : description;
+  const rest = idx !== -1 ? description.slice(idx + 1).trim() : '';
+
   return (
     <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md ring-1 ring-indigo-50">
         <div className="px-6 py-4">
-          <h4 className="text-lg font-semibold text-gray-800">{title}</h4>
-          <p className="text-sm text-gray-600 mt-2">{description}</p>
+          <h4 className="text-lg font-semibold text-gray-800 text-center break-words">{title}</h4>
+          <p className="text-sm text-gray-600 mt-2 text-center break-words whitespace-normal">
+            {idx !== -1 ? (
+              <>
+                <span className="whitespace-nowrap">{first} ?</span>
+                {rest ? (<><br />{rest}</>) : null}
+              </>
+            ) : (
+              description
+            )}
+          </p>
         </div>
-        <div className="px-6 py-3 flex justify-end gap-3 border-t">
+        <div className="px-6 py-3 flex flex-col sm:flex-row justify-center gap-3 border-t">
           <button onClick={onCancel} className="px-4 py-2 rounded bg-gray-100">Annuler</button>
           <button onClick={confirmHandler} disabled={loading} className="px-4 py-2 rounded bg-red-600 text-white">{loading ? 'Suppression...' : 'Supprimer'}</button>
         </div>
@@ -466,7 +483,7 @@ function ConfirmationModal({ title, description, onCancel, onConfirm }: { title:
   );
 }
 
-function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChange }: { post: Post; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdatePost: (postId: string, newText: string) => Promise<void>; onDeletePost: (postId: string) => Promise<void>; onMediasChange?: (postId: string, medias: Media[]) => void; }) {
+function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMediasChange }: { post: Post; bgClass?: string; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdatePost: (postId: string, newText: string) => Promise<void>; onDeletePost: (postId: string) => Promise<void>; onMediasChange?: (postId: string, medias: Media[]) => void; }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(post.text || '');
@@ -476,6 +493,26 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
   const canEdit = !!currentUser && (currentUser.id === post.authorId || ['admin', 'super-admin'].includes(role));
 
   const mediaCount = post.medias ? post.medias.length : 0;
+
+  // lightbox state for slideshow
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  function openLightbox(i: number) {
+    setLightboxIndex(i);
+    setLightboxOpen(true);
+  }
+  function closeLightbox() {
+    setLightboxOpen(false);
+  }
+  function nextLightbox() {
+    if (!post.medias || post.medias.length === 0) return;
+    setLightboxIndex((lightboxIndex + 1) % post.medias.length);
+  }
+  function prevLightbox() {
+    if (!post.medias || post.medias.length === 0) return;
+    setLightboxIndex((lightboxIndex - 1 + post.medias.length) % post.medias.length);
+  }
 
   async function save() {
     const trimmed = val.trim();
@@ -553,8 +590,10 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
           <div className="text-xs text-gray-400">Il y a {timeAgo(post.createdAt)}</div>
         </div>
         <div className="relative">
-          <button onClick={() => setMenuOpen(s => !s)} className="text-gray-400 hover:text-gray-600 px-2 rounded bg-white hover:bg-gray-50 border border-transparent hover:border-gray-100">⋯</button>
-          {menuOpen && (
+          {canEdit && (
+            <button onClick={() => setMenuOpen(s => !s)} className="text-gray-400 hover:text-gray-600 px-2">⋯</button>
+          )}
+          {menuOpen && canEdit && (
             <div className="absolute right-0 mt-2 w-44 bg-white border rounded-lg shadow-lg z-10 overflow-hidden">
               <div className="px-2 py-1">
                 {canEdit && (
@@ -574,29 +613,45 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
           )}
         </div>
       </div>
-      {!editing ? (
-  <div className="mt-3 text-gray-800 break-words text-sm sm:text-base">{post.text}</div>
-      ) : (
+  {/* post text moved below medias for better visual order */}
+      {/* medias display + controls */}
+      {mediaCount > 0 && (
         <div className="mt-3">
-          <textarea value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[80px]" />
-          <div className="mt-2 flex gap-2 justify-end">
-            <button onClick={() => { setEditing(false); setVal(post.text || ''); }} className="px-3 py-1 rounded bg-gray-100">Annuler</button>
-            <button onClick={save} className="px-3 py-1 rounded bg-indigo-600 text-white">Sauvegarder</button>
+          <div className="w-full overflow-hidden rounded-lg border border-gray-200">
+            <div className={`grid gap-2 ${ (post.medias || []).length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            {(post.medias || []).slice(0, 4).map((m, idx) => {
+            const isLastVisible = idx === 3 && (post.medias || []).length > 4;
+            // enforce aspect ratio per tile so images can't overflow their box
+            const tileClass = (post.medias || []).length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]';
+            return (
+              <div key={m.id} className={`relative w-full ${tileClass} ${bgClass || 'bg-gray-100'} rounded overflow-hidden`}>
+                <button type="button" onClick={() => openLightbox(idx)} className={`w-full h-full block`}>
+                  <img src={m.url} alt={post.text ? post.text.slice(0, 80) : 'photo'} className={`w-full h-full object-contain`} />
+                  {isLastVisible && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-lg font-semibold">+{(post.medias || []).length - 4}</div>
+                  )}
+                </button>
+                {canEdit && editing && (
+                  <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-2 right-2 bg-white rounded-full p-1 text-red-600 shadow">✕</button>
+                )}
+              </div>
+            );
+          })}
+            </div>
           </div>
         </div>
       )}
-      {/* medias display + controls */}
-      {mediaCount > 0 && (
-        <div className={`mt-3 grid gap-2 ${mediaCount === 1 ? 'grid-cols-1' : mediaCount === 2 ? 'grid-cols-2' : 'grid-cols-3'}`}>
-          {post.medias!.map(m => (
-            <div key={m.id} className={`relative w-full ${mediaCount === 1 ? 'h-32 sm:h-48 md:h-64' : mediaCount === 2 ? 'h-24 sm:h-32 md:h-40' : 'h-20 sm:h-24 md:h-32'} bg-gray-100 rounded overflow-hidden flex items-center justify-center`}>
-              {/* Use original media URL (not thumbnail) and show full image without cropping */}
-              <img src={m.url} alt={post.text ? post.text.slice(0, 80) : 'photo'} className="max-w-full max-h-full object-contain" />
-              {canEdit && editing && (
-                <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-2 right-2 bg-white rounded-full p-1 text-red-600 shadow">✕</button>
-              )}
-            </div>
-          ))}
+
+      {/* Lightbox / slideshow */}
+      {lightboxOpen && post.medias && post.medias.length > 0 && (
+        <div className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4" onClick={closeLightbox}>
+          <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
+            <button onClick={prevLightbox} aria-label="Précédent" className="absolute left-2 sm:left-6 text-white bg-black/30 hover:bg-black/40 rounded-full p-2">‹</button>
+            <img src={post.medias[lightboxIndex].url} className="max-w-full max-h-[85vh] object-contain rounded" />
+            <button onClick={nextLightbox} aria-label="Suivant" className="absolute right-2 sm:right-6 text-white bg-black/30 hover:bg-black/40 rounded-full p-2">›</button>
+            <button onClick={closeLightbox} aria-label="Fermer" className="absolute top-2 right-2 text-white bg-black/30 rounded-full p-2">✕</button>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/30 px-3 py-1 rounded">{lightboxIndex + 1} / {post.medias.length}</div>
+          </div>
         </div>
       )}
       {canEdit && editing && (
@@ -607,10 +662,28 @@ function PostItem({ post, currentUser, onUpdatePost, onDeletePost, onMediasChang
           </label>
         </div>
       )}
+      {/* post text (separate box so length doesn't affect images) */}
+      {!editing ? (
+        <div className="mt-3">
+          <div className={`border border-gray-200 rounded-lg p-3 ${bgClass || 'bg-white'} text-gray-800 break-words text-sm sm:text-base`}>
+            {post.text}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3">
+          <div className={`border border-gray-200 rounded-lg p-2 ${bgClass || 'bg-white'}`}>
+            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[80px]" />
+            <div className="mt-2 flex gap-2 justify-end">
+              <button onClick={() => { setEditing(false); setVal(post.text || ''); }} className="px-3 py-1 rounded bg-gray-100">Annuler</button>
+              <button onClick={save} className="px-3 py-1 rounded bg-indigo-600 text-white">Sauvegarder</button>
+            </div>
+          </div>
+        </div>
+      )}
       {showConfirm && (
         <ConfirmationModal
           title="Supprimer la publication"
-          description="Voulez-vous vraiment supprimer cette publication ? Cette action est irréversible."
+          description="Voulez-vous vraiment supprimer cette publication ?"
           onCancel={() => setShowConfirm(false)}
           onConfirm={doDelete}
         />

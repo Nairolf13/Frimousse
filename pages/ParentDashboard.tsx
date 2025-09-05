@@ -113,7 +113,30 @@ const ParentDashboard: React.FC = () => {
             const message = typeof json === 'string' ? json : (json && typeof json === 'object' && 'error' in (json as Record<string, unknown>) ? String((json as Record<string, unknown>).error) : 'Erreur serveur');
             throw new Error(message);
           }
-          setChildren(json as Child[]);
+          const childrenList = (json as Child[]) || [];
+          setChildren(childrenList);
+          // Compute billing for the connected parent so ParentCard shows the correct amount
+          try {
+            const now = new Date();
+            const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            const parentId = (user as UserInfo)?.parentId ?? (user as UserInfo)?.id ?? 'me';
+            let total = 0;
+            await Promise.all((childrenList || []).map(async (c: Child) => {
+              const childId = c.id;
+              if (!childId) return;
+              try {
+                const r = await fetchWithRefresh(`api/children/${childId}/billing?month=${month}`, { credentials: 'include' });
+                if (!r.ok) return;
+                const data = await r.json();
+                if (data && typeof (data as Record<string, unknown>).amount === 'number') total += (data as { amount: number }).amount;
+              } catch {
+                // ignore per-child billing errors
+              }
+            }));
+            setParentBilling({ [String(parentId)]: total });
+          } catch {
+            // ignore billing computation errors for parent view
+          }
         }
       } catch (err: unknown) {
         console.error('ParentDashboard load error', err);
@@ -124,7 +147,7 @@ const ParentDashboard: React.FC = () => {
       }
     };
     load();
-  }, [authUser]);
+  }, [authUser, user]);
 
       // Build a parent object for the connected parent user so we can reuse ParentCard UI
       const userInfo = (user as UserInfo) ?? null;
