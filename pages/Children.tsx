@@ -83,6 +83,11 @@ export default function Children() {
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
   const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number | undefined>>({});
   const { user } = useAuth();
+  const isAdminUser = !!(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.role.toLowerCase() === 'administrator'));
+  // narrow user shape for safe runtime checks
+  type UserLike = { role?: string | null; nannyId?: string | null } | null;
+  const uLike = user as unknown as UserLike;
+  const isNannyUser = !!(uLike && ((typeof uLike.role === 'string' && uLike.role.toLowerCase() === 'nanny') || !!uLike.nannyId));
 
   function handleEdit(child: Child) {
     setForm({
@@ -291,7 +296,7 @@ export default function Children() {
             <div className="text-gray-400 text-base">Gérez les profils, informations médicales et contacts d'urgence.</div>
           </div>
           <div className="flex gap-2 items-center self-end children-responsive-btn">
-            {user && user.role !== 'parent' && (
+            {isAdminUser && (
               <button
                 type="button"
                 onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
@@ -513,7 +518,11 @@ export default function Children() {
                             cotisationLoadingId === child.id ? (
                               <span className="text-gray-400 text-xs ml-2 animate-pulse">Mise à jour...</span>
                             ) : (
-                              <button onClick={handleCotisation} className="text-[#0b5566] text-xs font-semibold px-2 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition" title="Payer la cotisation">Payer</button>
+                              !isNannyUser ? (
+                                <button onClick={handleCotisation} className="text-[#0b5566] text-xs font-semibold px-2 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition" title="Payer la cotisation">Payer</button>
+                              ) : (
+                                <span className="text-xs text-gray-400 ml-2">—</span>
+                              )
                             )
                           )}
                           <span className="text-xs text-gray-500 ml-2">{countdown}</span>

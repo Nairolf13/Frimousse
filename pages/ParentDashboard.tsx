@@ -177,34 +177,38 @@ const ParentDashboard: React.FC = () => {
               <div className="text-gray-400 text-base">Gérez les comptes parents, contacts et enfants associés.</div>
             </div>
             <div className="flex gap-2 items-center">
-              <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 md:px-5 md:py-2 text-sm md:text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px]">Ajouter un parent</button>
+              {(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.nannyId == null)) && (
+                <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 md:px-5 md:py-2 text-sm md:text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px]">Ajouter un parent</button>
+              )}
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6 w-full">
-            <div className="flex flex-col md:flex-row gap-3 w-full">
-              <input type="text" placeholder="Rechercher par nom, email..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
+          <div className="flex flex-col md:items-start gap-3 mb-6 w-full">
+            <div className="w-full">
+              <div className="flex gap-2 items-center flex-wrap w-full">
+                <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
+                  <div className="text-xs text-gray-400">Total</div>
+                  <div className="text-lg font-bold text-gray-900">{stats.parentsCount}</div>
+                </div>
+                <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
+                  <div className="text-xs text-gray-400">Actifs</div>
+                  <div className="text-lg font-bold text-gray-900">{parents.filter(p => p.children && p.children.length > 0).length}</div>
+                </div>
+                <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
+                  <div className="text-xs text-gray-400">Nouveaux</div>
+                  <div className="text-lg font-bold text-gray-900">{parents.filter(p => {
+                    if (!p.createdAt) return false;
+                    const created = new Date(p.createdAt);
+                    const now = new Date();
+                    const diffTime = Math.abs(now.getTime() - created.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    return diffDays <= 30;
+                  }).length}</div>
+                </div>
+              </div>
             </div>
-            <div className="flex gap-2 items-center overflow-x-auto">
-                            <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
-                <div className="text-xs text-gray-400">Total</div>
-                <div className="text-lg font-bold text-gray-900">{stats.parentsCount}</div>
-              </div>
-              <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
-                <div className="text-xs text-gray-400">Actifs</div>
-                <div className="text-lg font-bold text-gray-900">{parents.filter(p => p.children && p.children.length > 0).length}</div>
-              </div>
-              <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
-                <div className="text-xs text-gray-400">Nouveaux</div>
-                <div className="text-lg font-bold text-gray-900">{parents.filter(p => {
-                  if (!p.createdAt) return false;
-                  const created = new Date(p.createdAt);
-                  const now = new Date();
-                  const diffTime = Math.abs(now.getTime() - created.getTime());
-                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                  return diffDays <= 30;
-                }).length}</div>
-              </div>
+            <div className="w-full md:w-auto">
+              <input type="text" placeholder="Rechercher par nom, email..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
             </div>
           </div>
 

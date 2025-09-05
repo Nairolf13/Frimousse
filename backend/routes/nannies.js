@@ -25,7 +25,7 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
     const userReq = req.user || {};
     // Only admins or nannies themselves (or super-admin) can create nannies
     if (!(userReq.role === 'admin' || userReq.nannyId || userReq.role === 'super-admin')) return res.status(403).json({ message: 'Forbidden' });
-  const { name, availability, experience, contact, email, birthDate } = req.body;
+  const { name, availability, experience, contact, email, birthDate, password } = req.body;
     const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
     if (isNaN(parsedExperience)) {
       return res.status(400).json({ error: 'Le champ "experience" doit être un nombre.' });
@@ -49,10 +49,10 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
         return { nanny, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
       }
 
-      // Create a temporary password and user record, then send invite email
-      const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
-      const hash = await bcrypt.hash(tempPassword, 10);
-      const userData = { email, password: hash, name, role: 'nanny', nannyId: nanny.id };
+  // Use provided password if present, otherwise create a temporary random password
+  const initialPassword = (typeof password === 'string' && password.trim() !== '') ? password : crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
+  const hash = await bcrypt.hash(initialPassword, 10);
+  const userData = { email, password: hash, name, role: 'nanny', nannyId: nanny.id };
       if (userReq.centerId) userData.centerId = userReq.centerId;
       const user = await tx.user.create({ data: userData });
       return { nanny, user };

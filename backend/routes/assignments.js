@@ -86,9 +86,15 @@ router.post('/', auth, async (req, res) => {
     // Parents are not allowed to create assignments
     if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
 
-    // Check if assignment date has passed and user is not admin or super-admin
-    if (!isSuperAdmin(req.user) && !isAdminRole(req.user) && new Date(date) < new Date()) {
-      return res.status(403).json({ message: 'Cannot create past assignments' });
+    // Check if assignment date has passed (compare dates without time) and user is not admin or super-admin
+    if (!isSuperAdmin(req.user) && !isAdminRole(req.user)) {
+      const assignDate = new Date(date);
+      assignDate.setHours(0,0,0,0);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      if (assignDate < today) {
+        return res.status(403).json({ message: 'Cannot create past assignments' });
+      }
     }
 
     if (!isSuperAdmin(req.user)) {
@@ -164,9 +170,15 @@ router.put('/:id', auth, async (req, res) => {
 
     if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
 
-    // Check if assignment date has passed and user is not admin or super-admin
-    if (!isSuperAdmin(req.user) && !isAdminRole(req.user) && existing.date < new Date()) {
-      return res.status(403).json({ message: 'Cannot modify past assignments' });
+    // Check if assignment date has passed (compare dates without time) and user is not admin or super-admin
+    if (!isSuperAdmin(req.user) && !isAdminRole(req.user)) {
+      const existingDate = new Date(existing.date);
+      existingDate.setHours(0,0,0,0);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      if (existingDate < today) {
+        return res.status(403).json({ message: 'Cannot modify past assignments' });
+      }
     }
     const assignment = await prisma.assignment.update({ where: { id }, data: { date: new Date(date), childId, nannyId } });
     res.json(assignment);
@@ -221,7 +233,6 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// DELETE assignment
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -233,9 +244,14 @@ router.delete('/:id', auth, async (req, res) => {
 
     if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
 
-    // Check if assignment date has passed and user is not admin or super-admin
-    if (!isSuperAdmin(req.user) && !isAdminRole(req.user) && existing.date < new Date()) {
-      return res.status(403).json({ message: 'Cannot delete past assignments' });
+    if (!isSuperAdmin(req.user) && !isAdminRole(req.user)) {
+      const existingDate = new Date(existing.date);
+      existingDate.setHours(0,0,0,0);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      if (existingDate < today) {
+        return res.status(403).json({ message: 'Cannot delete past assignments' });
+      }
     }
 
     const fullExisting = await prisma.assignment.findUnique({ where: { id }, include: { child: { include: { parents: { include: { parent: true } } } }, nanny: true } });
