@@ -37,14 +37,21 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
     return res.status(403).json({ message: 'Forbidden' });
   }
 
-  const { text, childId, visibility = 'CENTER' } = req.body;
+  const { text, childId, taggedChildIds, visibility = 'CENTER' } = req.body;
 
-  // If childId provided, optionally check PhotoConsent for that child & this user's parent(s)
-  // Enforce that if childId is provided, a PhotoConsent must exist allowing this center to post images
-  if (childId) {
-    const consent = await prisma.photoConsent.findFirst({ where: { childId, centerId: user.centerId, granted: true } });
-    if (!consent) {
-      return res.status(403).json({ message: 'Photo consent absent for this child' });
+  // Normalize tagged children into an array. Maintain backward compatibility with single childId param.
+  const tagged = Array.isArray(taggedChildIds) ? taggedChildIds.filter(Boolean) : (childId ? [childId] : []);
+
+  // If tagged children are provided, ensure each has at least one PhotoConsent granting posting for this center.
+  if (tagged.length > 0) {
+    // find all children that lack consent
+    const lacking = [];
+    for (const cid of tagged) {
+      const consent = await prisma.photoConsent.findFirst({ where: { childId: cid, consent: true } });
+      if (!consent) lacking.push(cid);
+    }
+    if (lacking.length > 0) {
+      return res.status(403).json({ message: 'Photo consent absent for some children', lacking });
     }
   }
 
@@ -191,6 +198,22 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
   } catch (e) {
     console.error('Failed to toggle like', e);
     return res.status(500).json({ message: 'Failed to toggle like' });
+  }
+});
+
+// List users who liked a post
+router.get('/:id/likes', authMiddleware, async (req, res) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const postId = req.params.id;
+  try {
+    // find likes and include user info
+    const likes = await prisma.feedLike.findMany({ where: { postId }, include: { user: true } });
+    const users = likes.map(l => ({ id: l.user?.id, name: l.user?.name || 'Utilisateur' }));
+    return res.json({ users });
+  } catch (e) {
+    console.error('Failed to list likers', e);
+    return res.status(500).json({ message: 'Failed to list likers' });
   }
 });
 

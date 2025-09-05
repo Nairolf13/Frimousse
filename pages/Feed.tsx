@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useAuth } from '../src/context/AuthContext';
 import type { User as AuthUser } from '../src/context/AuthContext';
@@ -29,9 +29,22 @@ function CommentBox({ postId, onSubmit }: { postId: string; onSubmit: (postId: s
 export default function Feed() {
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const [availableChildren, setAvailableChildren] = useState<{ id: string; name: string; allowed?: boolean }[]>([]);
+  const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
+  const [consentMap, setConsentMap] = useState<Record<string, boolean>>({});
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [lackingNames, setLackingNames] = useState<string[]>([]);
+  const [showIdentifyWarning, setShowIdentifyWarning] = useState(false);
+  const [showTagMenu, setShowTagMenu] = useState(false);
+  const [noChildSelected, setNoChildSelected] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(false);
+  const [likesModalOpen, setLikesModalOpen] = useState(false);
+  const [likers, setLikers] = useState<{ id: string; name: string }[]>([]);
+  const pressTimerRef = useRef<number | null>(null);
+  const [likesModalPos, setLikesModalPos] = useState<{ x: number; y: number } | null>(null);
+  const postRefs = useRef<Record<string, HTMLElement | null>>({});
   // filter removed - not used anymore
   const { user } = useAuth();
   // AuthContext's User may include extra runtime fields (id, centerId) returned by the API
@@ -99,8 +112,50 @@ export default function Feed() {
 
   useEffect(() => {
     const p = files.map(f => URL.createObjectURL(f));
-    setPreviews(p);
+  setPreviews(p);
+  if (files.length === 0) setShowIdentifyWarning(false);
     return () => p.forEach(url => URL.revokeObjectURL(url));
+  }, [files]);
+
+  // When files are attached, fetch list of children available to the user and consent summary for each
+  useEffect(() => {
+    let mounted = true;
+    async function loadChildrenAndConsents() {
+      try {
+        if (files.length === 0) {
+          setAvailableChildren([]);
+          setSelectedChildIds([]);
+          setNoChildSelected(false);
+          setConsentMap({});
+          return;
+        }
+        const res = await fetchWithRefresh('api/children', { credentials: 'include' });
+        if (!res.ok) return;
+        const children = await res.json();
+  type ChildShort = { id: string; name: string };
+  const mapped: ChildShort[] = Array.isArray(children) ? (children as ChildShort[]).map((c) => ({ id: c.id, name: c.name })) : [];
+        if (!mounted) return;
+        setAvailableChildren(mapped);
+        // fetch consent summary for each child in parallel
+        const consentResults = await Promise.all(mapped.map(async (c) => {
+          try {
+            const r = await fetchWithRefresh(`api/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
+            if (!r.ok) return { id: c.id, allowed: false };
+            const b = await r.json();
+            return { id: c.id, allowed: !!b.allowed };
+          } catch {
+              return { id: c.id, allowed: false };
+            }
+        }));
+        const cm: Record<string, boolean> = {};
+        consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
+        setConsentMap(cm);
+      } catch (e) {
+        console.error('Failed to load children/consents', e);
+      }
+    }
+    loadChildrenAndConsents();
+    return () => { mounted = false; };
   }, [files]);
 
   async function loadPosts() {
@@ -122,6 +177,64 @@ export default function Feed() {
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: (p.likes || 0) + (body.liked ? 1 : -1) } : p));
     } catch (e) {
       console.error('Like failed', e);
+    }
+  }
+
+  async function loadLikers(postId: string) {
+    try {
+      const res = await fetchWithRefresh(`api/feed/${postId}/likes`);
+      if (!res.ok) return setLikers([]);
+      const body = await res.json();
+      setLikers(body.users || []);
+    } catch (e) {
+      console.error('Failed to load likers', e);
+      setLikers([]);
+    }
+  }
+
+  function startPress(postId: string) {
+    // start long-press timer (600ms)
+    if (pressTimerRef.current) { clearTimeout(pressTimerRef.current); pressTimerRef.current = null; }
+    pressTimerRef.current = window.setTimeout(async () => {
+      await loadLikers(postId);
+      // compute post center position and open modal there
+      try {
+        const el = postRefs.current[postId];
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          // center point of the post in viewport coords
+          const cx = rect.left + rect.width / 2;
+          const cy = rect.top + rect.height / 2;
+          // clamp within viewport with some padding so modal doesn't touch edges
+          const padding = 80;
+          const top = Math.min(Math.max(cy, padding), window.innerHeight - padding);
+          const left = Math.min(Math.max(cx, 16), window.innerWidth - 16);
+          setLikesModalPos({ x: left, y: top });
+        } else {
+          setLikesModalPos(null);
+        }
+      } catch {
+        setLikesModalPos(null);
+      }
+      setLikesModalOpen(true);
+      pressTimerRef.current = null;
+    }, 600);
+  }
+
+  function endPressShort(postId: string) {
+    // if timer still exists, treat as short press
+    if (pressTimerRef.current) {
+  clearTimeout(pressTimerRef.current);
+  pressTimerRef.current = null;
+      // short press: toggle like
+      toggleLike(postId);
+    }
+  }
+
+  function cancelPress() {
+    if (pressTimerRef.current) {
+      clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
     }
   }
 
@@ -148,16 +261,39 @@ export default function Feed() {
     if (!text && files.length === 0) return;
     setLoading(true);
     try {
+      // Require either 'Pas d'enfant' or at least one tagged child when images attached
+      if (!noChildSelected && selectedChildIds.length === 0 && files.length > 0) {
+        // show a short inline warning asking the user to identify children
+        setShowIdentifyWarning(true);
+        setLoading(false);
+        return;
+      }
+
+      // Prevent publish when any selected child lacks consent and show modal
+      const lacking = selectedChildIds.filter(id => !consentMap[id]);
+      if (lacking.length > 0) {
+        const names = availableChildren.filter(c => lacking.includes(c.id)).map(c => c.name);
+        setLackingNames(names);
+        setShowConsentModal(true);
+        setLoading(false);
+        return;
+      }
+
       const fd = new FormData();
       fd.append('text', text);
       for (const f of files) fd.append('images', f, f.name);
+      // include tagged children when present
+      if (selectedChildIds && selectedChildIds.length) {
+        for (const cid of selectedChildIds) fd.append('taggedChildIds[]', cid);
+      }
 
       const res = await fetchWithRefresh('api/feed', { method: 'POST', body: fd });
       if (res.ok) {
         const created = await res.json();
         setPosts(prev => [created, ...prev]);
         setText('');
-        setFiles([]);
+  setFiles([]);
+  setShowIdentifyWarning(false);
       } else {
         const body = await res.json().catch(() => ({}));
         alert(body.message || 'Erreur lors de la publication');
@@ -229,8 +365,168 @@ export default function Feed() {
                   </label>
                   <span className="text-xs text-gray-400">{files.length === 0 ? 'Aucune image sélectionnée' : `${files.length} image(s)`}</span>
                 </div>
-                <button disabled={loading} className="bg-indigo-600 text-white px-4 py-2 rounded-full w-full sm:w-auto max-w-full">{loading ? 'Envoi...' : 'Publier'}</button>
+                {/* Tagging UI: responsive — dropdown on desktop, full-screen modal on mobile */}
+                <div className="w-full sm:w-auto mt-2 flex justify-center sm:justify-start">
+                  {files.length > 0 && (
+                    <div className="relative w-full sm:w-auto">
+                      <div className="flex items-center gap-2 justify-center sm:justify-start">
+                        <button
+                          type="button"
+                          onClick={() => setShowTagMenu(prev => !prev)}
+                          aria-haspopup="true"
+                          aria-expanded={showTagMenu}
+                          aria-label="Identifier"
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2 sm:px-3 sm:py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 text-sm w-full sm:w-auto shadow-sm"
+                        >
+                          Identifier
+                          {selectedChildIds.length > 0 && (
+                            <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700">{selectedChildIds.length}</span>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Desktop dropdown (visible on sm+) */}
+                      <div className="hidden sm:block">
+                        {showTagMenu && (
+                          <div className="absolute z-40 mt-2 w-64 bg-white border rounded shadow-lg p-3 max-h-56 overflow-auto">
+                            <div className="text-sm font-semibold mb-2">Sélectionner des enfants</div>
+                            {availableChildren.length === 0 ? (
+                              <div className="text-sm text-gray-500">Aucun enfant disponible</div>
+                            ) : (
+                              <div className="grid gap-2">
+                                {/* 'Pas d'enfant' option at top */}
+                                            <label className="flex items-center gap-2 text-sm">
+                                              <input type="checkbox" checked={noChildSelected} onChange={(e) => {
+                                                if (e.target.checked) {
+                                                  setNoChildSelected(true);
+                                                  setSelectedChildIds([]);
+                                                } else {
+                                                  setNoChildSelected(false);
+                                                }
+                                                setShowIdentifyWarning(false);
+                                              }} />
+                                              <span className="font-medium">Pas d'enfant</span>
+                                            </label>
+                                {availableChildren.map(c => {
+                                  const allowed = consentMap[c.id] ?? false;
+                                  const checked = selectedChildIds.includes(c.id);
+                                  return (
+                                    <label key={c.id} className="flex items-center gap-2 text-sm">
+                                      <input type="checkbox" checked={checked} onChange={(e) => {
+                                        // selecting a real child disables 'Pas d'enfant'
+                                        if (e.target.checked) {
+                                          setNoChildSelected(false);
+                                          setSelectedChildIds(prev => [...prev, c.id]);
+                                        } else setSelectedChildIds(prev => prev.filter(id => id !== c.id));
+                                        setShowIdentifyWarning(false);
+                                      }} disabled={noChildSelected} />
+                                      <span className="truncate">{c.name}</span>
+                                      {!allowed && <span className="text-xs text-red-500 ml-2">(pas d'autorisation)</span>}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            <div className="mt-3 flex justify-end">
+                              <button onClick={() => setShowTagMenu(false)} className="px-3 py-1 bg-gray-100 rounded text-sm">Fermer</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Mobile modal (visible on small screens) */}
+                      {showTagMenu && (
+                        <div className="sm:hidden fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 pt-10">
+                          <div className="mx-4 w-full max-w-md bg-white rounded-xl p-4 max-h-[85vh] overflow-auto shadow-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="text-lg font-semibold">Taguer des enfants</div>
+                              <button onClick={() => setShowTagMenu(false)} className="text-gray-600">Fermer</button>
+                            </div>
+                              {availableChildren.length === 0 ? (
+                                <div className="text-sm text-gray-500">Aucun enfant disponible</div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {/* top: Pas d'enfant */}
+                                  <label className="flex items-center justify-between gap-2 text-base p-2 border rounded">
+                                    <div className="flex items-center gap-2">
+                                          <input type="checkbox" checked={noChildSelected} onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setNoChildSelected(true);
+                                          setSelectedChildIds([]);
+                                        } else setNoChildSelected(false);
+                                        setShowIdentifyWarning(false);
+                                      }} />
+                                      <span className="truncate font-medium">Pas d'enfant</span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">Cocher si aucune personne identifiable</span>
+                                  </label>
+                                  {availableChildren.map(c => {
+                                    const allowed = consentMap[c.id] ?? false;
+                                    const checked = selectedChildIds.includes(c.id);
+                                    return (
+                                      <label key={c.id} className="flex items-center justify-between gap-2 text-base p-2 border rounded">
+                                        <div className="flex items-center gap-2">
+                                          <input type="checkbox" checked={checked} disabled={noChildSelected} onChange={(e) => {
+                                            if (e.target.checked) {
+                                              setNoChildSelected(false);
+                                              setSelectedChildIds(prev => [...prev, c.id]);
+                                            } else setSelectedChildIds(prev => prev.filter(id => id !== c.id));
+                                            setShowIdentifyWarning(false);
+                                          }} />
+                                          <span className="truncate">{c.name}</span>
+                                        </div>
+                                        {!allowed && <span className="text-xs text-red-500">Pas d'autorisation</span>}
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            <div className="mt-4">
+                              <button onClick={() => setShowTagMenu(false)} className="w-full px-4 py-2 bg-indigo-600 text-white rounded">Valider</button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <button disabled={loading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="bg-indigo-600 text-white px-4 py-2 rounded-full w-full sm:w-auto max-w-full">{loading ? 'Envoi...' : 'Publier'}</button>
               </div>
+              {/* If the user tried to publish without tagging children when required, show an inline warning */}
+              {showIdentifyWarning && (
+                <div className="mt-2 text-sm text-red-600 text-center sm:text-left" role="alert" aria-live="assertive">Veuillez identifier les enfants.</div>
+              )}
+              {/* If any selected child lacks consent, show an explanatory message and disable publish */}
+              {selectedChildIds.length > 0 && Object.keys(consentMap).length > 0 && (
+                (() => {
+                  const lacking = selectedChildIds.filter(id => !consentMap[id]);
+                  if (lacking.length === 0) return null;
+                  const names = availableChildren.filter(c => lacking.includes(c.id)).map(c => c.name).join(', ');
+                  return <div className="mt-2 text-sm text-red-600">Impossible de publier: autorisation photo manquante pour {names}.</div>;
+                })()
+              )}
+              {/* Consent modal */}
+              {showConsentModal && (
+                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+                  <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 ring-1 ring-gray-100">
+                    <div className="flex items-start gap-4">
+                      <div className="text-3xl">🚫</div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900">Autorisation photo manquante</h3>
+                        <p className="mt-2 text-sm text-gray-600">Vous n'avez pas l'autorisation des parents pour publier des photos des enfants suivants :</p>
+                        <ul className="mt-3 list-disc list-inside text-sm text-gray-800">
+                          {lackingNames.map((n) => <li key={n}>{n}</li>)}
+                        </ul>
+                        <p className="mt-3 text-sm text-gray-600">Veuillez retirer ces enfants de la sélection ou contacter les parents pour obtenir leur autorisation.</p>
+                      </div>
+                    </div>
+                    <div className="mt-6 flex justify-end">
+                      <button onClick={() => setShowConsentModal(false)} className="px-4 py-2 bg-gray-100 rounded-md mr-2">Fermer</button>
+                      <button onClick={() => { setShowConsentModal(false); }} className="px-4 py-2 bg-indigo-600 text-white rounded-md">Retour</button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {previews.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {previews.map((p, i) => (
@@ -262,7 +558,15 @@ export default function Feed() {
 
                   <div className="mt-4 flex flex-col sm:flex-row sm:items-center items-center justify-center text-sm text-gray-500 gap-2">
                     <div className="flex items-center gap-4 sm:gap-6">
-                      <button onClick={() => toggleLike(post.id)} className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">❤️ <span>{post.likes ?? 0}</span></button>
+                      <button
+                        onPointerDown={() => startPress(post.id)}
+                        onPointerUp={() => endPressShort(post.id)}
+                        onPointerLeave={() => cancelPress()}
+                        onContextMenu={(e) => { e.preventDefault(); }}
+                        className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
+                      >
+                        ❤️ <span>{post.likes ?? 0}</span>
+                      </button>
                       <button onClick={async () => { setOpenCommentsFor(post.id); await loadComments(post.id); }} className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">💬 <span>{post.commentsCount ?? 0}</span></button>
                     </div>
                     <div className="w-full sm:w-auto mt-2 sm:mt-0">
@@ -273,6 +577,26 @@ export default function Feed() {
               </div>
             </article>
           ))}
+          {likesModalOpen && (
+            <div className="fixed inset-0 z-60 bg-black/40" onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }}>
+              {/* position the modal element absolutely at the computed coords; if no coords, center it */}
+              <div style={likesModalPos ? { left: likesModalPos.x - 160, top: likesModalPos.y - 80 } : undefined} className={`absolute ${likesModalPos ? '' : 'inset-0 flex items-center justify-center'}`} onClick={e => e.stopPropagation()}>
+                <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4" style={likesModalPos ? { position: 'absolute' } : undefined}>
+                  <h3 className="text-lg font-semibold mb-3">Personnes qui ont aimé</h3>
+                  <div className="max-h-60 overflow-auto">
+                    {likers.length === 0 ? <div className="text-sm text-gray-500">Aucun like trouvé</div> : (
+                      <ul className="space-y-2">
+                        {likers.map(u => <li key={u.id} className="text-sm text-gray-800">{u.name}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                  <div className="mt-4 text-right">
+                    <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} className="px-3 py-1 rounded bg-indigo-600 text-white">Fermer</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
   {openCommentsFor && (
           <CommentsModal
@@ -453,10 +777,8 @@ function ConfirmationModal({ title, description, onCancel, onConfirm }: { title:
       setLoading(false);
     }
   }
-  // split description on the first question mark to keep the '?' attached and move the rest to a new line
-  const idx = description.indexOf('?');
-  const first = idx !== -1 ? description.slice(0, idx).trim() : description;
-  const rest = idx !== -1 ? description.slice(idx + 1).trim() : '';
+  // render the description as a single block that can wrap on small screens
+  // (previous logic attempted to force the part before '?' to stay on one line which caused overflow)
 
   return (
     <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
@@ -464,14 +786,7 @@ function ConfirmationModal({ title, description, onCancel, onConfirm }: { title:
         <div className="px-6 py-4">
           <h4 className="text-lg font-semibold text-gray-800 text-center break-words">{title}</h4>
           <p className="text-sm text-gray-600 mt-2 text-center break-words whitespace-normal">
-            {idx !== -1 ? (
-              <>
-                <span className="whitespace-nowrap">{first} ?</span>
-                {rest ? (<><br />{rest}</>) : null}
-              </>
-            ) : (
-              description
-            )}
+            {description}
           </p>
         </div>
         <div className="px-6 py-3 flex flex-col sm:flex-row justify-center gap-3 border-t">

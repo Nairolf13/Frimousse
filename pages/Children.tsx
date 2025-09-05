@@ -16,6 +16,58 @@ import { useAuth } from '../src/context/AuthContext';
 import '../styles/filter-responsive.css';
 import '../styles/children-responsive.css';
 
+function PhotoConsentToggle({ childId }: { childId: string }) {
+  const { user } = useAuth();
+  const API_URL = import.meta.env.VITE_API_URL;
+  const [consent, setConsent] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        const res = await fetch(`${API_URL}/children/${childId}/photo-consent`, { credentials: 'include' });
+        if (!mounted) return;
+        if (!res.ok) return setConsent(false);
+        const body = await res.json();
+        setConsent(!!body.consent);
+      } catch (e) {
+        console.error('Failed to load photo consent', e);
+      }
+    }
+    if (user && user.role === 'parent') load();
+    return () => { mounted = false; };
+  }, [childId, user, API_URL]);
+
+  const toggle = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/children/${childId}/photo-consent`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ consent: !consent }) });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        alert(b.message || 'Erreur lors de la mise à jour du consentement');
+        return;
+      }
+      const body = await res.json();
+      setConsent(!!body.consent);
+    } catch (e) {
+      console.error('Failed to toggle consent', e);
+    } finally { setLoading(false); }
+  };
+
+  if (!user || user.role !== 'parent') return null;
+  if (consent === null) return <div className="text-sm text-gray-500">Chargement du consentement...</div>;
+  return (
+    <div className="flex items-center gap-2">
+      <label className="flex items-center gap-2 cursor-pointer">
+        <input type="checkbox" checked={consent} onChange={toggle} disabled={loading} />
+        <span className="text-sm">Autoriser les photos</span>
+      </label>
+      <span className="text-xs text-gray-400">{consent ? 'Autorisé' : 'Non autorisé'}</span>
+    </div>
+  );
+}
+
 interface Child {
   id: string;
   name: string;
@@ -581,6 +633,12 @@ export default function Children() {
                           <span className="text-xs text-gray-500">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
                         </div>
                       </div>
+                      {/* Photo consent toggle for parents */}
+                      {user && user.role === 'parent' && child.parentId === (user.parentId || undefined) && (
+                        <div className="mt-3">
+                          <PhotoConsentToggle childId={child.id} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 justify-between mt-2">
                       <div className="flex items-center gap-2">

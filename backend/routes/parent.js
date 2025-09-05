@@ -206,9 +206,12 @@ router.post('/accept-invite', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired token' });
     }
     if (payload.type !== 'invite' || !payload.userId) return res.status(400).json({ message: 'Invalid token payload' });
-    const hash = await bcrypt.hash(password, 10);
-    await prisma.user.update({ where: { id: payload.userId }, data: { password: hash } });
-    res.json({ message: 'Password set successfully' });
+  const hash = await bcrypt.hash(password, 10);
+  // Ensure the user exists before attempting to update to avoid Prisma P2025
+  const userToUpdate = await prisma.user.findUnique({ where: { id: String(payload.userId) } });
+  if (!userToUpdate) return res.status(404).json({ message: 'User not found' });
+  await prisma.user.update({ where: { id: userToUpdate.id }, data: { password: hash } });
+  res.json({ message: 'Password set successfully' });
   } catch (err) {
     console.error('POST /api/parent/accept-invite error', err);
     res.status(500).json({ error: err && err.message ? err.message : String(err) });

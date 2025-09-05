@@ -385,5 +385,88 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
+// --- Photo consent endpoints ---
+// Get current parent's consent for a child (for parents to manage their own consent)
+router.get('/:id/photo-consent', auth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    if (!req.user || req.user.role !== 'parent') return res.status(403).json({ message: 'Forbidden' });
+    let parentId = req.user.parentId;
+    if (!parentId && req.user.email) {
+      const parentRec = await prisma.parent.findFirst({ where: { email: { equals: String(req.user.email).trim(), mode: 'insensitive' } } });
+      if (parentRec) parentId = parentRec.id;
+    }
+    if (!parentId) return res.status(403).json({ message: 'Parent identity not found' });
+    const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
+    if (!link) return res.status(404).json({ message: 'Child not linked to parent' });
+    const consent = await prisma.photoConsent.findUnique({ where: { childId_parentId: { childId: id, parentId } } });
+    return res.json({ consent: !!consent?.consent, grantedAt: consent?.grantedAt || null });
+  } catch (e) {
+    console.error('Failed to get photo consent', e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Upsert current parent's consent for a child (parent-only)
+router.post('/:id/photo-consent', auth, async (req, res) => {
+  const { id } = req.params;
+  const { consent } = req.body;
+  try {
+    if (!req.user || req.user.role !== 'parent') return res.status(403).json({ message: 'Forbidden' });
+    let parentId = req.user.parentId;
+    if (!parentId && req.user.email) {
+      const parentRec = await prisma.parent.findFirst({ where: { email: { equals: String(req.user.email).trim(), mode: 'insensitive' } } });
+      if (parentRec) parentId = parentRec.id;
+    }
+    if (!parentId) return res.status(403).json({ message: 'Parent identity not found' });
+    const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
+    if (!link) return res.status(404).json({ message: 'Child not linked to parent' });
+
+    const now = new Date();
+    const upserted = await prisma.photoConsent.upsert({
+      where: { childId_parentId: { childId: id, parentId } },
+      update: { consent: !!consent, grantedAt: consent ? now : null },
+      create: { childId: id, parentId, consent: !!consent, grantedAt: consent ? now : null }
+    });
+    return res.json({ consent: !!upserted.consent, grantedAt: upserted.grantedAt });
+  } catch (e) {
+    console.error('Failed to upsert photo consent', e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Summary endpoint used by feed composer: returns whether any parent granted consent for this child
+router.get('/:id/photo-consent-summary', auth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Ensure caller has access to view the child (parents, nannies assigned, admins)
+    const child = await prisma.child.findUnique({ where: { id } });
+    if (!child) return res.status(404).json({ message: 'Child not found' });
+    if (req.user && req.user.role === 'parent') {
+      let parentId = req.user.parentId;
+      if (!parentId && req.user.email) {
+        const parentRec = await prisma.parent.findFirst({ where: { email: { equals: String(req.user.email).trim(), mode: 'insensitive' } } });
+        if (parentRec) parentId = parentRec.id;
+      }
+      if (!parentId) return res.status(403).json({ message: 'Forbidden' });
+      const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
+      if (!link) return res.status(403).json({ message: 'Forbidden' });
+    } else if (req.user && req.user.role === 'nanny') {
+      // ensure nanny is assigned to this child
+      const nannyId = req.user.nannyId;
+      const link = await prisma.childNanny.findFirst({ where: { childId: id, nannyId } });
+      if (!link) return res.status(403).json({ message: 'Forbidden' });
+    } else if (!isSuperAdmin(req.user) && req.user && req.user.centerId && child.centerId !== req.user.centerId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const any = await prisma.photoConsent.findFirst({ where: { childId: id, consent: true } });
+    return res.json({ allowed: !!any });
+  } catch (e) {
+    console.error('Failed to get photo consent summary', e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
 
 module.exports = router;
