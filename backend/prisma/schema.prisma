@@ -100,6 +100,7 @@ model Nanny {
   experience           Int
   birthDate            DateTime?
   assignedChildren     Assignment[]
+  childNannies         ChildNanny[]
   schedules            Schedule[]   @relation("NannySchedules")
   user                 User?        @relation("NannyUser")
   reports              Report[]
@@ -122,6 +123,7 @@ model Child {
   allergies           String?
   cotisationPaidUntil DateTime?
   assignments         Assignment[]
+  childNannies        ChildNanny[]
   reports             Report[]
   center              Center?        @relation(fields: [centerId], references: [id])
   centerId            String?
@@ -129,6 +131,18 @@ model Child {
   updatedAt           DateTime       @updatedAt
   feedPosts           FeedPost[]
   photoConsents       PhotoConsent[] @relation("ChildPhotoConsents")
+}
+
+model ChildNanny {
+  id        String   @id @default(uuid())
+  child     Child    @relation(fields: [childId], references: [id], onDelete: Cascade)
+  childId   String
+  nanny     Nanny    @relation(fields: [nannyId], references: [id], onDelete: Cascade)
+  nannyId   String
+  createdAt DateTime @default(now())
+
+  @@unique([childId, nannyId])
+  @@index([nannyId])
 }
 
 model Assignment {

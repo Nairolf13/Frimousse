@@ -99,12 +99,34 @@ router.get('/', auth, async (req, res) => {
       return res.json(children);
     }
 
+    // Base where clause for center access
     const where = {};
     if (!isSuperAdmin(req.user)) {
       if (!req.user || !req.user.centerId) {
         return res.status(403).json({ error: 'Forbidden: user not linked to any center' });
       }
       where.centerId = req.user.centerId;
+    }
+
+    // If the authenticated user is a nanny, restrict to children assigned to them via ChildNanny
+    if (req.user && req.user.role === 'nanny') {
+      const nanny = await prisma.nanny.findUnique({ where: { id: req.user.nannyId } });
+      if (!nanny) return res.json([]);
+      const children = await prisma.child.findMany({ 
+        where: { ...where, childNannies: { some: { nannyId: nanny.id } } },
+        select: {
+          id: true,
+          name: true,
+          age: true,
+          sexe: true,
+          group: true,
+          birthDate: true,
+          cotisationPaidUntil: true,
+          allergies: true,
+          parents: { include: { parent: true } }
+        }
+      });
+      return res.json(children);
     }
 
     const children = await prisma.child.findMany({ 
@@ -183,7 +205,19 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
         linkedParent = parent;
       }
 
-      const childWithParents = await tx.child.findUnique({ where: { id: child.id }, include: { parents: { include: { parent: true } } } });
+      // handle nanny assignments if provided
+      if (Array.isArray(req.body.nannyIds) && req.body.nannyIds.length) {
+        const nannyIds = req.body.nannyIds.filter(Boolean);
+        for (const nid of nannyIds) {
+          // ensure nanny exists and belongs to same center (unless super-admin)
+          const nannyRec = await tx.nanny.findUnique({ where: { id: nid } });
+          if (!nannyRec) continue;
+          if (!isSuperAdmin(req.user) && nannyRec.centerId !== child.centerId) continue;
+          try { await tx.childNanny.create({ data: { childId: child.id, nannyId: nannyRec.id } }); } catch (e) { /* ignore duplicates */ }
+        }
+      }
+
+      const childWithParents = await tx.child.findUnique({ where: { id: child.id }, include: { parents: { include: { parent: true } }, childNannies: { include: { nanny: true } } } });
       return childWithParents;
     });
 
@@ -237,7 +271,7 @@ router.put('/:id', auth, async (req, res) => {
         data: updateData
       });
 
-      if (parentId) {
+  if (parentId) {
         await tx.parentChild.deleteMany({ where: { childId: id } });
         const parent = await tx.parent.findUnique({ where: { id: parentId } });
         if (parent) {
@@ -257,6 +291,18 @@ router.put('/:id', auth, async (req, res) => {
         }
         await tx.parentChild.deleteMany({ where: { childId: id } });
         await tx.parentChild.create({ data: { parentId: parent.id, childId: id } });
+      }
+
+      // handle nannyIds: replace existing childNannies with provided list
+      if (Array.isArray(req.body.nannyIds)) {
+        await tx.childNanny.deleteMany({ where: { childId: id } });
+        const nannyIds = req.body.nannyIds.filter(Boolean);
+        for (const nid of nannyIds) {
+          const nannyRec = await tx.nanny.findUnique({ where: { id: nid } });
+          if (!nannyRec) continue;
+          if (!isSuperAdmin(req.user) && nannyRec.centerId !== existingChild.centerId) continue;
+          try { await tx.childNanny.create({ data: { childId: id, nannyId: nannyRec.id } }); } catch (e) { /* ignore duplicates */ }
+        }
       }
 
       const childWithParents = await tx.child.findUnique({ where: { id }, include: { parents: { include: { parent: true } } } });

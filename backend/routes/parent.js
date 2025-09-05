@@ -224,7 +224,21 @@ router.get('/admin', requireAuth, async (req, res) => {
     if (prisma.parent && typeof prisma.parent.findMany === 'function') {
       const where = {};
       if (!isSuperAdmin(user) && user.centerId) where.centerId = user.centerId;
-  parents = await prisma.parent.findMany({ where, include: { children: { include: { child: true } } }, orderBy: { createdAt: 'desc' } });
+      // If user is a nanny, restrict parents to those whose children are assigned to this nanny
+      if (user && user.role === 'nanny') {
+        const nannyRec = await prisma.nanny.findUnique({ where: { id: user.nannyId } });
+        if (!nannyRec) {
+          parents = [];
+        } else {
+          parents = await prisma.parent.findMany({
+            where: { ...where, children: { some: { child: { childNannies: { some: { nannyId: nannyRec.id } } } } } },
+            include: { children: { include: { child: true } } },
+            orderBy: { createdAt: 'desc' }
+          });
+        }
+      } else {
+        parents = await prisma.parent.findMany({ where, include: { children: { include: { child: true } } }, orderBy: { createdAt: 'desc' } });
+      }
     } else {
       const users = await prisma.user.findMany({ where: { role: 'parent' }, orderBy: { createdAt: 'desc' } });
       const allChildren = await prisma.child.findMany();

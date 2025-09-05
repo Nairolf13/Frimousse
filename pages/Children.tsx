@@ -31,6 +31,7 @@ interface Child {
   newThisMonth?: boolean;
   cotisationPaidUntil?: string;
   birthDate?: string;
+  nannyIds?: string[];
 }
 
 interface Assignment {
@@ -50,6 +51,7 @@ const emptyForm: Omit<Child, 'id'> = {
   present: true,
   newThisMonth: false,
   birthDate: undefined,
+  nannyIds: [],
 };
 
 const groupLabels = [
@@ -72,6 +74,7 @@ export default function Children() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
   const [parentsList, setParentsList] = useState<{ id: string; name: string; email?: string | null; phone?: string | null }[]>([]);
+  const [nanniesList, setNanniesList] = useState<{ id: string; name: string }[]>([]);
   const [showParentsDropdown, setShowParentsDropdown] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -84,7 +87,6 @@ export default function Children() {
   const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number | undefined>>({});
   const { user } = useAuth();
   const isAdminUser = !!(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.role.toLowerCase() === 'administrator'));
-  // narrow user shape for safe runtime checks
   type UserLike = { role?: string | null; nannyId?: string | null } | null;
   const uLike = user as unknown as UserLike;
   const isNannyUser = !!(uLike && ((typeof uLike.role === 'string' && uLike.role.toLowerCase() === 'nanny') || !!uLike.nannyId));
@@ -186,6 +188,23 @@ export default function Children() {
       }
     };
     fetchParents();
+  const fetchNannies = async () => {
+      try {
+    const res = await fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' });
+    if (!res.ok) return setNanniesList([]);
+        const data = await res.json();
+        if (!Array.isArray(data)) return setNanniesList([]);
+        type NannyRaw = { id?: string | null; name?: string | null };
+        const mapped = (data as unknown[]).map(d => {
+          const nr = d as NannyRaw;
+          return { id: String(nr.id ?? ''), name: String(nr.name ?? '') };
+        });
+    setNanniesList(mapped);
+      } catch {
+        setNanniesList([]);
+      }
+    };
+    fetchNannies();
     const fetchBillings = async () => {
       try {
         const todayMonth = getCurrentMonth();
@@ -383,6 +402,35 @@ export default function Children() {
           </div>
           <input name="parentContact" value={form.parentContact} onChange={handleChange} placeholder="Téléphone parent" required className="border rounded px-3 py-2" />
           <input name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder="Email parent" required className="border rounded px-3 py-2" />
+          {/* Nannies multi-select */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nounous assignées (sélection multiple)</label>
+            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2 bg-gray-50">
+              {nanniesList.length === 0 ? (
+                <div className="text-sm text-gray-500">Aucune nounou disponible</div>
+              ) : nanniesList.map(n => {
+                const checked = Array.isArray(form.nannyIds) && form.nannyIds.includes(n.id);
+                return (
+                  <label key={n.id} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" value={n.id} checked={checked} onChange={(e) => {
+                      const val = e.target.value;
+                      setForm(prev => {
+                        const prevIds = Array.isArray(prev.nannyIds) ? [...prev.nannyIds] : [];
+                        if (e.target.checked) {
+                          if (!prevIds.includes(val)) prevIds.push(val);
+                        } else {
+                          const idx = prevIds.indexOf(val);
+                          if (idx >= 0) prevIds.splice(idx, 1);
+                        }
+                        return { ...prev, nannyIds: prevIds } as typeof prev;
+                      });
+                    }} />
+                    <span>{n.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
           <input name="allergies" value={form.allergies} onChange={handleChange} placeholder="Allergies (optionnel)" className="border rounded px-3 py-2 md:col-span-2" />
           <div className="md:col-span-2 flex gap-2">
             <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">
