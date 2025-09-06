@@ -137,6 +137,10 @@ export default function Children() {
   const [successMsg, setSuccessMsg] = useState('');
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
   const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number | undefined>>({});
+  
+
+  
+
   const { user } = useAuth();
   const isAdminUser = !!(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.role.toLowerCase() === 'administrator'));
   type UserLike = { role?: string | null; nannyId?: string | null } | null;
@@ -195,6 +199,13 @@ export default function Children() {
           newThisMonth: Boolean(base['newThisMonth'] ?? false),
           cotisationPaidUntil: base['cotisationPaidUntil'] ? String(base['cotisationPaidUntil']) : undefined,
           birthDate: base['birthDate'] ? String(base['birthDate']) : undefined,
+          nannyIds: Array.isArray(base['childNannies']) ? (base['childNannies'] as Array<Record<string, unknown>>).map((cn) => {
+            if (!cn || typeof cn !== 'object') return '';
+            const nannyObj = cn['nanny'] as Record<string, unknown> | undefined;
+            if (nannyObj && nannyObj['id']) return String(nannyObj['id']);
+            if (cn['nannyId']) return String(cn['nannyId']);
+            return '';
+          }).filter(Boolean) : [],
         };
         return typedChild;
       }) : [];
@@ -361,6 +372,7 @@ export default function Children() {
   return (
     <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
       <div className="max-w-7xl mx-auto w-full children-responsive-row">
+  {/* Minimal badge for assigned nannies (no dropdown) */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full children-responsive-header">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des enfants</h1>
@@ -645,14 +657,26 @@ export default function Children() {
                         {child.present ? (
                           <span className="text-[#08323a] text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#a9ddf2] inline-block"></span>Présent aujourd'hui</span>
                         ) : (
-                          <span className="text-red-500 text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Absent aujourd'hui</span>
+                                        <span className="text-red-500 text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span>Absent aujourd'hui</span>
                         )}
-                        {child.newThisMonth && (
-                          <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Nouveau</span>
-                        )}
+                                      {child.newThisMonth && (
+                                        <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Nouveau</span>
+                                      )}
+                                      {/* Assigned nanny names (static badge) */}
+                                      <div className="ml-2">
+                                        {Array.isArray(child.nannyIds) && child.nannyIds.length > 0 ? (
+                                          <span className="text-xs px-2 py-1 rounded-full flex items-center gap-2 bg-indigo-100 text-indigo-700">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline-block"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                            <span className="font-medium">Assigné: {child.nannyIds.map(id => nanniesList.find(n => n.id === id)?.name || '').filter(Boolean).join(', ')}</span>
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Non assigné</span>
+                                        )}
+                                      </div>
                       </div>
                       <div />
                     </div>
+                      {/* admin select removed - keep badge/dropdown only */}
                   </div>
                   {/* Bottom centered action buttons */}
                   <div className="absolute left-0 right-0 bottom-4 flex justify-center z-10">

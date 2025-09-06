@@ -447,8 +447,8 @@ export default function Feed() {
                               ) : (
                                 <div className="space-y-2">
                                   {/* top: Pas d'enfant */}
-                                  <label className="flex items-center justify-between gap-2 text-base p-2 border rounded">
-                                    <div className="flex items-center gap-2">
+                                  <label className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-base p-2 border rounded">
+                                    <div className="flex items-center gap-2 min-w-0">
                                           <input type="checkbox" checked={noChildSelected} onChange={(e) => {
                                         if (e.target.checked) {
                                           setNoChildSelected(true);
@@ -456,16 +456,16 @@ export default function Feed() {
                                         } else setNoChildSelected(false);
                                         setShowIdentifyWarning(false);
                                       }} />
-                                      <span className="truncate font-medium">Pas d'enfant</span>
+                                      <span className="break-words font-medium">Pas d'enfant</span>
                                     </div>
-                                    <span className="text-xs text-gray-500">Cocher si aucune personne identifiable</span>
+                                    <span className="text-xs text-gray-500 sm:ml-2">Cocher si aucune personne identifiable</span>
                                   </label>
                                   {availableChildren.map(c => {
                                     const allowed = consentMap[c.id] ?? false;
                                     const checked = selectedChildIds.includes(c.id);
                                     return (
-                                      <label key={c.id} className="flex items-center justify-between gap-2 text-base p-2 border rounded">
-                                        <div className="flex items-center gap-2">
+                                      <label key={c.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-base p-2 border rounded">
+                                        <div className="flex items-center gap-2 min-w-0">
                                           <input type="checkbox" checked={checked} disabled={noChildSelected} onChange={(e) => {
                                             if (e.target.checked) {
                                               setNoChildSelected(false);
@@ -473,9 +473,9 @@ export default function Feed() {
                                             } else setSelectedChildIds(prev => prev.filter(id => id !== c.id));
                                             setShowIdentifyWarning(false);
                                           }} />
-                                          <span className="truncate">{c.name}</span>
+                                          <span className="break-words">{c.name}</span>
                                         </div>
-                                        {!allowed && <span className="text-xs text-red-500">Pas d'autorisation</span>}
+                                        {!allowed && <span className="text-xs text-red-500 sm:ml-2">Pas d'autorisation</span>}
                                       </label>
                                     );
                                   })}

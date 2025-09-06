@@ -93,6 +93,9 @@ router.get('/', auth, async (req, res) => {
           allergies: true,
           parents: { 
             include: { parent: true } 
+          },
+          childNannies: {
+            include: { nanny: true }
           }
         }
       });
@@ -123,7 +126,8 @@ router.get('/', auth, async (req, res) => {
           birthDate: true,
           cotisationPaidUntil: true,
           allergies: true,
-          parents: { include: { parent: true } }
+          parents: { include: { parent: true } },
+          childNannies: { include: { nanny: true } }
         }
       });
       return res.json(children);
@@ -142,7 +146,8 @@ router.get('/', auth, async (req, res) => {
         allergies: true,
         parents: { 
           include: { parent: true } 
-        }
+        },
+        childNannies: { include: { nanny: true } }
       }
     });
     return res.json(children);
@@ -293,8 +298,8 @@ router.put('/:id', auth, async (req, res) => {
         await tx.parentChild.create({ data: { parentId: parent.id, childId: id } });
       }
 
-      // handle nannyIds: replace existing childNannies with provided list
-      if (Array.isArray(req.body.nannyIds)) {
+  // handle nannyIds: replace existing childNannies only if client explicitly provided the field
+  if (Object.prototype.hasOwnProperty.call(req.body, 'nannyIds') && Array.isArray(req.body.nannyIds)) {
         await tx.childNanny.deleteMany({ where: { childId: id } });
         const nannyIds = req.body.nannyIds.filter(Boolean);
         for (const nid of nannyIds) {
