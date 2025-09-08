@@ -198,9 +198,6 @@ exports.registerSubscribeComplete = async (req, res) => {
     const customerId = user.stripeCustomerId;
     if (!customerId) return res.status(400).json({ error: 'Customer absent' });
 
-    console.log('[auth.registerSubscribeComplete] userId=', userId, 'plan=', plan, 'mode=', mode, 'paymentMethodIdPresent=', !!paymentMethodId);
-    console.log('[auth.registerSubscribeComplete] user.stripeCustomerId=', customerId);
-
     // attach payment method and set as default
     try {
       // Attach and ensure the payment method is attached to this customer.
@@ -265,7 +262,6 @@ exports.registerSubscribeComplete = async (req, res) => {
 
     let subscription;
     try {
-      console.log('[auth.registerSubscribeComplete] creating subscription with priceId=', priceId, 'trialEnd=', trialEnd);
       subscription = await stripe.subscriptions.create({
         customer: customerId,
         items: [{ price: priceId }],

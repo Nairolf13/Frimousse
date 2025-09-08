@@ -6,6 +6,13 @@ function getCurrentMonth() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function getPrescriptionUrl(child: unknown): string | undefined {
+  if (!child || typeof child !== 'object') return undefined;
+  const c = child as Record<string, unknown>;
+  const v = c['prescriptionUrl'] ?? c['prescription_url'];
+  return typeof v === 'string' ? v : undefined;
+}
+
 interface Billing {
   days: number;
   amount: number;
@@ -31,8 +38,9 @@ function PhotoConsentToggle({ childId }: { childId: string }) {
         if (!res.ok) return setConsent(false);
         const body = await res.json();
         setConsent(!!body.consent);
-      } catch (e) {
-        console.error('Failed to load photo consent', e);
+    } catch (e: unknown) {
+      if (import.meta.env.DEV) console.error('Failed to load photo consent', e);
+      else console.error('Failed to load photo consent', e instanceof Error ? e.message : String(e));
       }
     }
     if (user && user.role === 'parent') load();
@@ -50,8 +58,9 @@ function PhotoConsentToggle({ childId }: { childId: string }) {
       }
       const body = await res.json();
       setConsent(!!body.consent);
-    } catch (e) {
-      console.error('Failed to toggle consent', e);
+    } catch (e: unknown) {
+      if (import.meta.env.DEV) console.error('Failed to toggle consent', e);
+      else console.error('Failed to toggle consent', e instanceof Error ? e.message : String(e));
     } finally { setLoading(false); }
   };
 
@@ -137,6 +146,9 @@ export default function Children() {
   const [successMsg, setSuccessMsg] = useState('');
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
   const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number | undefined>>({});
+  const [photoConsentMap, setPhotoConsentMap] = useState<Record<string, boolean>>({});
+  const [prescriptionModal, setPrescriptionModal] = useState<{ open: boolean; url?: string | null; childName?: string | null }>({ open: false, url: null, childName: null });
+  const [emptyPrescriptionModal, setEmptyPrescriptionModal] = useState<{ open: boolean; childName?: string | null }>({ open: false, childName: null });
   
 
   
@@ -214,6 +226,24 @@ export default function Children() {
   const amounts: Record<string, number | undefined> = {};
   childrenData.forEach(c => { amounts[c.id] = 15; });
   setCotisationAmounts(amounts);
+      // fetch photo consent summary for each child (parallel)
+      try {
+        const consentResults = await Promise.all(childrenData.map(async (c) => {
+          try {
+            const r = await fetchWithRefresh(`${API_URL}/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
+            if (!r.ok) return { id: c.id, allowed: false };
+            const b = await r.json();
+            return { id: c.id, allowed: !!b.allowed };
+          } catch {
+            return { id: c.id, allowed: false };
+          }
+        }));
+        const pcm: Record<string, boolean> = {};
+        consentResults.forEach(r => { pcm[r.id] = !!r.allowed; });
+        setPhotoConsentMap(pcm);
+      } catch {
+        setPhotoConsentMap({});
+      }
     } catch {
       setChildren([]);
     } finally {
@@ -378,7 +408,7 @@ export default function Children() {
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des enfants</h1>
             <div className="text-gray-400 text-base">Gérez les profils, informations médicales et contacts d'urgence.</div>
           </div>
-          <div className="flex gap-2 items-center self-end children-responsive-btn">
+          <div className="flex gap-2 items-center self-start md:ml-auto children-responsive-btn">
             {isAdminUser && (
               <button
                 type="button"
@@ -552,13 +582,14 @@ export default function Children() {
                   })
                 });
                 if (!res.ok) {
-                  // log server error for debugging
-                  console.error('Failed to update cotisation', res.status);
+                  if (import.meta.env.DEV) console.error('Failed to update cotisation', res.status);
+                  else console.error('Failed to update cotisation', String(res.status));
                 } else {
                   await fetchChildren();
                 }
               } catch (err) {
-                console.error('Error while updating cotisation', err);
+                if (import.meta.env.DEV) console.error('Error while updating cotisation', err);
+                else console.error('Error while updating cotisation', err instanceof Error ? err.message : String(err));
               } finally {
                 setCotisationLoadingId(null);
               }
@@ -566,7 +597,7 @@ export default function Children() {
             return (
               <div
                 key={child.id}
-                className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[420px] h-full transition-transform duration-500 perspective-1000 overflow-hidden`}
+                className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[520px] md:min-h-[540px] h-full transition-transform duration-500 perspective-1000 overflow-hidden`}
                 style={{height:'100%', perspective: '1000px'}}
               >
                 <div
@@ -574,7 +605,7 @@ export default function Children() {
                   style={{transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%'}}
                 >
                   <div
-                    className={`absolute inset-0 w-full h-full p-5 flex flex-col ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
+                    className={`absolute inset-0 w-full h-full p-5 pb-20 md:pb-28 flex flex-col ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
                     style={{backfaceVisibility: 'hidden'}}
                   >
                       <div className="flex items-center gap-3 mb-2 min-w-0">
@@ -583,7 +614,7 @@ export default function Children() {
                           <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{emoji}</div>
                           <span className="font-semibold text-lg text-gray-900 truncate" title={child.name}>{child.name}</span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <span className="text-xs font-bold bg-white text-[#08323a] px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{child.age} ans</span>
                           <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap" title="Sexe">{child.sexe === 'masculin' ? 'Garçon' : 'Fille'}</span>
                           {child.birthDate ? (
@@ -651,6 +682,18 @@ export default function Children() {
                           <PhotoConsentToggle childId={child.id} />
                         </div>
                       )}
+                      {/* Photo consent status badge (for admin/staff view) */}
+                      <div className="mt-2">
+                        {typeof photoConsentMap[child.id] === 'boolean' ? (
+                          photoConsentMap[child.id] ? (
+                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Autorisation photos: Oui</span>
+                          ) : (
+                            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">Autorisation photos: Non</span>
+                          )
+                        ) : (
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Autorisation: —</span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 justify-between mt-2">
                       <div className="flex items-center gap-2">
@@ -663,16 +706,14 @@ export default function Children() {
                                         <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">Nouveau</span>
                                       )}
                                       {/* Assigned nanny names (static badge) */}
-                                      <div className="ml-2">
-                                        {Array.isArray(child.nannyIds) && child.nannyIds.length > 0 ? (
-                                          <span className="text-xs px-2 py-1 rounded-full flex items-center gap-2 bg-indigo-100 text-indigo-700">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline-block"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                            <span className="font-medium">Assigné: {child.nannyIds.map(id => nanniesList.find(n => n.id === id)?.name || '').filter(Boolean).join(', ')}</span>
-                                          </span>
-                                        ) : (
-                                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Non assigné</span>
-                                        )}
-                                      </div>
+                                      {Array.isArray(child.nannyIds) && child.nannyIds.length > 0 ? (
+                                        <span className="ml-2 text-xs px-2 py-1 rounded-full flex items-center gap-2 bg-indigo-100 text-indigo-700 flex-shrink-0">
+                                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline-block"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                          <span className="font-medium truncate max-w-[160px]">Assigné: {child.nannyIds.map(id => nanniesList.find(n => n.id === id)?.name || '').filter(Boolean).join(', ')}</span>
+                                        </span>
+                                      ) : (
+                                        <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">Non assigné</span>
+                                      )}
                       </div>
                       <div />
                     </div>
@@ -680,12 +721,42 @@ export default function Children() {
                   </div>
                   {/* Bottom centered action buttons */}
                   <div className="absolute left-0 right-0 bottom-4 flex justify-center z-10">
-                    {(user && (user.role === 'admin' || user.role === 'super-admin' || user.nannyId)) ? (
-                      <div className="flex gap-2">
-                        <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
-                        <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                      </div>
-                    ) : null}
+                    <div className="flex gap-2">
+                      {/* Voir ordonnance visible for everyone on the child card */}
+                      <button onClick={async () => {
+                        const known = getPrescriptionUrl(child);
+                        let url = known || null;
+                        if (!url) {
+                          try {
+                            const res = await fetchWithRefresh(`${API_URL}/children/${child.id}/prescription`, { credentials: 'include' });
+                            if (!res.ok) {
+                              // show a friendly modal instead of alert
+                              setEmptyPrescriptionModal({ open: true, childName: child.name });
+                              return;
+                            }
+                            const body = await res.json();
+                            url = body.url || null;
+                            if (!url) {
+                              setEmptyPrescriptionModal({ open: true, childName: child.name });
+                              return;
+                            }
+                          } catch (e) {
+                            console.error('Failed to fetch prescription', e);
+                            setEmptyPrescriptionModal({ open: true, childName: child.name });
+                            return;
+                          }
+                        }
+                        if (url) setPrescriptionModal({ open: true, url, childName: child.name });
+                      }} className="bg-white border border-gray-200 text-gray-500 hover:text-green-700 rounded-full p-2 shadow-sm" title="Voir ordonnance">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/></svg>
+                      </button>
+                      {(user && (user.role === 'admin' || user.role === 'super-admin' || user.nannyId)) ? (
+                        <>
+                          <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm" title="Éditer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
+                          <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title="Supprimer"><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                        </>
+                      ) : null}
+                    </div>
                   </div>
                   <div
                     className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-8 ${isDeleting ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
@@ -713,6 +784,35 @@ export default function Children() {
           })}
         </div>
       )}
+          {/* Prescription modal */}
+          {prescriptionModal.open && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+              <div className="bg-white rounded-2xl shadow-xl p-4 w-full max-w-3xl relative mx-4">
+                <button onClick={() => setPrescriptionModal({ open: false, url: null })} className="absolute top-3 right-3 text-gray-500">×</button>
+                    <div className="text-lg font-bold mb-2">Ordonnance de {prescriptionModal.childName || "cet enfant"}</div>
+                <div className="w-full h-[50vh] sm:h-[70vh] flex items-center justify-center overflow-auto">
+                  {prescriptionModal.url && prescriptionModal.url.endsWith('.pdf') ? (
+                    <iframe src={prescriptionModal.url} className="w-full h-full" title="Ordonnance PDF" />
+                  ) : (
+                    <img src={prescriptionModal.url || ''} alt="Ordonnance" className="h-full w-auto object-contain" />
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Empty prescription modal */}
+          {emptyPrescriptionModal.open && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+              <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
+                <button onClick={() => setEmptyPrescriptionModal({ open: false, childName: null })} className="absolute top-3 right-3 text-gray-500">×</button>
+                <div className="text-lg font-bold mb-2">Aucune ordonnance</div>
+                <div className="text-gray-600 mb-4">Il n'y a pas d'ordonnance pour {emptyPrescriptionModal.childName || 'cet enfant'}.</div>
+                <div className="flex justify-end">
+                  <button onClick={() => setEmptyPrescriptionModal({ open: false, childName: null })} className="px-4 py-2 bg-[#0b5566] text-white rounded-lg">OK</button>
+                </div>
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );

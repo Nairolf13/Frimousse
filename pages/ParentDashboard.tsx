@@ -139,7 +139,8 @@ const ParentDashboard: React.FC = () => {
           }
         }
       } catch (err: unknown) {
-        console.error('ParentDashboard load error', err);
+        if (import.meta.env.DEV) console.error('ParentDashboard load error', err);
+        else console.error('ParentDashboard load error', err instanceof Error ? err.message : String(err));
         if (err instanceof Error) setError(err.message);
         else setError('Erreur');
       } finally {
@@ -178,7 +179,7 @@ const ParentDashboard: React.FC = () => {
             </div>
             <div className="flex gap-2 items-center">
               {(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.nannyId == null)) && (
-                <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 md:px-5 md:py-2 text-sm md:text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px]">Ajouter un parent</button>
+                <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center">Ajouter un parent</button>
               )}
             </div>
           </div>
@@ -364,7 +365,7 @@ const ParentDashboard: React.FC = () => {
             <div key={child.id} className="p-4 border rounded shadow-sm" style={{ borderColor: '#fcdcdf' }}>
               <div className="flex justify-between items-center">
                 <div>
-                  <button type="button" className="font-medium cursor-pointer text-[#08323a] hover:text-[#0b5566] text-left" onClick={(e) => { e.stopPropagation(); console.debug('[ParentDashboard] child click', child); setSelectedChild(child); setShowChildModal(true); }}>{child.name}</button>
+                  <button type="button" className="font-medium cursor-pointer text-[#08323a] hover:text-[#0b5566] text-left" onClick={(e) => { e.stopPropagation(); if (import.meta.env.DEV) console.debug('[ParentDashboard] child click', child); setSelectedChild(child); setShowChildModal(true); }}>{child.name}</button>
                   <div className="text-sm text-gray-500">Groupe: {child.group}</div>
                 </div>
                 <div className="flex space-x-2">

@@ -96,6 +96,9 @@ export default function Nannies() {
 
   const [messages, setMessages] = useState<Record<string, { text: string; type: 'success' | 'error' } | null>>({});
   const [confirmPayment, setConfirmPayment] = useState<{ nannyId: string; amount: number } | null>(null);
+  // Admin password-reset modal state
+  const [adminResetModal, setAdminResetModal] = useState<{ open: boolean; nannyId?: string; password?: string } | null>(null);
+  const [pendingSave, setPendingSave] = useState<{ payload: Partial<typeof emptyForm> & { experience?: number; newPassword?: string }; editingId?: string | null } | null>(null);
 
   const payCotisation = async (nannyId: string, amount?: number) => {
     setCotisationStatus(s => ({ ...s, [nannyId]: { ...s[nannyId], loading: true } }));
@@ -159,18 +162,51 @@ export default function Nannies() {
       return;
     }
     try {
-      const payload: Partial<typeof emptyForm> & { experience?: number } = {
+      const payload: Partial<typeof emptyForm> & { experience?: number; newPassword?: string } = {
         ...form,
         experience: Number(form.experience),
       };
       if (payload.birthDate === null || payload.birthDate === '') delete payload.birthDate;
       if (!payload.email) delete payload.email;
+      const isAdmin = user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super'));
       if (!payload.password) delete payload.password;
+      const isEditingOwnNanny = editingId && user && (String(user.nannyId) === String(editingId));
+
+      // If admin is resetting another nanny's password, show a modal to confirm
+      if (editingId && (isAdmin || isEditingOwnNanny) && form.password) {
+        // prepare payload with newPassword
+        (payload as Partial<typeof emptyForm> & { newPassword?: string }).newPassword = form.password;
+        delete (payload as Partial<typeof emptyForm> & { password?: string }).password;
+
+        if (isAdmin && !isEditingOwnNanny) {
+          // buffer the save and ask for confirmation via modal
+          setPendingSave({ payload, editingId });
+          setAdminResetModal({ open: true, nannyId: editingId, password: form.password });
+          return;
+        }
+        // otherwise proceed (self password change)
+      } else {
+        if (!isAdmin && !isEditingOwnNanny) delete (payload as Partial<typeof emptyForm> & { newPassword?: string }).newPassword;
+      }
+
+      await performSave(payload, editingId);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Erreur');
+      }
+    }
+  };
+
+  // perform the actual save request; reused by normal submit and by modal confirm
+  const performSave = async (payload: Partial<typeof emptyForm> & { experience?: number; newPassword?: string }, editingId?: string | null) => {
+    try {
       const res = await fetchWithRefresh(editingId ? `${API_URL}/nannies/${editingId}` : `${API_URL}/nannies`, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-  body: JSON.stringify(payload),
+        body: JSON.stringify(payload),
       });
       if (res.status === 402) {
         try {
@@ -205,6 +241,11 @@ export default function Nannies() {
       setConfirmPassword('');
       setEditingId(null);
       fetchNannies();
+      // show small success message for the edited nanny
+      if (editingId) {
+        setMessages(m => ({ ...m, [editingId]: { text: 'Mise à jour effectuée', type: 'success' } }));
+        setTimeout(() => setMessages(m => ({ ...m, [editingId]: null })), 3000);
+      }
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -212,6 +253,18 @@ export default function Nannies() {
         setError('Erreur');
       }
     }
+  };
+
+  const confirmAdminReset = async () => {
+    if (!pendingSave) return;
+    await performSave(pendingSave.payload, pendingSave.editingId);
+    setPendingSave(null);
+    setAdminResetModal(null);
+  };
+
+  const cancelAdminReset = () => {
+    setPendingSave(null);
+    setAdminResetModal(null);
   };
 
   const handleEdit = (nanny: Nanny) => {
@@ -239,9 +292,24 @@ export default function Nannies() {
     }
   };
 
-  const totalNannies = nannies.length;
-  const availableToday = nannies.filter(n => n.availability === 'Disponible').length;
-  const onLeave = nannies.filter(n => n.availability === 'En_congé' || n.availability === 'En congé').length;
+  // Determine visible nannies depending on role: admins see all, nannies see their own card and any nanny who shares children
+  const isNannyUser = user && typeof user.role === 'string' && user.role.toLowerCase() === 'nanny';
+  const isAdmin = user && typeof user.role === 'string' && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'));
+  const visibleNannies = React.useMemo(() => {
+    if (!isNannyUser) return nannies;
+    const meId = user && (user.nannyId || user.id);
+    if (!meId) return [];
+  // Children assigned to me
+  const myChildIds = new Set(assignments.filter(a => a.nanny && String(a.nanny.id) === String(meId)).map(a => a.child.id));
+  // Nanny IDs assigned to any of my children
+  const relatedNannyIds = new Set(assignments.filter(a => myChildIds.has(a.child.id)).map(a => a.nanny.id));
+  relatedNannyIds.add(meId);
+  return nannies.filter(n => relatedNannyIds.has(n.id));
+  }, [nannies, assignments, user, isNannyUser]);
+
+  const totalNannies = visibleNannies.length;
+  const availableToday = visibleNannies.filter(n => n.availability === 'Disponible').length;
+  const onLeave = visibleNannies.filter(n => n.availability === 'En_congé' || n.availability === 'En congé').length;
 
   const filtered = nannies.filter(n =>
     (!search || n.name.toLowerCase().includes(search.toLowerCase())) &&
@@ -261,18 +329,21 @@ export default function Nannies() {
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des nounous</h1>
             <div className="text-gray-400 text-base">Gérez les profils, plannings, qualifications et affectations des intervenants.</div>
           </div>
+          <div className="flex gap-2 items-center self-start md:ml-auto">
+            {(user && typeof user.role === 'string' && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'))) && (
+              <button
+                type="button"
+                onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
+                className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px]"
+              >
+                Ajouter une nounou
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full lg:flex-row lg:items-center lg:gap-4 lg:mb-6 lg:w-full md:max-w-md md:w-full">
-            <div className="flex gap-2 items-center mb-2 md:mb-0">
-            <button
-              type="button"
-              onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
-              className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px]"
-            >
-              Ajouter une nounou
-            </button>
-          </div>
+          
           <div className="flex gap-2 flex-wrap justify-start w-full">
             <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
               <div className="text-xs text-gray-400">Total</div>
@@ -339,7 +410,9 @@ export default function Nannies() {
           <div>Chargement...</div>
         ) : (
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full children-responsive-grid">
-            {filtered.map((nanny, idx) => {
+            {filtered
+              .filter(n => visibleNannies.some(v => String(v.id) === String(n.id)))
+              .map((nanny, idx) => {
               const cotisation = cotisationStatus[nanny.id];
               const daysRemaining = cotisation && cotisation.paidUntil ? Math.max(0, Math.ceil((new Date(cotisation.paidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
               const avatar = avatarEmojis[idx % avatarEmojis.length];
@@ -426,7 +499,7 @@ export default function Nannies() {
                             <span className="text-sm text-gray-500">Chargement...</span>
                           ) : daysRemaining > 0 ? (
                             <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
-                          ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
+                          ) : isAdmin ? (
                             <input
                               type="number"
                               className="w-20 px-2 py-1 border rounded text-sm"
@@ -443,7 +516,7 @@ export default function Nannies() {
                           ) : (
                             <span className="text-red-500 text-xl">❌</span>
                           )}
-                          {daysRemaining <= 0 && (
+                          {daysRemaining <= 0 && isAdmin && (
                             <button
                               className="text-[#0b5566] text-xs font-semibold px-2 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
                               disabled={cotisation?.loading || isPaymentModalOpen}
@@ -537,6 +610,19 @@ export default function Nannies() {
 
       {planningNanny && (
         <PlanningModal nanny={planningNanny} onClose={() => setPlanningNanny(null)} />
+      )}
+      {/* Admin password reset confirmation modal */}
+      {adminResetModal && adminResetModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-2">Confirmer la réinitialisation du mot de passe</h3>
+            <p className="mb-4">Vous allez réinitialiser le mot de passe de cette nounou. Voulez-vous continuer ?</p>
+            <div className="flex gap-3">
+              <button onClick={cancelAdminReset} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2">Annuler</button>
+              <button onClick={confirmAdminReset} className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2">Confirmer</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

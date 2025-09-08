@@ -138,7 +138,11 @@ export default function WeeklyActivityCalendar() {
     }
     if (!res.ok) {
       const text = await res.text();
-      console.error('Erreur API:', res.status, text);
+      if (import.meta.env.DEV) {
+        console.error('Erreur API:', res.status, text);
+      } else {
+        console.error('Erreur API:', res.status, String(text));
+      }
       alert('Erreur lors de la sauvegarde de l\'activité: ' + text);
       return;
     }
@@ -151,7 +155,6 @@ export default function WeeklyActivityCalendar() {
   };
 
   function handleActivityCardClick(activity: Activity) {
-    console.log('Carte activité cliquée', activity);
     setSelectedActivity(activity);
     setModalOpen(true);
   }

@@ -89,8 +89,9 @@ export default function ParentChildSchedule() {
         const data = await res.json();
   const found = Array.isArray(data) ? data.find((c: unknown) => { const obj = c as Record<string, unknown>; return String(obj.id) === String(childId); }) : null;
         setChildName(found ? (found.name || `${found.firstName || ''} ${found.lastName || ''}`.trim()) : null);
-      } catch (err) {
-        console.error('Failed to load child name', err);
+      } catch (err: unknown) {
+        if (import.meta.env.DEV) console.error('Failed to load child name', err);
+        else console.error('Failed to load child name', err instanceof Error ? err.message : String(err));
       }
     })();
     setLoading(true);
@@ -103,8 +104,9 @@ export default function ParentChildSchedule() {
         const data: Assignment[] = await fetchAssignments(first, last);
         const filtered = Array.isArray(data) ? data.filter(a => a.child && a.child.id === childId) : [];
         setAssignments(filtered);
-      } catch (err) {
-        console.error('Failed to load assignments for child', err);
+      } catch (err: unknown) {
+        if (import.meta.env.DEV) console.error('Failed to load assignments for child', err);
+        else console.error('Failed to load assignments for child', err instanceof Error ? err.message : String(err));
         setAssignments([]);
       } finally {
         setLoading(false);
@@ -194,7 +196,6 @@ export default function ParentChildSchedule() {
                                             const dateYmd = toLocalYMD(a.date);
                                             const res = await fetchWithRefresh(`/api/nannies/${encodeURIComponent(nannyId)}/schedules`, { credentials: 'include' });
                                             const data = await res.json();
-                                            console.log('Activités reçues pour la nounou:', data, 'dateYmd:', dateYmd);
                                             const filtered = Array.isArray(data)
                                               ? data.filter((s: unknown) => {
                                                   const obj = s as Record<string, unknown>;
@@ -202,7 +203,6 @@ export default function ParentChildSchedule() {
                                                   return date === dateYmd;
                                                 }) as LocalActivity[]
                                               : [];
-                                            console.log('Activités filtrées:', filtered);
                                             setActivityModalData({ activities: toModalActivities(filtered) });
                                           } catch (err) {
                                             console.error('Failed to fetch activities', err);

@@ -7,6 +7,21 @@ function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
+const multer = require('multer');
+const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
+const sharp = require('sharp');
+const path = require('path');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 6 * 1024 * 1024 } }); // 6MB
+
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'PrivacyPictures';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false } });
+
+function validatePrescriptionMime(mimetype) {
+  return ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(mimetype);
+}
 
 router.get('/count', async (req, res) => {
   try {
@@ -94,9 +109,11 @@ router.get('/', auth, async (req, res) => {
           parents: { 
             include: { parent: true } 
           },
-          childNannies: {
+            childNannies: {
             include: { nanny: true }
           }
+            ,
+            prescriptionUrl: true
         }
       });
       return res.json(children);
@@ -127,7 +144,8 @@ router.get('/', auth, async (req, res) => {
           cotisationPaidUntil: true,
           allergies: true,
           parents: { include: { parent: true } },
-          childNannies: { include: { nanny: true } }
+            childNannies: { include: { nanny: true } },
+            prescriptionUrl: true
         }
       });
       return res.json(children);
@@ -147,7 +165,8 @@ router.get('/', auth, async (req, res) => {
         parents: { 
           include: { parent: true } 
         },
-        childNannies: { include: { nanny: true } }
+    childNannies: { include: { nanny: true } },
+    prescriptionUrl: true
       }
     });
     return res.json(children);
@@ -469,6 +488,114 @@ router.get('/:id/photo-consent-summary', auth, async (req, res) => {
     return res.json({ allowed: !!any });
   } catch (e) {
     console.error('Failed to get photo consent summary', e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Upload prescription for a child (parent only)
+router.post('/:id/prescription', auth, upload.single('prescription'), async (req, res) => {
+  const { id } = req.params;
+  const user = req.user;
+  if (!user || user.role !== 'parent') return res.status(403).json({ message: 'Forbidden' });
+  try {
+    // verify parent-child link
+    let parentId = user.parentId;
+    if (!parentId && user.email) {
+      const p = await prisma.parent.findFirst({ where: { email: { equals: String(user.email).trim(), mode: 'insensitive' } } });
+      if (p) parentId = p.id;
+    }
+    if (!parentId) return res.status(403).json({ message: 'Parent identity not found' });
+    const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
+    if (!link) return res.status(403).json({ message: 'Child not linked to parent' });
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: 'No file provided' });
+    if (!validatePrescriptionMime(file.mimetype)) return res.status(400).json({ message: 'Invalid file type' });
+    if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ message: 'Storage not configured' });
+
+    // Generate path and upload (no image processing for PDFs)
+    const ext = file.mimetype === 'application/pdf' ? 'pdf' : 'webp';
+    let buffer = file.buffer;
+    if (ext === 'webp') {
+      buffer = await sharp(file.buffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
+    }
+    const baseName = `${id}_presc_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+    const storagePath = path.posix.join('prescriptions', `${baseName}.${ext}`);
+    const { data: uploadData, error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(storagePath, buffer, { contentType: file.mimetype, upsert: true });
+    if (uploadError) {
+      console.error('Supabase upload error', uploadError);
+      return res.status(500).json({ message: 'Upload failed' });
+    }
+    const publicUrl = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath)?.data?.publicUrl || null;
+
+    // delete previous prescription if present
+    const existing = await prisma.child.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ message: 'Child not found' });
+    if (existing.prescriptionPath) {
+      try { await supabase.storage.from(SUPABASE_BUCKET).remove([existing.prescriptionPath]); } catch (e) { console.error('Failed to remove old prescription', e); }
+    }
+
+    const updated = await prisma.child.update({ where: { id }, data: { prescriptionUrl: publicUrl, prescriptionPath: storagePath } });
+    return res.json({ url: publicUrl });
+  } catch (e) {
+    console.error('Failed to upload prescription', e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get prescription signed/public URL (admin, nanny, or parent linked)
+router.get('/:id/prescription', auth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const child = await prisma.child.findUnique({ where: { id } });
+    if (!child) return res.status(404).json({ message: 'Child not found' });
+    // check permissions
+    if (req.user && req.user.role === 'parent') {
+      let parentId = req.user.parentId;
+      if (!parentId && req.user.email) {
+        const p = await prisma.parent.findFirst({ where: { email: { equals: String(req.user.email).trim(), mode: 'insensitive' } } });
+        if (p) parentId = p.id;
+      }
+      if (!parentId) return res.status(403).json({ message: 'Forbidden' });
+      const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
+      if (!link) return res.status(403).json({ message: 'Forbidden' });
+    } else if (req.user && req.user.role === 'nanny') {
+      const link = await prisma.childNanny.findFirst({ where: { childId: id, nannyId: req.user.nannyId } });
+      if (!link) return res.status(403).json({ message: 'Forbidden' });
+    } else if (!isSuperAdmin(req.user) && child.centerId !== req.user.centerId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    if (!child.prescriptionPath) return res.status(404).json({ message: 'No prescription' });
+    if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ message: 'Storage not configured' });
+    const publicUrl = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(child.prescriptionPath)?.data?.publicUrl || null;
+    return res.json({ url: publicUrl });
+  } catch (e) {
+    console.error('Failed to get prescription', e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete prescription (parent only)
+router.delete('/:id/prescription', auth, async (req, res) => {
+  const { id } = req.params;
+  const user = req.user;
+  if (!user || user.role !== 'parent') return res.status(403).json({ message: 'Forbidden' });
+  try {
+    let parentId = user.parentId;
+    if (!parentId && user.email) {
+      const p = await prisma.parent.findFirst({ where: { email: { equals: String(user.email).trim(), mode: 'insensitive' } } });
+      if (p) parentId = p.id;
+    }
+    if (!parentId) return res.status(403).json({ message: 'Parent identity not found' });
+    const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
+    if (!link) return res.status(403).json({ message: 'Child not linked to parent' });
+    const child = await prisma.child.findUnique({ where: { id } });
+    if (!child || !child.prescriptionPath) return res.status(404).json({ message: 'No prescription' });
+    if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ message: 'Storage not configured' });
+    try { await supabase.storage.from(SUPABASE_BUCKET).remove([child.prescriptionPath]); } catch (e) { console.error('Supabase remove failed', e); }
+    await prisma.child.update({ where: { id }, data: { prescriptionPath: null, prescriptionUrl: null } });
+    return res.json({ message: 'Deleted' });
+  } catch (e) {
+    console.error('Failed to delete prescription', e);
     return res.status(500).json({ message: 'Server error' });
   }
 });

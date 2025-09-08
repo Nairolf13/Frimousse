@@ -119,6 +119,9 @@ model Child {
   sexe                Sexe           @default(masculin)
   group               ChildGroup     @default(G1)
   birthDate           DateTime?
+  // Prescription storage: public URL and storage path in Supabase
+  prescriptionUrl     String?
+  prescriptionPath    String?
   parents             ParentChild[]
   allergies           String?
   cotisationPaidUntil DateTime?

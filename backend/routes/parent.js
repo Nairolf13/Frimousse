@@ -39,6 +39,101 @@ router.get('/children', requireAuth, async (req, res) => {
   }
 });
 
+// Admin listing (must be before '/:id' so 'admin' isn't treated as an id)
+router.get('/admin', requireAuth, async (req, res) => {
+  try {
+    const user = req.user || {};
+    if (!canManageParents(user)) return res.status(403).json({ message: 'Forbidden' });
+
+    let parents = [];
+    if (prisma.parent && typeof prisma.parent.findMany === 'function') {
+      const where = {};
+      if (!isSuperAdmin(user) && user.centerId) where.centerId = user.centerId;
+      // If user is a nanny, restrict parents to those whose children are assigned to this nanny
+      if (user && user.role === 'nanny') {
+        const nannyRec = await prisma.nanny.findUnique({ where: { id: user.nannyId } });
+        if (!nannyRec) {
+          parents = [];
+        } else {
+          parents = await prisma.parent.findMany({
+            where: { ...where, children: { some: { child: { childNannies: { some: { nannyId: nannyRec.id } } } } } },
+            include: { children: { include: { child: true } } },
+            orderBy: { createdAt: 'desc' }
+          });
+        }
+      } else {
+        parents = await prisma.parent.findMany({ where, include: { children: { include: { child: true } } }, orderBy: { createdAt: 'desc' } });
+      }
+    } else {
+      const users = await prisma.user.findMany({ where: { role: 'parent' }, orderBy: { createdAt: 'desc' } });
+      const allChildren = await prisma.child.findMany();
+      const byEmail = new Map();
+      const byName = new Map();
+      for (const c of allChildren) {
+        if (c.parentMail) {
+          const list = byEmail.get(c.parentMail) || [];
+          list.push({ child: c });
+          byEmail.set(c.parentMail, list);
+        }
+        if (c.parentName) {
+          const key = String(c.parentName).trim();
+          const list = byName.get(key) || [];
+          list.push({ child: c });
+          byName.set(key, list);
+        }
+      }
+      parents = users.map(u => {
+        const fullName = `${u.name || ''}`.trim();
+        const childrenFromEmail = u.email ? (byEmail.get(u.email) || []) : [];
+        const childrenFromName = fullName ? (byName.get(fullName) || []) : [];
+        const merged = [...childrenFromEmail, ...childrenFromName];
+        const unique = Array.from(new Map(merged.map(item => [item.child.id, item])).values());
+        return { id: u.id, firstName: u.name, lastName: '', email: u.email, phone: u.parentPhone || u.phone || null, children: unique };
+      });
+    }
+
+    const parentsCount = parents.length;
+    const childrenCount = parents.reduce((acc, p) => acc + (p.children?.length || 0), 0);
+
+    const todayStart = new Date();
+    todayStart.setHours(0,0,0,0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23,59,59,999);
+    const assignmentWhere = { date: { gte: todayStart, lte: todayEnd } };
+    if (!isSuperAdmin(user) && user.centerId) assignmentWhere.centerId = user.centerId;
+    const presentAssignments = await prisma.assignment.count({ where: assignmentWhere });
+
+    res.json({
+      stats: { parentsCount, childrenCount, presentToday: presentAssignments },
+      parents
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get parent by id (allow owner or managers)
+router.get('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userReq = req.user || {};
+    // allow if user can manage parents or it's their own parent record
+    if (!(canManageParents(userReq) || (userReq.parentId && String(userReq.parentId) === String(id)))) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    const parent = await prisma.parent.findUnique({ where: { id } });
+    if (!parent) return res.status(404).json({ message: 'Parent not found' });
+    // If manager but not super-admin, ensure same center
+    if (!isSuperAdmin(userReq) && canManageParents(userReq) && userReq.centerId && parent.centerId !== userReq.centerId) {
+      return res.status(404).json({ message: 'Parent not found' });
+    }
+    res.json(parent);
+  } catch (err) {
+    console.error('GET /api/parent/:id error', err);
+    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
 router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
   try {
   const userReq = req.user || {};
@@ -143,9 +238,10 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
 
 router.put('/:id', requireAuth, async (req, res) => {
   try {
-  const userReq = req.user || {};
-  if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
     const { id } = req.params;
+    const userReq = req.user || {};
+    // allow if user can manage parents (admin/nanny/super-admin) OR the parent is updating their own record
+    if (!(canManageParents(userReq) || (userReq.parentId && String(userReq.parentId) === String(id)))) return res.status(403).json({ message: 'Forbidden' });
     const { name, email, phone, firstName, lastName } = req.body;
     let data = {};
     if (name) {
@@ -168,6 +264,27 @@ router.put('/:id', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('PUT /api/parent/:id error', err);
     if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent not found' });
+    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
+// Find parent by email (allow parent to fetch their own record by their email, or admins)
+router.get('/by-email', requireAuth, async (req, res) => {
+  try {
+    const userReq = req.user || {};
+    const email = (req.query.email || '').toString();
+    if (!email) return res.status(400).json({ message: 'Missing email' });
+
+    // allow if user can manage parents or if requesting their own email
+    if (!(canManageParents(userReq) || (userReq.email && String(userReq.email).toLowerCase() === email.toLowerCase()))) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const parent = await prisma.parent.findFirst({ where: { email } });
+    if (!parent) return res.status(404).json({ message: 'Parent not found' });
+    res.json(parent);
+  } catch (err) {
+    console.error('GET /api/parent/by-email error', err);
     res.status(500).json({ error: err && err.message ? err.message : String(err) });
   }
 });
@@ -218,77 +335,7 @@ router.post('/accept-invite', async (req, res) => {
   }
 });
 
-router.get('/admin', requireAuth, async (req, res) => {
-  try {
-  const user = req.user || {};
-  if (!canManageParents(user)) return res.status(403).json({ message: 'Forbidden' });
 
-    let parents = [];
-    if (prisma.parent && typeof prisma.parent.findMany === 'function') {
-      const where = {};
-      if (!isSuperAdmin(user) && user.centerId) where.centerId = user.centerId;
-      // If user is a nanny, restrict parents to those whose children are assigned to this nanny
-      if (user && user.role === 'nanny') {
-        const nannyRec = await prisma.nanny.findUnique({ where: { id: user.nannyId } });
-        if (!nannyRec) {
-          parents = [];
-        } else {
-          parents = await prisma.parent.findMany({
-            where: { ...where, children: { some: { child: { childNannies: { some: { nannyId: nannyRec.id } } } } } },
-            include: { children: { include: { child: true } } },
-            orderBy: { createdAt: 'desc' }
-          });
-        }
-      } else {
-        parents = await prisma.parent.findMany({ where, include: { children: { include: { child: true } } }, orderBy: { createdAt: 'desc' } });
-      }
-    } else {
-      const users = await prisma.user.findMany({ where: { role: 'parent' }, orderBy: { createdAt: 'desc' } });
-      const allChildren = await prisma.child.findMany();
-      const byEmail = new Map();
-      const byName = new Map();
-      for (const c of allChildren) {
-        if (c.parentMail) {
-          const list = byEmail.get(c.parentMail) || [];
-          list.push({ child: c });
-          byEmail.set(c.parentMail, list);
-        }
-        if (c.parentName) {
-          const key = String(c.parentName).trim();
-          const list = byName.get(key) || [];
-          list.push({ child: c });
-          byName.set(key, list);
-        }
-      }
-      parents = users.map(u => {
-        const fullName = `${u.name || ''}`.trim();
-        const childrenFromEmail = u.email ? (byEmail.get(u.email) || []) : [];
-        const childrenFromName = fullName ? (byName.get(fullName) || []) : [];
-        const merged = [...childrenFromEmail, ...childrenFromName];
-        const unique = Array.from(new Map(merged.map(item => [item.child.id, item])).values());
-        return { id: u.id, firstName: u.name, lastName: '', email: u.email, phone: u.parentPhone || u.phone || null, children: unique };
-      });
-    }
-
-    const parentsCount = parents.length;
-    const childrenCount = parents.reduce((acc, p) => acc + (p.children?.length || 0), 0);
-
-    const todayStart = new Date();
-    todayStart.setHours(0,0,0,0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23,59,59,999);
-  const assignmentWhere = { date: { gte: todayStart, lte: todayEnd } };
-  if (!isSuperAdmin(user) && user.centerId) assignmentWhere.centerId = user.centerId;
-  const presentAssignments = await prisma.assignment.count({ where: assignmentWhere });
-
-    res.json({
-      stats: { parentsCount, childrenCount, presentToday: presentAssignments },
-      parents
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 router.get('/child/:childId/schedule', requireAuth, async (req, res) => {
   try {

@@ -417,10 +417,8 @@ router.post('/create-with-token', async (req, res) => {
     try { payload = jwt.verify(subscribeToken, JWT_SECRET); } catch (e) { return res.status(403).json({ error: 'Invalid or expired token' }); }
     if (!payload || payload.type !== 'subscribe' || !payload.id) return res.status(403).json({ error: 'Invalid token payload' });
     const userId = payload.id;
-  console.log('[subscriptions.create-with-token] payload ok for userId=', userId);
   const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
-  console.log('[subscriptions.create-with-token] found user', { id: user.id, email: user.email, stripeCustomerId: user.stripeCustomerId });
 
     let customerId = user.stripeCustomerId;
     if (!customerId) {
@@ -441,7 +439,6 @@ router.post('/create-with-token', async (req, res) => {
     effectivePlan = selectedPlan;
   }
   const priceId = await resolvePriceId(effectivePlan);
-  console.log('[subscriptions.create-with-token] effectivePlan=', effectivePlan, 'resolved priceId=', priceId);
 
     // Idempotency: prevent duplicate subscriptions for the same user
     const existing = await prisma.subscription.findFirst({ where: { userId: user.id, status: { in: ['trialing', 'active', 'past_due'] } } });

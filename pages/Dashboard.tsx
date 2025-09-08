@@ -281,6 +281,9 @@ export default function Dashboard() {
 
   const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
+  // currently selected assignment object (used to show child name in the delete modal)
+  const selectedAssignment = selectedId ? assignments.find(a => a.id === selectedId) : undefined;
+
   return (
     <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
       <div className="max-w-7xl mx-auto w-full">
@@ -381,7 +384,7 @@ export default function Dashboard() {
                   {assigns.length === 0 ? (
                     <div className="text-gray-300 text-xs">—</div>
                   ) : (
-                    assigns.slice(0, 2).map((a, j) => (
+                        assigns.slice(0, 2).map((a, j) => (
                       <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-[#a9ddf2]' : 'bg-[#fff7e6]') + " shadow-sm group"}>
                         <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-[#08323a]' : 'bg-[#856400]')}></span>
                         <span
@@ -395,7 +398,13 @@ export default function Dashboard() {
                     ))
                   )}
                   {assigns.length > 2 && (
-                    <div className="text-gray-400 text-xs italic truncate max-w-[70px] overflow-hidden whitespace-nowrap">...et {assigns.length - 2} autres</div>
+                    <button
+                      onClick={() => { setDayModalAssignments(assigns); setDayModalDate(day.toLocaleDateString()); setDayModalOpen(true); }}
+                      className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200"
+                      title={`Voir ${assigns.length - 2} autres enfants`}
+                    >
+                      +{assigns.length - 2}
+                    </button>
                   )}
                 </div>
               );
@@ -458,16 +467,22 @@ export default function Dashboard() {
                             <div key={a.id} className={"flex items-center gap-2 mb-2 px-2 py-1 rounded-lg " + (j === 0 ? 'bg-[#a9ddf2]' : 'bg-[#f7f4d7]') + " shadow-sm group"}>
                                       <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-[#08323a]' : 'bg-[#856400]')}></span>
                                 <span
-                                  className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600"
-                                  title="Supprimer cette affectation"
-                                  onClick={() => { if (!(user && user.role === 'parent')) setSelectedId(a.id); }}
-                                >
-                                  {a.child.name}
-                                </span>
+                                      className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[120px]"
+                                      title={a.child.name}
+                                      onClick={() => { if (!(user && user.role === 'parent')) setSelectedId(a.id); }}
+                                    >
+                                      {a.child.name}
+                                    </span>
                               </div>
                             ))}
                             {assigns.length > 2 && (
-                              <div className="text-gray-400 text-xs italic">...et {assigns.length - 2} autres</div>
+                              <button
+                                onClick={() => { setDayModalAssignments(assigns); setDayModalDate(day.toLocaleDateString()); setDayModalOpen(true); }}
+                                className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200"
+                                title={`Voir ${assigns.length - 2} autres enfants`}
+                              >
+                                +{assigns.length - 2}
+                              </button>
                             )}
                           </>
                         )}
@@ -498,11 +513,14 @@ export default function Dashboard() {
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm relative flex flex-col items-center">
             <button onClick={() => setSelectedId(null)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl" aria-label="Fermer">×</button>
             <div className="flex flex-col items-center gap-4">
-              <div className="bg-red-100 rounded-full p-4 mb-2">
-                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Confirmer la suppression</h3>
-              <p className="text-gray-600 text-center mb-4">Voulez-vous vraiment supprimer cette affectation ? Cette action est irréversible.</p>
+                <div className="bg-red-100 rounded-full p-4 mb-2">
+                  <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Confirmer la suppression</h3>
+                <p className="text-gray-600 text-center mb-1">Voulez-vous vraiment supprimer cette affectation ? Cette action est irréversible.</p>
+                {selectedAssignment && (
+                  <p className="text-gray-700 font-semibold text-center">Enfant concerné : <span className="text-gray-900">{selectedAssignment.child.name}</span></p>
+                )}
               <div className="flex gap-3 w-full">
                 <button
                   onClick={() => setSelectedId(null)}

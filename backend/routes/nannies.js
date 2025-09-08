@@ -136,12 +136,36 @@ router.post('/accept-invite', async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const { name, availability, experience, contact, email, birthDate } = req.body;
+  const { name, availability, experience, contact, email, birthDate, newPassword } = req.body;
   if (!isSuperAdmin(req.user)) {
     const existing = await prisma.nanny.findUnique({ where: { id } });
     if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
   }
   const nanny = await prisma.nanny.update({ where: { id }, data: { name, availability, experience, contact, email, birthDate: birthDate ? new Date(birthDate) : null } });
+
+  // If an admin provided newPassword, update the linked user password
+  try {
+    if (newPassword && typeof newPassword === 'string') {
+      const actor = req.user || {};
+      const isAdmin = actor && (actor.role === 'admin' || isSuperAdmin(actor));
+      const isSelfNanny = actor && actor.nannyId && String(actor.nannyId) === String(id);
+      // Allow admins or the nanny herself to change the password
+      if (isAdmin || isSelfNanny) {
+        // find user(s) linked to this nanny and update their password
+        const users = await prisma.user.findMany({ where: { nannyId: id } });
+        if (users && users.length > 0) {
+          const bcrypt = require('bcryptjs');
+          const hash = await bcrypt.hash(newPassword, 10);
+          for (const u of users) {
+            await prisma.user.update({ where: { id: u.id }, data: { password: hash } });
+            try { await prisma.refreshToken.deleteMany({ where: { userId: u.id } }); } catch (e) { /* ignore */ }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to update nanny user password', e && e.message ? e.message : e);
+  }
   res.json(nanny);
 });
 

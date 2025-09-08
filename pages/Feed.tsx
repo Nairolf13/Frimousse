@@ -75,7 +75,9 @@ export default function Feed() {
   const mapped: Comment[] = (body.comments || []).map((c: { id: string; authorName: string; authorId?: string; createdAt: string; text: string }) => ({ id: c.id, authorName: c.authorName, authorId: c.authorId, timeAgo: timeAgo(c.createdAt), text: c.text }));
       setCommentsForPost(prev => ({ ...prev, [postId]: mapped }));
     } catch (e) {
-      console.error('Failed to load comments', e);
+      const err = e as unknown;
+      if (import.meta.env.DEV) console.error('Failed to load comments', err);
+      else console.error('Failed to load comments', err instanceof Error ? err.message : String(err));
       setCommentsForPost(prev => ({ ...prev, [postId]: [] }));
     } finally {
       setCommentsLoading(false);
@@ -151,7 +153,9 @@ export default function Feed() {
         consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
         setConsentMap(cm);
       } catch (e) {
-        console.error('Failed to load children/consents', e);
+        const err = e as unknown;
+        if (import.meta.env.DEV) console.error('Failed to load children/consents', err);
+        else console.error('Failed to load children/consents', err instanceof Error ? err.message : String(err));
       }
     }
     loadChildrenAndConsents();
@@ -165,7 +169,9 @@ export default function Feed() {
       const body = await res.json();
       setPosts(body.posts || []);
     } catch (e) {
-      console.error('Failed to load feed', e);
+      const err = e as unknown;
+      if (import.meta.env.DEV) console.error('Failed to load feed', err);
+      else console.error('Failed to load feed', err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -176,7 +182,9 @@ export default function Feed() {
       const body = await res.json();
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: (p.likes || 0) + (body.liked ? 1 : -1) } : p));
     } catch (e) {
-      console.error('Like failed', e);
+      const err = e as unknown;
+      if (import.meta.env.DEV) console.error('Like failed', err);
+      else console.error('Like failed', err instanceof Error ? err.message : String(err));
     }
   }
 
@@ -187,7 +195,9 @@ export default function Feed() {
       const body = await res.json();
       setLikers(body.users || []);
     } catch (e) {
-      console.error('Failed to load likers', e);
+      const err = e as unknown;
+      if (import.meta.env.DEV) console.error('Failed to load likers', err);
+      else console.error('Failed to load likers', err instanceof Error ? err.message : String(err));
       setLikers([]);
     }
   }
@@ -777,8 +787,6 @@ function ConfirmationModal({ title, description, onCancel, onConfirm }: { title:
       setLoading(false);
     }
   }
-  // render the description as a single block that can wrap on small screens
-  // (previous logic attempted to force the part before '?' to stay on one line which caused overflow)
 
   return (
     <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
