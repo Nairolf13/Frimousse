@@ -45,6 +45,9 @@ const ParentDashboard: React.FC = () => {
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' });
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [adminResetModal, setAdminResetModal] = useState<{ open: boolean; parentId?: string; password?: string } | null>(null);
+  const [pendingSave, setPendingSave] = useState<{ payload: { name: string; email: string; phone?: string; password?: string; newPassword?: string }; parentId?: string | null } | null>(null);
+  const [showPw, setShowPw] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -226,16 +229,49 @@ const ParentDashboard: React.FC = () => {
                 return;
               }
                 try {
-                type CreateParentPayload = { name: string; email: string; phone?: string; password?: string };
-                const payload: CreateParentPayload = { name: `${form.firstName} ${form.lastName}`, email: form.email, phone: form.phone };
-                if (form.password) payload.password = form.password;
+                  const url = editingParent ? `api/parent/${editingParent.id}` : `api/parent`;
+                  const method = editingParent ? 'PUT' : 'POST';
 
-                const url = editingParent ? `api/parent/${editingParent.id}` : `api/parent`;
-                const method = editingParent ? 'PUT' : 'POST';
+                  // admin check and safer user info extraction
+                  const isAdmin = user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super'));
+                  const userInfoLocal = user as UserInfo | null;
+                  const isEditingOwnParent = Boolean(editingParent && userInfoLocal && String((userInfoLocal.parentId ?? userInfoLocal.id ?? '')) === String(editingParent.id));
 
-                const res = await fetchWithRefresh(url, {
-                  method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload)
-                });
+                  // build a safe send payload object
+                  const sendPayload: Record<string, unknown> = {
+                    name: `${form.firstName} ${form.lastName}`,
+                    email: form.email,
+                  };
+                  if (form.phone) sendPayload.phone = form.phone;
+
+                  // If editing and admin provided password for another parent, map to newPassword and show modal
+                  if (editingParent && form.password && (isAdmin && !isEditingOwnParent)) {
+                    // construct a properly typed pending payload
+                    const pendingPayload: { name: string; email: string; phone?: string; newPassword?: string } = {
+                      name: String(sendPayload.name),
+                      email: String(sendPayload.email),
+                    };
+                    if (sendPayload.phone) pendingPayload.phone = String(sendPayload.phone);
+                    pendingPayload.newPassword = form.password;
+                    setPendingSave({ payload: pendingPayload, parentId: editingParent.id });
+                    setAdminResetModal({ open: true, parentId: editingParent.id, password: form.password });
+                    return;
+                  }
+
+                  // otherwise include password/newPassword directly depending on context
+                  if (form.password) {
+                    if (editingParent && (isAdmin || isEditingOwnParent)) {
+                      // admin or self editing -> send as newPassword
+                      (sendPayload as Record<string, unknown>)['newPassword'] = form.password;
+                    } else if (!editingParent) {
+                      // creating a parent -> include password
+                      (sendPayload as Record<string, unknown>)['password'] = form.password;
+                    }
+                  }
+
+                  const res = await fetchWithRefresh(url, {
+                    method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(sendPayload)
+                  });
                 let resBody: unknown = null;
                 try { resBody = await res.json(); } catch { /* noop */ }
                 if (!res.ok) {
@@ -262,8 +298,14 @@ const ParentDashboard: React.FC = () => {
               <input name="lastName" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder="Nom" required className="border rounded px-3 py-2 text-xs md:text-base" />
               <input name="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" required className="border rounded px-3 py-2 text-xs md:text-base" />
               <input name="phone" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="Téléphone" className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="password" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Mot de passe (laisser vide pour envoyer une invitation)" className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="confirmPassword" type="password" value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Confirmer le mot de passe" className="border rounded px-3 py-2 text-xs md:text-base" />
+              <div className="relative">
+                <input name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Mot de passe (laisser vide pour envoyer une invitation)" className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
+                <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button>
+              </div>
+              <div className="relative">
+                <input name="confirmPassword" type={showPw ? 'text' : 'password'} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Confirmer le mot de passe" className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
+                <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button>
+              </div>
               <div className="md:col-span-2 flex gap-2">
                 <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingParent ? 'Enregistrer' : 'Ajouter'}</button>
                 <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); setFormError(null); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
@@ -335,6 +377,40 @@ const ParentDashboard: React.FC = () => {
             </div>
           )}
           {showChildModal && <ChildOptionsModal child={selectedChild} onClose={() => { setShowChildModal(false); setSelectedChild(null); }} />}
+          {/* Admin password reset modal for parents */}
+          {adminResetModal && adminResetModal.open && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
+                <h3 className="text-lg font-bold mb-2">Confirmer la réinitialisation du mot de passe</h3>
+                <p className="mb-4">Vous allez réinitialiser le mot de passe de ce parent. Voulez-vous continuer ?</p>
+                <div className="flex gap-3">
+                  <button onClick={() => { setPendingSave(null); setAdminResetModal(null); }} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2">Annuler</button>
+                  <button onClick={async () => {
+                    if (!pendingSave) return;
+                    try {
+                      const res = await fetchWithRefresh(`api/parent/${pendingSave.parentId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(pendingSave.payload) });
+                      if (!res.ok) throw new Error('Erreur lors de la mise à jour');
+                      const reload = await fetchWithRefresh(`api/parent/admin`, { credentials: 'include' });
+                      const text = await reload.text();
+                      let json: unknown = null;
+                      try { json = text ? JSON.parse(text) : null; } catch { json = text; }
+                      setAdminData(json as AdminData);
+                      setPendingSave(null);
+                      setAdminResetModal(null);
+                      setEditingParent(null);
+                      setAdding(false);
+                      setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' });
+                    } catch (err) {
+                      console.error('Parent reset failed', err);
+                      setPendingSave(null);
+                      setAdminResetModal(null);
+                      setFormError('La réinitialisation a échoué');
+                    }
+                  }} className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2">Confirmer</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

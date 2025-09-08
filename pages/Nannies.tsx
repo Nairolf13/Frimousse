@@ -20,7 +20,7 @@ function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }
   );
 }
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface Child {
   id: string;
@@ -74,6 +74,7 @@ export default function Nannies() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [error, setError] = useState('');
   const [planningNanny, setPlanningNanny] = useState<Nanny|null>(null);
   const [search, setSearch] = useState('');
@@ -172,19 +173,15 @@ export default function Nannies() {
       if (!payload.password) delete payload.password;
       const isEditingOwnNanny = editingId && user && (String(user.nannyId) === String(editingId));
 
-      // If admin is resetting another nanny's password, show a modal to confirm
       if (editingId && (isAdmin || isEditingOwnNanny) && form.password) {
-        // prepare payload with newPassword
         (payload as Partial<typeof emptyForm> & { newPassword?: string }).newPassword = form.password;
         delete (payload as Partial<typeof emptyForm> & { password?: string }).password;
 
         if (isAdmin && !isEditingOwnNanny) {
-          // buffer the save and ask for confirmation via modal
           setPendingSave({ payload, editingId });
           setAdminResetModal({ open: true, nannyId: editingId, password: form.password });
           return;
         }
-        // otherwise proceed (self password change)
       } else {
         if (!isAdmin && !isEditingOwnNanny) delete (payload as Partial<typeof emptyForm> & { newPassword?: string }).newPassword;
       }
@@ -199,7 +196,6 @@ export default function Nannies() {
     }
   };
 
-  // perform the actual save request; reused by normal submit and by modal confirm
   const performSave = async (payload: Partial<typeof emptyForm> & { experience?: number; newPassword?: string }, editingId?: string | null) => {
     try {
       const res = await fetchWithRefresh(editingId ? `${API_URL}/nannies/${editingId}` : `${API_URL}/nannies`, {
@@ -241,7 +237,6 @@ export default function Nannies() {
       setConfirmPassword('');
       setEditingId(null);
       fetchNannies();
-      // show small success message for the edited nanny
       if (editingId) {
         setMessages(m => ({ ...m, [editingId]: { text: 'Mise à jour effectuée', type: 'success' } }));
         setTimeout(() => setMessages(m => ({ ...m, [editingId]: null })), 3000);
@@ -270,6 +265,18 @@ export default function Nannies() {
   const handleEdit = (nanny: Nanny) => {
     setForm({ name: nanny.name, availability: nanny.availability, experience: nanny.experience, specializations: nanny.specializations || [], status: nanny.status || 'Disponible', contact: nanny.contact, email: nanny.email, birthDate: nanny.birthDate });
     setEditingId(nanny.id);
+    setAdding(false);
+    // scroll to the form so the user doesn't have to manually scroll
+    // timeout lets React render the form before we attempt to scroll
+    setTimeout(() => {
+      if (formRef.current) {
+        formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // small offset so form header isn't flush to top (optional)
+        window.scrollBy({ top: -12, left: 0, behavior: 'smooth' });
+        const firstInput = formRef.current.querySelector<HTMLInputElement>('input[name="name"]');
+        firstInput?.focus();
+      }
+    }, 80);
   };
 
   const [deleteId, setDeleteId] = useState<string|null>(null);
@@ -376,7 +383,7 @@ export default function Nannies() {
         </div>
 
         {(adding || editingId) && (
-          <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
             <input name="name" value={form.name} onChange={handleChange} placeholder="Nom" required className="border rounded px-3 py-2 text-base" />
             <select name="availability" value={form.availability} onChange={handleChange} required className="border rounded px-3 py-2 text-xs md:text-base">
               <option value="Disponible">Disponible</option>

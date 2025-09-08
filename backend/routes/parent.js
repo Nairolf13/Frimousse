@@ -260,6 +260,29 @@ router.put('/:id', requireAuth, async (req, res) => {
       if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent not found' });
     }
     const updated = await prisma.parent.update({ where: { id }, data });
+
+    // If newPassword provided, allow admins or the parent themself to update linked user password(s)
+    try {
+      const { newPassword } = req.body || {};
+      if (newPassword && typeof newPassword === 'string') {
+        const actor = req.user || {};
+        const isAdmin = isAdminRole(actor) || isSuperAdmin(actor);
+        // owner if the logged user has parentId equal to id, or the user id equals the parent user id
+        const isSelfParent = actor && (actor.parentId && String(actor.parentId) === String(id));
+        if (isAdmin || isSelfParent) {
+          const users = await prisma.user.findMany({ where: { parentId: id } });
+          if (users && users.length > 0) {
+            const hash = await bcrypt.hash(newPassword, 10);
+            for (const u of users) {
+              await prisma.user.update({ where: { id: u.id }, data: { password: hash } });
+              try { await prisma.refreshToken.deleteMany({ where: { userId: u.id } }); } catch (e) { /* ignore */ }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to update parent user password', e && e.message ? e.message : e);
+    }
     res.json(updated);
   } catch (err) {
     console.error('PUT /api/parent/:id error', err);
