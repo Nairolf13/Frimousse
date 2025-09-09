@@ -6,6 +6,7 @@ const auth = require('../middleware/authMiddleware');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('../lib/logger');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
@@ -246,6 +247,62 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
     });
 
     res.status(201).json(result);
+    // background notify nannies assigned to this child (push + email fallback)
+    (async () => {
+      try {
+        const { sendTemplatedMail } = require('../lib/email');
+        const { notifyUsers } = require('../lib/pushNotifications');
+        const childRec = result;
+        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
+        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+        const title = (lang === 'fr') ? `Nouvel enfant assigné: ${childRec.name}` : `New child assigned: ${childRec.name}`;
+        const text = (lang === 'fr') ? `Bonjour,\n\nUn nouvel enfant (${childRec.name}) vous a été confié.` : `Hello,\n\nA new child (${childRec.name}) has been assigned to you.`;
+        for (const cn of (childRec.childNannies || [])) {
+          const nanny = cn && cn.nanny ? cn.nanny : null;
+          if (!nanny) continue;
+          let nannyUserId = null;
+          if (nanny && nanny.id) {
+            const nannyUserRec = await prisma.user.findFirst({ where: { nannyId: nanny.id }, select: { id: true } });
+            if (nannyUserRec && nannyUserRec.id) nannyUserId = nannyUserRec.id;
+          }
+          if (!nannyUserId && nanny && nanny.id && typeof nanny.id === 'string') {
+            const maybeUser = await prisma.user.findUnique({ where: { id: nanny.id }, select: { id: true } }).catch(() => null);
+            if (maybeUser && maybeUser.id) nannyUserId = maybeUser.id;
+          }
+          if (nannyUserId) {
+            // send email to user account if configured
+            try {
+              if (process.env.SMTP_HOST) {
+                const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
+                if (nannyUser && nannyUser.email) {
+                  await sendTemplatedMail({ templateName: 'assignment', lang, to: [nannyUser.email], subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' } });
+                }
+              }
+            } catch (e) {
+              logger.error('Failed to send new child email to nanny user', e && e.message ? e.message : e);
+            }
+            try {
+              await notifyUsers([nannyUserId], { title, body: text, data: { childId: childRec.id } });
+            } catch (e) {
+              logger.error('Failed to send new child push to nanny', e && e.message ? e.message : e);
+            }
+          } else {
+            // fallback: email to nanny record if available
+            logger.warn('No linked user for nanny when creating child; attempting fallback email', nanny && nanny.id ? nanny.id : null);
+            try {
+              if (process.env.SMTP_HOST && (nanny.email || nanny.contactEmail)) {
+                const to = nanny.email ? [nanny.email] : [nanny.contactEmail];
+                await sendTemplatedMail({ templateName: 'assignment', lang, to, subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' } });
+              }
+            } catch (e) {
+              logger.error('Fallback email to nanny failed when creating child', e && e.message ? e.message : e);
+            }
+          }
+        }
+      } catch (e) {
+        logger.error('Failed to notify nannies for new child', e && e.message ? e.message : e);
+      }
+    })();
   } catch (error) {
     console.error('Error creating child', error);
     return res.status(500).json({ error: 'Erreur serveur lors de la création de l\'enfant' });

@@ -10,6 +10,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const authMiddleware = require('../middleware/authMiddleware');
+const { sendFeedPostNotification, sendLikeNotification, sendCommentNotification } = require('../lib/pushNotifications');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } }); // 8MB
 
@@ -133,10 +134,38 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
     }
 
     const result = await prisma.feedPost.findUnique({ where: { id: post.id }, include: { medias: true, author: true } });
+
+    // send push notifications in background (don't block response)
+    (async () => {
+      try {
+        await sendFeedPostNotification({ postId: result.id, centerId: result.centerId, authorId: result.authorId, authorName: result.author?.name, text: result.text, action: 'created' });
+      } catch (err) {
+        console.error('Background push send failed', err);
+      }
+    })();
+
     return res.status(201).json(result);
   } catch (e) {
     console.error('Failed to create feed post', e);
     return res.status(500).json({ message: 'Failed to create post' });
+  }
+});
+
+// Admin-only route: trigger a push notification for an existing post (useful for testing)
+router.post('/:postId/notify', authMiddleware, async (req, res) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  if (!['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
+  const { postId } = req.params;
+  try {
+    const post = await prisma.feedPost.findUnique({ where: { id: postId }, include: { author: true } });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    await sendFeedPostNotification({ postId: post.id, centerId: post.centerId, authorId: post.authorId, authorName: post.author?.name, text: post.text, action: 'test' });
+    return res.json({ sent: true });
+  } catch (e) {
+    console.error('Failed to send test notification', e);
+    return res.status(500).json({ message: 'Failed to send notification' });
   }
 });
 
@@ -194,6 +223,16 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
       return res.json({ liked: false });
     }
     await prisma.feedLike.create({ data: { postId, userId: user.id } });
+
+    // notify post owner in background
+    (async () => {
+      try {
+        await sendLikeNotification({ postId, likerId: user.id, likerName: user.name });
+      } catch (err) {
+        console.error('Background like push failed', err);
+      }
+    })();
+
     return res.json({ liked: true });
   } catch (e) {
     console.error('Failed to toggle like', e);
@@ -225,8 +264,18 @@ router.post('/:id/comment', authMiddleware, async (req, res) => {
   const { text } = req.body;
   if (!text || text.trim().length === 0) return res.status(400).json({ message: 'Comment text required' });
   try {
-  const comment = await prisma.feedComment.create({ data: { postId, authorId: user.id, text } });
-  return res.status(201).json({ id: comment.id, text: comment.text, authorName: user.name, authorId: comment.authorId, createdAt: comment.createdAt });
+    const comment = await prisma.feedComment.create({ data: { postId, authorId: user.id, text } });
+
+    // notify post owner in background
+    (async () => {
+      try {
+        await sendCommentNotification({ postId, commenterId: user.id, commenterName: user.name, commentText: text });
+      } catch (err) {
+        console.error('Background comment push failed', err);
+      }
+    })();
+
+    return res.status(201).json({ id: comment.id, text: comment.text, authorName: user.name, authorId: comment.authorId, createdAt: comment.createdAt });
   } catch (e) {
     console.error('Failed to add comment', e);
     return res.status(500).json({ message: 'Failed to add comment' });
@@ -306,6 +355,17 @@ router.patch('/:postId', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
     const updated = await prisma.feedPost.update({ where: { id: postId }, data: { text } });
+
+    // notify subscribers in background
+    (async () => {
+      try {
+        const postWithAuthor = await prisma.feedPost.findUnique({ where: { id: updated.id }, include: { author: true } });
+        await sendFeedPostNotification({ postId: updated.id, centerId: postWithAuthor.centerId, authorId: postWithAuthor.authorId, authorName: postWithAuthor.author?.name, text: updated.text, action: 'updated' });
+      } catch (err) {
+        console.error('Background push send failed', err);
+      }
+    })();
+
     return res.json({ id: updated.id, text: updated.text, createdAt: updated.createdAt });
   } catch (e) {
     console.error('Failed to edit post', e);
@@ -324,13 +384,26 @@ router.delete('/:postId', authMiddleware, async (req, res) => {
     if (existing.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
       return res.status(403).json({ message: 'Forbidden' });
     }
-    // delete associated medias first
-    await prisma.feedMedia.deleteMany({ where: { postId } });
-    await prisma.feedPost.delete({ where: { id: postId } });
-    return res.json({ deleted: true });
+    // delete associated rows in correct order to avoid foreign-key constraint errors
+    // remove medias, likes, comments then the post itself inside a transaction
+    try {
+      const result = await prisma.$transaction([
+        prisma.feedMedia.deleteMany({ where: { postId } }),
+        prisma.feedLike.deleteMany({ where: { postId } }),
+        prisma.feedComment.deleteMany({ where: { postId } }),
+        prisma.feedPost.delete({ where: { id: postId } }),
+      ]);
+      // result contains the counts / deleted objects; return success
+      return res.json({ deleted: true });
+    } catch (txErr) {
+      console.error('Failed to delete post in transaction', postId, txErr && txErr.message ? txErr.message : txErr);
+      if (txErr && txErr.code) console.error('Prisma error code', txErr.code);
+      return res.status(500).json({ message: 'Failed to delete post' });
+    }
   } catch (e) {
-    console.error('Failed to delete post', e);
-    return res.status(500).json({ message: 'Failed to delete post' });
+  console.error('Failed to delete post', e && e.message ? e.message : e);
+  if (e && e.stack) console.error(e.stack);
+  return res.status(500).json({ message: 'Failed to delete post' });
   }
 });
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -227,9 +228,43 @@ function ProfileButton() {
 
 export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
+  const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
+  // store server-side subscription id for this device (returned by /api/push-subscriptions/save)
+  const [pushSubId, setPushSubId] = useState<string | null>(null);
   const [language, setLanguage] = useState('fr');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  useEffect(() => {
+    // detect existing subscription
+    (async () => {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        setPushEnabled(false);
+        return;
+      }
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) return setPushEnabled(false);
+        const sub = await reg.pushManager.getSubscription();
+        setPushEnabled(!!sub);
+        // try to fetch server-side subscription id for current user
+        try {
+          const me = await fetchWithRefresh('/api/push-subscriptions/me', { credentials: 'include' });
+          if (me.ok) {
+            const data = await me.json();
+            // try to match subscription by endpoint if we have a client-side sub
+            if (sub && Array.isArray(data.subscriptions)) {
+              type SubRecord = { id?: string; subscription?: { endpoint?: string } | null };
+              const found = (data.subscriptions as SubRecord[]).find((s) => s.subscription && s.subscription.endpoint === sub.endpoint);
+              if (found && found.id) setPushSubId(found.id);
+            }
+          }
+  } catch { /* ignore */ }
+      } catch {
+        setPushEnabled(false);
+      }
+    })();
+  }, []);
 
   return (
     <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
@@ -260,6 +295,56 @@ export default function Settings() {
                 <option value="fr">Français</option>
                 <option value="en">English</option>
               </select>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow p-4 md:col-span-2 flex items-center justify-between">
+              <div>
+                <div className="font-semibold text-gray-800">Notifications push</div>
+                <div className="text-gray-500 text-sm">Recevoir des notifications sur votre navigateur (rappels et annonces)</div>
+              </div>
+              <div>
+                <button
+                  className={`px-4 py-2 rounded font-medium ${pushEnabled ? 'bg-red-200 text-red-700' : 'bg-[#a9ddf2] text-[#0b5566]'}`}
+                  onClick={async () => {
+                    try {
+                      if (pushEnabled) {
+                        // client-side unsubscribe
+                        try { await unsubscribeFromPush(); } catch { /* ignore client-side unsubscribe errors */ }
+                        // notify backend to remove any server-side subscriptions for this user
+                        try {
+                          if (pushSubId) {
+                            await fetchWithRefresh(`/api/push-subscriptions/${encodeURIComponent(pushSubId)}`, { method: 'DELETE', credentials: 'include' });
+                          } else {
+                            await fetchWithRefresh('/api/push-subscriptions/me', { method: 'DELETE', credentials: 'include' });
+                          }
+                        } catch (be) {
+                          console.error('Failed to delete subscription on server', be);
+                        }
+                        setPushEnabled(false);
+                        setPushSubId(null);
+                        return;
+                      }
+                      const vapid = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+                      if (!vapid) return alert('VAPID_PUBLIC_KEY non défini en front');
+                      const { subscription } = await subscribeToPush(vapid);
+                      // send to backend and capture id
+                      try {
+                        const res = await fetchWithRefresh('/api/push-subscriptions/save', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription }) });
+                        if (res.ok) {
+                          const json = await res.json();
+                          if (json && json.id) setPushSubId(json.id);
+                        }
+                      } catch { /* ignore backend save errors */ }
+                      setPushEnabled(true);
+                    } catch (e: unknown) {
+                      const msg = e instanceof Error ? e.message : String(e);
+                      alert('Impossible d\'activer les notifications push: ' + msg);
+                    }
+                  }}
+                >
+                  {pushEnabled ? 'Désactiver' : 'Activer'}
+                </button>
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow p-4 md:col-span-2">

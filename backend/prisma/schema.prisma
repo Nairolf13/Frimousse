@@ -74,6 +74,7 @@ model User {
   center           Center?        @relation(fields: [centerId], references: [id])
   centerId         String?
   refreshTokens    RefreshToken[]
+  pushSubscriptions PushSubscription[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   feedPosts        FeedPost[]
@@ -307,4 +308,14 @@ enum FeedVisibility {
   CENTER
   PARENTS
   PUBLIC
+}
+
+model PushSubscription {
+  id          String   @id @default(uuid())
+  user        User?    @relation(fields: [userId], references: [id])
+  userId      String?
+  subscription Json     
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
 }
