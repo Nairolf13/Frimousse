@@ -3,6 +3,7 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const auth = require('../middleware/authMiddleware');
+const logger = require('../lib/logger');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
 router.get('/schedules', auth, async (req, res) => {
@@ -41,20 +42,86 @@ router.post('/schedules', auth, async (req, res) => {
     });
       res.json(fullSchedule);
 
-      // notify parents of children assigned that day about the new activity (non-blocking)
+      // notify participating nannies and parents of children cared for by those nannies
       (async () => {
         try {
-          const { sendTemplatedMail, getParentEmailsForDate } = require('../lib/email');
-          if (!process.env.SMTP_HOST) return;
+          const { sendTemplatedMail } = require('../lib/email');
+          const { notifyUsers } = require('../lib/pushNotifications');
           const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
           const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-          const parentEmails = await getParentEmailsForDate(prisma, date, req.user.centerId, isSuperAdmin(req.user));
-          if (!parentEmails.length) return;
-          const subject = (lang === 'fr') ? `Nouvelle activité : ${name || ''}` : `New activity: ${name || ''}`;
+
+          const nannyIds = (fullSchedule && fullSchedule.nannies) ? fullSchedule.nannies.map(n => n.id).filter(Boolean) : [];
+          if (!nannyIds.length) return;
+
+          const title = (lang === 'fr') ? `Nouvelle activité : ${name || ''}` : `New activity: ${name || ''}`;
           const text = (lang === 'fr') ? `Une nouvelle activité a été planifiée pour ${new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' })}` : `A new activity has been planned for ${new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' })}`;
-          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp' } });
+
+          // Notify nannies (push + email to user account if present)
+          for (const nid of nannyIds) {
+            try {
+              const nannyRec = await prisma.nanny.findUnique({ where: { id: nid } });
+              if (!nannyRec) continue;
+              // resolve user account for nanny
+              let nannyUserId = null;
+              const nannyUserRec = await prisma.user.findFirst({ where: { nannyId: nid }, select: { id: true, email: true } }).catch(() => null);
+              if (nannyUserRec && nannyUserRec.id) nannyUserId = nannyUserRec.id;
+              // send email to nanny user if configured
+              if (nannyUserRec && nannyUserRec.email && process.env.SMTP_HOST) {
+                try {
+                  await sendTemplatedMail({ templateName: 'activity', lang, to: [nannyUserRec.email], subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' } });
+                } catch (e) { logger.error('Failed to send activity email to nanny user', e && e.message ? e.message : e); }
+              }
+              if (nannyUserId) {
+                try { await notifyUsers([nannyUserId], { title, body: text, data: { scheduleId: schedule.id, type: 'schedule.created' } }); } catch (e) { logger.error('Failed to send activity push to nanny', e && e.message ? e.message : e); }
+              } else {
+                // fallback: email to nanny record
+                if (process.env.SMTP_HOST && (nannyRec.email || nannyRec.contactEmail)) {
+                  try {
+                    const to = nannyRec.email ? [nannyRec.email] : [nannyRec.contactEmail];
+                    await sendTemplatedMail({ templateName: 'activity', lang, to, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' } });
+                  } catch (e) { logger.error('Fallback activity email to nanny failed', e && e.message ? e.message : e); }
+                }
+              }
+            } catch (e) {
+              logger.error('Error notifying nanny for schedule', e && e.message ? e.message : e);
+            }
+          }
+
+          // Notify parents whose children are cared for by any of these nannies
+          try {
+            // find children linked to these nannies
+            const children = await prisma.child.findMany({ where: { childNannies: { some: { nannyId: { in: nannyIds } } }, ...(isSuperAdmin(req.user) ? {} : { centerId: req.user.centerId }) }, include: { parents: { include: { parent: true } } } });
+            const parentEmails = new Set();
+            const parentIds = new Set();
+            for (const c of children) {
+              for (const pc of (c.parents || [])) {
+                if (pc && pc.parent) {
+                  if (pc.parent.email) parentEmails.add(pc.parent.email);
+                  if (pc.parent.id) parentIds.add(pc.parent.id);
+                }
+              }
+            }
+            const parentEmailList = Array.from(parentEmails);
+            // send emails
+            if (process.env.SMTP_HOST && parentEmailList.length) {
+              try {
+                await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmailList, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' } });
+              } catch (e) { logger.error('Failed to send activity emails to parents', e && e.message ? e.message : e); }
+            }
+            // push to parent users (resolve users by parentId)
+            if (parentIds.size) {
+              const parentUsers = await prisma.user.findMany({ where: { parentId: { in: Array.from(parentIds) } }, select: { id: true } });
+              const parentUserIds = parentUsers.map(u => u.id).filter(Boolean);
+              if (parentUserIds.length) {
+                try { await notifyUsers(parentUserIds, { title, body: text, data: { scheduleId: schedule.id, type: 'schedule.created' } }); } catch (e) { logger.error('Failed to send activity pushes to parents', e && e.message ? e.message : e); }
+              }
+            }
+          } catch (e) {
+            logger.error('Failed to notify parents for schedule', e && e.message ? e.message : e);
+          }
+
         } catch (err) {
-          console.error('Failed to send activity notification', err && err.message ? err.message : err);
+          logger.error('Failed to send schedule-related notifications', err && err.message ? err.message : err);
         }
       })();
   } catch (err) {

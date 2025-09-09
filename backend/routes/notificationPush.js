@@ -4,6 +4,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const requireAuth = require('../middleware/authMiddleware');
 
+const logger = require('../lib/logger');
+
 // Helper to mask a push endpoint so we don't leak it in logs
 function maskEndpoint(ep) {
   if (!ep) return '<no-endpoint>';
@@ -50,9 +52,9 @@ router.post('/save', requireAuth, async (req, res) => {
         try {
           await prisma.pushSubscription.deleteMany({ where: { subscription: { path: ['endpoint'], equals: endpoint }, id: { not: updated.id } } });
         } catch (e) {
-          console.warn('Failed to cleanup duplicate subscriptions for endpoint', maskEndpoint(endpoint), e && e.message ? e.message : e);
+          logger.warn('Failed to cleanup duplicate subscriptions for endpoint', maskEndpoint(endpoint), e && e.message ? e.message : e);
         }
-        if (existing.userId && existing.userId !== userId) console.warn('[push] /save: reassociated endpoint', maskEndpoint(endpoint), 'from user', existing.userId, 'to', userId);
+        if (existing.userId && existing.userId !== userId) logger.warn('[push] /save: reassociated endpoint', maskEndpoint(endpoint), 'from user', existing.userId, 'to', userId);
         return res.json({ success: true, id: updated.id, updated: true });
       }
     }
@@ -61,11 +63,11 @@ router.post('/save', requireAuth, async (req, res) => {
     const created = await prisma.pushSubscription.create({ data: { userId: userId, subscription } });
     // Remove other rows for this user (keep only the created one)
     if (userId) {
-      try { await prisma.pushSubscription.deleteMany({ where: { userId, id: { not: created.id } } }); } catch (e) { console.warn('Failed to cleanup other subs for user', userId, e && e.message ? e.message : e); }
+      try { await prisma.pushSubscription.deleteMany({ where: { userId, id: { not: created.id } } }); } catch (e) { logger.warn('Failed to cleanup other subs for user', userId, e && e.message ? e.message : e); }
     }
     res.json({ success: true, id: created.id, created: true });
-  } catch (err) {
-    console.error('Error saving subscription:', err && err.message ? err.message : err);
+    } catch (err) {
+    logger.error('Error saving subscription:', err && err.message ? err.message : err);
     res.status(500).json({ error: 'Database error' });
   }
 });
@@ -86,7 +88,7 @@ router.post('/associate', requireAuth, async (req, res) => {
       found = await prisma.pushSubscription.findFirst({ where: { subscription: { path: ['endpoint'], equals: endpoint } } });
     }
 
-    if (found) {
+  if (found) {
       // If the subscription already belongs to this user and payload is unchanged, no-op to avoid duplicate processing
       try {
         const foundSubStr = JSON.stringify(found.subscription || {});
@@ -100,15 +102,15 @@ router.post('/associate', requireAuth, async (req, res) => {
       }
       const updated = await prisma.pushSubscription.update({ where: { id: found.id }, data: { userId, subscription } });
       // Clean up any other rows with the same endpoint
-  try { await prisma.pushSubscription.deleteMany({ where: { subscription: { path: ['endpoint'], equals: endpoint }, id: { not: updated.id } } }); } catch (e) { console.warn('Failed cleanup after associate', e && e.message ? e.message : e); }
-  if (found.userId && found.userId !== userId) console.warn('[push] /associate: reassociated endpoint', maskEndpoint(endpoint), 'from user', found.userId, 'to', userId);
+  try { await prisma.pushSubscription.deleteMany({ where: { subscription: { path: ['endpoint'], equals: endpoint }, id: { not: updated.id } } }); } catch (e) { logger.warn('Failed cleanup after associate', e && e.message ? e.message : e); }
+  if (found.userId && found.userId !== userId) logger.warn('[push] /associate: reassociated endpoint', maskEndpoint(endpoint), 'from user', found.userId, 'to', userId);
       return res.json({ updated: true, id: updated.id });
     }
 
     const created = await prisma.pushSubscription.create({ data: { userId, subscription } });
     return res.json({ created: true, id: created.id });
   } catch (err) {
-    console.error('Error associating subscription:', err && err.message ? err.message : err);
+    logger.error('Error associating subscription:', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -121,7 +123,7 @@ router.get('/me', requireAuth, async (req, res) => {
     const subs = await prisma.pushSubscription.findMany({ where: { userId } });
     return res.json({ subscriptions: subs });
   } catch (err) {
-    console.error('Error listing subscriptions for user:', err && err.message ? err.message : err);
+    logger.error('Error listing subscriptions for user:', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -134,7 +136,7 @@ router.delete('/me', requireAuth, async (req, res) => {
     await prisma.pushSubscription.deleteMany({ where: { userId } });
     return res.json({ deleted: true });
   } catch (err) {
-    console.error('Error deleting subscriptions for user:', err && err.message ? err.message : err);
+    logger.error('Error deleting subscriptions for user:', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'Database error' });
   }
 });
@@ -154,7 +156,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     await prisma.pushSubscription.delete({ where: { id } });
     return res.json({ deleted: true, id });
   } catch (err) {
-    console.error('Error deleting subscription by id:', err && err.message ? err.message : err);
+    logger.error('Error deleting subscription by id:', err && err.message ? err.message : err);
     return res.status(500).json({ error: 'Database error' });
   }
 });

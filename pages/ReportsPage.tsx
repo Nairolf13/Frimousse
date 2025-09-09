@@ -127,6 +127,7 @@ export default function ReportsPage() {
     return ok;
   });
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingReport, setEditingReport] = useState<Report | null>(null);
   const [form, setForm] = useState({
     priority: 'moyenne' as 'haute' | 'moyenne' | 'basse',
     type: 'incident' as 'incident' | 'comportement' | 'soin',
@@ -185,6 +186,7 @@ export default function ReportsPage() {
       .then(data => setReports(data))
       .catch(() => setReports([]));
     setModalOpen(false);
+  setEditingReport(null);
     setForm({
       priority: 'moyenne',
       type: 'incident',
@@ -239,7 +241,28 @@ export default function ReportsPage() {
               />
             </div>
             {!(user && user.role === 'parent') && (
-              <button className="bg-[#0b5566] text-white px-4 md:px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-sm md:text-base mt-2 md:mt-0 md:ml-2 w-full md:w-auto" onClick={() => setModalOpen(true)}>Nouveau Rapport</button>
+              <button className="bg-[#0b5566] text-white px-4 md:px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-sm md:text-base mt-2 md:mt-0 md:ml-2 w-full md:w-auto" onClick={() => {
+                setEditingReport(null);
+                setForm({
+                  priority: 'moyenne',
+                  type: 'incident',
+                  status: 'en_attente',
+                  childId: '',
+                  childName: '',
+                  childAge: 3,
+                  childGroup: '',
+                  nannyId: '',
+                  nannyName: '',
+                  nannyRole: '',
+                  summary: '',
+                  details: '',
+                  date: new Date().toISOString().split('T')[0],
+                  time: '14:00',
+                  duration: '',
+                  childrenInvolved: '',
+                });
+                setModalOpen(true);
+              }}>Nouveau Rapport</button>
             )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-4 md:mb-6">
@@ -268,6 +291,34 @@ export default function ReportsPage() {
                     <span className="font-bold text-xs md:text-sm ml-1" style={{ color: '#08323a' }}>{report.child?.name}</span>
                     <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold border" style={{ background: '#fff7e6', color: '#856400', borderColor: '#fff1d6' }}>{nannyInitials}</span>
                     <span className="font-bold text-xs md:text-sm ml-1" style={{ color: '#856400' }}>{report.nanny?.name}</span>
+                    {/* three-dot menu */}
+                    <div className="relative ml-2">
+                      <button aria-label="Actions" className="text-gray-500 hover:text-gray-800" onClick={() => {
+                        // prefill form with report values
+                        setEditingReport(report);
+                        setForm({
+                          priority: (report.priority as unknown as 'haute' | 'moyenne' | 'basse') || 'moyenne',
+                          type: (report.type as unknown as 'incident' | 'comportement' | 'soin') || 'incident',
+                          status: (report.status as unknown as 'en_attente' | 'traite' | 'resolu') || 'en_attente',
+                          childId: report.child?.id || report.child?.id || '',
+                          childName: report.child?.name || '',
+                          childAge: report.child?.age || 3,
+                          childGroup: report.child?.group || '',
+                          nannyId: report.nanny?.id || report.nanny?.id || '',
+                          nannyName: report.nanny?.name || '',
+                          nannyRole: report.nanny?.role || '',
+                          summary: report.summary || '',
+                          details: report.details || '',
+                          date: report.date ? new Date(report.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                          time: report.time || '14:00',
+                          duration: report.duration || '',
+                          childrenInvolved: report.childrenInvolved ? String(report.childrenInvolved) : '',
+                        });
+                        setModalOpen(true);
+                      }}>
+                        ⋮
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="px-4 md:px-6 pb-4">
@@ -310,8 +361,35 @@ export default function ReportsPage() {
             <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative flex flex-col gap-6 animate-fade-in" style={{ border: '4px solid #fcdcdf' }}>
               <button onClick={() => setModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-              <h2 className="text-2xl font-extrabold mb-2 text-center" style={{ color: '#0b5566' }}>Nouveau Rapport</h2>
-              <form className="space-y-3" onSubmit={handleAddReport}>
+              <h2 className="text-2xl font-extrabold mb-2 text-center" style={{ color: '#0b5566' }}>{editingReport ? 'Modifier le Rapport' : 'Nouveau Rapport'}</h2>
+              <form className="space-y-3" onSubmit={async (e) => {
+                if (editingReport) {
+                  e.preventDefault();
+                  const payload = {
+                    priority: form.priority,
+                    type: form.type,
+                    status: form.status,
+                    childId: form.childId,
+                    nannyId: form.nannyId,
+                    summary: form.summary,
+                    details: form.details,
+                    date: form.date,
+                    time: form.time,
+                    duration: form.type === 'comportement' ? form.duration : undefined,
+                    childrenInvolved: form.type === 'comportement' ? Number(form.childrenInvolved) || undefined : undefined,
+                  };
+                  await fetchWithRefresh(`${API_URL}/reports/${editingReport.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                  });
+                  fetchWithRefresh(`${API_URL}/reports`).then(res => res.json()).then(data => setReports(data)).catch(() => setReports([]));
+                  setModalOpen(false);
+                  setEditingReport(null);
+                } else {
+                  await handleAddReport(e);
+                }
+              }}>
                 <div className="flex gap-2">
                   <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as 'haute' | 'moyenne' | 'basse' }))} className="border rounded px-3 py-2 w-1/2">
                     <option value="haute">Priorité Haute</option>
@@ -378,8 +456,16 @@ export default function ReportsPage() {
                   </div>
                 )}
                 <div className="flex gap-2 mt-2">
-                  <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">Créer</button>
-                  <button type="button" onClick={() => setModalOpen(false)} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
+                  <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingReport ? 'Sauvegarder' : 'Créer'}</button>
+                  {editingReport && (
+                    <button type="button" onClick={async () => {
+                      if (!editingReport) return; 
+                      await fetchWithRefresh(`${API_URL}/reports/${editingReport.id}`, { method: 'DELETE' });
+                      fetchWithRefresh(`${API_URL}/reports`).then(res => res.json()).then(data => setReports(data)).catch(() => setReports([]));
+                      setModalOpen(false); setEditingReport(null);
+                    }} className="bg-red-500 text-white px-4 py-2 rounded">Supprimer</button>
+                  )}
+                  <button type="button" onClick={() => { setModalOpen(false); setEditingReport(null); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
                 </div>
               </form>
             </div>
