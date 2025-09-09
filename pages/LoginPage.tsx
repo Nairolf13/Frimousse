@@ -27,7 +27,6 @@ export default function LoginPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        // If server indicates subscription required, show that message and a CTA
         if (res.status === 402 && data && data.error) {
           setError(data.error);
           setNeedsSubscription(true);
@@ -95,7 +94,7 @@ export default function LoginPage() {
             </button>
           </div>
         </label>
-        <div className="w-full text-center text-sm mt-2">
+  <div className="w-full text-center text-sm mt-6 mb-6">
           <button type="button" onClick={() => setForgotOpen(true)} className="text-[#0b5566] hover:underline">Mot de passe oublié ?</button>
         </div>
         <button type="submit" className="w-full bg-[#0b5566] text-white py-2 rounded-full font-semibold hover:opacity-95 transition">Se connecter</button>

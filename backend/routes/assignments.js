@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const logger = require('../lib/logger');
 function isSuperAdmin(user) { if (!user || !user.role) return false; const r = String(user.role).toLowerCase(); return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super'); }
 
 function isAdminRole(user) {
@@ -68,7 +69,7 @@ router.get('/', auth, async (req, res) => {
     });
     res.json(assignments);
   } catch (err) {
-    console.error('GET /assignments error', err);
+  logger.error('GET /assignments error', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -111,13 +112,11 @@ router.post('/', auth, async (req, res) => {
     (async () => {
       try {
         const { sendTemplatedMail } = require('../lib/email');
-        if (!process.env.SMTP_HOST) return;
         const full = await prisma.assignment.findUnique({ where: { id: assignment.id }, include: { child: { include: { parents: { include: { parent: true } } } }, nanny: true } });
         if (!full) return;
         const child = full.child;
         const nanny = full.nanny;
         const parentEmails = (child.parents || []).map(p => p.parent && p.parent.email).filter(Boolean);
-        if (!parentEmails.length) return;
 
         const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
         const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
@@ -129,30 +128,93 @@ router.post('/', auth, async (req, res) => {
         const subject = (lang === 'fr' ? `Affectation pour ${child.name}` : `Assignment for ${child.name}`);
         const text = (lang === 'fr') ? `Bonjour,\n\nVotre enfant ${child.name} a une affectation pour ${formattedDate}.\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nYour child ${child.name} has an assignment for ${formattedDate}.\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
 
-        await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+        // Send emails only if SMTP configured
+        if (process.env.SMTP_HOST && parentEmails.length) {
+          try {
+            await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+          } catch (e) {
+            logger.error('Failed to send assignment email to parents', e && e.message ? e.message : e);
+          }
+        }
 
         // Notify admins if created by nanny
         if (req.user.role === 'nanny') {
-          const adminEmails = [];
-          // Get admins of the center
           const centerAdmins = await prisma.user.findMany({ where: { role: 'admin', centerId: req.user.centerId } });
-          adminEmails.push(...centerAdmins.map(u => u.email));
-          // Get super-admins
           const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
-          adminEmails.push(...superAdmins.map(u => u.email));
-          if (adminEmails.length) {
+          const adminIds = [...centerAdmins.map(u => u.id), ...superAdmins.map(u => u.id)].filter(Boolean);
+          if (adminIds.length) {
             const adminSubject = (lang === 'fr' ? `Nouvelle affectation créée par ${req.user.name}` : `New assignment created by ${req.user.name}`);
             const adminText = (lang === 'fr') ? `Bonjour,\n\nUne nouvelle affectation pour ${child.name} a été créée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nA new assignment for ${child.name} has been created by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
-            await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+            try {
+              await sendTemplatedMail({ templateName: 'assignment', lang, to: [...centerAdmins.map(u => u.email), ...superAdmins.map(u => u.email)].filter(Boolean), subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+            } catch (e) {
+              logger.error('Failed to send assignment email to admins', e && e.message ? e.message : e);
+            }
+
+            try {
+              const { notifyUsers } = require('../lib/pushNotifications');
+              const pushPayload = { title: adminSubject, body: adminText, data: { url: `/planning`, assignmentId: assignment.id } };
+              await notifyUsers(adminIds, pushPayload);
+            } catch (e) {
+              logger.error('Failed to send admin push notification', e && e.message ? e.message : e);
+            }
+          }
+        }
+
+        // Notify assigned nanny when an admin created the assignment
+        if (isAdminRole(req.user) || isSuperAdmin(req.user)) {
+          try {
+            const { notifyUsers } = require('../lib/pushNotifications');
+            // Resolve the User.id for this nanny (User.nannyId === Nanny.id)
+            let nannyUserId = null;
+            if (nanny && nanny.id) {
+              const nannyUserRec = await prisma.user.findFirst({ where: { nannyId: nanny.id }, select: { id: true } });
+              if (nannyUserRec && nannyUserRec.id) nannyUserId = nannyUserRec.id;
+            }
+            // fallback: if nannyId param is actually a user id
+            if (!nannyUserId && nannyId && typeof nannyId === 'string') {
+              const maybeUser = await prisma.user.findUnique({ where: { id: nannyId }, select: { id: true } }).catch(() => null);
+              if (maybeUser && maybeUser.id) nannyUserId = maybeUser.id;
+            }
+            if (nannyUserId) {
+              const nannySubject = (lang === 'fr' ? `Nouvelle affectation pour ${child.name}` : `New assignment for ${child.name}`);
+              const nannyText = (lang === 'fr') ? `Bonjour,\n\nVous avez été affectée à ${child.name} le ${formattedDate}.\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nYou have been assigned to ${child.name} on ${formattedDate}.\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
+              // Send email to the nanny user if available
+              try {
+                if (process.env.SMTP_HOST) {
+                  const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
+                  if (nannyUser && nannyUser.email) {
+                    await sendTemplatedMail({ templateName: 'assignment', lang, to: [nannyUser.email], subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+                  }
+                }
+              } catch (e) {
+                logger.error('Failed to send assignment email to nanny', e && e.message ? e.message : e);
+              }
+              await notifyUsers([nannyUserId], { title: nannySubject, body: nannyText, data: { url: `/planning`, assignmentId: assignment.id } });
+            }
+            else {
+              logger.warn('No linked user for nanny on update; attempting fallback email', nanny && nanny.id ? nanny.id : nannyId);
+              try {
+                if (process.env.SMTP_HOST && nanny && (nanny.email || nanny.contactEmail)) {
+                  const to = nanny.email ? [nanny.email] : [nanny.contactEmail];
+                  await sendTemplatedMail({ templateName: 'assignment', lang, to, subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+                }
+              } catch (e) {
+                logger.error('Fallback email to nanny failed on update', e && e.message ? e.message : e);
+              }
+            }
+            // end of nannyUserId branch
+          } catch (e) {
+            logger.error('Failed to send nanny push notification', e && e.message ? e.message : e);
           }
         }
       } catch (err) {
-        console.error('Failed to send assignment notification', err && err.message ? err.message : err);
+  logger.error('Failed to send assignment notification', err && err.message ? err.message : err);
       }
     })();
 
   } catch (err) {
-    console.error('POST /assignments error', err);
+  logger.error('POST /assignments error', err);
     res.status(500).json({ error: err.message || 'Erreur serveur' });
   }
 });
@@ -187,13 +249,11 @@ router.put('/:id', auth, async (req, res) => {
     (async () => {
       try {
         const { sendTemplatedMail } = require('../lib/email');
-        if (!process.env.SMTP_HOST) return;
         const full = await prisma.assignment.findUnique({ where: { id: assignment.id }, include: { child: { include: { parents: { include: { parent: true } } } }, nanny: true } });
         if (!full) return;
         const child = full.child;
         const nanny = full.nanny;
         const parentEmails = (child.parents || []).map(p => p.parent && p.parent.email).filter(Boolean);
-        if (!parentEmails.length) return;
 
         const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
         const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
@@ -205,7 +265,14 @@ router.put('/:id', auth, async (req, res) => {
         const subject = (lang === 'fr' ? `Affectation mise à jour pour ${child.name}` : `Assignment updated for ${child.name}`);
         const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été mise à jour pour ${formattedDate}.\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nThe assignment for ${child.name} has been updated for ${formattedDate}.\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
 
-        await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+        // Send emails only if SMTP configured
+        if (process.env.SMTP_HOST && parentEmails.length) {
+          try {
+            await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+          } catch (e) {
+            logger.error('Failed to send assignment email to parents', e && e.message ? e.message : e);
+          }
+        }
 
         // Notify admins if modified by nanny
         if (req.user.role === 'nanny') {
@@ -220,15 +287,62 @@ router.put('/:id', auth, async (req, res) => {
             const adminSubject = (lang === 'fr' ? `Modification d'affectation par ${req.user.name}` : `Assignment modified by ${req.user.name}`);
             const adminText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été modifiée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nThe assignment for ${child.name} has been modified by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
             await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+
+            // Send push notifications to admins (non-blocking)
+            try {
+              const { notifyUsers } = require('../lib/pushNotifications');
+              const adminIds = [...centerAdmins.map(u => u.id), ...superAdmins.map(u => u.id)].filter(Boolean);
+              if (adminIds.length) {
+                const pushPayload = { title: adminSubject, body: adminText, data: { url: `/planning`, assignmentId: assignment.id } };
+                await notifyUsers(adminIds, pushPayload);
+              }
+            } catch (e) {
+              logger.error('Failed to send admin push notification', e && e.message ? e.message : e);
+            }
+      }
+    } // end if (req.user.role === 'nanny')
+
+    // Notify assigned nanny when an admin modified the assignment
+    if (isAdminRole(req.user) || isSuperAdmin(req.user)) {
+          try {
+            const { notifyUsers } = require('../lib/pushNotifications');
+            // Resolve the User.id for this nanny (User.nannyId === Nanny.id)
+            let nannyUserId = null;
+            if (nanny && nanny.id) {
+              const nannyUserRec = await prisma.user.findFirst({ where: { nannyId: nanny.id }, select: { id: true } });
+              if (nannyUserRec && nannyUserRec.id) nannyUserId = nannyUserRec.id;
+            }
+            if (!nannyUserId && nannyId && typeof nannyId === 'string') {
+              const maybeUser = await prisma.user.findUnique({ where: { id: nannyId }, select: { id: true } }).catch(() => null);
+              if (maybeUser && maybeUser.id) nannyUserId = maybeUser.id;
+            }
+            if (nannyUserId) {
+              const nannySubject = (lang === 'fr' ? `Affectation mise à jour pour ${child.name}` : `Assignment updated for ${child.name}`);
+              const nannyText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été mise à jour pour ${formattedDate}.\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nThe assignment for ${child.name} has been updated for ${formattedDate}.\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
+              // Send email to the nanny user if available
+              try {
+                if (process.env.SMTP_HOST) {
+                  const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
+                  if (nannyUser && nannyUser.email) {
+                    await sendTemplatedMail({ templateName: 'assignment', lang, to: [nannyUser.email], subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+                  }
+                }
+              } catch (e) {
+                logger.error('Failed to send assignment update email to nanny', e && e.message ? e.message : e);
+              }
+              await notifyUsers([nannyUserId], { title: nannySubject, body: nannyText, data: { url: `/planning`, assignmentId: assignment.id } });
+            }
+          } catch (e) {
+            logger.error('Failed to send nanny push notification', e && e.message ? e.message : e);
           }
         }
       } catch (err) {
-        console.error('Failed to send assignment update notification', err && err.message ? err.message : err);
+  logger.error('Failed to send assignment update notification', err && err.message ? err.message : err);
       }
     })();
 
   } catch (err) {
-    console.error('PUT /assignments error', err);
+  logger.error('PUT /assignments error', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -294,15 +408,72 @@ router.delete('/:id', auth, async (req, res) => {
             const adminSubject = (lang === 'fr' ? `Suppression d'affectation par ${req.user.name}` : `Assignment deleted by ${req.user.name}`);
             const adminText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}\n\nConsultez le planning: ${process.env.FRONTEND_URL || 'http://localhost:5173'}` : `Hello,\n\nThe assignment for ${child.name} has been deleted by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}\n\nView schedule: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`;
             await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+
+            // Send push notifications to admins (non-blocking)
+            try {
+              const { notifyUsers } = require('../lib/pushNotifications');
+              const adminIds = [...centerAdmins.map(u => u.id), ...superAdmins.map(u => u.id)].filter(Boolean);
+              if (adminIds.length) {
+                const pushPayload = { title: adminSubject, body: adminText, data: { url: `/planning`, assignmentId: fullExisting.id } };
+                await notifyUsers(adminIds, pushPayload);
+              }
+            } catch (e) {
+              logger.error('Failed to send admin push notification', e && e.message ? e.message : e);
+            }
+          }
+        }
+
+        // Notify assigned nanny when deleted by admin
+        if (isAdminRole(req.user) || isSuperAdmin(req.user)) {
+          try {
+            const { notifyUsers } = require('../lib/pushNotifications');
+            let nannyUserId = null;
+            if (nanny && nanny.id) {
+              const nannyUserRec = await prisma.user.findFirst({ where: { nannyId: nanny.id }, select: { id: true } });
+              if (nannyUserRec && nannyUserRec.id) nannyUserId = nannyUserRec.id;
+            }
+            if (!nannyUserId && nanny && nanny.id && typeof nanny.id === 'string') {
+              const maybeUser = await prisma.user.findUnique({ where: { id: nanny.id }, select: { id: true } }).catch(() => null);
+              if (maybeUser && maybeUser.id) nannyUserId = maybeUser.id;
+            }
+            if (nannyUserId) {
+              const nannySubject = (lang === 'fr' ? `Affectation supprimée pour ${child.name}` : `Assignment removed for ${child.name}`);
+              const nannyText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée.` : `Hello,\n\nThe assignment for ${child.name} has been removed.`;
+              // Send email to the nanny user if available
+              try {
+                if (process.env.SMTP_HOST) {
+                  const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
+                  if (nannyUser && nannyUser.email) {
+                    await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: [nannyUser.email], subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+                  }
+                }
+              } catch (e) {
+                logger.error('Failed to send assignment deletion email to nanny', e && e.message ? e.message : e);
+              }
+              await notifyUsers([nannyUserId], { title: nannySubject, body: nannyText, data: { url: `/planning`, assignmentId: fullExisting.id } });
+            }
+            else {
+              logger.warn('No linked user for nanny on delete; attempting fallback email', nanny && nanny.id ? nanny.id : nannyId);
+              try {
+                if (process.env.SMTP_HOST && nanny && (nanny.email || nanny.contactEmail)) {
+                  const to = nanny.email ? [nanny.email] : [nanny.contactEmail];
+                  await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to, subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml } });
+                }
+              } catch (e) {
+                logger.error('Fallback email to nanny failed on delete', e && e.message ? e.message : e);
+              }
+            }
+          } catch (e) {
+            logger.error('Failed to send nanny push notification after delete', e && e.message ? e.message : e);
           }
         }
       } catch (err) {
-        console.error('Failed to send assignment deletion notification', err && err.message ? err.message : err);
+  logger.error('Failed to send assignment deletion notification', err && err.message ? err.message : err);
       }
     })();
 
   } catch (err) {
-    console.error('DELETE /assignments error', err);
+  logger.error('DELETE /assignments error', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
