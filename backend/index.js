@@ -97,6 +97,9 @@ app.use('/api', schedulesRoutes);
 const subscriptionsRoutes = require('./routes/subscriptions');
 app.use('/api/subscriptions', subscriptionsRoutes);
 
+const notificationPushRoutes = require('./routes/notificationPush');
+app.use('/api/push-subscriptions', notificationPushRoutes);
+
 const feedRoutes = require('./routes/feed');
 app.use('/api/feed', feedRoutes);
 
@@ -119,6 +122,4 @@ app.post('/create-payment-intent', async (req, res) => {
 
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, '0.0.0.0');
