@@ -59,7 +59,23 @@ async function sendFeedPostNotification({ postId, centerId, authorId, authorName
   const title = sanitizeText(rawTitle);
   const rawBody = text ? (text.length > 120 ? text.slice(0, 117) + '...' : text) : 'Nouvelle publication sur le fil';
   const body = sanitizeText(rawBody);
-  const payload = JSON.stringify({ title, body, icon: '/imgs/LogoFrimousse-192.png', badge: '/imgs/LogoFrimousse-512.png', tag: 'frimousse-feed', data: { url: `/feed/${postId}`, postId } });
+  const payloadObj = { title, body, icon: '/imgs/LogoFrimousse-192.png', badge: '/imgs/LogoFrimousse-512.png', tag: 'frimousse-feed', data: { url: `/feed/${postId}`, postId } };
+  const payload = JSON.stringify(payloadObj);
+
+  // Persist notifications for target users so they appear in the in-app Notifications section
+  try {
+    const toStore = Object.assign({ icon: '/imgs/LogoFrimousse-192.png', badge: '/imgs/LogoFrimousse-512.png' }, payloadObj || {});
+    const createRows = userIds.map(u => ({ userId: u, title: String(toStore.title || 'Notification'), body: toStore.body || null, data: toStore }));
+    try {
+      await prisma.notification.createMany({ data: createRows });
+    } catch (e) {
+      for (const r of createRows) {
+        try { await prisma.notification.create({ data: r }); } catch (e2) { if (DEBUG) console.error('[push] notif create failed for', r.userId, e2 && e2.message ? e2.message : e2); }
+      }
+    }
+  } catch (e) {
+    if (DEBUG) console.error('[push] failed to persist feed notifications', e && e.message ? e.message : e);
+  }
 
   for (const s of subs) {
     try {
@@ -90,6 +106,14 @@ async function _sendToUser(userId, payloadObj) {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   const contact = process.env.VAPID_CONTACT || 'mailto:notifications@lesfrimousses.com';
+  // Persist notification in DB for this user even if push sending is disabled
+  try {
+    const toStore = Object.assign({ icon: '/imgs/LogoFrimousse-192.png', badge: '/imgs/LogoFrimousse-512.png' }, payloadObj || {});
+    await prisma.notification.create({ data: { userId, title: String(toStore.title || 'Notification'), body: toStore.body || null, data: toStore } });
+  } catch (e) {
+    if (DEBUG) console.error('[push] failed to persist notification for user', userId, e && e.message ? e.message : e);
+  }
+
   if (!publicKey || !privateKey) return;
   webpush.setVapidDetails(contact, publicKey, privateKey);
   if (DEBUG) console.debug('[push] _sendToUser userId=', userId);
@@ -107,10 +131,7 @@ async function _sendToUser(userId, payloadObj) {
   const uniqueSubs = Array.from(grouped.values());
   if (DEBUG && uniqueSubs.length !== subs.length) console.debug('[push] _sendToUser deduped subs', subs.length, '->', uniqueSubs.length, 'for user', userId);
   // Ensure icon and badge fallbacks so notifications show the app logo when provided
-  const safePayloadObj = Object.assign({
-    icon: '/imgs/LogoFrimousse-192.png',
-    badge: '/imgs/LogoFrimousse-512.png'
-  }, payloadObj || {});
+  const safePayloadObj = Object.assign({ icon: '/imgs/LogoFrimousse-192.png', badge: '/imgs/LogoFrimousse-512.png' }, payloadObj || {});
   const payload = JSON.stringify(safePayloadObj);
   for (const s of uniqueSubs) {
     try {
@@ -205,6 +226,23 @@ async function notifyUsers(userIds, payloadObj) {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   const contact = process.env.VAPID_CONTACT || 'mailto:notifications@lesfrimousses.com';
+  // Persist notifications in DB for all target users even if push sending is disabled
+  try {
+    const toStore = Object.assign({ icon: '/imgs/LogoFrimousse-192.png', badge: '/imgs/LogoFrimousse-512.png' }, payloadObj || {});
+    const createRows = userIds.map(u => ({ userId: u, title: String(toStore.title || 'Notification'), body: toStore.body || null, data: toStore }));
+    // createMany is faster; ignore errors if DB doesn't support it in some envs
+    try {
+      await prisma.notification.createMany({ data: createRows });
+    } catch (e) {
+      // fallback: create individually
+      for (const r of createRows) {
+        try { await prisma.notification.create({ data: r }); } catch (e2) { if (DEBUG) console.error('[push] notif create failed for', r.userId, e2 && e2.message ? e2.message : e2); }
+      }
+    }
+  } catch (e) {
+    if (DEBUG) console.error('[push] failed to persist notifications', e && e.message ? e.message : e);
+  }
+
   if (!publicKey || !privateKey) return;
   webpush.setVapidDetails(contact, publicKey, privateKey);
 
