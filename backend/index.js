@@ -77,6 +77,7 @@ app.use('/api/children', childrenRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/parent', parentRoutes);
 
+
 const centersRoutes = require('./routes/centers');
 app.use('/api/centers', centersRoutes);
 
@@ -102,6 +103,9 @@ app.use('/api/push-subscriptions', notificationPushRoutes);
 
 const feedRoutes = require('./routes/feed');
 app.use('/api/feed', feedRoutes);
+
+const notificationsRoutes = require('./routes/notifications');
+app.use('/api/notifications', notificationsRoutes);
 
 app.get('/', (req, res) => {
   res.send('API is running');

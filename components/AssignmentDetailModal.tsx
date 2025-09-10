@@ -11,7 +11,7 @@ type Assignment = {
 function formatLocal(dt: string) {
   try {
     const d = new Date(dt);
-    return d.toLocaleString();
+  return d.toLocaleDateString(undefined, { dateStyle: 'full' });
   } catch {
     return dt;
   }

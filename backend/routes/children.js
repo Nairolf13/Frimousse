@@ -405,16 +405,74 @@ router.delete('/:id', auth, async (req, res) => {
     return res.status(403).json({ error: 'Forbidden: parents cannot delete children' });
   }
   try {
-    const existingChild = await prisma.child.findUnique({ where: { id } });
-    if (!existingChild) return res.status(404).json({ error: 'Child not found' });
-    if (!isSuperAdmin(req.user) && existingChild.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
+    // load child with assigned nannies so we can notify them after deletion
+    const fullExisting = await prisma.child.findUnique({ where: { id }, include: { childNannies: { include: { nanny: true } } } });
+    if (!fullExisting) return res.status(404).json({ error: 'Child not found' });
+    if (!isSuperAdmin(req.user) && fullExisting.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
+
     await prisma.$transaction(async (tx) => {
       await tx.parentChild.deleteMany({ where: { childId: id } });
       await tx.assignment.deleteMany({ where: { childId: id } });
       await tx.report.deleteMany({ where: { childId: id } });
       await tx.child.delete({ where: { id } });
     });
-    return res.json({ message: 'Child deleted' });
+    res.json({ message: 'Child deleted' });
+
+    // background notify previously assigned nannies (email fallback + push)
+    (async () => {
+      try {
+        const { sendTemplatedMail } = require('../lib/email');
+        const { notifyUsers } = require('../lib/pushNotifications');
+        const childRec = fullExisting;
+        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
+        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+  const title = (lang === 'fr') ? `Affectation supprimée : ${childRec.name}` : `Assignment removed: ${childRec.name}`;
+  const text = (lang === 'fr') ? `Bonjour,\n\nL'enfant ${childRec.name} a été retiré de vos affectations et n'est plus disponible.` : `Hello,\n\nThe child ${childRec.name} has been removed from your assignments and is no longer available.`;
+
+        for (const cn of (childRec.childNannies || [])) {
+          const nanny = cn && cn.nanny ? cn.nanny : null;
+          if (!nanny) continue;
+          let nannyUserId = null;
+          if (nanny && nanny.id) {
+            const nannyUserRec = await prisma.user.findFirst({ where: { nannyId: nanny.id }, select: { id: true } });
+            if (nannyUserRec && nannyUserRec.id) nannyUserId = nannyUserRec.id;
+          }
+          if (!nannyUserId && nanny && nanny.id && typeof nanny.id === 'string') {
+            const maybeUser = await prisma.user.findUnique({ where: { id: nanny.id }, select: { id: true } }).catch(() => null);
+            if (maybeUser && maybeUser.id) nannyUserId = maybeUser.id;
+          }
+          if (nannyUserId) {
+            try {
+              if (process.env.SMTP_HOST) {
+                const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
+                if (nannyUser && nannyUser.email) {
+                  await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: [nannyUser.email], subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' } });
+                }
+              }
+            } catch (e) {
+              logger.error('Failed to send assignment deletion email to nanny', e && e.message ? e.message : e);
+            }
+            try {
+              await notifyUsers([nannyUserId], { title, body: text, data: { childId: childRec.id } });
+            } catch (e) {
+              logger.error('Failed to send assignment deletion push to nanny', e && e.message ? e.message : e);
+            }
+          } else {
+            logger.warn('No linked user for nanny on delete; attempting fallback email', nanny && nanny.id ? nanny.id : null);
+            try {
+              if (process.env.SMTP_HOST && (nanny.email || nanny.contactEmail)) {
+                const to = nanny.email ? [nanny.email] : [nanny.contactEmail];
+                await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to, subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' } });
+              }
+            } catch (e) {
+              logger.error('Fallback email to nanny failed on delete', e && e.message ? e.message : e);
+            }
+          }
+        }
+      } catch (err) {
+        logger.error('Failed to notify nannies for deleted child', err && err.message ? err.message : err);
+      }
+    })();
   } catch (error) {
     console.error('Error deleting child', error);
     if (error && error.code === 'P2025') {
