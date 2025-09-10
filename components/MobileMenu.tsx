@@ -4,7 +4,7 @@ import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalenda
 import { useAuth } from '../src/context/AuthContext';
 
 function getNavLinks(user: { role?: string | null; nannyId?: string | null } | null) {
-  // Parents see a reduced set
+  // Parents 
   if (user && user.role === 'parent') {
     return [
       { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
@@ -16,19 +16,20 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null } | n
       { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
   }
-  // Nanny users see a similar set without the 'Nounous' entry
+  // Nanny 
   if (user && user.nannyId) {
     return [
       { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
       { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
       { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
       { to: '/activites', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
       { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
   }
-  // Default (admin/manager) sees full set including Nounous
+  // (admin)
   return [
     { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
     { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
