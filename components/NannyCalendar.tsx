@@ -108,9 +108,9 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
                 " relative"
               }>
                 <div className="flex items-center justify-between mb-1">
-                  <span className={"text-xs font-bold " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}>{day.getDate()}</span>
+                  <span className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}>{day.getDate()}</span>
                   <button
-                    className="text-green-500 hover:text-green-700 text-lg font-bold px-1"
+                    className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold"
                     title="Ajouter un enfant à ce jour"
                     onClick={() => { setShowForm({ date: dayStr }); setSelectedChild(''); setError(''); }}
                   >+
@@ -119,12 +119,15 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
                 {assigns.length === 0 ? (
                   <div className="text-gray-300 text-xs">—</div>
                 ) : (
-                  assigns.map((a) => (
-                    <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg bg-blue-50 shadow-sm group"}>
-                      <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                      <span className="font-semibold text-gray-800 text-xs group-hover:underline cursor-pointer">{a.child.name}</span>
+                  assigns.slice(0, 2).map((a, j) => (
+                    <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-[#a9ddf2]' : 'bg-[#fff7e6]') + " shadow-sm group"}>
+                      <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-[#08323a]' : 'bg-[#856400]')}></span>
+                      <span className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]" title={a.child.name}>{a.child.name}</span>
                     </div>
                   ))
+                )}
+                {assigns.length > 2 && (
+                  <div className="text-xs text-gray-500 truncate max-w-[64px] sm:max-w-none">+{assigns.length - 2} autres</div>
                 )}
               </div>
             );
