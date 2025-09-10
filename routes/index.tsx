@@ -19,6 +19,7 @@ import Activites from '../pages/Activites';
 import ReportsPage from '../pages/ReportsPage';
 import NotificationsPage from '../pages/Notifications';
 import Settings from '../pages/Settings';
+import PaymentHistory from '../pages/PaymentHistory';
 import ParentDashboard from '../pages/ParentDashboard';
 import ParentChildSchedule from '../pages/ParentChildSchedule';
 import ParentChildReports from '../pages/ParentChildReports';
@@ -68,6 +69,7 @@ export default function AppRoutes() {
           <Route path="/parent/child/:childId/reports" element={<ParentChildReports />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/payment-history" element={<PaymentHistory />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>

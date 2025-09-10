@@ -28,3 +28,8 @@ backend/uploads/
 .env.local
 .env.development
 .env.production
+
+# local scripts
+scripts/
+backend/scripts/
+backend/tmp_http_patch.js
