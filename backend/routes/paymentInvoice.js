@@ -48,6 +48,8 @@ function renderTableHeader(doc, leftX, pageWidth, cols) {
 }
 
 router.get('/invoice/:id', auth, async (req, res) => {
+  // declare doc here so the catch block can stop it if an error occurs while streaming
+  let doc;
   try {
     const id = req.params.id;
     if (!id) return res.status(400).json({ message: 'Missing id' });
@@ -77,7 +79,16 @@ router.get('/invoice/:id', auth, async (req, res) => {
     const inlineView = (req.query.inline === '1' || req.query.inline === 'true');
     res.setHeader('Content-Disposition', `${inlineView ? 'inline' : 'attachment'}; filename="facture-${ph.id}.pdf"`);
 
-    const doc = new PDFDocument({ size: 'A4', margin: 36 });
+    doc = new PDFDocument({ size: 'A4', margin: 36 });
+    // robust stream error handling: ensure PDF stream errors don't crash the process
+    doc.on('error', (e) => {
+      console.error('PDF stream error', e);
+      try { doc.destroy(); } catch (er) { /* ignore */ }
+    });
+    // If response errors (client disconnect), destroy the PDF stream
+    res.on('close', () => {
+      try { if (doc && !doc.destroyed) doc.destroy(); } catch (er) { /* ignore */ }
+    });
     doc.pipe(res);
 
     const leftX = doc.page.margins.left;
@@ -93,8 +104,11 @@ router.get('/invoice/:id', auth, async (req, res) => {
     const colSubtotalX = leftX + pageWidth - colSubtotalW;
     const colRateX = colSubtotalX - gap - colRateW;
     const colDaysX = colRateX - gap - colDaysW;
+    // define age column size and position (was previously missing -> ReferenceError)
+    const colAgeW = 80;
+    const colAgeX = colDaysX - gap - colAgeW;
     const colNameX = leftX;
-    const colNameW = colDaysX - leftX - gap;
+    const colNameW = colAgeX - leftX - gap;
 
     const cols = {
       name: { x: colNameX, w: colNameW },
