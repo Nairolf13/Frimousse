@@ -3,8 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 import type { User as AuthUser } from '../src/context/AuthContext';
 import { useEffect, useState } from 'react';
-import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell } from 'react-icons/hi';
 import MobileMenu from './MobileMenu';
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 
 function getNavLinks(user: AuthUser | null) {
@@ -13,6 +14,7 @@ function getNavLinks(user: AuthUser | null) {
     return [
       { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
       { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+  { to: '/notifications', label: 'Notifications', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
       { to: '/children', label: 'Mes enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
       { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
       { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
@@ -22,9 +24,10 @@ function getNavLinks(user: AuthUser | null) {
   }
 
   if (user && user.nannyId) {
-    return [
+  return [
       { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
       { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/notifications', label: 'Notifications', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
       { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
       { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
       { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
@@ -37,6 +40,7 @@ function getNavLinks(user: AuthUser | null) {
   return [
     { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
     { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+  { to: '/notifications', label: 'Notifications', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
     { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
     { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
     { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
@@ -49,7 +53,29 @@ function getNavLinks(user: AuthUser | null) {
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
+  const [unreadCount, setUnreadCount] = useState<number>(0);
   const [centerName, setCenterName] = useState<string | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    async function loadUnread() {
+      try {
+        const res = await fetchWithRefresh('/api/notifications/unread-count', { credentials: 'include' });
+        if (!mounted) return;
+        if (!res.ok) return setUnreadCount(0);
+        const j = await res.json();
+        setUnreadCount(Number(j.unread) || 0);
+      } catch {
+        if (mounted) setUnreadCount(0);
+      }
+    }
+    loadUnread();
+    const iv = setInterval(loadUnread, 30000);
+    function onChange() { loadUnread(); }
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('notifications:changed', onChange as EventListener);
+    }
+    return () => { mounted = false; clearInterval(iv); if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') { window.removeEventListener('notifications:changed', onChange as EventListener); } };
+  }, []);
   useEffect(() => {
     let mounted = true;
     async function loadCenter() {
@@ -95,7 +121,7 @@ export default function Sidebar() {
   }
   return (
     <>
-      <MobileMenu />
+  <MobileMenu />
       <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white shadow-lg flex-col p-0 border-r border-gray-100 z-30">
          <div className="flex items-center gap-3 px-6 pt-8 pb-6">
           <div className="w-20 h-16 rounded-full overflow-hidden bg-white flex items-center justify-center">
@@ -112,7 +138,10 @@ export default function Sidebar() {
                   className={`flex items-center px-4 py-2 rounded-lg font-medium transition text-base ${location.pathname === link.to ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'text-gray-500 hover:bg-gray-50'}`}
                 >
                   {link.icon}
-                  {link.label}
+                  <span className="flex-1">{link.label}</span>
+                  {link.to === '/notifications' && unreadCount > 0 ? (
+                    <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-600 text-white">{unreadCount}</span>
+                  ) : null}
                 </Link>
               </li>
             ))}
