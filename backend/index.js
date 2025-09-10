@@ -107,6 +107,18 @@ app.use('/api/feed', feedRoutes);
 const notificationsRoutes = require('./routes/notifications');
 app.use('/api/notifications', notificationsRoutes);
 
+// paymentHistoryRoutes mounted later after invoice and admin routes
+
+const paymentInvoiceRoutes = require('./routes/paymentInvoice');
+// Mount invoice route before the general payment-history routes so it has priority
+app.use('/api/payment-history', paymentInvoiceRoutes);
+
+const paymentHistoryAdminRoutes = require('./routes/paymentHistoryAdmin');
+app.use('/api/payment-history', paymentHistoryAdminRoutes);
+
+const paymentHistoryRoutes = require('./routes/paymentHistory');
+app.use('/api/payment-history', paymentHistoryRoutes);
+
 app.get('/', (req, res) => {
   res.send('API is running');
 });
@@ -127,3 +139,12 @@ app.post('/create-payment-intent', async (req, res) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, '0.0.0.0');
+
+// Start monthly payment cron (calculates previous month on 1st of month)
+try {
+  const paymentCron = require('./lib/paymentCron');
+  // task is scheduled automatically when the module is required
+  console.log('Payment cron loaded');
+} catch (err) {
+  console.error('Failed to load payment cron', err);
+}

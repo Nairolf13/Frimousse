@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { HiOutlineViewGrid, HiOutlineBell, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineBell, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar } from 'react-icons/hi';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 function getNavLinks(user: { role?: string | null; nannyId?: string | null } | null) {
-  // Parents see a reduced set
+  // Parents 
   if (user && user.role === 'parent') {
     return [
       { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
@@ -18,7 +18,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null } | n
       { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
   }
-  // Nanny users see a similar set without the 'Nounous' entry
+  // Nanny 
   if (user && user.nannyId) {
     return [
       { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
@@ -31,7 +31,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null } | n
       { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
   }
-  // Default (admin/manager) sees full set including Nounous
+  //admin
   return [
     { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
     { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
@@ -41,6 +41,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null } | n
     { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
     { to: '/activites', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
     { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+    { to: '/payment-history', label: 'Historique paiements', icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
     { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
   ];
 }
