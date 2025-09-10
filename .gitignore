@@ -28,3 +28,7 @@ backend/uploads/
 .env.local
 .env.development
 .env.production
+
+# local scripts
+scripts/
+backend/scripts/
