@@ -6,8 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
   "start": "node index.js",
-  "send:abandoned-reminders": "node scripts/sendAbandonedSignupReminders.js",
-  "send:push": "node scripts/sendPushNotifications.js"
+  "send:abandoned-reminders": "node ops/sendAbandonedSignupReminders.js",
+  "send:push": "node ops/sendPushNotifications.js"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +31,9 @@
     "react-router-dom": "^7.7.1",
     "sharp": "^0.32.1",
     "web-push": "^3.6.7"
+  ,
+  "pdfkit": "^0.13.0",
+  "node-cron": "^3.0.0"
   },
   "devDependencies": {
     "@types/react-router-dom": "^5.3.3",

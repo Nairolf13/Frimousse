@@ -7,6 +7,7 @@ model Parent {
   user          User?          @relation("UserParent")
   children      ParentChild[]
   photoConsents PhotoConsent[] @relation("ParentPhotoConsents")
+  paymentHistories PaymentHistory[]
   center        Center?        @relation(fields: [centerId], references: [id])
   centerId      String?
   createdAt     DateTime       @default(now())
@@ -334,4 +335,16 @@ model Notification {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+model PaymentHistory {
+  id         String   @id @default(uuid())
+  parent     Parent   @relation(fields: [parentId], references: [id])
+  parentId   String
+  month      Int
+  year       Int
+  total      Float
+  details    Json
+  paid       Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }

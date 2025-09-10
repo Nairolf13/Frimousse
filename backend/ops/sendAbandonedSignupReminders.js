@@ -19,17 +19,14 @@ async function main() {
   const users = await prisma.user.findMany({ where: {} });
 
   for (const u of users) {
-    // skip if user already has subscription
     const sub = await prisma.subscription.findFirst({ where: { userId: u.id } });
     if (sub) continue;
 
-    // check existing reminder entry
     let reminder = await prisma.abandonedSignupReminder.findUnique({ where: { userId: u.id } });
     const createdAt = u.createdAt;
     const hoursSince = (Date.now() - new Date(createdAt).getTime()) / (1000*60*60);
 
     if (!reminder) {
-      // create entry if within first 7 days
       if (hoursSince >= 0 && hoursSince <= REMINDER_HOURS[REMINDER_HOURS.length -1]) {
         reminder = await prisma.abandonedSignupReminder.create({ data: { userId: u.id } });
       } else {
@@ -37,12 +34,10 @@ async function main() {
       }
     }
 
-    // If already sent all reminders, skip
     if (reminder.sentCount >= REMINDER_HOURS.length) continue;
 
     const nextReminderHour = REMINDER_HOURS[reminder.sentCount];
     if (hoursSince >= nextReminderHour) {
-      // send email
       const acceptLang = (u.email || '').includes('.com') ? 'en' : 'fr';
       const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
       const templatePath = path.join(__dirname, '..', 'emailTemplates', `abandoned_signup_${lang}.html`);

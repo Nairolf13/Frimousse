@@ -25,8 +25,8 @@ async function main() {
   const payload = JSON.stringify({
     title: 'Notification Frimousse',
     body: 'Message de test',
-  icon: '/imgs/LogoFrimousse-192.png',
-  badge: '/imgs/LogoFrimousse-512.png',
+    icon: '/imgs/LogoFrimousse-192.png',
+    badge: '/imgs/LogoFrimousse-512.png',
     tag: 'frimousse-notif',
   });
 
@@ -35,7 +35,6 @@ async function main() {
       await webpush.sendNotification(s.subscription, payload);
       console.log('Sent to', s.id);
     } catch (err) {
-      // remove invalid subscriptions
       const statusCode = (err && err.statusCode) || (err && err.status) || null;
       console.error('Failed to send to', s.id, statusCode || '', err && err.body ? err.body : (err && err.message) || err);
       if (statusCode === 404 || statusCode === 410) {

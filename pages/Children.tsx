@@ -327,11 +327,27 @@ export default function Children() {
     e.preventDefault();
     setError('');
     try {
+      // Build payload and omit parentId if not set to allow creating a child without a parent
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        age: form.age,
+        sexe: form.sexe,
+        parentName: form.parentName || undefined,
+        parentContact: form.parentContact || undefined,
+        parentMail: form.parentMail || undefined,
+        allergies: form.allergies || undefined,
+        group: form.group || undefined,
+        present: form.present,
+        birthDate: form.birthDate || undefined,
+        nannyIds: Array.isArray(form.nannyIds) ? form.nannyIds : undefined,
+      };
+      if (form.parentId) payload.parentId = form.parentId;
+
       const res = await fetchWithRefresh(editingId ? `${API_URL}/children/${editingId}` : `${API_URL}/children`, {
         method: editingId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Erreur lors de la sauvegarde');
       setForm(emptyForm);
@@ -459,22 +475,30 @@ export default function Children() {
             {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
           </select>
           <div className="relative w-full">
-            <input name="parentName" value={form.parentName} onChange={(e) => {
-              const val = e.target.value;
-              setForm(f => ({ ...f, parentName: val }));
-              // only autofill when the entered value exactly matches a parent name
-              const lower = val.toLowerCase();
-              const exact = parentsList.find(p => p.name.toLowerCase() === lower);
-              if (exact) {
-                setForm(f => ({ ...f, parentMail: exact.email || '', parentContact: exact.phone || '', parentId: exact.id }));
-              } else {
-                setForm(f => ({ ...f, parentId: undefined }));
-              }
-              setShowParentsDropdown(true);
-            }} onFocus={() => setShowParentsDropdown(true)} onBlur={() => {
-              // hide dropdown on blur after a short delay to allow click handlers
-              setTimeout(() => setShowParentsDropdown(false), 150);
-            }} placeholder="Nom du parent" required className="border rounded px-3 py-2 w-full" />
+            <input
+              name="parentName"
+              value={form.parentName}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm(f => ({ ...f, parentName: val }));
+                // only autofill when the entered value exactly matches a parent name
+                const lower = val.toLowerCase();
+                const exact = parentsList.find(p => p.name.toLowerCase() === lower);
+                if (exact) {
+                  setForm(f => ({ ...f, parentMail: exact.email || '', parentContact: exact.phone || '', parentId: exact.id }));
+                } else {
+                  setForm(f => ({ ...f, parentId: undefined }));
+                }
+                setShowParentsDropdown(true);
+              }}
+              onFocus={() => setShowParentsDropdown(true)}
+              onBlur={() => {
+                // hide dropdown on blur after a short delay to allow click handlers
+                setTimeout(() => setShowParentsDropdown(false), 150);
+              }}
+              placeholder="Nom du parent (optionnel)"
+              className="border rounded px-3 py-2 w-full"
+            />
 
             {showParentsDropdown && (() => {
               const lower = form.parentName.trim().toLowerCase();
@@ -494,8 +518,8 @@ export default function Children() {
               );
             })()}
           </div>
-          <input name="parentContact" value={form.parentContact} onChange={handleChange} placeholder="Téléphone parent" required className="border rounded px-3 py-2" />
-          <input name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder="Email parent" required className="border rounded px-3 py-2" />
+          <input name="parentContact" value={form.parentContact} onChange={handleChange} placeholder="Téléphone parent (optionnel)" className="border rounded px-3 py-2" />
+          <input name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder="Email parent (optionnel)" className="border rounded px-3 py-2" />
           {/* Nannies multi-select */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Nounous assignées (sélection multiple)</label>
