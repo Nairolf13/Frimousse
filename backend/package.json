@@ -6,8 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
   "start": "node index.js",
-  "send:abandoned-reminders": "node scripts/sendAbandonedSignupReminders.js",
-  "send:push": "node scripts/sendPushNotifications.js"
+  "send:abandoned-reminders": "node ops/sendAbandonedSignupReminders.js",
+  "send:push": "node ops/sendPushNotifications.js"
   },
   "keywords": [],
   "author": "",
