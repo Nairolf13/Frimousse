@@ -33,6 +33,9 @@ export default function Feed() {
   const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
   const [consentMap, setConsentMap] = useState<Record<string, boolean>>({});
   const [showConsentModal, setShowConsentModal] = useState(false);
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [errorModalTitle, setErrorModalTitle] = useState<string>('');
+  const [errorModalMessage, setErrorModalMessage] = useState<string>('');
   const [lackingNames, setLackingNames] = useState<string[]>([]);
   const [showIdentifyWarning, setShowIdentifyWarning] = useState(false);
   const [showTagMenu, setShowTagMenu] = useState(false);
@@ -252,8 +255,9 @@ export default function Feed() {
     try {
       const res = await fetchWithRefresh(`api/feed/${postId}/comment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
       if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
-        alert(b.message || 'Erreur commentaire');
+  const b = await res.json().catch(() => ({}));
+  const serverMsg = (b && b.message) ? String(b.message) : '';
+  showError('Impossible d\'envoyer le commentaire', mapServerMessage(serverMsg, 400));
         return;
       }
       const created = await res.json();
@@ -306,14 +310,43 @@ export default function Feed() {
   setShowIdentifyWarning(false);
       } else {
         const body = await res.json().catch(() => ({}));
-        alert(body.message || 'Erreur lors de la publication');
+        const serverMsg = (body && body.message) ? String(body.message) : '';
+        showError('Échec de la publication', mapServerMessage(serverMsg, res.status));
       }
     } catch (err) {
       console.error(err);
-      alert('Erreur réseau');
+      showError('Erreur réseau', 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.');
     } finally {
       setLoading(false);
     }
+  }
+
+  function showError(title: string, message: string) {
+    setErrorModalTitle(title);
+    setErrorModalMessage(message);
+    setErrorModalOpen(true);
+  }
+
+  function mapServerMessage(raw: string, status: number) {
+    const s = (raw || '').toLowerCase();
+    // Map common backend messages to friendly French messages
+    if (!raw) {
+      if (status === 401) return "Vous devez être connecté pour effectuer cette action.";
+      if (status === 403) return "Vous n'êtes pas autorisé à effectuer cette action.";
+      if (status === 503) return "Le service de stockage est temporairement indisponible. Réessayez plus tard.";
+      if (status === 400) return "Requête invalide. Vérifiez vos données et réessayez.";
+      return "Une erreur est survenue lors de la publication. Réessayez.";
+    }
+    if (s.includes('storage backend not configured') || s.includes('supabase not configured') || s.includes('storage backend not configured on server')) return 'Le stockage des images n\'est pas configuré sur le serveur. Contactez l\'administrateur.';
+    if (s.includes('image processing not available') || s.includes('sharp not available')) return 'Le serveur ne peut pas traiter les images pour le moment (dépendance manquante). Réessayez plus tard.';
+    if (s.includes('too many files') || s.includes('trop de fichiers')) return 'Trop d\'images : le maximum est de 6.';
+    if (s.includes('photo consent absent') || s.includes('consent')) return 'Le consentement photo est manquant pour un ou plusieurs enfants identifiés.';
+    if (s.includes('failed to upload any media')) return 'Échec du chargement des images. Aucun fichier n\'a été sauvegardé.';
+    if (s.includes('forbidden')) return 'Vous n\'avez pas la permission d\'effectuer cette action.';
+    if (s.includes('unauthorized') || status === 401) return 'Vous devez vous connecter pour publier.';
+    if (status >= 500) return 'Erreur serveur lors de la publication. Réessayez plus tard.';
+    // default fallback
+    return raw;
   }
 
   return (
@@ -628,6 +661,21 @@ export default function Feed() {
               </div>
             </div>
           </div>
+
+          {/* Error modal (shows friendly messages for publish/upload failures) */}
+          {errorModalOpen && (
+            <div className="fixed inset-0 z-60 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setErrorModalOpen(false)} />
+              <div role="dialog" aria-modal="true" className="bg-white rounded-lg shadow-xl p-6 z-70 max-w-lg w-full mx-4">
+                <h3 className="text-lg font-semibold text-gray-900">{errorModalTitle || 'Erreur'}</h3>
+                <div className="mt-3 text-sm text-gray-700 whitespace-pre-line">{errorModalMessage}</div>
+                <div className="mt-4 flex justify-end">
+                  <button onClick={() => setErrorModalOpen(false)} className="px-4 py-2 bg-indigo-600 text-white rounded">OK</button>
+                </div>
+              </div>
+            </div>
+          )}
+
     </div>
   );
 }
