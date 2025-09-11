@@ -44,8 +44,9 @@ router.get('/:id/billing', auth, async (req, res) => {
   const endDate = new Date(year, mon, 1);
   if (req.user && req.user.role === 'parent') {
     let parentId = req.user.parentId;
-    if (!parentId && req.user.email) {
-      const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
+      if (!parentId && req.user.email) {
+      const emailTrim = String(req.user.email).trim();
+      const parentRec = await prisma.parent.findFirst({ where: { email: { equals: emailTrim, mode: 'insensitive' } } });
       if (parentRec) parentId = parentRec.id;
     }
     if (!parentId) {
@@ -182,7 +183,8 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
   if (req.user && req.user.role === 'parent') {
     return res.status(403).json({ error: 'Forbidden: parents cannot create children' });
   }
-  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group, birthDate } = req.body;
+    const { name, age, sexe, parentId, parentName, parentContact, allergies, group, birthDate } = req.body;
+    const parentMail = req.body.parentMail !== undefined ? String(req.body.parentMail || '').trim().toLowerCase() : undefined;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
     return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
@@ -217,7 +219,8 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
           linkedParent = parent;
         }
       } else if (parentMail) {
-        let parent = await tx.parent.findUnique({ where: { email: parentMail } });
+      } else if (parentMail) {
+  let parent = await tx.parent.findFirst({ where: { email: { equals: parentMail, mode: 'insensitive' } } });
         if (!parent) {
           const names = (parentName || '').trim().split(/\s+/);
           const firstName = names.shift() || 'Parent';
@@ -315,7 +318,8 @@ router.put('/:id', auth, async (req, res) => {
   if (req.user && req.user.role === 'parent') {
     return res.status(403).json({ error: 'Forbidden: parents cannot update children' });
   }
-  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group, cotisationPaidUntil, payCotisation, birthDate } = req.body;
+    const { name, age, sexe, parentId, parentName, parentContact, allergies, group, cotisationPaidUntil, payCotisation, birthDate } = req.body;
+    const parentMail = req.body.parentMail !== undefined ? String(req.body.parentMail || '').trim().toLowerCase() : undefined;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
     return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
@@ -359,7 +363,8 @@ router.put('/:id', auth, async (req, res) => {
           await tx.parentChild.create({ data: { parentId: parent.id, childId: id } });
         }
       } else if (parentMail) {
-        let parent = await tx.parent.findUnique({ where: { email: parentMail } });
+      } else if (parentMail) {
+  let parent = await tx.parent.findFirst({ where: { email: { equals: parentMail, mode: 'insensitive' } } });
           if (!isSuperAdmin(req.user)) {
             const existing = await prisma.child.findUnique({ where: { id } });
             if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
@@ -508,9 +513,10 @@ router.get('/:id', auth, async (req, res) => {
     if (req.user && req.user.role === 'parent') {
       let parentId = req.user.parentId;
       if (!parentId && req.user.email) {
-        const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
-        if (parentRec) parentId = parentRec.id;
-      }
+      const emailTrim = String(req.user.email).trim();
+      const parentRec = await prisma.parent.findFirst({ where: { email: { equals: emailTrim, mode: 'insensitive' } } });
+      if (parentRec) parentId = parentRec.id;
+    }
       if (!parentId) return res.status(404).json({ message: 'Not found' });
       const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
       if (!link) return res.status(404).json({ message: 'Not found' });

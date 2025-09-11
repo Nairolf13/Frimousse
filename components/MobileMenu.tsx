@@ -28,6 +28,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null } | n
       { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
       { to: '/activites', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
       { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/payment-history', label: 'Historique paiements', icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
       { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
   }

@@ -58,32 +58,62 @@ router.get('/all', async (req, res) => {
 
 router.delete('/', auth, async (req, res) => {
   try {
-    await prisma.refreshToken.deleteMany({ where: { userId: req.user.id } });
+    // Perform a single transaction to remove the user and all related records
+    await prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({ where: { id: req.user.id } });
+      if (!user) throw new Error('User not found');
 
-    if (req.user.role === 'nanny' && req.user.nannyId) {
-      await prisma.nanny.delete({ where: { id: req.user.nannyId } });
-    }
+      // Collect posts authored by the user so we can remove related medias/likes/comments first
+      const posts = await tx.feedPost.findMany({ where: { authorId: user.id }, select: { id: true } });
+      const postIds = posts.map(p => p.id);
 
-    if (req.user.role === 'parent' && req.user.parentId) {
-      await prisma.parent.delete({ where: { id: req.user.parentId } });
-    }
+      // Remove tokens, push subscriptions, notifications, subscriptions
+      await tx.refreshToken.deleteMany({ where: { userId: user.id } });
+      await tx.pushSubscription.deleteMany({ where: { userId: user.id } });
+      await tx.notification.deleteMany({ where: { userId: user.id } });
+      await tx.subscription.deleteMany({ where: { userId: user.id } });
 
-    await prisma.user.delete({ where: { id: req.user.id } });
+      // Remove likes and comments made by the user
+      await tx.feedLike.deleteMany({ where: { userId: user.id } });
+      await tx.feedComment.deleteMany({ where: { authorId: user.id } });
+
+      // Remove likes/comments/media attached to user's posts, then the posts
+      if (postIds.length) {
+        await tx.feedLike.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.feedComment.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.feedMedia.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.feedPost.deleteMany({ where: { id: { in: postIds } } });
+      }
+
+      // Remove the user record (after we've removed records that reference the user)
+      await tx.user.delete({ where: { id: user.id } });
+
+  // Do NOT delete Parent or Nanny entities or their histories.
+  // Preserve:
+  // - assignments, reports for nannies
+  // - paymentHistory, parentChild, photoConsents for parents
+  // We only remove user-owned data (tokens, posts, likes, comments, notifications, push subscriptions, subscriptions)
+  // Defensive cleanup of user-scoped things (in case anything remains)
+  await tx.pushSubscription.deleteMany({ where: { userId: user.id } });
+  await tx.notification.deleteMany({ where: { userId: user.id } });
+    });
+
     res.json({ success: true });
   } catch (e) {
-    res.status(400).json({ error: e && e.message ? e.message : String(e) });
+    const msg = e && e.message ? e.message : String(e);
+    res.status(400).json({ error: msg });
   }
 });
 
 // Update current user's basic info (name, email)
 router.put('/me', auth, async (req, res) => {
   try {
-    const { name, email } = req.body || {};
+  const { name, email } = req.body || {};
     if (!name && !email) return res.status(400).json({ error: 'No fields to update' });
 
     const data = {};
     if (typeof name === 'string') data.name = name;
-    if (typeof email === 'string') data.email = email;
+  if (typeof email === 'string') data.email = String(email || '').trim().toLowerCase();
 
     const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true } });
     res.json(updated);
