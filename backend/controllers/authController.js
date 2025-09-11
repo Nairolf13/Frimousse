@@ -24,7 +24,9 @@ function cookieOptions() {
 }
 
 exports.register = async (req, res) => {
-  const { email, password, name, role, nannyId, centerId, centerName, plan } = req.body;
+  // normalize email to avoid case-sensitivity issues
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const { password, name, role, nannyId, centerId, centerName, plan } = req.body;
   if (!email || !password || !name || !role) return res.status(400).json({ message: 'Missing fields' });
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
@@ -131,12 +133,14 @@ exports.register = async (req, res) => {
 // Create user + Stripe customer + return SetupIntent client secret for card collection
 exports.registerSubscribeInit = async (req, res) => {
   try {
-    const { email, password, name, role, centerName, plan } = req.body;
+    // normalize email
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const { password, name, role, centerName, plan } = req.body;
     if (!email || !password || !name || !role || !plan) return res.status(400).json({ message: 'Missing fields' });
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
     const hash = await bcrypt.hash(password, 10);
-    const userData = { email, password: hash, name, role };
+  const userData = { email, password: hash, name, role };
     // center creation rules similar to register
     const totalUsers = await prisma.user.count();
     if (totalUsers === 0) {
@@ -176,7 +180,7 @@ exports.registerSubscribeInit = async (req, res) => {
     const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
 
     // return client secret, temporary user id and subscribe token to start Checkout from the frontend
-    res.status(201).json({ clientSecret: setupIntent.client_secret, userId: user.id, subscribeToken });
+  res.status(201).json({ clientSecret: setupIntent.client_secret, userId: user.id, subscribeToken });
   } catch (err) {
     console.error('registerSubscribeInit error', err);
     res.status(500).json({ error: 'Erreur lors de la création du compte' });
@@ -301,7 +305,8 @@ exports.registerSubscribeComplete = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = req.body.password;
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(401).json({ message: "Adresse e-mail inconnue. Vérifiez l'adresse saisie." });
     const valid = await bcrypt.compare(password, user.password);
@@ -417,7 +422,7 @@ exports.logout = async (req, res) => {
 
 // Forgot password: generate a short-lived token and send reset email
 exports.forgotPassword = async (req, res) => {
-  const { email } = req.body;
+  const email = String(req.body.email || '').trim().toLowerCase();
   if (!email) return res.status(400).json({ error: 'Email requis' });
   try {
     const user = await prisma.user.findUnique({ where: { email } });

@@ -9,11 +9,21 @@ const prisma = new PrismaClient();
 const logger = require('../lib/logger');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const multer = require('multer');
+const os = require('os');
+const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const sharp = require('sharp');
 const path = require('path');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 6 * 1024 * 1024 } }); // 6MB
+// Per-file upload limit increased to 20MB for higher-quality uploads
+const PER_FILE_LIMIT = 20 * 1024 * 1024; // 20MB
+const MAX_TOTAL_PER_POST = 120 * 1024 * 1024; // 120MB aggregate
+// Use disk storage to avoid holding files in memory
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, os.tmpdir()),
+  filename: (req, file, cb) => cb(null, `${Date.now()}_${Math.random().toString(36).slice(2,8)}${path.extname(file.originalname)}`)
+});
+const upload = multer({ storage, limits: { fileSize: PER_FILE_LIMIT } }); // 20MB
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -44,8 +54,9 @@ router.get('/:id/billing', auth, async (req, res) => {
   const endDate = new Date(year, mon, 1);
   if (req.user && req.user.role === 'parent') {
     let parentId = req.user.parentId;
-    if (!parentId && req.user.email) {
-      const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
+      if (!parentId && req.user.email) {
+      const emailTrim = String(req.user.email).trim();
+      const parentRec = await prisma.parent.findFirst({ where: { email: { equals: emailTrim, mode: 'insensitive' } } });
       if (parentRec) parentId = parentRec.id;
     }
     if (!parentId) {
@@ -182,7 +193,8 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
   if (req.user && req.user.role === 'parent') {
     return res.status(403).json({ error: 'Forbidden: parents cannot create children' });
   }
-  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group, birthDate } = req.body;
+    const { name, age, sexe, parentId, parentName, parentContact, allergies, group, birthDate } = req.body;
+    const parentMail = req.body.parentMail !== undefined ? String(req.body.parentMail || '').trim().toLowerCase() : undefined;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
     return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
@@ -217,7 +229,8 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
           linkedParent = parent;
         }
       } else if (parentMail) {
-        let parent = await tx.parent.findUnique({ where: { email: parentMail } });
+      } else if (parentMail) {
+  let parent = await tx.parent.findFirst({ where: { email: { equals: parentMail, mode: 'insensitive' } } });
         if (!parent) {
           const names = (parentName || '').trim().split(/\s+/);
           const firstName = names.shift() || 'Parent';
@@ -315,7 +328,8 @@ router.put('/:id', auth, async (req, res) => {
   if (req.user && req.user.role === 'parent') {
     return res.status(403).json({ error: 'Forbidden: parents cannot update children' });
   }
-  const { name, age, sexe, parentId, parentName, parentContact, parentMail, allergies, group, cotisationPaidUntil, payCotisation, birthDate } = req.body;
+    const { name, age, sexe, parentId, parentName, parentContact, allergies, group, cotisationPaidUntil, payCotisation, birthDate } = req.body;
+    const parentMail = req.body.parentMail !== undefined ? String(req.body.parentMail || '').trim().toLowerCase() : undefined;
   const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (isNaN(parsedAge)) {
     return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
@@ -359,7 +373,8 @@ router.put('/:id', auth, async (req, res) => {
           await tx.parentChild.create({ data: { parentId: parent.id, childId: id } });
         }
       } else if (parentMail) {
-        let parent = await tx.parent.findUnique({ where: { email: parentMail } });
+      } else if (parentMail) {
+  let parent = await tx.parent.findFirst({ where: { email: { equals: parentMail, mode: 'insensitive' } } });
           if (!isSuperAdmin(req.user)) {
             const existing = await prisma.child.findUnique({ where: { id } });
             if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
@@ -508,9 +523,10 @@ router.get('/:id', auth, async (req, res) => {
     if (req.user && req.user.role === 'parent') {
       let parentId = req.user.parentId;
       if (!parentId && req.user.email) {
-        const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
-        if (parentRec) parentId = parentRec.id;
-      }
+      const emailTrim = String(req.user.email).trim();
+      const parentRec = await prisma.parent.findFirst({ where: { email: { equals: emailTrim, mode: 'insensitive' } } });
+      if (parentRec) parentId = parentRec.id;
+    }
       if (!parentId) return res.status(404).json({ message: 'Not found' });
       const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
       if (!link) return res.status(404).json({ message: 'Not found' });
@@ -629,15 +645,23 @@ router.post('/:id/prescription', auth, upload.single('prescription'), async (req
 
     // Generate path and upload (no image processing for PDFs)
     const ext = file.mimetype === 'application/pdf' ? 'pdf' : 'webp';
+    // read from disk if available (diskStorage)
     let buffer = file.buffer;
+    if (!buffer && file.path) buffer = require('fs').readFileSync(file.path);
     if (ext === 'webp') {
-      buffer = await sharp(file.buffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
+      buffer = await sharp(buffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
     }
     const baseName = `${id}_presc_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
     const storagePath = path.posix.join('prescriptions', `${baseName}.${ext}`);
-    const { data: uploadData, error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(storagePath, buffer, { contentType: file.mimetype, upsert: true });
-    if (uploadError) {
-      console.error('Supabase upload error', uploadError);
+    try {
+      const retry = require('../lib/retry');
+      const upRes = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(storagePath, buffer, { contentType: file.mimetype, upsert: true }));
+      if (upRes.error) {
+        console.error('Supabase upload error', upRes.error);
+        return res.status(500).json({ message: 'Upload failed' });
+      }
+    } catch (err) {
+      console.error('Supabase upload failed after retries', err);
       return res.status(500).json({ message: 'Upload failed' });
     }
     const publicUrl = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath)?.data?.publicUrl || null;
@@ -649,8 +673,9 @@ router.post('/:id/prescription', auth, upload.single('prescription'), async (req
       try { await supabase.storage.from(SUPABASE_BUCKET).remove([existing.prescriptionPath]); } catch (e) { console.error('Failed to remove old prescription', e); }
     }
 
-    const updated = await prisma.child.update({ where: { id }, data: { prescriptionUrl: publicUrl, prescriptionPath: storagePath } });
-    return res.json({ url: publicUrl });
+  const updated = await prisma.child.update({ where: { id }, data: { prescriptionUrl: publicUrl, prescriptionPath: storagePath } });
+  try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
+  return res.json({ url: publicUrl });
   } catch (e) {
     console.error('Failed to upload prescription', e);
     return res.status(500).json({ message: 'Server error' });

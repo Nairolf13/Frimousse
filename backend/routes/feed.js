@@ -1,19 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-// sharp is an optional native dependency; handle its absence gracefully so the server still runs
-let sharp;
-let HAS_SHARP = true;
-try {
-  sharp = require('sharp');
-} catch (err) {
-  HAS_SHARP = false;
-  console.warn('sharp is not available. Image processing will be disabled. Install sharp to enable image uploads.');
-}
+const sharp = require('sharp');
 const path = require('path');
 const crypto = require('crypto');
-const fs = require('fs');
 const os = require('os');
+const fs = require('fs');
 
 const { createClient } = require('@supabase/supabase-js');
 // Robust Prisma client import: prefer generated client output, fall back to @prisma/client
@@ -22,22 +14,18 @@ const prisma = new PrismaClient();
 const authMiddleware = require('../middleware/authMiddleware');
 const { sendFeedPostNotification, sendLikeNotification, sendCommentNotification } = require('../lib/pushNotifications');
 
-// Use disk storage to avoid keeping large files in memory. Temp dir can be overridden with UPLOAD_TMP_DIR
-const tmpDir = process.env.UPLOAD_TMP_DIR || os.tmpdir();
+// Increase per-file upload limit to 20MB. Allow up to 6 files per post.
+const PER_FILE_LIMIT = 20 * 1024 * 1024; // 20MB
+const MAX_TOTAL_PER_POST = 120 * 1024 * 1024; // 120MB aggregate
+// Use diskStorage to avoid holding large files in memory. Temp files are stored in OS tmp dir and removed after processing.
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, tmpDir);
-  },
-  filename: function (req, file, cb) {
-    const base = Date.now() + '-' + Math.random().toString(36).slice(2,8);
-    // sanitize originalname minimally
-    const name = (file.originalname || 'file').replace(/[^a-zA-Z0-9.-_]/g, '_');
-    cb(null, `${base}-${name}`);
+  destination: (req, file, cb) => cb(null, os.tmpdir()),
+  filename: (req, file, cb) => {
+    const unique = `${Date.now()}_${Math.random().toString(36).slice(2,8)}${path.extname(file.originalname)}`;
+    cb(null, unique);
   }
 });
-
-// Increase per-file limit slightly; still protect against huge uploads
-const upload = multer({ storage, limits: { fileSize: 12 * 1024 * 1024 } }); // 12MB
+const upload = multer({ storage, limits: { fileSize: PER_FILE_LIMIT } }); // 20MB per file
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -93,86 +81,84 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
       }
     });
 
-  const files = req.files || [];
-    // If files were provided but Supabase isn't configured or sharp is missing, fail early with clear message
+    const files = req.files || [];
+    // Defensive aggregate size check to avoid excessive memory usage
+    const totalBytes = (files || []).reduce((s, f) => s + (f.size || 0), 0);
+    if (totalBytes > MAX_TOTAL_PER_POST) {
+      console.warn('Upload rejected: aggregate upload size exceeds limit', { totalBytes, max: MAX_TOTAL_PER_POST });
+      return res.status(413).json({ message: 'Total upload size too large' });
+    }
+    // If files were provided but Supabase isn't configured, fail early with clear message
     if (files.length > 0 && (!SUPABASE_URL || !SUPABASE_KEY)) {
       console.error('Supabase not configured but upload attempted');
       return res.status(503).json({ message: 'Storage backend not configured on server' });
     }
-    if (files.length > 0 && !HAS_SHARP) {
-      console.error('sharp not available but upload attempted');
-      return res.status(503).json({ message: 'Image processing not available on server (missing sharp native dependency)' });
-    }
     if (files.length > 6) return res.status(400).json({ message: 'Too many files' });
     const savedMedias = [];
 
-    for (const file of files) {
-      const tmpFilePath = file.path;
-      try {
-        if (!validateMime(file.mimetype)) {
-          console.warn('Skipping unsupported mime', file.mimetype, file.originalname);
-          continue;
-        }
+  for (const file of files) {
+      if (!validateMime(file.mimetype)) continue;
 
-        // Read file from disk for hashing
-        const fileBuffer = fs.readFileSync(tmpFilePath);
-        const hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+      // Calculate MD5 hash of the original file
+  const fileBufForHash = file.buffer || (file.path ? fs.readFileSync(file.path) : Buffer.alloc(0));
+  const hash = crypto.createHash('md5').update(fileBufForHash).digest('hex');
 
-        const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: post.id, hash: hash } });
-        if (existingMedia) {
-          continue;
-        }
-
-        // Process images via sharp using disk buffer
-        const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
-        const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
-
-        const ext = 'webp';
-        const baseName = `${post.id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-        const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
-        const thumbPath = path.posix.join('feed', `thumb_${baseName}.${ext}`);
-
-        const { data: uploadData, error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, mainBuffer, { contentType: 'image/webp', upsert: false });
-        if (uploadError) {
-          console.error('Supabase upload error', uploadError);
-          continue;
-        }
-
-        const { data: thumbData, error: thumbError } = await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false });
-        if (thumbError) {
-          console.error('Supabase thumb upload error', thumbError);
-        }
-
-        const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
-        const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
-        const mainUrl = publicMain?.data?.publicUrl || null;
-        const thumbUrl = publicThumb?.data?.publicUrl || null;
-
-        const media = await prisma.feedMedia.create({
-          data: {
-            postId: post.id,
-            type: 'image',
-            url: mainUrl,
-            thumbnailUrl: thumbUrl,
-            size: file.size,
-            hash: hash,
-            storagePath: mainPath,
-            thumbnailPath: thumbPath,
-          }
-        });
-        savedMedias.push(media);
-      } catch (err) {
-        console.error('Failed processing file', file.originalname, err);
-      } finally {
-        // remove tmp file
-        try { fs.unlinkSync(tmpFilePath); } catch (e) { /* ignore */ }
+      // Check if a media with this hash already exists for this post (though post is new, but to be safe)
+      const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: post.id, hash: hash } });
+      if (existingMedia) {
+        // Skip this file as it's already uploaded for this post
+        continue;
       }
-    }
 
-    if (files.length > 0 && savedMedias.length === 0) {
-      // rollback: remove the created post since uploads failed
-      try { await prisma.feedPost.delete({ where: { id: post.id } }); } catch (e) { console.error('Failed to rollback post after upload failures', e); }
-      return res.status(500).json({ message: 'Failed to upload any media for post' });
+      // Process main image (resize to max width 1600) and thumbnail (300)
+  // Read file from disk (multer.diskStorage places path in file.path)
+  const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
+  const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
+  const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
+
+      const ext = 'webp';
+      const baseName = `${post.id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+      const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
+      const thumbPath = path.posix.join('feed', `thumb_${baseName}.${ext}`);
+
+      // Upload main (with retries)
+      const retry = require('../lib/retry');
+      try {
+        const upMain = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, mainBuffer, { contentType: 'image/webp', upsert: false }));
+        if (upMain.error) { console.error('Supabase upload error', upMain.error); continue; }
+      } catch (err) {
+        console.error('Supabase upload failed after retries', err);
+        continue;
+      }
+      // Upload thumbnail (with retries)
+      try {
+        const upThumb = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false }));
+        if (upThumb.error) console.error('Supabase thumb upload error', upThumb.error);
+      } catch (err) {
+        console.error('Supabase thumb upload failed after retries', err);
+      }
+
+  // For public bucket: return public URLs and store storage paths so we can delete later
+  const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
+  const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
+  const mainUrl = publicMain?.data?.publicUrl || null;
+  const thumbUrl = publicThumb?.data?.publicUrl || null;
+
+  const media = await prisma.feedMedia.create({
+        data: {
+          postId: post.id,
+          type: 'image',
+          url: mainUrl,
+          thumbnailUrl: thumbUrl,
+          size: file.size,
+          hash: hash,
+          storagePath: mainPath,
+          thumbnailPath: thumbPath,
+        }
+      });
+      savedMedias.push(media);
+  // cleanup temp file
+  try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
     }
 
     const result = await prisma.feedPost.findUnique({ where: { id: post.id }, include: { medias: true, author: true } });
@@ -469,57 +455,46 @@ router.post('/:postId/media', authMiddleware, upload.array('images', 6), async (
       console.error('Supabase not configured but media add attempted');
       return res.status(503).json({ message: 'Storage backend not configured on server' });
     }
-    if (files.length > 0 && !HAS_SHARP) {
-      console.error('sharp not available but media add attempted');
-      return res.status(503).json({ message: 'Image processing not available on server (missing sharp native dependency)' });
-    }
     const savedMedias = [];
     for (const file of files) {
-      const tmpFilePath = file.path;
-      try {
-        if (!validateMime(file.mimetype)) {
-          continue;
-        }
+      if (!validateMime(file.mimetype)) continue;
 
-        // Calculate MD5 hash of the original file read from disk
-        const fileBuffer = fs.readFileSync(tmpFilePath);
-        const hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+      // Calculate MD5 hash of the original file
+      const hash = crypto.createHash('md5').update(file.buffer).digest('hex');
 
-        // Check if a media with this hash already exists for this post
-        const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: postId, hash: hash } });
-        if (existingMedia) {
-          continue;
-        }
-
-        const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
-        const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
-
-        const ext = 'webp';
-        const baseName = `${postId}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-        const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
-        const thumbPath = path.posix.join('feed', `thumb_${baseName}.${ext}`);
-
-        const { data: uploadData, error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, mainBuffer, { contentType: 'image/webp', upsert: false });
-        if (uploadError) {
-          console.error('Supabase upload error', uploadError);
-          continue;
-        }
-        const { data: thumbData, error: thumbError } = await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false });
-        if (thumbError) console.error('Supabase thumb upload error', thumbError);
-
-        // For public bucket: use public URLs and store storage paths
-        const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
-        const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
-        const mainUrl = publicMain?.data?.publicUrl || null;
-        const thumbUrl = publicThumb?.data?.publicUrl || null;
-
-        const media = await prisma.feedMedia.create({ data: { postId: postId, type: 'image', url: mainUrl, thumbnailUrl: thumbUrl, size: file.size, hash: hash, storagePath: mainPath, thumbnailPath: thumbPath } });
-        savedMedias.push(media);
-      } catch (err) {
-        console.error('Failed processing file', file.originalname, err);
-      } finally {
-        try { if (tmpFilePath) fs.unlinkSync(tmpFilePath); } catch (e) { /* ignore */ }
+      // Check if a media with this hash already exists for this post
+      const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: postId, hash: hash } });
+      if (existingMedia) {
+        // Skip this file as it's already uploaded for this post
+        continue;
       }
+
+  const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
+  const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
+  const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
+
+      const ext = 'webp';
+      const baseName = `${postId}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+      const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
+      const thumbPath = path.posix.join('feed', `thumb_${baseName}.${ext}`);
+
+      const { data: uploadData, error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, mainBuffer, { contentType: 'image/webp', upsert: false });
+      if (uploadError) {
+        console.error('Supabase upload error', uploadError);
+        continue;
+      }
+      const { data: thumbData, error: thumbError } = await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false });
+      if (thumbError) console.error('Supabase thumb upload error', thumbError);
+
+  // For public bucket: use public URLs and store storage paths
+  const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
+  const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
+  const mainUrl = publicMain?.data?.publicUrl || null;
+  const thumbUrl = publicThumb?.data?.publicUrl || null;
+
+  const media = await prisma.feedMedia.create({ data: { postId: postId, type: 'image', url: mainUrl, thumbnailUrl: thumbUrl, size: file.size, hash: hash, storagePath: mainPath, thumbnailPath: thumbPath } });
+  savedMedias.push(media);
+  try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
     }
     return res.status(201).json({ medias: savedMedias });
   } catch (e) {
@@ -555,6 +530,25 @@ router.delete('/:postId/media/:mediaId', authMiddleware, async (req, res) => {
       console.error('Error while removing files from Supabase', e);
     }
     await prisma.feedMedia.delete({ where: { id: mediaId } });
+
+    // If this was the last media for the post and the post has no text, remove the empty post as well
+    try {
+      const remainingMedias = await prisma.feedMedia.count({ where: { postId } });
+      const postAfter = await prisma.feedPost.findUnique({ where: { id: postId } });
+      const postTextEmpty = !postAfter || !postAfter.text || String(postAfter.text).trim().length === 0;
+      if (remainingMedias === 0 && postTextEmpty) {
+        // delete likes, comments and the post in a transaction
+        await prisma.$transaction([
+          prisma.feedLike.deleteMany({ where: { postId } }),
+          prisma.feedComment.deleteMany({ where: { postId } }),
+          prisma.feedPost.delete({ where: { id: postId } }),
+        ]);
+        return res.json({ deleted: true, postDeleted: true });
+      }
+    } catch (cleanupErr) {
+      console.error('Failed to cleanup empty post after media deletion', cleanupErr);
+    }
+
     return res.json({ deleted: true });
   } catch (e) {
     console.error('Failed to delete media', e);

@@ -108,6 +108,24 @@ router.post('/', auth, async (req, res) => {
     const assignment = await prisma.assignment.create({ data: { date: new Date(date), childId, nannyId, centerId: req.user.centerId } });
     res.status(201).json(assignment);
 
+    // Update payment history for affected parents for the current month (non-blocking)
+    (async () => {
+      try {
+        const { upsertPaymentsForParentForMonth } = require('../lib/paymentCron');
+        const full = await prisma.assignment.findUnique({ where: { id: assignment.id }, include: { child: { include: { parents: { include: { parent: true } } } } } });
+        if (!full || !full.child) return;
+        const parents = (full.child.parents || []).map(p => p.parent).filter(Boolean);
+        const now = new Date();
+        const year = now.getFullYear();
+        const monthIndex = now.getMonth(); // 0-11 current month
+        for (const parent of parents) {
+          try { await upsertPaymentsForParentForMonth(parent.id, year, monthIndex); } catch (e) { /* ignore */ }
+        }
+      } catch (e) {
+        // non-blocking
+      }
+    })();
+
     // background notify parents
     (async () => {
       try {
@@ -280,6 +298,24 @@ router.put('/:id', auth, async (req, res) => {
     const assignment = await prisma.assignment.update({ where: { id }, data: { date: new Date(date), childId, nannyId } });
     res.json(assignment);
 
+    // Update payment history for affected parents for the current month (non-blocking)
+    (async () => {
+      try {
+        const { upsertPaymentsForParentForMonth } = require('../lib/paymentCron');
+        const full = await prisma.assignment.findUnique({ where: { id: assignment.id }, include: { child: { include: { parents: { include: { parent: true } } } } } });
+        if (!full || !full.child) return;
+        const parents = (full.child.parents || []).map(p => p.parent).filter(Boolean);
+        const now = new Date();
+        const year = now.getFullYear();
+        const monthIndex = now.getMonth(); // 0-11 current month
+        for (const parent of parents) {
+          try { await upsertPaymentsForParentForMonth(parent.id, year, monthIndex); } catch (e) { /* ignore */ }
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+
     // background notify parents about update
     (async () => {
       try {
@@ -431,6 +467,22 @@ router.delete('/:id', auth, async (req, res) => {
     const fullExisting = await prisma.assignment.findUnique({ where: { id }, include: { child: { include: { parents: { include: { parent: true } } } }, nanny: true } });
     await prisma.assignment.delete({ where: { id } });
     res.json({ message: 'Assignment deleted' });
+
+    // Update payment history for affected parents for the current month (non-blocking)
+    (async () => {
+      try {
+        const { upsertPaymentsForParentForMonth } = require('../lib/paymentCron');
+        const parents = (fullExisting.child && fullExisting.child.parents) ? (fullExisting.child.parents.map(p => p.parent).filter(Boolean)) : [];
+        const now = new Date();
+        const year = now.getFullYear();
+        const monthIndex = now.getMonth();
+        for (const parent of parents) {
+          try { await upsertPaymentsForParentForMonth(parent.id, year, monthIndex); } catch (e) { /* ignore */ }
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
 
     (async () => {
       try {

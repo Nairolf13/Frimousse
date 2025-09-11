@@ -46,7 +46,8 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('report'), asyn
         if (req.user && req.user.role === 'parent') {
           let parentId = req.user.parentId;
           if (!parentId && req.user.email) {
-            const parentRec = await prisma.parent.findFirst({ where: { email: req.user.email } });
+            const emailTrim = String(req.user.email).trim();
+            const parentRec = await prisma.parent.findFirst({ where: { email: { equals: emailTrim, mode: 'insensitive' } } });
             if (parentRec) parentId = parentRec.id;
           }
           if (!parentId) return res.status(403).json({ message: 'Forbidden' });

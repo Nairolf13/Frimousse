@@ -139,15 +139,17 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
   const userReq = req.user || {};
   if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
 
-    const { name, email, phone, password } = req.body;
+  // normalize email to avoid case-sensitivity issues
+  const { name, phone, password } = req.body;
+  const email = String(req.body.email || '').trim().toLowerCase();
     if (!name || !email) return res.status(400).json({ message: 'Missing fields: name and email required' });
 
     const parts = name.trim().split(/\s+/);
     const firstName = parts.shift() || '';
     const lastName = parts.join(' ') || '';
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+  const existingUser = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
     const result = await prisma.$transaction(async (tx) => {
-      const data = { firstName, lastName, email, phone };
+    const data = { firstName, lastName, email, phone };
       // Assign centerId:
       // - if creator is super-admin allow explicit centerId in body
       // - otherwise inherit creator's centerId when present
@@ -161,8 +163,9 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
         // Ensure existing user is linked to the created parent and centered correctly
         // If the found user is not already an admin/super-admin, promote them to 'parent'.
         const updateData = { parentId: parent.id };
-        // Only change role when the existing user is not an admin or super-admin
-        if (!isSuperAdmin(existingUser) && !isAdminRole(existingUser)) {
+        // Only change role to 'parent' when the existing user is not an admin/super-admin
+        // AND is not a nanny (we must not overwrite nanny role)
+        if (!isSuperAdmin(existingUser) && !isAdminRole(existingUser) && !existingUser.nannyId) {
           updateData.role = 'parent';
         }
         if (isSuperAdmin(userReq)) {
@@ -174,8 +177,8 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
         return { parent, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
       } else {
 
-        const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
-        const hash = await bcrypt.hash(tempPassword, 10);
+    const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
+    const hash = await bcrypt.hash(tempPassword, 10);
   const userData = { email, password: hash, name: `${firstName} ${lastName}`, role: 'parent', parentId: parent.id };
   if (isSuperAdmin(userReq)) {
     if (req.body.centerId) userData.centerId = req.body.centerId;
@@ -242,7 +245,8 @@ router.put('/:id', requireAuth, async (req, res) => {
     const userReq = req.user || {};
     // allow if user can manage parents (admin/nanny/super-admin) OR the parent is updating their own record
     if (!(canManageParents(userReq) || (userReq.parentId && String(userReq.parentId) === String(id)))) return res.status(403).json({ message: 'Forbidden' });
-    const { name, email, phone, firstName, lastName } = req.body;
+  const { name, phone, firstName, lastName } = req.body;
+  const email = req.body.email !== undefined ? String(req.body.email || '').trim().toLowerCase() : undefined;
     let data = {};
     if (name) {
       const parts = name.trim().split(/\s+/);
@@ -251,7 +255,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     if (firstName !== undefined) data.firstName = firstName;
     if (lastName !== undefined) data.lastName = lastName;
-    if (email !== undefined) data.email = email;
+  if (email !== undefined) data.email = email;
     if (phone !== undefined) data.phone = phone;
 
     // Ensure the parent belongs to the same center (unless super-admin)
@@ -295,7 +299,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 router.get('/by-email', requireAuth, async (req, res) => {
   try {
     const userReq = req.user || {};
-    const email = (req.query.email || '').toString();
+  const email = (req.query.email || '').toString().trim().toLowerCase();
     if (!email) return res.status(400).json({ message: 'Missing email' });
 
     // allow if user can manage parents or if requesting their own email
@@ -303,7 +307,7 @@ router.get('/by-email', requireAuth, async (req, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const parent = await prisma.parent.findFirst({ where: { email } });
+  const parent = await prisma.parent.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
     if (!parent) return res.status(404).json({ message: 'Parent not found' });
     res.json(parent);
   } catch (err) {
@@ -322,8 +326,15 @@ router.delete('/:id', requireAuth, async (req, res) => {
       if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent not found' });
     }
     await prisma.$transaction(async (tx) => {
+      // unlink users
       await tx.user.updateMany({ where: { parentId: id }, data: { parentId: null } });
+      // delete parent-child relations
       await tx.parentChild.deleteMany({ where: { parentId: id } });
+      // delete photo consents referencing this parent
+      try { await tx.photoConsent.deleteMany({ where: { parentId: id } }); } catch (e) { /* ignore if model not present */ }
+      // delete payment histories referencing this parent
+      try { await tx.paymentHistory.deleteMany({ where: { parentId: id } }); } catch (e) { /* ignore if model not present */ }
+      // finally delete the parent
       await tx.parent.delete({ where: { id } });
     });
     res.json({ message: 'Parent deleted' });
