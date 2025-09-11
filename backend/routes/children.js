@@ -9,11 +9,21 @@ const prisma = new PrismaClient();
 const logger = require('../lib/logger');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const multer = require('multer');
+const os = require('os');
+const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const sharp = require('sharp');
 const path = require('path');
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 6 * 1024 * 1024 } }); // 6MB
+// Per-file upload limit increased to 20MB for higher-quality uploads
+const PER_FILE_LIMIT = 20 * 1024 * 1024; // 20MB
+const MAX_TOTAL_PER_POST = 120 * 1024 * 1024; // 120MB aggregate
+// Use disk storage to avoid holding files in memory
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, os.tmpdir()),
+  filename: (req, file, cb) => cb(null, `${Date.now()}_${Math.random().toString(36).slice(2,8)}${path.extname(file.originalname)}`)
+});
+const upload = multer({ storage, limits: { fileSize: PER_FILE_LIMIT } }); // 20MB
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -635,15 +645,23 @@ router.post('/:id/prescription', auth, upload.single('prescription'), async (req
 
     // Generate path and upload (no image processing for PDFs)
     const ext = file.mimetype === 'application/pdf' ? 'pdf' : 'webp';
+    // read from disk if available (diskStorage)
     let buffer = file.buffer;
+    if (!buffer && file.path) buffer = require('fs').readFileSync(file.path);
     if (ext === 'webp') {
-      buffer = await sharp(file.buffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
+      buffer = await sharp(buffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
     }
     const baseName = `${id}_presc_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
     const storagePath = path.posix.join('prescriptions', `${baseName}.${ext}`);
-    const { data: uploadData, error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(storagePath, buffer, { contentType: file.mimetype, upsert: true });
-    if (uploadError) {
-      console.error('Supabase upload error', uploadError);
+    try {
+      const retry = require('../lib/retry');
+      const upRes = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(storagePath, buffer, { contentType: file.mimetype, upsert: true }));
+      if (upRes.error) {
+        console.error('Supabase upload error', upRes.error);
+        return res.status(500).json({ message: 'Upload failed' });
+      }
+    } catch (err) {
+      console.error('Supabase upload failed after retries', err);
       return res.status(500).json({ message: 'Upload failed' });
     }
     const publicUrl = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath)?.data?.publicUrl || null;
@@ -655,8 +673,9 @@ router.post('/:id/prescription', auth, upload.single('prescription'), async (req
       try { await supabase.storage.from(SUPABASE_BUCKET).remove([existing.prescriptionPath]); } catch (e) { console.error('Failed to remove old prescription', e); }
     }
 
-    const updated = await prisma.child.update({ where: { id }, data: { prescriptionUrl: publicUrl, prescriptionPath: storagePath } });
-    return res.json({ url: publicUrl });
+  const updated = await prisma.child.update({ where: { id }, data: { prescriptionUrl: publicUrl, prescriptionPath: storagePath } });
+  try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
+  return res.json({ url: publicUrl });
   } catch (e) {
     console.error('Failed to upload prescription', e);
     return res.status(500).json({ message: 'Server error' });

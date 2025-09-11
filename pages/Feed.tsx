@@ -293,25 +293,45 @@ export default function Feed() {
         return;
       }
 
-      const fd = new FormData();
-      fd.append('text', text);
-      for (const f of files) fd.append('images', f, f.name);
-      // include tagged children when present
-      if (selectedChildIds && selectedChildIds.length) {
-        for (const cid of selectedChildIds) fd.append('taggedChildIds[]', cid);
-      }
+      // Server-only upload: always POST FormData to api/feed (safer for private photos)
+      if (files.length > 0) {
+        const fd = new FormData();
+        fd.append('text', text);
+        for (const f of files) fd.append('images', f, f.name);
+        if (selectedChildIds && selectedChildIds.length) {
+          for (const cid of selectedChildIds) fd.append('taggedChildIds[]', cid);
+        }
 
-      const res = await fetchWithRefresh('api/feed', { method: 'POST', body: fd });
-      if (res.ok) {
-        const created = await res.json();
-        setPosts(prev => [created, ...prev]);
-        setText('');
-  setFiles([]);
-  setShowIdentifyWarning(false);
+        const res = await fetchWithRefresh('api/feed', { method: 'POST', body: fd });
+        if (res.ok) {
+          const created = await res.json();
+          setPosts(prev => [created, ...prev]);
+          setText(''); setFiles([]); setShowIdentifyWarning(false);
+        } else {
+          const body = await res.json().catch(() => ({}));
+          const serverMsg = (body && body.message) ? String(body.message) : '';
+          showError('Échec de la publication', mapServerMessage(serverMsg, res.status));
+        }
       } else {
-        const body = await res.json().catch(() => ({}));
-        const serverMsg = (body && body.message) ? String(body.message) : '';
-        showError('Échec de la publication', mapServerMessage(serverMsg, res.status));
+        // Fallback server upload when no anon key available or no files
+        const fd = new FormData();
+        fd.append('text', text);
+        for (const f of files) fd.append('images', f, f.name);
+        // include tagged children when present
+        if (selectedChildIds && selectedChildIds.length) {
+          for (const cid of selectedChildIds) fd.append('taggedChildIds[]', cid);
+        }
+
+        const res = await fetchWithRefresh('api/feed', { method: 'POST', body: fd });
+        if (res.ok) {
+          const created = await res.json();
+          setPosts(prev => [created, ...prev]);
+          setText(''); setFiles([]); setShowIdentifyWarning(false);
+        } else {
+          const body = await res.json().catch(() => ({}));
+          const serverMsg = (body && body.message) ? String(body.message) : '';
+          showError('Échec de la publication', mapServerMessage(serverMsg, res.status));
+        }
       }
     } catch (err) {
       console.error(err);
@@ -921,8 +941,18 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
   // Media handlers
   async function handleUploadImages(files: FileList | null) {
     if (!files || files.length === 0) return;
+    const currentCount = (post.medias || []).length;
+    const maxAllowed = 6;
+    const remaining = Math.max(0, maxAllowed - currentCount);
+    if (remaining === 0) {
+      return alert(`Vous avez déjà ${currentCount} images. Le maximum est ${maxAllowed}.`);
+    }
+    const fileArray = Array.from(files);
+    if (fileArray.length > remaining) {
+      alert(`Vous pouvez ajouter seulement ${remaining} image(s) supplémentaires. Seules les ${remaining} premières seront prises.`);
+    }
     const fd = new FormData();
-    for (const f of Array.from(files)) fd.append('images', f, f.name);
+    for (const f of fileArray.slice(0, remaining)) fd.append('images', f, f.name);
     try {
       const res = await fetchWithRefresh(`api/feed/${post.id}/media`, { method: 'POST', body: fd });
       if (!res.ok) {
@@ -1029,7 +1059,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
         <div className="mt-3">
           <label className="inline-flex items-center gap-2 cursor-pointer">
             <input type="file" accept="image/*" multiple className="hidden" onChange={e => handleUploadImages(e.target.files)} />
-            <span className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">Ajouter des images</span>
+            <span className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">Ajouter des images (max 6)</span>
           </label>
         </div>
       )}
