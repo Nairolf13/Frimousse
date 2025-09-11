@@ -1,18 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-// sharp is an optional native dependency; handle its absence gracefully so the server still runs
-let sharp;
-let HAS_SHARP = true;
-try {
-  sharp = require('sharp');
-} catch (err) {
-  HAS_SHARP = false;
-  console.warn('sharp is not available. Image processing will be disabled. Install sharp to enable image uploads.');
-}
+const sharp = require('sharp');
 const path = require('path');
 const crypto = require('crypto');
-
 const os = require('os');
 const fs = require('fs');
 
@@ -22,7 +13,6 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const authMiddleware = require('../middleware/authMiddleware');
 const { sendFeedPostNotification, sendLikeNotification, sendCommentNotification } = require('../lib/pushNotifications');
-
 
 // Increase per-file upload limit to 20MB. Allow up to 6 files per post.
 const PER_FILE_LIMIT = 20 * 1024 * 1024; // 20MB
@@ -36,7 +26,6 @@ const storage = multer.diskStorage({
   }
 });
 const upload = multer({ storage, limits: { fileSize: PER_FILE_LIMIT } }); // 20MB per file
-
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -92,7 +81,6 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
       }
     });
 
-
     const files = req.files || [];
     // Defensive aggregate size check to avoid excessive memory usage
     const totalBytes = (files || []).reduce((s, f) => s + (f.size || 0), 0);
@@ -101,18 +89,12 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
       return res.status(413).json({ message: 'Total upload size too large' });
     }
     // If files were provided but Supabase isn't configured, fail early with clear message
-
     if (files.length > 0 && (!SUPABASE_URL || !SUPABASE_KEY)) {
       console.error('Supabase not configured but upload attempted');
       return res.status(503).json({ message: 'Storage backend not configured on server' });
     }
-    if (files.length > 0 && !HAS_SHARP) {
-      console.error('sharp not available but upload attempted');
-      return res.status(503).json({ message: 'Image processing not available on server (missing sharp native dependency)' });
-    }
     if (files.length > 6) return res.status(400).json({ message: 'Too many files' });
     const savedMedias = [];
-
 
   for (const file of files) {
       if (!validateMime(file.mimetype)) continue;
@@ -121,12 +103,12 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
   const fileBufForHash = file.buffer || (file.path ? fs.readFileSync(file.path) : Buffer.alloc(0));
   const hash = crypto.createHash('md5').update(fileBufForHash).digest('hex');
 
-
-        const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: post.id, hash: hash } });
-        if (existingMedia) {
-          continue;
-        }
-
+      // Check if a media with this hash already exists for this post (though post is new, but to be safe)
+      const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: post.id, hash: hash } });
+      if (existingMedia) {
+        // Skip this file as it's already uploaded for this post
+        continue;
+      }
 
       // Process main image (resize to max width 1600) and thumbnail (300)
   // Read file from disk (multer.diskStorage places path in file.path)
@@ -134,12 +116,10 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
   const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
   const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
 
-
-        const ext = 'webp';
-        const baseName = `${post.id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-        const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
-        const thumbPath = path.posix.join('feed', `thumb_${baseName}.${ext}`);
-
+      const ext = 'webp';
+      const baseName = `${post.id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+      const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
+      const thumbPath = path.posix.join('feed', `thumb_${baseName}.${ext}`);
 
       // Upload main (with retries)
       const retry = require('../lib/retry');
@@ -156,10 +136,7 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
         if (upThumb.error) console.error('Supabase thumb upload error', upThumb.error);
       } catch (err) {
         console.error('Supabase thumb upload failed after retries', err);
-
       }
-    }
-
 
   // For public bucket: return public URLs and store storage paths so we can delete later
   const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
@@ -182,7 +159,6 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
       savedMedias.push(media);
   // cleanup temp file
   try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
-
     }
 
     const result = await prisma.feedPost.findUnique({ where: { id: post.id }, include: { medias: true, author: true } });
@@ -479,58 +455,46 @@ router.post('/:postId/media', authMiddleware, upload.array('images', 6), async (
       console.error('Supabase not configured but media add attempted');
       return res.status(503).json({ message: 'Storage backend not configured on server' });
     }
-    if (files.length > 0 && !HAS_SHARP) {
-      console.error('sharp not available but media add attempted');
-      return res.status(503).json({ message: 'Image processing not available on server (missing sharp native dependency)' });
-    }
     const savedMedias = [];
     for (const file of files) {
-      const tmpFilePath = file.path;
-      try {
-        if (!validateMime(file.mimetype)) {
-          continue;
-        }
+      if (!validateMime(file.mimetype)) continue;
 
-        // Calculate MD5 hash of the original file read from disk
-        const fileBuffer = fs.readFileSync(tmpFilePath);
-        const hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
+      // Calculate MD5 hash of the original file
+      const hash = crypto.createHash('md5').update(file.buffer).digest('hex');
 
-        // Check if a media with this hash already exists for this post
-        const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: postId, hash: hash } });
-        if (existingMedia) {
-          continue;
-        }
-
+      // Check if a media with this hash already exists for this post
+      const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: postId, hash: hash } });
+      if (existingMedia) {
+        // Skip this file as it's already uploaded for this post
+        continue;
+      }
 
   const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
   const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
   const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
 
+      const ext = 'webp';
+      const baseName = `${postId}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+      const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
+      const thumbPath = path.posix.join('feed', `thumb_${baseName}.${ext}`);
 
-        const ext = 'webp';
-        const baseName = `${postId}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
-        const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
-        const thumbPath = path.posix.join('feed', `thumb_${baseName}.${ext}`);
+      const { data: uploadData, error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, mainBuffer, { contentType: 'image/webp', upsert: false });
+      if (uploadError) {
+        console.error('Supabase upload error', uploadError);
+        continue;
+      }
+      const { data: thumbData, error: thumbError } = await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false });
+      if (thumbError) console.error('Supabase thumb upload error', thumbError);
 
-        const { data: uploadData, error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, mainBuffer, { contentType: 'image/webp', upsert: false });
-        if (uploadError) {
-          console.error('Supabase upload error', uploadError);
-          continue;
-        }
-        const { data: thumbData, error: thumbError } = await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false });
-        if (thumbError) console.error('Supabase thumb upload error', thumbError);
-
-        // For public bucket: use public URLs and store storage paths
-        const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
-        const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
-        const mainUrl = publicMain?.data?.publicUrl || null;
-        const thumbUrl = publicThumb?.data?.publicUrl || null;
-
+  // For public bucket: use public URLs and store storage paths
+  const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
+  const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
+  const mainUrl = publicMain?.data?.publicUrl || null;
+  const thumbUrl = publicThumb?.data?.publicUrl || null;
 
   const media = await prisma.feedMedia.create({ data: { postId: postId, type: 'image', url: mainUrl, thumbnailUrl: thumbUrl, size: file.size, hash: hash, storagePath: mainPath, thumbnailPath: thumbPath } });
   savedMedias.push(media);
   try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
-
     }
     return res.status(201).json({ medias: savedMedias });
   } catch (e) {
