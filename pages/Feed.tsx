@@ -313,6 +313,7 @@ export default function Feed() {
           showError('Échec de la publication', mapServerMessage(serverMsg, res.status));
         }
       } else {
+
         // Fallback server upload when no anon key available or no files
         const fd = new FormData();
         fd.append('text', text);
@@ -332,6 +333,7 @@ export default function Feed() {
           const serverMsg = (body && body.message) ? String(body.message) : '';
           showError('Échec de la publication', mapServerMessage(serverMsg, res.status));
         }
+
       }
     } catch (err) {
       console.error(err);
