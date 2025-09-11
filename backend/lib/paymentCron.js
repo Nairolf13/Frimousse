@@ -62,6 +62,31 @@ async function calculatePaymentsForMonth(year, monthIndex) {
   }
 }
 
+async function upsertPaymentsForParentForMonth(parentId, year, monthIndex) {
+  // Calculate payment only for a single parent
+  const parent = await prisma.parent.findUnique({ where: { id: parentId }, include: { children: { include: { child: true } } } });
+  if (!parent) return;
+  let total = 0;
+  const details = [];
+  for (const pc of parent.children) {
+    const child = pc.child;
+    const days = await prisma.assignment.count({ where: { childId: child.id, date: { gte: new Date(year, monthIndex, 1), lte: new Date(year, monthIndex + 1, 0) } } });
+    const subtotal = days * RATE_PER_DAY;
+    total += subtotal;
+    details.push({ childName: child.name, daysPresent: days, ratePerDay: RATE_PER_DAY, subtotal });
+  }
+  try {
+    const existing = await prisma.paymentHistory.findFirst({ where: { parentId: parent.id, year, month: monthIndex + 1 } });
+    if (existing) {
+      await prisma.paymentHistory.update({ where: { id: existing.id }, data: { total, details } });
+    } else {
+      await prisma.paymentHistory.create({ data: { parentId: parent.id, month: monthIndex + 1, year, total, details } });
+    }
+  } catch (err) {
+    console.error('Failed to upsert paymentHistory for parent single', parent.id, err);
+  }
+}
+
 async function calculatePayments() {
   const now = new Date();
   const year = now.getFullYear();
@@ -80,4 +105,4 @@ const task = cron.schedule('5 0 1 * *', () => {
   calculatePayments().catch(console.error);
 }, { scheduled: true });
 
-module.exports = { calculatePayments, calculatePaymentsForMonth, task };
+module.exports = { calculatePayments, calculatePaymentsForMonth, upsertPaymentsForParentForMonth, task };

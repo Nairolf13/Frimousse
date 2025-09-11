@@ -64,7 +64,8 @@ export default function PaymentHistoryPage() {
 
   const totalRevenue = data.reduce((s, r) => s + (Number(r.total) || 0), 0);
   const familiesActive = data.length;
-  const familiesWithPositive = data.filter(r => (Number(r.total) || 0) > 0).length;
+  // Nombre de paiements en attente : seules les entrées non marquées payées ET avec un montant strictement > 0
+  const unpaidCount = data.filter(r => (Number(r.total) || 0) > 0 && !r.paid).length;
 
   function downloadCSVForAll() {
     const rows: string[] = [];
@@ -211,8 +212,8 @@ export default function PaymentHistoryPage() {
             <div className="text-2xl font-bold mt-1">{familiesActive}</div>
           </div>
           <div className="bg-white rounded-xl shadow border border-gray-100 p-4">
-            <div className="text-sm text-gray-500">Paiements</div>
-            <div className="text-2xl font-bold mt-1">{familiesWithPositive}</div>
+            <div className="text-sm text-gray-500">Paiements en attente</div>
+            <div className="text-2xl font-bold mt-1">{unpaidCount}</div>
           </div>
         </div>
 

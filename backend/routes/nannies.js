@@ -25,7 +25,8 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
     const userReq = req.user || {};
     // Only admins or nannies themselves (or super-admin) can create nannies
     if (!(userReq.role === 'admin' || userReq.nannyId || userReq.role === 'super-admin')) return res.status(403).json({ message: 'Forbidden' });
-  const { name, availability, experience, contact, email, birthDate, password } = req.body;
+  const { name, availability, experience, contact, birthDate, password } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
     const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
     if (isNaN(parsedExperience)) {
       return res.status(400).json({ error: 'Le champ "experience" doit être un nombre.' });
@@ -37,7 +38,7 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
 
       if (!email) return { nanny, user: null };
 
-      const existingUser = await tx.user.findUnique({ where: { email } });
+  const existingUser = await tx.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
       if (existingUser) {
         // Do not attach existing users who are not nounous. This prevents admins being assigned a nannyId.
         if (existingUser.role !== 'nanny') {
@@ -136,12 +137,15 @@ router.post('/accept-invite', async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const { name, availability, experience, contact, email, birthDate, newPassword } = req.body;
+  const { name, availability, experience, contact, birthDate, newPassword } = req.body;
+  const email = req.body.email !== undefined ? String(req.body.email || '').trim().toLowerCase() : undefined;
   if (!isSuperAdmin(req.user)) {
     const existing = await prisma.nanny.findUnique({ where: { id } });
     if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
   }
-  const nanny = await prisma.nanny.update({ where: { id }, data: { name, availability, experience, contact, email, birthDate: birthDate ? new Date(birthDate) : null } });
+  const updateData = { name, availability, experience, contact, birthDate: birthDate ? new Date(birthDate) : null };
+  if (email !== undefined) updateData.email = email;
+  const nanny = await prisma.nanny.update({ where: { id }, data: updateData });
 
   // If an admin provided newPassword, update the linked user password
   try {

@@ -120,7 +120,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
           // fallback: try session customer email (if available on the checkout session)
           if (!user && session.customer_details && session.customer_details.email) {
-            user = await prisma.user.findUnique({ where: { email: session.customer_details.email } });
+            const sessEmail = String(session.customer_details.email).trim();
+            user = await prisma.user.findFirst({ where: { email: { equals: sessEmail, mode: 'insensitive' } } });
           }
 
           // Upsert subscription record
@@ -363,7 +364,8 @@ router.post('/complete-checkout-session', async (req, res) => {
       user = await prisma.user.findFirst({ where: { stripeCustomerId: subscriptionObj.customer } });
     }
     if (!user && session.customer_details && session.customer_details.email) {
-      user = await prisma.user.findUnique({ where: { email: session.customer_details.email } });
+      const sessEmail = String(session.customer_details.email).trim();
+      user = await prisma.user.findFirst({ where: { email: { equals: sessEmail, mode: 'insensitive' } } });
     }
 
     // Upsert subscription record
