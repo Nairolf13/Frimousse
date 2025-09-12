@@ -95,6 +95,35 @@ export default function PaymentHistoryPage() {
       const res = await fetchWithRefresh(`${API_URL}/payment-history/invoice/${paymentId}`, { credentials: 'include' });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
+        // For 403 we show a friendly modal message to the user instead of raw server text
+        if (res.status === 403) {
+          // Try to extract a clean message from JSON or plain text.
+          let friendly = "Le mois en cours n'est pas fini : vous ne pouvez pas télécharger cette facture.";
+          if (text && text.trim().length > 0) {
+            const t = text.trim();
+            try {
+              const parsed = JSON.parse(t);
+              if (parsed && typeof parsed === 'object') {
+                if (typeof parsed.message === 'string' && parsed.message.trim()) {
+                  friendly = parsed.message.trim();
+                } else if (typeof parsed.error === 'string' && parsed.error.trim()) {
+                  friendly = parsed.error.trim();
+                } else {
+                  // pick first string value inside object if available
+                  const firstString = Object.values(parsed).find(v => typeof v === 'string' && v.trim());
+                  if (typeof firstString === 'string') friendly = firstString.trim();
+                }
+              } else if (t.length < 500) {
+                friendly = t;
+              }
+            } catch {
+              // not JSON, use trimmed text if reasonable length
+              if (t.length < 500) friendly = t;
+            }
+          }
+          showModal(friendly);
+          return;
+        }
         throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
       }
       const ct = res.headers.get('content-type') || '';
@@ -124,7 +153,8 @@ export default function PaymentHistoryPage() {
         if (isErrWithMessage(err)) return err.message;
         try { return JSON.stringify(err); } catch { return String(err); }
       })();
-      alert(msg || 'Erreur lors du téléchargement de la facture');
+      // Use the app modal instead of a native alert for nicer UX
+      showModal(msg || 'Erreur lors du téléchargement de la facture');
     } finally {
       setLoading(false);
     }

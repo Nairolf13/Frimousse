@@ -5,13 +5,15 @@ const prisma = new PrismaClient();
 
 // GET /api/payment-history/assigned?year=2025&month=9&limit=50&offset=0
 // month is 1-12
-router.get('/assigned', async (req, res) => {
+const auth = require('../middleware/authMiddleware');
+
+router.get('/assigned', auth, async (req, res) => {
   try {
     const userId = req.user && req.user.id;
     if (!userId) return res.status(401).json({ error: 'Not authenticated' });
 
     // find the user's linked nannyId (User.nannyId)
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { nannyId: true } });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { nannyId: true, parentId: true, role: true } });
     if (!user || !user.nannyId) return res.status(403).json({ error: 'User is not a nanny' });
     const nannyId = user.nannyId;
 

@@ -30,9 +30,24 @@ router.get('/:year/:month', auth, async (req, res) => {
     const role = (user && user.role) || '';
     const isAdmin = typeof role === 'string' && (role.toLowerCase().includes('admin') || role.toLowerCase().includes('super'));
 
+    // If the user's role explicitly indicates 'parent' but we don't have a parentId on the user record,
+    // deny access rather than falling back to other checks.
+    if (typeof role === 'string' && role.toLowerCase().includes('parent') && (!user || !user.parentId)) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
     let data;
-    if (user && user.nannyId) {
-      // Nanny: only parents who have at least one child that has an assignment with this nanny
+    if (isAdmin) {
+      // Admin: all
+      data = await prisma.paymentHistory.findMany({ where: whereBase, include: { parent: true } });
+    } else if (user && user.parentId) {
+      // Parent: only their own records
+      data = await prisma.paymentHistory.findMany({
+        where: { ...whereBase, parentId: user.parentId },
+        include: { parent: true }
+      });
+    } else if (user && user.nannyId) {
+      // Nanny: only parents who have at least one child that has an assignment or an explicit childNanny with this nanny
       data = await prisma.paymentHistory.findMany({
         where: {
           ...whereBase,
@@ -40,9 +55,10 @@ router.get('/:year/:month', auth, async (req, res) => {
             children: {
               some: {
                 child: {
-                  assignments: {
-                    some: { nannyId: user.nannyId }
-                  }
+                  OR: [
+                    { assignments: { some: { nannyId: user.nannyId } } },
+                    { childNannies: { some: { nannyId: user.nannyId } } }
+                  ]
                 }
               }
             }
@@ -50,15 +66,6 @@ router.get('/:year/:month', auth, async (req, res) => {
         },
         include: { parent: true }
       });
-    } else if (user && user.parentId) {
-      // Parent: only their own records
-      data = await prisma.paymentHistory.findMany({
-        where: { ...whereBase, parentId: user.parentId },
-        include: { parent: true }
-      });
-    } else if (isAdmin) {
-      // Admin: all
-      data = await prisma.paymentHistory.findMany({ where: whereBase, include: { parent: true } });
     } else {
       // Other authenticated users: deny
       return res.status(403).json({ message: 'Accès refusé' });

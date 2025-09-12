@@ -64,7 +64,47 @@ router.get('/invoice/:id', auth, async (req, res) => {
     if (!user) return res.status(403).json({ message: 'Forbidden' });
     const role = (user.role || '').toLowerCase();
     const isAdmin = role === 'admin' || role.includes('super');
-    if (!isAdmin && user.parentId !== ph.parentId) return res.status(403).json({ message: 'Forbidden' });
+
+    // allow admin
+    if (isAdmin) {
+      /* ok */
+    } else {
+      // For non-admins, disallow downloading invoices for the current month
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1; // 1-12
+      const currentYear = now.getFullYear();
+      if (ph.month === currentMonth && ph.year === currentYear) {
+        return res.status(403).json({ message: "Le mois en cours n'est pas fini : vous ne pouvez pas télécharger cette facture." });
+      }
+
+      // Parent can access their invoice
+      if (user.parentId && user.parentId === ph.parentId) {
+        /* ok */
+      }
+      // Nanny can access invoice only if assigned to that parent (either via Assignment or ChildNanny)
+      else if (user.nannyId) {
+        const assigned = await prisma.parent.findFirst({
+          where: {
+            id: ph.parentId,
+            children: {
+              some: {
+                child: {
+                  OR: [
+                    { assignments: { some: { nannyId: user.nannyId } } },
+                    { childNannies: { some: { nannyId: user.nannyId } } }
+                  ]
+                }
+              }
+            }
+          },
+          select: { id: true }
+        });
+        if (!assigned) return res.status(403).json({ message: 'Forbidden' });
+      } else {
+        // other authenticated users: forbid
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+    }
 
     const parentName = ph.parent ? `${ph.parent.firstName || ''} ${ph.parent.lastName || ''}`.trim() : '';
     const parentEmail = ph.parent?.email || '';
