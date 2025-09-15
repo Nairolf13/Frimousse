@@ -2,11 +2,9 @@ const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Tarif par jour (modifiable)
 const RATE_PER_DAY = 2;
 
 async function calculatePaymentsForMonth(year, monthIndex) {
-  // monthIndex is 0-based (0 = January)
   const parents = await prisma.parent.findMany({
     include: { children: { include: { child: true } } }
   });
@@ -18,7 +16,6 @@ async function calculatePaymentsForMonth(year, monthIndex) {
     for (const pc of parent.children) {
       const child = pc.child;
 
-      // Compter les jours de présence dans Assignment
       const days = await prisma.assignment.count({
         where: {
           childId: child.id,
@@ -40,7 +37,6 @@ async function calculatePaymentsForMonth(year, monthIndex) {
       });
     }
 
-    // Sauvegarder dans PaymentHistory (idempotent)
     try {
       const existing = await prisma.paymentHistory.findFirst({ where: { parentId: parent.id, year, month: monthIndex + 1 } });
       if (existing) {
@@ -63,7 +59,6 @@ async function calculatePaymentsForMonth(year, monthIndex) {
 }
 
 async function upsertPaymentsForParentForMonth(parentId, year, monthIndex) {
-  // Calculate payment only for a single parent
   const parent = await prisma.parent.findUnique({ where: { id: parentId }, include: { children: { include: { child: true } } } });
   if (!parent) return;
   let total = 0;
@@ -91,7 +86,6 @@ async function calculatePayments() {
   const now = new Date();
   const year = now.getFullYear();
   const monthIndex = now.getMonth(); // 0-11
-  // Calculate for previous month to ensure full data
   const targetMonth = monthIndex - 1;
   const targetYear = targetMonth === -1 ? year - 1 : year;
   const targetMonthIndex = targetMonth === -1 ? 11 : targetMonth;
