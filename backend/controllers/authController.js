@@ -26,12 +26,18 @@ function cookieOptions() {
 exports.register = async (req, res) => {
   // normalize email to avoid case-sensitivity issues
   const email = String(req.body.email || '').trim().toLowerCase();
-  const { password, name, role, nannyId, centerId, centerName, plan } = req.body;
+  const { password, name, role, nannyId, centerId, centerName, plan, address, city, postalCode, region, country } = req.body;
   if (!email || !password || !name || !role) return res.status(400).json({ message: 'Missing fields' });
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
   const hash = await bcrypt.hash(password, 10);
   const userData = { email, password: hash, name, role };
+  // optional address fields
+  if (address) userData.address = address;
+  if (city) userData.city = city;
+  if (postalCode) userData.postalCode = postalCode;
+  if (region) userData.region = region;
+  if (country) userData.country = country;
   if (nannyId) userData.nannyId = nannyId;
   // Determine center assignment rules:
   // - If this is the very first user in the system, force admin role and create a new Center.
@@ -135,12 +141,17 @@ exports.registerSubscribeInit = async (req, res) => {
   try {
     // normalize email
     const email = String(req.body.email || '').trim().toLowerCase();
-    const { password, name, role, centerName, plan } = req.body;
+    const { password, name, role, centerName, plan, address, city, postalCode, region, country } = req.body;
     if (!email || !password || !name || !role || !plan) return res.status(400).json({ message: 'Missing fields' });
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
     const hash = await bcrypt.hash(password, 10);
   const userData = { email, password: hash, name, role };
+  if (address) userData.address = address;
+  if (city) userData.city = city;
+  if (postalCode) userData.postalCode = postalCode;
+  if (region) userData.region = region;
+  if (country) userData.country = country;
     // center creation rules similar to register
     const totalUsers = await prisma.user.count();
     if (totalUsers === 0) {

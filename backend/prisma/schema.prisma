@@ -66,6 +66,11 @@ model User {
   email            String         @unique
   password         String
   name             String
+  address          String?
+  city             String?
+  postalCode       String?
+  region           String?
+  country          String?
   role             String
   stripeCustomerId String?
   nanny            Nanny?         @relation("NannyUser", fields: [nannyId], references: [id])
