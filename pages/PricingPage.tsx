@@ -57,6 +57,7 @@ export default function PricingPage() {
   // removed pending discovery modal state (Découverte now redirects to /register)
   const [globalMessage, setGlobalMessage] = useState<null | { type: 'success' | 'error' | 'info'; text: string }>(null);
   const [userRoleLoading, setUserRoleLoading] = useState(true);
+  const [paidInfoShown, setPaidInfoShown] = useState<string | null>(null);
 
   useEffect(() => {
     setUserRoleLoading(true);
@@ -157,16 +158,21 @@ export default function PricingPage() {
                     </ul>
                   </div>
                   {plan.buyButtonId ? (
-                    <div className="w-full flex justify-center mt-4">
+                    <div className="w-full flex flex-col items-center mt-4">
+                      {paidInfoShown === plan.name && (
+                        <div className="w-full max-w-xs mb-2 flex items-start justify-between">
+                          <div className="rounded-md bg-yellow-100 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 flex-1">
+                            Les abonnements payants ne sont pas encore disponibles — contactez-nous pour plus de renseignements.
+                          </div>
+                          <button aria-label="Fermer" onClick={() => setPaidInfoShown(null)} className="ml-2 text-sm text-gray-600">✕</button>
+                        </div>
+                      )}
                       <button
-                        className="w-full max-w-xs h-11 px-4 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-pointer rounded"
+                        className="w-full max-w-xs h-11 px-4 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-not-allowed rounded bg-gray-300 text-gray-600"
                         type="button"
-                        style={{ backgroundColor: '#0b5566', color: '#fff' }}
-                        onClick={() => {
-                          if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
-                          if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
-                          return startDirect(plan.name.toLowerCase());
-                        }}
+                        aria-disabled="true"
+                        title="Les abonnements payants ne sont pas encore disponibles. Contactez-nous pour plus d’informations."
+                        onClick={() => setPaidInfoShown(plan.name)}
                       >
                         {plan.cta}
                       </button>
@@ -179,9 +185,13 @@ export default function PricingPage() {
                         style={{ backgroundColor: '#0b5566', color: '#fff' }}
                         onClick={() => {
                           if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
+                          // If user clicked the free trial, navigate to register when not logged in.
+                          if (plan.name === 'Découverte') {
+                            if (userRole) return setGlobalMessage({ type: 'info', text: 'Vous êtes déjà connecté.' });
+                            return navigate('/register');
+                          }
+                          // For paid plans, keep existing admin guard
                           if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
-                          // Découverte plan has cta 'Essai gratuit' and price '0€'
-                          if (plan.name === 'Découverte') return navigate('/register');
                           // For Essentiel/Pro use direct mode (30 days trial)
                           return startDirect(plan.name.toLowerCase());
                         }}

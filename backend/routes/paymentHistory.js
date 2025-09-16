@@ -24,11 +24,12 @@ router.get('/:year/:month', auth, async (req, res) => {
       return res.status(401).json({ message: 'Non authentifié' });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { nannyId: true, parentId: true, role: true } });
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { nannyId: true, parentId: true, role: true, centerId: true } });
 
-    // Admins / supers can see everything
-    const role = (user && user.role) || '';
-    const isAdmin = typeof role === 'string' && (role.toLowerCase().includes('admin') || role.toLowerCase().includes('super'));
+  // Roles: distinguish regular admins from super-admins
+  const role = (user && user.role) || '';
+  const isSuperAdmin = typeof role === 'string' && role.toLowerCase().includes('super');
+  const isAdmin = typeof role === 'string' && role.toLowerCase().includes('admin');
 
     // If the user's role explicitly indicates 'parent' but we don't have a parentId on the user record,
     // deny access rather than falling back to other checks.
@@ -37,9 +38,19 @@ router.get('/:year/:month', auth, async (req, res) => {
     }
 
     let data;
-    if (isAdmin) {
-      // Admin: all
+    if (isSuperAdmin) {
+      // Super-admin: full access
       data = await prisma.paymentHistory.findMany({ where: whereBase, include: { parent: true } });
+    } else if (isAdmin) {
+      // Regular admin: only parents belonging to the same center as the admin
+      if (!user || !user.centerId) return res.status(403).json({ message: 'Accès refusé' });
+      data = await prisma.paymentHistory.findMany({
+        where: {
+          ...whereBase,
+          parent: { is: { centerId: user.centerId } }
+        },
+        include: { parent: true }
+      });
     } else if (user && user.parentId) {
       // Parent: only their own records
       data = await prisma.paymentHistory.findMany({
