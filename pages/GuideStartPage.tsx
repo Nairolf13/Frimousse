@@ -35,9 +35,11 @@ export default function GuideStartPage() {
             <ol className="list-decimal list-inside text-[#08323a] space-y-3 mb-6">
               <li><strong>Connexion :</strong> Rendez-vous sur la page d'accueil, cliquez sur "Se connecter" et saisissez vos identifiants fournis par l'association.</li>
               <li><strong>Navigation :</strong> Utilisez le menu pour accéder aux rubriques : Enfants, Planning, Rapports, etc.</li>
+              <li><strong>Ajouter une nounou :</strong> Depuis la rubrique "Nounou", cliquez sur "Ajouter" et remplissez le formulaire (nom, âge, expérience, etc.).</li>
+              <li><strong>Ajouter un parent :</strong> Depuis la rubrique "Parents", cliquez sur "Ajouter" et remplissez le formulaire (nom, âge, contacts,  etc.).</li>
               <li><strong>Ajouter un enfant :</strong> Depuis la rubrique "Enfants", cliquez sur "Ajouter" et remplissez le formulaire (nom, âge, contacts, allergies, etc.).</li>
-              <li><strong>Gérer le planning :</strong> Accédez à "Mon planning" pour visualiser et modifier les plannings de garde.</li>
-              <li><strong>Consulter/Exporter un rapport :</strong> Dans "Rapports", filtrez, consultez et exportez les rapports d'activité.</li>
+              <li><strong>Gérer le planning :</strong> Accédez à "Accueil" pour visualiser et modifier les plannings de garde.</li>
+              <li><strong>Consulter un rapport :</strong> Dans "Rapports", filtrez et consultez les rapports d'activité.</li>
               <li><strong>Besoin d’aide ?</strong> Consultez la page Support ou contactez l’équipe Frimousse.</li>
             </ol>
             <div className="mt-8 text-[#08323a] text-sm">Pour plus de détails, consultez les guides spécifiques dans la rubrique Support.</div>
