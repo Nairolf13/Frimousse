@@ -164,10 +164,11 @@ router.put('/schedules/:scheduleId', auth, async (req, res) => {
 router.delete('/schedules/:scheduleId', auth, async (req, res) => {
   try {
     const { scheduleId } = req.params;
-    if (!isSuperAdmin(req.user)) {
-      const existing = await prisma.schedule.findUnique({ where: { id: scheduleId } });
-      if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Schedule not found' });
-    }
+    // load the existing schedule first so we can perform permission checks
+    // and still reference it later when sending notifications
+    const existing = await prisma.schedule.findUnique({ where: { id: scheduleId } });
+    if (!existing) return res.status(404).json({ message: 'Schedule not found' });
+    if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Schedule not found' });
     await prisma.schedule.delete({ where: { id: scheduleId } });
     res.json({ success: true });
       // notify parents about deleted activity
