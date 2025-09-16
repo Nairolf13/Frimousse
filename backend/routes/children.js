@@ -10,6 +10,8 @@ const logger = require('../lib/logger');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const multer = require('multer');
 const os = require('os');
+const redisCache = require('../lib/redisCache');
+const simpleCache = require('../lib/simpleCache');
 const fs = require('fs');
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
@@ -404,6 +406,18 @@ router.put('/:id', auth, async (req, res) => {
       const childWithParents = await tx.child.findUnique({ where: { id }, include: { parents: { include: { parent: true } } } });
       return childWithParents;
     });
+    // Invalidate children list cache for this center
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api/children';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.delByPrefix(`${basePath}|center:${centerId}`);
+        await redisCache.delByPrefix(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.delByPrefix(`${basePath}|center:${centerId}`);
+        simpleCache.delByPrefix(`${basePath}|anon`);
+      }
+    } catch (e) { console.warn('Failed to invalidate children cache', e && e.message ? e.message : e); }
     res.json(result);
   } catch (error) {
     console.error('Error updating child', error);
@@ -431,6 +445,18 @@ router.delete('/:id', auth, async (req, res) => {
       await tx.report.deleteMany({ where: { childId: id } });
       await tx.child.delete({ where: { id } });
     });
+    // Invalidate children list cache for this center
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api/children';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+        await redisCache.del(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+        simpleCache.del(`${basePath}|anon`);
+      }
+    } catch (e) { console.warn('Failed to invalidate children cache', e && e.message ? e.message : e); }
     res.json({ message: 'Child deleted' });
 
     // background notify previously assigned nannies (email fallback + push)

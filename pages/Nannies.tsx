@@ -21,6 +21,7 @@ function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }
 }
 
 import { useEffect, useState, useRef } from 'react';
+import { useGetNanniesQuery, useCreateNannyMutation, useUpdateNannyMutation, useDeleteNannyMutation, usePayCotisationMutation } from '../src/features/nannies/nanniesApi';
 
 interface Child {
   id: string;
@@ -41,6 +42,18 @@ interface Nanny {
   birthDate?: string | null;
 }
 
+type CreateNannyPayload = Partial<{
+  name: string;
+  availability: string;
+  experience: number;
+  specializations: string[];
+  status: string;
+  contact: string;
+  email: string;
+  birthDate?: string | null;
+  password?: string;
+}>;
+
 const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; password?: string } = {
   name: '',
   availability: 'Disponible',
@@ -57,7 +70,8 @@ const avatarEmojis = ['🦁', '🐻', '🐱', '🐶', '🦊', '🐼', '🐵', '�
 
 export default function Nannies() {
   const { user } = useAuth();
-  const [nannies, setNannies] = useState<Nanny[]>([]);
+  const { data: nanniesRaw = [], isLoading: nanniesLoading, refetch: refetchNannies } = useGetNanniesQuery();
+  const nannies: Nanny[] = (nanniesRaw as unknown) as Nanny[];
   const [cotisationStatus, setCotisationStatus] = useState<Record<string, { paidUntil: string | null; loading: boolean }>>({});
   const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number>>({});
   interface Assignment {
@@ -68,7 +82,7 @@ export default function Nannies() {
   }
   
     const [assignments, setAssignments] = useState<Assignment[]>([]); 
-  const [loading, setLoading] = useState(true);
+  // loading state replaced by RTK Query's isLoading (nanniesLoading)
   const [form, setForm] = useState(emptyForm);
   const [showPw, setShowPw] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -85,11 +99,9 @@ export default function Nannies() {
     setCotisationStatus(s => ({ ...s, [nannyId]: { ...s[nannyId], loading: true } }));
     try {
       const res = await fetchWithRefresh(`${API_URL}/nannies/${nannyId}/cotisation`, { credentials: 'include' });
-      const data = await res.json();
-      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: data.cotisationPaidUntil, loading: false } }));
-      if (data.lastCotisationAmount) {
-        setCotisationAmounts(prev => ({ ...prev, [nannyId]: Number(data.lastCotisationAmount) }));
-      }
+      const data = await res.json().catch(() => ({}));
+      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: data.cotisationPaidUntil ?? null, loading: false } }));
+      if (data.lastCotisationAmount) setCotisationAmounts(prev => ({ ...prev, [nannyId]: Number(data.lastCotisationAmount) }));
     } catch {
       setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: null, loading: false } }));
     }
@@ -101,23 +113,7 @@ export default function Nannies() {
   const [adminResetModal, setAdminResetModal] = useState<{ open: boolean; nannyId?: string; password?: string } | null>(null);
   const [pendingSave, setPendingSave] = useState<{ payload: Partial<typeof emptyForm> & { experience?: number; newPassword?: string }; editingId?: string | null } | null>(null);
 
-  const payCotisation = async (nannyId: string, amount?: number) => {
-    setCotisationStatus(s => ({ ...s, [nannyId]: { ...s[nannyId], loading: true } }));
-    try {
-      const body = amount ? JSON.stringify({ amount }) : undefined;
-      const res = await fetchWithRefresh(`${API_URL}/nannies/${nannyId}/cotisation`, { method: 'PUT', credentials: 'include', headers: body ? { 'Content-Type': 'application/json' } : undefined, body });
-      const data = await res.json();
-      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: data.cotisationPaidUntil, loading: false } }));
-      setMessages(m => ({ ...m, [nannyId]: { text: 'Paiement enregistré', type: 'success' } }));
-      if (data.lastCotisationAmount) setCotisationAmounts(prev => ({ ...prev, [nannyId]: Number(data.lastCotisationAmount) }));
-      setTimeout(() => setMessages(m => ({ ...m, [nannyId]: null })), 3000);
-      await fetchCotisation(nannyId);
-      } catch {
-      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: null, loading: false } }));
-      setMessages(m => ({ ...m, [nannyId]: { text: 'Erreur lors du paiement', type: 'error' } }));
-      setTimeout(() => setMessages(m => ({ ...m, [nannyId]: null })), 4000);
-    }
-  };
+  const [payCotisation] = usePayCotisationMutation();
 
   const requestPay = (nannyId: string) => {
     const amount = cotisationAmounts[nannyId] || 10;
@@ -128,28 +124,31 @@ export default function Nannies() {
     if (!confirmPayment) return;
     const { nannyId, amount } = confirmPayment;
     setConfirmPayment(null);
-    await payCotisation(nannyId, amount);
+    setCotisationStatus(s => ({ ...s, [nannyId]: { ...s[nannyId], loading: true } }));
+    try {
+      const resp = await payCotisation({ id: nannyId, amount }).unwrap();
+      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: resp.cotisationPaidUntil ?? null, loading: false } }));
+      setMessages(m => ({ ...m, [nannyId]: { text: 'Paiement enregistré', type: 'success' } }));
+      if (resp.lastCotisationAmount) setCotisationAmounts(prev => ({ ...prev, [nannyId]: Number(resp.lastCotisationAmount) }));
+      setTimeout(() => setMessages(m => ({ ...m, [nannyId]: null })), 3000);
+    } catch {
+      setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: null, loading: false } }));
+      setMessages(m => ({ ...m, [nannyId]: { text: 'Erreur lors du paiement', type: 'error' } }));
+      setTimeout(() => setMessages(m => ({ ...m, [nannyId]: null })), 4000);
+    }
   };
 
-  const fetchNannies = React.useCallback(() => {
-    setLoading(true);
-    fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
-      .then(res => res.json())
-      .then((nannies: Nanny[]) => {
-  setNannies(nannies);
-  const amounts: Record<string, number> = {};
-  nannies.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); });
-  setCotisationAmounts(amounts);
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const [createNanny] = useCreateNannyMutation();
+  const [updateNanny] = useUpdateNannyMutation();
+  const [deleteNannyMutation] = useDeleteNannyMutation();
 
   useEffect(() => {
-    fetchNannies();
+    // nannies are provided by RTK Query; fetch cotisations for each when available
+    nannies.forEach(n => { setCotisationAmounts(a => ({ ...a, [n.id]: 10 })); fetchCotisation(n.id); });
     fetchWithRefresh(`${API_URL}/assignments`, { credentials: 'include' })
       .then(res => res.json())
       .then(setAssignments);
-  }, [fetchNannies]);
+  }, [nannies]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -198,45 +197,18 @@ export default function Nannies() {
 
   const performSave = async (payload: Partial<typeof emptyForm> & { experience?: number; newPassword?: string }, editingId?: string | null) => {
     try {
-      const res = await fetchWithRefresh(editingId ? `${API_URL}/nannies/${editingId}` : `${API_URL}/nannies`, {
-        method: editingId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (res.status === 402) {
-        try {
-          const body = await res.json().catch(() => ({}));
-          setError(body && body.error ? String(body.error) : 'Limite atteinte pour votre plan.');
-        } catch {
-          setError('Limite atteinte pour votre plan.');
-        }
-        return;
-      }
-      if (res.status === 409) {
-        try {
-          const body = await res.json().catch(() => ({}));
-          const msg = body && (body.message || body.error) ? String(body.message || body.error) : 'Un utilisateur avec cet email existe déjà.';
-          setError(msg);
-        } catch {
-          setError('Un utilisateur avec cet email existe déjà.');
-        }
-        return;
-      }
-      if (!res.ok) {
-        try {
-          const body = await res.json().catch(() => ({}));
-          const msg = body && (body.message || body.error) ? String(body.message || body.error) : 'Erreur lors de la sauvegarde';
-          setError(msg);
-        } catch {
-          setError('Erreur lors de la sauvegarde');
-        }
-        return;
+      if (editingId) {
+        await updateNanny({ id: editingId, body: payload }).unwrap();
+      } else {
+        const { newPassword, ...rest } = payload as unknown as Record<string, unknown>;
+        const createBody: CreateNannyPayload = { ...(rest as CreateNannyPayload) };
+        if (newPassword && typeof newPassword === 'string') createBody.password = newPassword;
+        await createNanny(createBody).unwrap();
       }
       setForm(emptyForm);
       setConfirmPassword('');
       setEditingId(null);
-      fetchNannies();
+      refetchNannies();
       if (editingId) {
         setMessages(m => ({ ...m, [editingId]: { text: 'Mise à jour effectuée', type: 'success' } }));
         setTimeout(() => setMessages(m => ({ ...m, [editingId]: null })), 3000);
@@ -244,9 +216,14 @@ export default function Nannies() {
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
-      } else {
-        setError('Erreur');
+        return;
       }
+      if (typeof err === 'object' && err !== null && 'status' in err) {
+        const maybe = err as { status?: number | string };
+        if (maybe.status === 402) { setError('Limite atteinte pour votre plan.'); return; }
+        if (maybe.status === 409) { setError('Un utilisateur avec cet email existe déjà.'); return; }
+      }
+      setError('Erreur');
     }
   };
 
@@ -283,13 +260,9 @@ export default function Nannies() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      const res = await fetchWithRefresh(`${API_URL}/nannies/${deleteId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Erreur lors de la suppression');
+      await deleteNannyMutation(deleteId).unwrap();
       setDeleteId(null);
-      fetchNannies();
+      refetchNannies();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -314,9 +287,10 @@ export default function Nannies() {
   return nannies.filter(n => relatedNannyIds.has(n.id));
   }, [nannies, assignments, user, isNannyUser]);
 
-  const totalNannies = visibleNannies.length;
-  const availableToday = visibleNannies.filter(n => n.availability === 'Disponible').length;
-  const onLeave = visibleNannies.filter(n => n.availability === 'En_congé' || n.availability === 'En congé').length;
+  // metrics derived from visibleNannies (kept for potential UI but not used elsewhere)
+  // const totalNannies = visibleNannies.length;
+  // const availableToday = visibleNannies.filter(n => n.availability === 'Disponible').length;
+  // const onLeave = visibleNannies.filter(n => n.availability === 'En_congé' || n.availability === 'En congé').length;
 
   const filtered = nannies.filter(n =>
     (!search || n.name.toLowerCase().includes(search.toLowerCase())) &&
@@ -348,25 +322,6 @@ export default function Nannies() {
             )}
           </div>
         </div>
-
-        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full lg:flex-row lg:items-center lg:gap-4 lg:mb-6 lg:w-full md:max-w-md md:w-full">
-          
-          <div className="flex gap-2 flex-wrap justify-start w-full">
-            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
-              <div className="text-xs text-gray-400">Total</div>
-              <div className="text-base md:text-lg font-bold text-[#0b5566]">{totalNannies}</div>
-            </div>
-            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
-              <div className="text-xs text-gray-400">Disponibles</div>
-              <div className="text-base md:text-lg font-bold text-[#0b5566]">{availableToday}</div>
-            </div>
-            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
-              <div className="text-xs text-gray-400">En congé</div>
-              <div className="text-base md:text-lg font-bold text-[#0b5566]">{onLeave}</div>
-            </div>
-          </div>
-        </div>
-
         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-6 w-full filter-responsive">
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
           <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border rounded px-3 py-2 text-xs md:text-base bg-white text-gray-700 shadow-sm w-full md:w-auto">
@@ -379,9 +334,8 @@ export default function Nannies() {
             <option value="junior">Junior (-3 ans)</option>
             <option value="senior">Senior (3+ ans)</option>
           </select>
-          <div className="flex-1"></div>
+          <div className="flex-1" />
         </div>
-
         {(adding || editingId) && (
           <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
             <input name="name" value={form.name} onChange={handleChange} placeholder="Nom" required className="border rounded px-3 py-2 text-base" />
@@ -413,7 +367,7 @@ export default function Nannies() {
           </form>
         )}
 
-        {loading ? (
+        {nanniesLoading ? (
           <div>Chargement...</div>
         ) : (
           <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full children-responsive-grid">

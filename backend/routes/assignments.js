@@ -4,6 +4,8 @@ const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const logger = require('../lib/logger');
+const redisCache = require('../lib/redisCache');
+const simpleCache = require('../lib/simpleCache');
 function isSuperAdmin(user) { if (!user || !user.role) return false; const r = String(user.role).toLowerCase(); return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super'); }
 
 function isAdminRole(user) {
@@ -106,6 +108,18 @@ router.post('/', auth, async (req, res) => {
     }
 
     const assignment = await prisma.assignment.create({ data: { date: new Date(date), childId, nannyId, centerId: req.user.centerId } });
+    // Invalidate assignments list cache for this center
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api/assignments';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.delByPrefix(`${basePath}|center:${centerId}`);
+        await redisCache.delByPrefix(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.delByPrefix(`${basePath}|center:${centerId}`);
+        simpleCache.delByPrefix(`${basePath}|anon`);
+      }
+    } catch (e) { logger.warn && logger.warn('Failed to invalidate assignments cache', e && e.message ? e.message : e); }
     res.status(201).json(assignment);
 
     // Update payment history for affected parents for the current month (non-blocking)
@@ -296,6 +310,18 @@ router.put('/:id', auth, async (req, res) => {
       }
     }
     const assignment = await prisma.assignment.update({ where: { id }, data: { date: new Date(date), childId, nannyId } });
+    // Invalidate assignments list cache for this center
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api/assignments';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+        await redisCache.del(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+        simpleCache.del(`${basePath}|anon`);
+      }
+    } catch (e) { logger.warn && logger.warn('Failed to invalidate assignments cache', e && e.message ? e.message : e); }
     res.json(assignment);
 
     // Update payment history for affected parents for the current month (non-blocking)
@@ -466,6 +492,18 @@ router.delete('/:id', auth, async (req, res) => {
 
     const fullExisting = await prisma.assignment.findUnique({ where: { id }, include: { child: { include: { parents: { include: { parent: true } } } }, nanny: true } });
     await prisma.assignment.delete({ where: { id } });
+    // Invalidate assignments list cache for this center
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api/assignments';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+        await redisCache.del(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+        simpleCache.del(`${basePath}|anon`);
+      }
+    } catch (e) { logger.warn && logger.warn('Failed to invalidate assignments cache', e && e.message ? e.message : e); }
     res.json({ message: 'Assignment deleted' });
 
     // Update payment history for affected parents for the current month (non-blocking)

@@ -12,7 +12,8 @@
     "start:back": "cd backend && node index.js",
     "start:prod": "npm-run-all --parallel start:front:prod start:back:prod",
     "start:front:prod": "vite build && vite preview",
-    "start:back:prod": "cd backend && NODE_ENV=production node index.js"
+    "start:back:prod": "cd backend && NODE_ENV=production node index.js",
+    "test:unit": "vitest run --reporter verbose utils/__tests__"
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.18",
@@ -20,6 +21,7 @@
     "@fullcalendar/react": "^6.1.18",
     "@fullcalendar/timegrid": "^6.1.18",
     "@prisma/client": "^6.15.0",
+    "@reduxjs/toolkit": "^2.9.0",
     "@stripe/react-stripe-js": "^3.9.0",
     "@stripe/stripe-js": "^7.8.0",
     "@supabase/supabase-js": "^2.57.4",
@@ -29,6 +31,7 @@
     "react-helmet": "^6.1.0",
     "react-helmet-async": "^2.0.5",
     "react-icons": "^5.5.0",
+    "react-redux": "^9.2.0",
     "react-router-dom": "^7.7.1",
     "react-select": "^5.10.2",
     "string.prototype.padend": "^3.1.6",
@@ -40,6 +43,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/react-helmet-async": "^1.0.1",
+    "@types/react-redux": "^7.1.34",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^4.6.0",
     "concurrently": "^8.2.2",
@@ -52,7 +56,8 @@
     "tailwindcss": "^4.1.11",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vitest": "^1.6.1"
   },
   "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
   "main": "eslint.config.js",

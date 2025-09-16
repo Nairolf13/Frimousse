@@ -99,11 +99,35 @@ router.delete('/', auth, async (req, res) => {
     });
 
     res.json({ success: true });
+    // Invalidate cached user listings (admin listing under /api/user or /api/user/all)
+    try {
+      const redisCache = require('../lib/redisCache');
+      const simpleCache = require('../lib/simpleCache');
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const bases = ['/api/user/all', '/api/user'];
+      for (const basePath of bases) {
+        if (process.env.REDIS_URL) {
+          if (centerId) await redisCache.delByPrefix(`${basePath}|center:${centerId}`);
+          await redisCache.delByPrefix(`${basePath}|anon`);
+        } else {
+          if (centerId) simpleCache.delByPrefix(`${basePath}|center:${centerId}`);
+          simpleCache.delByPrefix(`${basePath}|anon`);
+        }
+      }
+    } catch (e) { console.warn('Failed to invalidate user list cache', e && e.message ? e.message : e); }
   } catch (e) {
     const msg = e && e.message ? e.message : String(e);
     res.status(400).json({ error: msg });
   }
 });
+
+// Invalidate user list cache after deleting own user
+try {
+  const redisCache = require('../lib/redisCache');
+  const simpleCache = require('../lib/simpleCache');
+} catch (e) {
+  // ignore if modules not present at require-time
+}
 
 // Update current user's basic info (name, email)
 router.put('/me', auth, async (req, res) => {
@@ -117,6 +141,22 @@ router.put('/me', auth, async (req, res) => {
 
     const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true } });
     res.json(updated);
+    // Invalidate cached user listings in case admin views reflect updated info
+    try {
+      const redisCache = require('../lib/redisCache');
+      const simpleCache = require('../lib/simpleCache');
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const bases = ['/api/user/all', '/api/user'];
+      for (const basePath of bases) {
+        if (process.env.REDIS_URL) {
+          if (centerId) await redisCache.delByPrefix(`${basePath}|center:${centerId}`);
+          await redisCache.delByPrefix(`${basePath}|anon`);
+        } else {
+          if (centerId) simpleCache.delByPrefix(`${basePath}|center:${centerId}`);
+          simpleCache.delByPrefix(`${basePath}|anon`);
+        }
+      }
+    } catch (e) { console.warn('Failed to invalidate user list cache after update', e && e.message ? e.message : e); }
   } catch (e) {
     const msg = e && e.code === 'P2002' ? 'Email déjà utilisé' : (e && e.message ? e.message : String(e));
     res.status(400).json({ error: msg });

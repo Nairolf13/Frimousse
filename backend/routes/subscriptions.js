@@ -172,6 +172,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const sub = await prisma.subscription.findUnique({ where: { stripeSubscriptionId: stripeSubId } });
         if (sub) {
           await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'active', currentPeriodStart: new Date(invoice.period_start * 1000), currentPeriodEnd: new Date(invoice.period_end * 1000) } });
+          // Invalidate subscriptions cache
+          try { const basePath = '/api/subscriptions'; if (process.env.REDIS_URL) { await require('../lib/redisCache').del(`${basePath}|anon`); } else { require('../lib/simpleCache').del(`${basePath}|anon`); } } catch (e) { console.error('Failed to invalidate subscriptions cache on invoice.payment_succeeded', e && e.message ? e.message : e); }
         }
         break;
       }
@@ -181,6 +183,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const sub = await prisma.subscription.findUnique({ where: { stripeSubscriptionId: stripeSubId } });
         if (sub) {
           await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'past_due' } });
+          try { const basePath = '/api/subscriptions'; if (process.env.REDIS_URL) { await require('../lib/redisCache').del(`${basePath}|anon`); } else { require('../lib/simpleCache').del(`${basePath}|anon`); } } catch (e) { console.error('Failed to invalidate subscriptions cache on invoice.payment_failed', e && e.message ? e.message : e); }
         }
         break;
       }
@@ -189,6 +192,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const sub = await prisma.subscription.findUnique({ where: { stripeSubscriptionId: subscriptionObj.id } });
         if (sub) {
           await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'canceled', canceledAt: new Date() } });
+          try { const basePath = '/api/subscriptions'; if (process.env.REDIS_URL) { await require('../lib/redisCache').del(`${basePath}|anon`); } else { require('../lib/simpleCache').del(`${basePath}|anon`); } } catch (e) { console.error('Failed to invalidate subscriptions cache on customer.subscription.deleted', e && e.message ? e.message : e); }
         }
         break;
       }
@@ -197,6 +201,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const sub = await prisma.subscription.findUnique({ where: { stripeSubscriptionId: subscriptionObj.id } });
         if (sub) {
           await prisma.subscription.update({ where: { id: sub.id }, data: { status: subscriptionObj.status, currentPeriodStart: subscriptionObj.current_period_start ? new Date(subscriptionObj.current_period_start * 1000) : null, currentPeriodEnd: subscriptionObj.current_period_end ? new Date(subscriptionObj.current_period_end * 1000) : null } });
+          try { const basePath = '/api/subscriptions'; if (process.env.REDIS_URL) { await require('../lib/redisCache').del(`${basePath}|anon`); } else { require('../lib/simpleCache').del(`${basePath}|anon`); } } catch (e) { console.error('Failed to invalidate subscriptions cache on customer.subscription.updated', e && e.message ? e.message : e); }
         }
         break;
       }
@@ -479,6 +484,17 @@ router.post('/create-with-token', async (req, res) => {
     }
 
     const sub = await prisma.subscription.create({ data: { userId: user.id, stripeSubscriptionId: subscription.id, plan, status: 'trialing', trialStart: new Date(), trialEnd: new Date(trialEnd * 1000) } });
+    // Invalidate subscriptions cache for this user
+    try {
+      const basePath = '/api/subscriptions';
+      if (process.env.REDIS_URL) {
+        await require('../lib/redisCache').del(`${basePath}|uid:${user.id}`);
+        await require('../lib/redisCache').del(`${basePath}|anon`);
+      } else {
+        require('../lib/simpleCache').del(`${basePath}|uid:${user.id}`);
+        require('../lib/simpleCache').del(`${basePath}|anon`);
+      }
+    } catch (e) { console.error('Failed to invalidate subscriptions cache on create-with-token', e && e.message ? e.message : e); }
     res.json({ subscription: sub });
   } catch (e) {
   console.error('[subscriptions.create-with-token] Unexpected error', e && e.message ? e.message : e);
@@ -505,11 +521,13 @@ router.post('/cancel', requireAuth, async (req, res) => {
     if (immediately) {
       await stripe.subscriptions.del(sub.stripeSubscriptionId);
       await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'canceled', canceledAt: new Date() } });
+      try { const basePath = '/api/subscriptions'; if (process.env.REDIS_URL) { await require('../lib/redisCache').del(`${basePath}|uid:${user.id}`); await require('../lib/redisCache').del(`${basePath}|anon`); } else { require('../lib/simpleCache').del(`${basePath}|uid:${user.id}`); require('../lib/simpleCache').del(`${basePath}|anon`); } } catch (e) { console.error('Failed to invalidate subscriptions cache on cancel immediate', e && e.message ? e.message : e); }
       return res.json({ success: true });
     }
 
     await stripe.subscriptions.update(sub.stripeSubscriptionId, { cancel_at_period_end: true });
     await prisma.subscription.update({ where: { id: sub.id }, data: { cancelAtPeriodEnd: true } });
+    try { const basePath = '/api/subscriptions'; if (process.env.REDIS_URL) { await require('../lib/redisCache').del(`${basePath}|uid:${user.id}`); await require('../lib/redisCache').del(`${basePath}|anon`); } else { require('../lib/simpleCache').del(`${basePath}|uid:${user.id}`); require('../lib/simpleCache').del(`${basePath}|anon`); } } catch (e) { console.error('Failed to invalidate subscriptions cache on cancel', e && e.message ? e.message : e); }
     res.json({ success: true });
   } catch (e) {
     console.error(e);

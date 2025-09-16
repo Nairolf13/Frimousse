@@ -1,10 +1,37 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import Typeahead from '../src/components/Typeahead';
 const API_URL = import.meta.env.VITE_API_URL;
+// Types for external place APIs (Photon) responses
+// Photon feature type (partial) returned by photon.komoot.io
+type PhotonFeature = {
+  type: string;
+  geometry?: { type: string; coordinates?: number[] };
+  properties?: {
+    name?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    street?: string;
+    postcode?: string;
+  };
+};
+// PhotonGeoJSON type intentionally not exported; we'll use PhotonFeature where needed
+
+// Lightweight fallback list of countries for offline/dev when external proxy fails
+const FALLBACK_COUNTRIES = [
+  'France','Belgique','Suisse','Canada','Luxembourg','Monaco','Espagne','Italie','Portugal','Royaume-Uni','Allemagne','Pays-Bas'
+];
+
+function isErrorResponse(obj: unknown): obj is { error: string } {
+  if (typeof obj !== 'object' || obj === null) return false;
+  const rec = obj as Record<string, unknown>;
+  return 'error' in rec && typeof rec['error'] === 'string';
+}
 
 // No inline card collection on Register: we redirect to Stripe Checkout instead.
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({ email: '', password: '', name: '', role: 'admin', centerName: '' });
+  const [form, setForm] = useState({ email: '', password: '', name: '', role: 'admin', centerName: '', address: '', region: '', country: '' });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -93,6 +120,103 @@ export default function RegisterPage() {
     }
   };
 
+  // country/place helpers using REST Countries + Photon
+  const [countryIso2, setCountryIso2] = useState<string | null>(null);
+  const [regionsCache, setRegionsCache] = useState<Record<string, Array<{ id?: string; name?: string }>>>({});
+  const countriesMapRef = useRef<Record<string, string>>({}); // label -> iso2
+
+  const fetchCountries = useCallback(async (q: string): Promise<string[]> => {
+    if (!q || q.trim().length === 0) return [] as string[];
+    try {
+      const baseRaw = typeof API_URL === 'string' && API_URL ? API_URL : '';
+      const base = baseRaw.replace(/\/$/, '');
+      const proxyRoot = base ? (base.endsWith('/api') ? base : `${base}/api`) : '';
+      const proxy = proxyRoot ? `${proxyRoot}/external/countries?q=${encodeURIComponent(q)}` : `/api/external/countries?q=${encodeURIComponent(q)}`;
+      const res = await fetch(proxy);
+      if (!res.ok) return [] as string[];
+      const json = await res.json().catch(() => ({}));
+      if (!json || isErrorResponse(json) || !Array.isArray(json)) {
+        const lower = q.toLowerCase();
+        return FALLBACK_COUNTRIES.filter(c => c.toLowerCase().includes(lower)).slice(0, 12);
+      }
+      const labels: string[] = [];
+      for (const c of json as Array<{ name?: string; iso2?: string }>) {
+        const label = (c.name || '').toString();
+        if (!label) continue;
+        labels.push(label);
+        if (c.iso2) countriesMapRef.current[label] = String(c.iso2);
+      }
+      return labels;
+    } catch {
+      const lower = q.toLowerCase();
+      return FALLBACK_COUNTRIES.filter(c => c.toLowerCase().includes(lower)).slice(0, 12);
+    }
+  }, []);
+
+  const fetchRegions = useCallback(async (q: string): Promise<string[]> => {
+    if (!countryIso2) return [] as string[];
+    try {
+      if (!regionsCache[countryIso2]) {
+        // We don't have an authoritative public API for subdivisions; use Photon to search for major admin levels by country
+        const baseRaw = typeof API_URL === 'string' && API_URL ? API_URL : '';
+        const base = baseRaw.replace(/\/$/, '');
+        const proxyRoot = base ? (base.endsWith('/api') ? base : `${base}/api`) : '';
+        const proxy = proxyRoot ? `${proxyRoot}/external/photon/search?q=${encodeURIComponent(countryIso2)}&limit=40` : `/api/external/photon/search?q=${encodeURIComponent(countryIso2)}&limit=40`;
+        const res = await fetch(proxy);
+        if (!res.ok) return [] as string[];
+        const json = await res.json().catch(() => ({}));
+        if (!json || isErrorResponse(json) || !json.features) return [] as string[];
+        // extract unique admin names from features.properties (e.g., state, county, city)
+        const names: string[] = [];
+        const seen = new Set<string>();
+        for (const f of (json.features as PhotonFeature[] || [])) {
+          const p = f.properties || {};
+          const cand = p.state || p.city || p.name || p.street || null;
+          if (cand && !seen.has(cand)) { seen.add(cand); names.push(cand); }
+          if (names.length >= 200) break;
+        }
+        const list = names.map((n, i) => ({ id: String(i), name: n }));
+        setRegionsCache(prev => ({ ...prev, [countryIso2]: list }));
+        return list.filter(it => String(it.name).toLowerCase().includes(q.toLowerCase())).map(it => it.name || '').slice(0, 12) as string[];
+      }
+      const cached = regionsCache[countryIso2] || [];
+      return cached.filter(it => String(it.name).toLowerCase().includes(q.toLowerCase())).map(it => it.name || '').slice(0, 12) as string[];
+    } catch {
+      return [] as string[];
+    }
+  }, [countryIso2, regionsCache]);
+
+  const fetchAddresses = useCallback(async (q: string): Promise<string[]> => {
+    if (!q || q.trim().length === 0) return [] as string[];
+    try {
+      const baseRaw = typeof API_URL === 'string' && API_URL ? API_URL : '';
+      const base = baseRaw.replace(/\/$/, '');
+      const proxyRoot = base ? (base.endsWith('/api') ? base : `${base}/api`) : '';
+      const country = countryIso2 ? `&country=${encodeURIComponent(countryIso2)}` : '';
+      const proxy = proxyRoot ? `${proxyRoot}/external/photon/search?q=${encodeURIComponent(q)}&limit=8${country}` : `/api/external/photon/search?q=${encodeURIComponent(q)}&limit=8${country}`;
+      const res = await fetch(proxy);
+      if (!res.ok) return [] as string[];
+      const json = await res.json().catch(() => ([]));
+      if (!json || isErrorResponse(json) || !json.features) return [] as string[];
+      const labels: string[] = (json.features as PhotonFeature[] || []).map(f => {
+        const p = f.properties || {};
+        // choose a readable label: name, city, state, country
+        const parts = [p.name, p.city, p.state, p.country].filter(Boolean);
+        return parts.join(', ');
+      }).filter(Boolean).slice(0, 8) as string[];
+      return labels;
+    } catch {
+      return [] as string[];
+    }
+  }, [countryIso2]);
+
+  // when a country is selected from the Typeahead we store its iso2
+  const onCountrySelect = useCallback((v: string) => {
+    setForm(prev => ({ ...prev, country: String(v || '') }));
+    const iso2 = countriesMapRef.current[String(v || '')];
+    if (iso2) setCountryIso2(String(iso2)); else setCountryIso2(null);
+  }, []);
+
   // No handleCardConfirmed: we rely on Checkout flow and webhook to finalize subscription and login
 
   return (
@@ -106,12 +230,48 @@ export default function RegisterPage() {
         {error && <div className="mb-4 text-red-600 w-full text-center">{error}</div>}
         {success && <div className="mb-4 text-[#0b5566] w-full text-center">Inscription réussie. Redirection…</div>}
   {/* ... plan radio selection removed; use compact cards below ... */}
+  
         <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Nom
           <input name="name" value={form.name} onChange={handleChange} required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>
         <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Société / Crèche 
           <input name="centerName" value={form.centerName} onChange={handleChange} placeholder="Nom de la crèche ou société" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>
+        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Pays
+          <Typeahead
+            id="country-typeahead"
+            value={form.country}
+            onChange={onCountrySelect}
+            placeholder="Commencez à taper le pays"
+            fetchOptions={fetchCountries}
+            minChars={1}
+          />
+        </label>
+
+        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Région
+          <Typeahead
+            id="region-typeahead"
+            value={form.region}
+            onChange={(v: string) => setForm(prev => ({ ...prev, region: v }))}
+            placeholder="Commencez à taper la région / ville"
+            fetchOptions={fetchRegions}
+            minChars={1}
+          />
+        </label>
+
+        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Adresse
+          <Typeahead
+            id="address-typeahead"
+            value={form.address}
+            onChange={(v: string) => setForm(prev => ({ ...prev, address: v }))}
+            placeholder="Commencez à taper l'adresse"
+            fetchOptions={fetchAddresses}
+            minChars={3}
+          />
+        </label>
+
+      
+
         <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Email
           <input name="email" type="email" value={form.email} onChange={handleChange} required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>

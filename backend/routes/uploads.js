@@ -76,6 +76,12 @@ router.post('/supabase/finalize', authMiddleware, async (req, res) => {
       if (downloadRes.error) throw downloadRes.error;
       const arrayBuffer = await downloadRes.data.arrayBuffer();
       buffer = Buffer.from(arrayBuffer);
+      // Protect against extremely large uploads which could exhaust memory/CPU during thumbnail creation
+      const maxBytes = Number(process.env.UPLOAD_MAX_BYTES || 10 * 1024 * 1024); // default 10MB
+      if (buffer.length > maxBytes) {
+        console.warn('Upload finalize rejected: file too large', storagePath, buffer.length);
+        return res.status(413).json({ message: 'Uploaded file too large' });
+      }
     } catch (err) {
       console.error('Failed to download uploaded object during finalize', err);
       return res.status(500).json({ message: 'Failed to access uploaded object' });

@@ -1,16 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../src/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import AssignmentModal from '../components/AssignmentModal';
-import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import { useGetAssignmentsQuery, useAddAssignmentMutation, useUpdateAssignmentMutation, useDeleteAssignmentMutation } from '../src/features/assignments/assignmentsApi';
+import { useGetChildrenQuery } from '../src/features/children/childrenApi';
+import { useGetNanniesQuery } from '../src/features/nannies/nanniesApi';
 
-const API_URL = import.meta.env.VITE_API_URL;
+// API_URL is accessed by RTK Query slices; no direct fetchWithRefresh usage here
 
-interface Nanny {
-  id: string;
-  name: string;
-  availability: string;
-}
 
 interface Assignment {
   id: string;
@@ -33,9 +30,12 @@ function getMonthGrid(date: Date) {
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
   const start = new Date(first);
+  // normalize start to Monday of the week containing the 1st
   start.setDate(first.getDate() - ((first.getDay() + 6) % 7));
   const end = new Date(last);
-  end.setDate(last.getDate() + (7 - end.getDay() === 7 ? 0 : 7 - end.getDay()));
+  // extend to Sunday of the week containing the last day
+  const daysToAdd = end.getDay() === 0 ? 0 : 7 - end.getDay();
+  end.setDate(end.getDate() + daysToAdd);
   const days: Date[] = [];
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     days.push(new Date(d));
@@ -55,9 +55,17 @@ export default function Dashboard() {
       navigate('/mon-planning', { replace: true });
     }
   }, [user, navigate]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [childrenCount, setChildrenCount] = useState<number>(0);
-  const [activeCaregivers, setActiveCaregivers] = useState<number>(0);
+  // assignments come from RTK Query hook below
+  const { data: childrenList } = useGetChildrenQuery();
+  const { data: nanniesList } = useGetNanniesQuery();
+  const childrenCount = Array.isArray(childrenList) ? childrenList.length : 0;
+  // some nanny records may include an availability field coming from the backend
+  function hasAvailability(x: unknown): x is { availability?: string } {
+    return typeof x === 'object' && x !== null && 'availability' in (x as Record<string, unknown>);
+  }
+  const activeCaregivers = Array.isArray(nanniesList)
+    ? nanniesList.filter(n => hasAvailability(n) && n.availability === 'Disponible').length
+    : 0;
   const [childrenChangePercent, setChildrenChangePercent] = useState<number | null>(null);
   const [weeklyChangePercent, setWeeklyChangePercent] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -68,113 +76,84 @@ export default function Dashboard() {
   const [dayModalAssignments, setDayModalAssignments] = useState<Assignment[]>([]);
   const [dayModalDate, setDayModalDate] = useState<string>('');
 
-  const fetchAssignments = React.useCallback((start?: Date, end?: Date) => {
-    let url = `${API_URL}/assignments`;
-    const params: string[] = [];
-    if (start && end) {
-      params.push(`start=${start.toISOString()}`);
-      params.push(`end=${end.toISOString()}`);
-    }
-    if (user && user.role === 'nanny' && user.nannyId) {
-      params.push(`nannyId=${user.nannyId}`);
-    }
-    if (params.length > 0) {
-      url += '?' + params.join('&');
-    }
-    fetchWithRefresh(url, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        setAssignments(data);
-      });
-  }, [user]);
+  // compute month range for queries
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
 
+  const nannyIdParam = user && user.role === 'nanny' && user.nannyId ? user.nannyId : undefined;
+
+  const { data: assignments = [] } = useGetAssignmentsQuery({ start: first.toISOString(), end: last.toISOString(), nannyId: nannyIdParam });
+  const prevFirst = new Date(year, month - 1, 1);
+  const prevLast = new Date(year, month, 0);
+  const { data: prevAssignments = [] } = useGetAssignmentsQuery({ start: prevFirst.toISOString(), end: prevLast.toISOString(), nannyId: nannyIdParam });
+
+  const { data: prevWeekAssignments = [] } = useGetAssignmentsQuery({
+    start: new Date(new Date().setDate(new Date().getDate() - 13)).toISOString(), // two weeks ago start (safe window)
+    end: new Date(new Date().setDate(new Date().getDate() - 1)).toISOString(),
+    nannyId: nannyIdParam,
+  });
+
+  const [addAssignment] = useAddAssignmentMutation();
+  const [updateAssignment] = useUpdateAssignmentMutation();
+  const [deleteAssignment] = useDeleteAssignmentMutation();
+
+  // compute change percents whenever assignments or previous ranges change
   useEffect(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const first = new Date(year, month, 1);
-    const last = new Date(year, month + 1, 0);
+    try {
+      const uniqueThis = new Set((assignments || []).map(a => a.child.id)).size;
+      const uniquePrev = new Set((prevAssignments || []).map(a => a.child.id)).size;
+      if (uniquePrev === 0) {
+        setChildrenChangePercent(null);
+      } else {
+        const diff = Math.round(((uniqueThis - uniquePrev) / uniquePrev) * 100);
+        setChildrenChangePercent(diff);
+      }
+    } catch {
+      setChildrenChangePercent(null);
+    }
 
-    fetchWithRefresh(`${API_URL}/assignments?start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
-      .then(res => res.json())
-      .then((data: Assignment[]) => {
-        setAssignments(data);
-        const uniqueThis = new Set((data || []).map(a => a.child.id)).size;
-
-        const prevFirst = new Date(year, month - 1, 1);
-        const prevLast = new Date(year, month, 0);
-        fetchWithRefresh(`${API_URL}/assignments?start=${prevFirst.toISOString()}&end=${prevLast.toISOString()}`, { credentials: 'include' })
-          .then(r => r.json())
-          .then((prevData: Assignment[]) => {
-            const uniquePrev = new Set((prevData || []).map(a => a.child.id)).size;
-            if (uniquePrev === 0) {
-              setChildrenChangePercent(null);
-            } else {
-              const diff = Math.round(((uniqueThis - uniquePrev) / uniquePrev) * 100);
-              setChildrenChangePercent(diff);
-            }
-          })
-          .catch(() => setChildrenChangePercent(null));
-
-        const today = new Date();
-        const last7Days: string[] = [];
-        for (let i = 6; i >= 0; i--) {
-          const d = new Date(today);
-          d.setDate(today.getDate() - i);
-          const dayOfWeek = d.getDay();
-          if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-            last7Days.push(d.toISOString().split('T')[0]);
-          }
+    try {
+      const today = new Date();
+      const last7Days: string[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const dayOfWeek = d.getDay();
+        if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+          last7Days.push(d.toISOString().split('T')[0]);
         }
-        const totalChildrenLocal = Array.isArray(data) ? Array.from(new Set(data.map(a => a.child.id))).length : 0;
-        const dailyRates = last7Days.map(dateStr => {
-          const present = new Set((data || []).filter(a => a.date.split('T')[0] === dateStr).map(a => a.child.id)).size;
-          return totalChildrenLocal > 0 ? (present / totalChildrenLocal) * 100 : 0;
-        });
-        const currentWeeklyAvg = dailyRates.length > 0 ? Math.round(dailyRates.reduce((a, b) => a + b, 0) / dailyRates.length) : 0;
+      }
+      const totalChildrenLocal = Array.isArray(assignments) ? Array.from(new Set(assignments.map(a => a.child.id))).length : 0;
+      const dailyRates = last7Days.map(dateStr => {
+        const present = new Set((assignments || []).filter(a => a.date.split('T')[0] === dateStr).map(a => a.child.id)).size;
+        return totalChildrenLocal > 0 ? (present / totalChildrenLocal) * 100 : 0;
+      });
+      const currentWeeklyAvg = dailyRates.length > 0 ? Math.round(dailyRates.reduce((a, b) => a + b, 0) / dailyRates.length) : 0;
 
-        const prevWeekDays = last7Days.map(d => {
-          const nd = new Date(d);
-          nd.setDate(nd.getDate() - 7);
-          return nd.toISOString().split('T')[0];
-        });
-        const prevStart = new Date(prevWeekDays[0]);
-        const prevEnd = new Date(prevWeekDays[prevWeekDays.length - 1]);
-        fetchWithRefresh(`${API_URL}/assignments?start=${new Date(prevStart).toISOString()}&end=${new Date(prevEnd).toISOString()}`, { credentials: 'include' })
-          .then(r => r.json())
-          .then((prevWeekData: Assignment[]) => {
-            const prevDailyRates = prevWeekDays.map(dateStr => {
-              const present = new Set((prevWeekData || []).filter(a => a.date.split('T')[0] === dateStr).map(a => a.child.id)).size;
-              return totalChildrenLocal > 0 ? (present / totalChildrenLocal) * 100 : 0;
-            });
-            const prevWeeklyAvg = prevDailyRates.length > 0 ? Math.round(prevDailyRates.reduce((a, b) => a + b, 0) / prevDailyRates.length) : 0;
-            if (prevWeeklyAvg === 0) {
-              setWeeklyChangePercent(null);
-            } else {
-              const wdiff = Math.round(((currentWeeklyAvg - prevWeeklyAvg) / prevWeeklyAvg) * 100);
-              setWeeklyChangePercent(wdiff);
-            }
-          })
-          .catch(() => setWeeklyChangePercent(null));
+      const prevWeekDays = last7Days.map(d => {
+        const nd = new Date(d);
+        nd.setDate(nd.getDate() - 7);
+        return nd.toISOString().split('T')[0];
+      });
+      const prevDailyRates = prevWeekDays.map(dateStr => {
+        const present = new Set((prevWeekAssignments || []).filter(a => a.date.split('T')[0] === dateStr).map(a => a.child.id)).size;
+        return totalChildrenLocal > 0 ? (present / totalChildrenLocal) * 100 : 0;
+      });
+      const prevWeeklyAvg = prevDailyRates.length > 0 ? Math.round(prevDailyRates.reduce((a, b) => a + b, 0) / prevDailyRates.length) : 0;
+      if (prevWeeklyAvg === 0) {
+        setWeeklyChangePercent(null);
+      } else {
+        const wdiff = Math.round(((currentWeeklyAvg - prevWeeklyAvg) / prevWeeklyAvg) * 100);
+        setWeeklyChangePercent(wdiff);
+      }
+    } catch {
+      setWeeklyChangePercent(null);
+    }
 
-      })
-      .catch(() => setAssignments([]));
-
-    fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => setChildrenCount(Array.isArray(data) ? data.length : 0))
-      .catch(() => setChildrenCount(0));
-
-    fetch(`${API_URL}/nannies`, { credentials: 'include' })
-      .then(res => res.json())
-      .then((data: Nanny[]) => {
-        if (Array.isArray(data)) {
-          setActiveCaregivers(data.filter((n: Nanny) => n.availability === 'Disponible').length);
-        } else {
-          setActiveCaregivers(0);
-        }
-      })
-      .catch(() => setActiveCaregivers(0));
-  }, [currentDate, fetchAssignments]);
+  // no local copy necessary: we use the RTK Query data directly
+  }, [assignments, prevAssignments, prevWeekAssignments]);
 
   const totalChildren = childrenCount;
   const today = new Date();
@@ -199,7 +178,7 @@ export default function Dashboard() {
     }
     const dailyRates = last7Days.map(dateStr => {
       const present = new Set(assignments.filter(a => a.date.split('T')[0] === dateStr).map(a => a.child.id)).size;
-      return (present / totalChildren) + 100;
+      return totalChildren > 0 ? Math.round((present / totalChildren) * 100) : 0;
     });
     weeklyAverage = dailyRates.length > 0 ? Math.round(dailyRates.reduce((a, b) => a + b, 0) / dailyRates.length) : 0;
   }
@@ -243,37 +222,21 @@ export default function Dashboard() {
       return;
     }
     if (selectedId) {
-      await fetchWithRefresh(`${API_URL}/assignments/${selectedId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(dataToSend),
-      });
-      setModalOpen(false);
-      setSelectedId(null);
-      setModalInitial(null);
-      const year = currentDate.getFullYear();
-      const monthIdx = currentDate.getMonth();
-      const first = new Date(year, monthIdx, 1);
-      const last = new Date(year, monthIdx + 1, 0);
-      fetchAssignments(first, last);
-    } else {
-      const res = await fetchWithRefresh(`${API_URL}/assignments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(dataToSend),
-      });
-      if (res.ok) {
+      try {
+        await updateAssignment({ id: selectedId, body: dataToSend }).unwrap();
         setModalOpen(false);
         setSelectedId(null);
         setModalInitial(null);
-        const year = currentDate.getFullYear();
-        const monthIdx = currentDate.getMonth();
-        const first = new Date(year, monthIdx, 1);
-        const last = new Date(year, monthIdx + 1, 0);
-        fetchAssignments(first, last);
-      } else {
+      } catch {
+          setSaveError("Erreur lors de la sauvegarde. Veuillez réessayer.");
+        }
+    } else {
+      try {
+        await addAssignment(dataToSend).unwrap();
+        setModalOpen(false);
+        setSelectedId(null);
+        setModalInitial(null);
+      } catch {
         setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
       }
     }
@@ -528,18 +491,13 @@ export default function Dashboard() {
                 >Annuler</button>
                 <button
                   onClick={async () => {
-                    await fetchWithRefresh(`api/assignments/${selectedId}`, {
-                      method: 'DELETE',
-                      credentials: 'include',
-                    });
-                    setSelectedId(null);
-                    setModalInitial(null);
-                    const year = currentDate.getFullYear();
-                    const monthIdx = currentDate.getMonth();
-                    const first = new Date(year, monthIdx, 1);
-                    const last = new Date(year, monthIdx + 1, 0);
-                    fetchAssignments(first, last);
-                  }}
+                      try {
+                        if (selectedId) await deleteAssignment(selectedId).unwrap();
+                      } finally {
+                        setSelectedId(null);
+                        setModalInitial(null);
+                      }
+                    }}
                   className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white font-bold shadow-lg hover:from-red-600 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 transition-all duration-150"
                   aria-label="Supprimer l’affectation"
                 >

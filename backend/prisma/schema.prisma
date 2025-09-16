@@ -67,6 +67,9 @@ model User {
   password         String
   name             String
   role             String
+  address          String?
+  region           String?
+  country          String?
   stripeCustomerId String?
   nanny            Nanny?         @relation("NannyUser", fields: [nannyId], references: [id])
   nannyId          String?        @unique

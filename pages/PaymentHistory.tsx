@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useGetMonthQuery } from '../src/features/paymentHistory/paymentHistoryApi';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
@@ -14,7 +15,7 @@ export default function PaymentHistoryPage() {
   const [data, setData] = useState<RecordType[]>([]);
   const [loading, setLoading] = useState(false);
   const [parentFilter, setParentFilter] = useState<string>(''); 
-  const [error, setError] = useState<string>('');
+  // local error state removed: we show errors via modal
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const { user } = useAuth();
@@ -27,29 +28,39 @@ export default function PaymentHistoryPage() {
   const monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
+  // Use RTK Query to fetch month data and keep a local copy for optimistic updates
+  const { data: monthData, error: queryError } = useGetMonthQuery({ year, month });
+
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    setError('');
-    fetchWithRefresh(`${API_URL}/payment-history/${year}/${month}`, { credentials: 'include' })
-      .then(async res => {
-        const ct = res.headers.get('content-type') || '';
-        if (!res.ok) {
-          let text;
-          try { text = await res.clone().text(); } catch (e) { text = String(e); }
-          throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
+    if (Array.isArray(monthData)) setData(monthData as RecordType[]);
+    else setData([]);
+  }, [monthData]);
+
+  // show friendly modal on query error
+  useEffect(() => {
+    if (!queryError) return;
+    // try to extract a friendly message from the RTK Query error object
+    let msg = 'Erreur lors de la récupération des données.';
+    if (queryError) {
+      const qe: unknown = queryError;
+      if (typeof qe === 'object' && qe !== null) {
+        const obj = qe as Record<string, unknown>;
+        const data = obj.data;
+        if (typeof data === 'string') msg = data;
+        else if (typeof data === 'object' && data !== null) {
+          const dobj = data as Record<string, unknown>;
+          if (typeof dobj.message === 'string') msg = dobj.message;
+          else {
+            const vals = Object.values(dobj).filter(v => typeof v === 'string') as string[];
+            if (vals.length > 0) msg = vals[0];
+          }
+        } else if (typeof obj.error === 'string') {
+          msg = obj.error;
         }
-        if (!ct.includes('application/json')) {
-          const text = await res.text();
-          throw new Error('Unexpected non-JSON response from API: ' + text.slice(0, 200));
-        }
-        return res.json();
-      })
-      .then(d => { if (mounted) setData(Array.isArray(d) ? d : []); })
-      .catch(err => { console.error('Failed to fetch payment history', err); if (mounted) setData([]); if (mounted) setError(String(err.message || err)); })
-      .finally(() => { if (mounted) setLoading(false); });
-    return () => { mounted = false; };
-  }, [year, month]);
+      }
+    }
+    showModal(msg);
+  }, [queryError]);
 
 
   const parents = Array.from(new Map(
@@ -260,7 +271,7 @@ export default function PaymentHistoryPage() {
                 </div>
               </div>
             )}
-          {error && <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded">{error}</div>}
+          {/* error shown via modal, not inline */}
           {loading && <div>Chargement...</div>}
           {!loading && filtered.length === 0 && <div className="text-gray-500">Aucun enregistrement pour cette période.</div>}
           {filtered.map(rec => (

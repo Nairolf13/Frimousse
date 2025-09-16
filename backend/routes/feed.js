@@ -13,6 +13,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const authMiddleware = require('../middleware/authMiddleware');
 const { sendFeedPostNotification, sendLikeNotification, sendCommentNotification } = require('../lib/pushNotifications');
+const redisCache = require('../lib/redisCache');
+const simpleCache = require('../lib/simpleCache');
 
 // Increase per-file upload limit to 20MB. Allow up to 6 files per post.
 const PER_FILE_LIMIT = 20 * 1024 * 1024; // 20MB
@@ -172,6 +174,21 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
       }
     })();
 
+    // Invalidate feed list cache for this center so new post shows up
+    try {
+      const centerId = result && result.centerId ? String(result.centerId) : (user && user.centerId ? String(user.centerId) : null);
+      const basePath = '/api/feed';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.delByPrefix(`${basePath}|center:${centerId}`);
+        await redisCache.delByPrefix(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.delByPrefix(`${basePath}|center:${centerId}`);
+        simpleCache.delByPrefix(`${basePath}|anon`);
+      }
+    } catch (e) {
+      console.warn('Failed to invalidate feed cache', e && e.message ? e.message : e);
+    }
+
     return res.status(201).json(result);
   } catch (e) {
     console.error('Failed to create feed post', e);
@@ -248,6 +265,17 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
     const existing = await prisma.feedLike.findUnique({ where: { postId_userId: { postId, userId: user.id } } });
     if (existing) {
       await prisma.feedLike.delete({ where: { id: existing.id } });
+      try {
+        const centerId = user && user.centerId ? String(user.centerId) : null;
+        const basePath = '/api/feed';
+        if (process.env.REDIS_URL) {
+          if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+          await redisCache.del(`${basePath}|anon`);
+        } else {
+          if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+          simpleCache.del(`${basePath}|anon`);
+        }
+      } catch (e) { console.warn('Failed to invalidate feed cache on unlike', e && e.message ? e.message : e); }
       return res.json({ liked: false });
     }
     await prisma.feedLike.create({ data: { postId, userId: user.id } });
@@ -261,6 +289,17 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
       }
     })();
 
+    try {
+      const centerId = user && user.centerId ? String(user.centerId) : null;
+      const basePath = '/api/feed';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+        await redisCache.del(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+        simpleCache.del(`${basePath}|anon`);
+      }
+    } catch (e) { console.warn('Failed to invalidate feed cache on like', e && e.message ? e.message : e); }
     return res.json({ liked: true });
   } catch (e) {
     console.error('Failed to toggle like', e);
@@ -303,6 +342,17 @@ router.post('/:id/comment', authMiddleware, async (req, res) => {
       }
     })();
 
+    try {
+      const centerId = user && user.centerId ? String(user.centerId) : null;
+      const basePath = '/api/feed';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+        await redisCache.del(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+        simpleCache.del(`${basePath}|anon`);
+      }
+    } catch (e) { console.warn('Failed to invalidate feed cache on comment add', e && e.message ? e.message : e); }
     return res.status(201).json({ id: comment.id, text: comment.text, authorName: user.name, authorId: comment.authorId, createdAt: comment.createdAt });
   } catch (e) {
     console.error('Failed to add comment', e);
@@ -363,6 +413,17 @@ router.delete('/comments/:commentId', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
     await prisma.feedComment.delete({ where: { id: commentId } });
+    try {
+      const centerId = user && user.centerId ? String(user.centerId) : null;
+      const basePath = '/api/feed';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+        await redisCache.del(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+        simpleCache.del(`${basePath}|anon`);
+      }
+    } catch (e) { console.warn('Failed to invalidate feed cache on comment delete', e && e.message ? e.message : e); }
     return res.json({ deleted: true });
   } catch (e) {
     console.error('Failed to delete comment', e);
@@ -394,6 +455,17 @@ router.patch('/:postId', authMiddleware, async (req, res) => {
       }
     })();
 
+    try {
+      const centerId = user && user.centerId ? String(user.centerId) : null;
+      const basePath = '/api/feed';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+        await redisCache.del(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+        simpleCache.del(`${basePath}|anon`);
+      }
+    } catch (e) { console.warn('Failed to invalidate feed cache on post edit', e && e.message ? e.message : e); }
     return res.json({ id: updated.id, text: updated.text, createdAt: updated.createdAt });
   } catch (e) {
     console.error('Failed to edit post', e);
@@ -422,6 +494,17 @@ router.delete('/:postId', authMiddleware, async (req, res) => {
         prisma.feedPost.delete({ where: { id: postId } }),
       ]);
       // result contains the counts / deleted objects; return success
+      try {
+        const centerId = user && user.centerId ? String(user.centerId) : null;
+        const basePath = '/api/feed';
+        if (process.env.REDIS_URL) {
+          if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+          await redisCache.del(`${basePath}|anon`);
+        } else {
+          if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+          simpleCache.del(`${basePath}|anon`);
+        }
+      } catch (e) { console.warn('Failed to invalidate feed cache on post delete', e && e.message ? e.message : e); }
       return res.json({ deleted: true });
     } catch (txErr) {
       console.error('Failed to delete post in transaction', postId, txErr && txErr.message ? txErr.message : txErr);

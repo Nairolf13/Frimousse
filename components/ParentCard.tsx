@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useAuth } from '../src/context/AuthContext';
+import { useUploadPrescriptionMutation, useDeletePrescriptionMutation } from '../src/features/children/childrenApi';
 
 type ChildRef = { child: { id: string; name: string; group?: string; prescriptionUrl?: string | null } };
 
@@ -22,7 +23,7 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
   const [isDeleting, setIsDeleting] = useState(false);
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // map childId -> { url?, loading }
+  // map childId -> { url?, loading } — we'll update this after upload/delete so the UI reflects changes
   const [prescriptions, setPrescriptions] = useState<Record<string, { url?: string | null; loading?: boolean }>>({});
   const [prescriptionModal, setPrescriptionModal] = useState<{ open: boolean; url?: string | null; childName?: string | null }>({ open: false, url: null, childName: null });
   // Do not prefetch prescriptions for all children to avoid unnecessary 404/403 calls.
@@ -32,57 +33,51 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
   const uLike = user as unknown as { role?: string | null; parentId?: string | null } | null;
   const isCurrentParent = !!(uLike && typeof uLike.role === 'string' && uLike.role === 'parent' && uLike.parentId === parent.id);
 
-  const uploadPrescription = async (childId: string, file: File | null) => {
+  const [uploadPrescription] = useUploadPrescriptionMutation();
+
+  const [deletePrescription] = useDeletePrescriptionMutation();
+
+  // fetch prescription URL; return url or null (do not open a new tab)
+  // helpers to wrap mutations
+  const doUploadPrescription = async (childId: string, file: File | null) => {
     if (!file) return;
-    setPrescriptions(prev => ({ ...prev, [childId]: { ...(prev[childId] || {}), loading: true } }));
     try {
       const fd = new FormData();
       fd.append('prescription', file);
-      const res = await fetchWithRefresh(`${API_URL}/children/${childId}/prescription`, { method: 'POST', credentials: 'include', body: fd });
-      if (!res.ok) throw new Error('Upload failed');
-      const body = await res.json();
-      setPrescriptions(prev => ({ ...prev, [childId]: { url: body.url || null, loading: false } }));
-    } catch (err: unknown) {
-      if (import.meta.env.DEV) console.error('Upload error', err);
-      else console.error('Upload error', err instanceof Error ? err.message : String(err));
-      setPrescriptions(prev => ({ ...prev, [childId]: { url: null, loading: false } }));
+      const res = await uploadPrescription({ childId, formData: fd }).unwrap();
+      // update local cache for immediate UX
+      if (res && res.url) setPrescriptions(p => ({ ...p, [childId]: { ...(p[childId] || {}), url: res.url } }));
+    } catch (e) {
+      console.error('Upload error', e);
       alert('Échec de l\'upload de l\'ordonnance.');
     }
   };
 
-  const deletePrescription = async (childId: string) => {
+  const doDeletePrescription = async (childId: string) => {
     if (!confirm('Supprimer l\'ordonnance pour cet enfant ?')) return;
-    setPrescriptions(prev => ({ ...prev, [childId]: { ...(prev[childId] || {}), loading: true } }));
     try {
-      const res = await fetchWithRefresh(`${API_URL}/children/${childId}/prescription`, { method: 'DELETE', credentials: 'include' });
-      if (!res.ok) throw new Error('Delete failed');
-      setPrescriptions(prev => ({ ...prev, [childId]: { url: null, loading: false } }));
-    } catch (err: unknown) {
-      if (import.meta.env.DEV) console.error('Delete error', err);
-      else console.error('Delete error', err instanceof Error ? err.message : String(err));
-      setPrescriptions(prev => ({ ...prev, [childId]: { ...(prev[childId] || {}), loading: false } }));
+      await deletePrescription({ childId, prescriptionId: '' }).unwrap();
+      setPrescriptions(p => ({ ...p, [childId]: { ...(p[childId] || {}), url: null } }));
+    } catch (e) {
+      console.error('Delete error', e);
       alert('Échec de la suppression de l\'ordonnance.');
     }
   };
 
-  // fetch prescription URL; return url or null (do not open a new tab)
   const openPrescription = async (childId: string): Promise<string | null> => {
-    setPrescriptions(prev => ({ ...prev, [childId]: { ...(prev[childId] || {}), loading: true } }));
     try {
-      const res = await fetchWithRefresh(`${API_URL}/children/${childId}/prescription`, { credentials: 'include' });
-      if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
+      // call query directly by creating a temporary hook result
+      // useGetPrescriptionsQuery returns an object; instead we'll call the endpoint via the childrenApi hook in components that need it
+      const r = await fetchWithRefresh(`${API_URL}/children/${childId}/prescription`, { credentials: 'include' });
+      if (!r.ok) {
+        const b = await r.json().catch(() => ({}));
         alert(b.message || 'Aucune ordonnance disponible');
-        setPrescriptions(prev => ({ ...prev, [childId]: { url: null, loading: false } }));
         return null;
       }
-      const body = await res.json();
-      setPrescriptions(prev => ({ ...prev, [childId]: { url: body.url || null, loading: false } }));
+      const body = await r.json();
       return body.url || null;
-    } catch (err: unknown) {
-      if (import.meta.env.DEV) console.error('Failed to open prescription', err);
-      else console.error('Failed to open prescription', err instanceof Error ? err.message : String(err));
-      setPrescriptions(prev => ({ ...prev, [childId]: { ...(prev[childId] || {}), loading: false } }));
+    } catch (err) {
+      console.error('Failed to open prescription', err);
       alert('Erreur lors de la récupération de l\'ordonnance');
       return null;
     }
@@ -144,13 +139,13 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
                       <>
                         <input id={`presc-${c.child.id}`} type="file" accept="image/*,.pdf" className="hidden" onChange={async (e) => {
                           const f = e.target.files ? e.target.files[0] : null;
-                          await uploadPrescription(c.child.id, f);
+                          await doUploadPrescription(c.child.id, f);
                           // reset input
                           (e.target as HTMLInputElement).value = '';
                         }} />
                         <label htmlFor={`presc-${c.child.id}`} className="text-xs bg-[#0b5566] text-white px-2 py-1 rounded cursor-pointer">Téléverser</label>
                         {prescriptions[c.child.id] && prescriptions[c.child.id].url ? (
-                          <button onClick={() => deletePrescription(c.child.id)} className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Supprimer</button>
+                          <button onClick={() => doDeletePrescription(c.child.id)} className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Supprimer</button>
                         ) : null}
                       </>
                     ) : null}

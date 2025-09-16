@@ -42,6 +42,19 @@ router.post('/schedules', auth, async (req, res) => {
     });
       res.json(fullSchedule);
 
+      // Invalidate schedules cache (mounted on /api)
+      try {
+        const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+        const basePath = '/api';
+        if (process.env.REDIS_URL) {
+          if (centerId) await require('../lib/redisCache').del(`${basePath}|center:${centerId}|anon`);
+          await require('../lib/redisCache').del(`${basePath}|anon`);
+        } else {
+          if (centerId) require('../lib/simpleCache').del(`${basePath}|center:${centerId}|anon`);
+          require('../lib/simpleCache').del(`${basePath}|anon`);
+        }
+      } catch (e) { logger.error && logger.error('Failed to invalidate schedules cache', e && e.message ? e.message : e); }
+
       // notify participating nannies and parents of children cared for by those nannies
       (async () => {
         try {
@@ -140,6 +153,18 @@ router.put('/schedules/:scheduleId', auth, async (req, res) => {
     }
     const schedule = await prisma.schedule.update({ where: { id: scheduleId }, data: { date: new Date(date), startTime, endTime, name, comment, nannies: nannyIds ? { set: nannyIds.map(id => ({ id })) } : undefined } });
     res.json(schedule);
+    // Invalidate schedules cache (mounted on /api)
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api';
+      if (process.env.REDIS_URL) {
+        if (centerId) await require('../lib/redisCache').del(`${basePath}|center:${centerId}|anon`);
+        await require('../lib/redisCache').del(`${basePath}|anon`);
+      } else {
+        if (centerId) require('../lib/simpleCache').del(`${basePath}|center:${centerId}|anon`);
+        require('../lib/simpleCache').del(`${basePath}|anon`);
+      }
+    } catch (e) { logger.error && logger.error('Failed to invalidate schedules cache on update', e && e.message ? e.message : e); }
       // notify parents about updated activity
       (async () => {
         try {
@@ -170,6 +195,18 @@ router.delete('/schedules/:scheduleId', auth, async (req, res) => {
     }
     await prisma.schedule.delete({ where: { id: scheduleId } });
     res.json({ success: true });
+    // Invalidate schedules cache (mounted on /api)
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api';
+      if (process.env.REDIS_URL) {
+        if (centerId) await require('../lib/redisCache').del(`${basePath}|center:${centerId}|anon`);
+        await require('../lib/redisCache').del(`${basePath}|anon`);
+      } else {
+        if (centerId) require('../lib/simpleCache').del(`${basePath}|center:${centerId}|anon`);
+        require('../lib/simpleCache').del(`${basePath}|anon`);
+      }
+    } catch (e) { logger.error && logger.error('Failed to invalidate schedules cache on delete', e && e.message ? e.message : e); }
       // notify parents about deleted activity
       (async () => {
         try {

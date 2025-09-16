@@ -5,6 +5,8 @@ function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
+const redisCache = require('../lib/redisCache');
+const simpleCache = require('../lib/simpleCache');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -105,6 +107,22 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
       })();
     }
 
+    // Invalidate cached nannies lists for this center (and anon) so new nanny appears
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api/nannies';
+      // Use prefix deletion to remove variants (query string, cursor, page)
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.delByPrefix(`${basePath}|center:${centerId}`);
+        await redisCache.delByPrefix(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.delByPrefix(`${basePath}|center:${centerId}`);
+        simpleCache.delByPrefix(`${basePath}|anon`);
+      }
+    } catch (e) {
+      console.warn('Failed to invalidate nannies cache', e && e.message ? e.message : e);
+    }
+
     res.status(201).json(result);
   } catch (e) {
     console.error('POST /api/nannies error', e);
@@ -171,6 +189,18 @@ router.put('/:id', auth, async (req, res) => {
     console.error('Failed to update nanny user password', e && e.message ? e.message : e);
   }
   res.json(nanny);
+  // Invalidate nannies list cache for this center
+  try {
+    const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+    const basePath = '/api/nannies';
+    if (process.env.REDIS_URL) {
+      if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+      await redisCache.del(`${basePath}|anon`);
+    } else {
+      if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+      simpleCache.del(`${basePath}|anon`);
+    }
+  } catch (e) { console.warn('Failed to invalidate nannies cache after update', e && e.message ? e.message : e); }
 });
 
 router.delete('/:id', auth, async (req, res) => {
@@ -196,6 +226,18 @@ router.delete('/:id', auth, async (req, res) => {
       await tx.user.deleteMany({ where: { nannyId: id } });
       await tx.nanny.delete({ where: { id } });
     });
+    // Invalidate nannies list cache for this center
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api/nannies';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+        await redisCache.del(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+        simpleCache.del(`${basePath}|anon`);
+      }
+    } catch (e) { console.warn('Failed to invalidate nannies cache after delete', e && e.message ? e.message : e); }
     res.json({ success: true });
   } catch (e) {
     console.error('DELETE /api/nannies/:id error', e);
@@ -248,6 +290,18 @@ router.put('/:id/cotisation', auth, async (req, res) => {
       where: { id: req.params.id },
       data: updateData
     });
+    // Invalidate nannies list cache for this center
+    try {
+      const centerId = req.user && req.user.centerId ? String(req.user.centerId) : null;
+      const basePath = '/api/nannies';
+      if (process.env.REDIS_URL) {
+        if (centerId) await redisCache.del(`${basePath}|center:${centerId}|anon`);
+        await redisCache.del(`${basePath}|anon`);
+      } else {
+        if (centerId) simpleCache.del(`${basePath}|center:${centerId}|anon`);
+        simpleCache.del(`${basePath}|anon`);
+      }
+    } catch (e) { console.warn('Failed to invalidate nannies cache after cotisation update', e && e.message ? e.message : e); }
     res.json({ cotisationPaidUntil: newDate, lastCotisationAmount: updateData.lastCotisationAmount || null });
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
