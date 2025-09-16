@@ -80,24 +80,19 @@ export default function RegisterPage() {
   const [placeSuggestions, setPlaceSuggestions] = useState<GeodataPlace[]>([]);
   const [citySuggestions, setCitySuggestions] = useState<GeodataPlace[]>([]);
 
-  // open/close flags: false => closed until user types again
   const [openCountry, setOpenCountry] = useState(false);
   const [openRegion, setOpenRegion] = useState(false);
   const [openCity, setOpenCity] = useState(false);
   const [openAddress, setOpenAddress] = useState(false);
 
-  // debounce timers
-  // debounce: call API only after user stops typing for 1s
+  
   const searchTimer = useRef<number | null>(null);
 
-  // container ref to handle outside click
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // helper: update form immutably
   const updateForm = (patch: Partial<FormType>) =>
     setForm((prev) => ({ ...prev, ...patch }));
 
-  // focus helper
   const applyAndFocus = (name: keyof FormType, value: string) => {
     updateForm({ [name]: value } as Partial<FormType>);
     setTimeout(() => {
@@ -111,13 +106,11 @@ export default function RegisterPage() {
           el.setSelectionRange(len, len);
         }
       } catch (err) {
-        // Log to help debugging focus issues without throwing
         console.error('applyAndFocus error:', err);
       }
     }, 0);
   };
 
-  // handle input changes - open suggestions only when user types
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -133,7 +126,6 @@ export default function RegisterPage() {
     if (name === "address") { setOpenAddress(true); console.debug('[geodata] openAddress'); }
   };
 
-  // load countries once (expects your backend to serve list or static JSON)
   useEffect(() => {
     (async () => {
       try {
@@ -147,7 +139,6 @@ export default function RegisterPage() {
     })();
   }, []);
 
-  // country suggestions + try to resolve country code heuristics
   useEffect(() => {
     if (!form.country) {
       setCountrySuggestions([]);
@@ -161,7 +152,6 @@ export default function RegisterPage() {
       .map((c) => ({ name: c.name }));
     setCountrySuggestions(matches);
 
-    // heuristics: exact, unique, startsWith
     const exact =
       countries.find((c) => c.name === form.country) ||
       countries.find((c) => c.name && c.name.toLowerCase() === q);
@@ -184,7 +174,6 @@ export default function RegisterPage() {
     }
   }, [form.country, countries]);
 
-  // fetch places from our backend PositionStack proxy
   const fetchGeodata = useCallback(
     async (query: string) => {
       console.debug('[geodata] fetchGeodata query=', query);
@@ -224,7 +213,6 @@ export default function RegisterPage() {
     []
   );
 
-  // debounce places for address/city fields — 1s after last keypress
   useEffect(() => {
     const q = (form.address || form.city || "").trim();
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
@@ -237,7 +225,6 @@ export default function RegisterPage() {
     };
   }, [form.address, form.city, fetchGeodata]);
 
-  // region suggestions extracted from nominatim search (unique state names)
   useEffect(() => {
     const q = (form.region || "").trim();
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
@@ -278,7 +265,6 @@ export default function RegisterPage() {
     };
   }, [form.region, selectedCountryCode]);
 
-  // click outside to close suggestion lists
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!containerRef.current) return;
@@ -293,7 +279,6 @@ export default function RegisterPage() {
     return () => document.removeEventListener("click", onDocClick);
   }, []);
 
-  // handle submit (kept same API usage as your original)
   const [initialPlan, setInitialPlan] = useState<
     "decouverte" | "essentiel" | "pro"
   >("decouverte");
@@ -352,7 +337,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // paid plans flow (unchanged)
       setInitLoading(true);
       const res = await fetch(`${API_URL}/auth/register-subscribe/init`, {
         method: "POST",
@@ -378,7 +362,6 @@ export default function RegisterPage() {
     }
   };
 
-  // selection handlers: country / region / place
   const selectCountry = (name: string) => {
     updateForm({ country: name });
     const found = countries.find((c) => c.name === name || (c.name && c.name.toLowerCase() === name.toLowerCase()));
@@ -400,15 +383,12 @@ export default function RegisterPage() {
     const road = p.street ? String(p.street).trim() : "";
     const streetPart = (house ? `${house} ${road}`.trim() : (road || ""));
     const displayStreet = streetPart || p.name || "";
-    // If the place has no house number but the user typed one at the start of the address input,
-    // preserve that typed number and prefix it to the street.
     const userTyped = String(form.address || '').trim();
     let composed = displayStreet;
     if (!house) {
       const m = userTyped.match(/^(\d+)\s+(.+)$/);
       if (m && m[1]) {
         const typedNum = m[1];
-        // avoid duplicating if displayStreet already starts with the same number
         if (!displayStreet.startsWith(typedNum + ' ')) {
           composed = `${typedNum} ${displayStreet}`.trim();
         }
@@ -422,7 +402,6 @@ export default function RegisterPage() {
       region: p.state || "",
       country: p.country || "",
     });
-    // if important fields are missing (postcode or city), try a quick lookup for more details
     (async () => {
       try {
         if (!p.postcode || !p.city || !p.house_number) {
@@ -454,10 +433,8 @@ export default function RegisterPage() {
         console.error('selectPlace followup lookup error', err);
       }
     })();
-    // close suggestions and move focus to next logical field (focus without clearing value)
     setPlaceSuggestions([]);
     setOpenAddress(false);
-    // focus postalCode input without changing its value
     setTimeout(() => {
       try {
         const el = document.querySelector(`input[name="postalCode"]`) as HTMLInputElement | null;
@@ -472,7 +449,6 @@ export default function RegisterPage() {
     }, 0);
   };
 
-  // UI
   return (
     <div ref={containerRef} className="h-screen flex items-center justify-center bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] overflow-hidden">
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-xl md:max-w-2xl flex flex-col items-center max-h-[95vh] overflow-auto">
@@ -484,27 +460,23 @@ export default function RegisterPage() {
         {error && <div className="mb-4 text-red-600 w-full text-center">{error}</div>}
         {success && <div className="mb-4 text-[#0b5566] w-full text-center">Inscription réussie. Redirection…</div>}
 
-        {/* Name */}
         <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Nom
-          <input name="name" value={form.name} onChange={handleChange} required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+          <input name="name" value={form.name} onChange={handleChange} placeholder="Nom et prénom" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>
 
-        {/* Email */}
         <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Email
-          <input name="email" type="email" value={form.email} onChange={handleChange} required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+          <input name="email" type="email" value={form.email} onChange={handleChange}placeholder="Email" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>
 
-        {/* Center */}
         <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Société / Crèche
           <input name="centerName" value={form.centerName} onChange={handleChange} placeholder="Nom de la crèche ou société" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>
         
 
-        {/* Country / Region / City (row) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full mb-3">
            <label className="block text-left font-medium text-[#08323a]">Adresse
             <div className="relative">
-              <input name="address" value={form.address} onChange={handleChange} placeholder="Adresse (ligne 1)" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <input name="address" value={form.address} onChange={handleChange} placeholder="Adresse " className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
               {openAddress && placeSuggestions.length > 0 && (
                 <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-56 overflow-auto rounded shadow">
                       {placeSuggestions.map((p, idx) => {
@@ -521,7 +493,6 @@ export default function RegisterPage() {
               )}
             </div>
           </label>
-          {/* Country */}
           <label className="block text-left font-medium text-[#08323a]">Pays
             <div className="relative">
               <input name="country" value={form.country} onChange={handleChange} placeholder="Pays" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
@@ -535,7 +506,6 @@ export default function RegisterPage() {
             </div>
           </label>
 
-          {/* Region */}
           <label className="block text-left font-medium text-[#08323a]">Région
             <div className="relative">
               <input name="region" value={form.region} onChange={handleChange} placeholder="Région / Département" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
@@ -549,11 +519,10 @@ export default function RegisterPage() {
             </div>
           </label>
 
-          {/* City / Address autofill via Nominatim suggestions */}
          
           <label className="block text-left font-medium text-[#08323a]">Ville 
             <div className="relative">
-              <input name="city" value={form.city} onChange={handleChange} placeholder="Ville (ou ligne d'adresse)" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <input name="city" value={form.city} onChange={handleChange} placeholder="Ville" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
               {openCity && citySuggestions.length > 0 && (
                 <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-56 overflow-auto rounded shadow">
                   {citySuggestions.map((p, idx) => {
@@ -588,22 +557,20 @@ export default function RegisterPage() {
          
         </div>
 
-        {/* Passwords */}
         <label className="block mb-3 w-full text-left font-medium text-gray-700">Mot de passe
           <div className="relative">
-            <input name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] pr-10" />
+            <input name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="Mot de passe" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] pr-10" />
             <button type="button" tabIndex={-1} aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#0b5566] text-lg focus:outline-none" onClick={() => setShowPassword(v => !v)}>{showPassword ? '🙈' : '👁️'}</button>
           </div>
         </label>
 
         <label className="block mb-3 w-full text-left font-medium text-gray-700">Confirmer le mot de passe
           <div className="relative">
-            <input name="confirmPassword" type={showConfirm ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] pr-10" />
+            <input name="confirmPassword" type={showConfirm ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmer le mot de passe" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] pr-10" />
             <button type="button" tabIndex={-1} aria-label={showConfirm ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#0b5566] text-lg focus:outline-none" onClick={() => setShowConfirm(v => !v)}>{showConfirm ? '🙈' : '👁️'}</button>
           </div>
         </label>
 
-        {/* Plans simplified */}
         <div className="w-full mb-4 mt-6">
           <label className="block mb-2 font-medium text-[#08323a]">Offres</label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
