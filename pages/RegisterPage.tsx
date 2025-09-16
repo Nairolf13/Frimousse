@@ -204,7 +204,24 @@ export default function RegisterPage() {
         </div>
       </div>
 
-  <button type="submit" disabled={initLoading || completeLoading} className="w-full bg-[#0b5566] text-white py-2 rounded-full font-semibold hover:opacity-95 transition focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]">{initLoading || completeLoading ? 'Patientez…' : (initialPlan === 'decouverte' ? 'S’inscrire' : 'S’inscrire et payer')}</button>
+      {/* Show a notice when a paid plan is selected */}
+      {(initialPlan === 'essentiel' || initialPlan === 'pro') && (
+        <div className="w-full max-w-xl md:max-w-2xl mt-2 px-6">
+          <div className="rounded-md bg-yellow-100 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800">
+            Les abonnements payant ne sont pas encore disponibles veuillez essayer la version gratuite sans engagement — Contactez-nous pour plus de renseignements.
+          </div>
+        </div>
+      )}
+
+  <button
+    type="submit"
+    disabled={initLoading || completeLoading || initialPlan !== 'decouverte'}
+    title={initialPlan !== 'decouverte' ? 'Les abonnements payants ne sont pas encore disponibles. Contactez-nous pour plus d’informations.' : undefined}
+    aria-disabled={initialPlan !== 'decouverte' ? 'true' : 'false'}
+    className={`w-full py-2 rounded-full font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] ${initLoading || completeLoading || initialPlan !== 'decouverte' ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-[#0b5566] text-white hover:opacity-95'}`}
+  >
+    {initLoading || completeLoading ? 'Patientez…' : (initialPlan === 'decouverte' ? 'S’inscrire' : 'S’inscrire et payer')}
+  </button>
     <div className="mt-4 text-sm text-[#08323a]">Déjà un compte ? <a href="/login" className="text-[#0b5566] hover:underline">Se connecter</a></div>
   {/* Inline card collection removed: registration uses Stripe Checkout redirect */}
       </form>

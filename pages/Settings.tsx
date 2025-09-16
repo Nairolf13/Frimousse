@@ -357,9 +357,10 @@ export default function Settings() {
 
             
 
-            <div className="md:col-span-2">
+                <div className="md:col-span-2">
               <button className="w-full bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" style={{marginTop: '8px'}} onClick={async () => {
-                try { await fetchWithRefresh(`${API_URL}/logout`, { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
+                // Use a relative path so the browser sends cookies to the same origin (Vite dev proxy)
+                try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
                 // Clear client storage
                 try { localStorage.clear(); } catch { /* ignore */ }
                 try { sessionStorage.clear(); } catch { /* ignore */ }
