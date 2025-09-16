@@ -101,6 +101,9 @@ app.use('/api/subscriptions', subscriptionsRoutes);
 const notificationPushRoutes = require('./routes/notificationPush');
 app.use('/api/push-subscriptions', notificationPushRoutes);
 
+const geodataRoutes = require('./routes/geodata');
+app.use('/api/geodata', geodataRoutes);
+
 const feedRoutes = require('./routes/feed');
 app.use('/api/feed', feedRoutes);
 
