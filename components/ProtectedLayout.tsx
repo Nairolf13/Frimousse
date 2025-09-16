@@ -3,8 +3,6 @@ import Sidebar from './Sidebar';
 import { useNavigate, useOutlet } from 'react-router-dom';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
-const API_URL = import.meta.env.VITE_API_URL;
-
 export default function ProtectedLayout() {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
@@ -13,7 +11,8 @@ export default function ProtectedLayout() {
   // tutorial/welcome modal disabled by default
 
   useEffect(() => {
-    fetchWithRefresh(`${API_URL}/user/me`, { credentials: 'include' })
+    // Use relative path so cookies are sent correctly in dev (Vite proxy) and in prod the same origin is used
+    fetchWithRefresh('/api/user/me', { credentials: 'include' })
       .then(res => setAuthenticated(res.ok))
       .finally(() => setLoading(false));
   }, []);

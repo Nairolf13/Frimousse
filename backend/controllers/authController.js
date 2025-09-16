@@ -415,8 +415,16 @@ exports.logout = async (req, res) => {
   if (refreshToken) {
     await prisma.refreshToken.deleteMany({ where: { token: refreshToken } });
   }
-  res.clearCookie('accessToken');
-  res.clearCookie('refreshToken');
+  // Clear cookies using the same options used when creating them so the browser accepts the removal
+  try {
+    const opts = cookieOptions();
+    // set expired cookies for both access and refresh tokens
+    res.cookie('accessToken', '', Object.assign({}, opts, { maxAge: 0 }));
+    res.cookie('refreshToken', '', Object.assign({}, opts, { maxAge: 0 }));
+  } catch (e) {
+    // fallback to clearCookie if cookieOptions fails for some reason
+    try { res.clearCookie('accessToken'); res.clearCookie('refreshToken'); } catch (_) { /* ignore */ }
+  }
   res.json({ message: 'Logged out' });
 };
 
