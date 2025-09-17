@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../src/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../src/lib/useI18n';
 import AssignmentModal from '../components/AssignmentModal';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
@@ -25,7 +26,7 @@ interface AssignmentForm {
   nannyId: string;
 }
 
-const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
 
 function getMonthGrid(date: Date) {
   const year = date.getFullYear();
@@ -50,6 +51,7 @@ function getMonthGrid(date: Date) {
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t, locale } = useI18n();
   useEffect(() => {
     if (user && user.nannyId) {
       navigate('/mon-planning', { replace: true });
@@ -279,7 +281,15 @@ export default function Dashboard() {
     }
   };
 
-  const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const monthLabel = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(currentDate);
+  // weekday short labels (Mon..Sun) based on currentDate week starting Monday
+  const mondayRef = new Date(currentDate);
+  mondayRef.setDate(currentDate.getDate() - ((currentDate.getDay() + 6) % 7));
+  const shortWeekDays = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(mondayRef);
+    d.setDate(mondayRef.getDate() + i);
+    return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(d);
+  });
 
   // currently selected assignment object (used to show child name in the delete modal)
   const selectedAssignment = selectedId ? assignments.find(a => a.id === selectedId) : undefined;
@@ -289,14 +299,14 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">Tableau de bord</h1>
-          <div className="text-gray-400 text-base text-left">Bienvenue ! Voici ce qui se passe aujourd'hui.</div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">{t('page.dashboard')}</h1>
+          <div className="text-gray-400 text-base text-left">{t('dashboard.welcome')}</div>
         </div>
           <div className="flex items-center gap-2 self-start md:self-end">
           <input type="date" value={currentDate.toISOString().split('T')[0]} onChange={e => setCurrentDate(new Date(e.target.value))}
             className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-[120px] sm:w-auto" />
           {!(user && user.role === 'parent') && (
-            <button onClick={() => handleQuickAdd(new Date())} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 text-base shadow hover:opacity-95 transition whitespace-nowrap">+ Ajouter</button>
+            <button onClick={() => handleQuickAdd(new Date())} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 text-base shadow hover:opacity-95 transition whitespace-nowrap">+ {t('global.add')}</button>
           )}
         </div>
       </div>
@@ -306,37 +316,37 @@ export default function Dashboard() {
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{totalChildren}</span>
             <span className="rounded-full p-2" style={{ background: '#a9ddf2', color: '#08323a' }}><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg></span>
           </div>
-          <div className="text-gray-500 font-medium text-sm sm:text-base">Enfants inscrits</div>
-          <div className={`${childrenChangePercent !== null && childrenChangePercent < 0 ? 'text-red-500' : 'text-[#0b5566]'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{childrenChangePercent === null ? '—' : `${childrenChangePercent > 0 ? '+' : ''}${childrenChangePercent}%`} depuis le mois dernier</div>
+          <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.children_registered')}</div>
+          <div className={`${childrenChangePercent !== null && childrenChangePercent < 0 ? 'text-red-500' : 'text-[#0b5566]'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{childrenChangePercent === null ? '—' : `${childrenChangePercent > 0 ? '+' : ''}${childrenChangePercent}%`} {t('dashboard.since_last_month')}</div>
         </div>
         <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{presentToday}</span>
             <span className="bg-[#a9ddf2] text-[#0b5566] rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
           </div>
-          <div className="text-gray-500 font-medium text-sm sm:text-base">Présents aujourd'hui</div>
-          <div className="text-[#0b5566] text-xs sm:text-sm font-semibold flex items-center gap-1">Taux de présence {presentRate}%</div>
+          <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.present_today')}</div>
+          <div className="text-[#0b5566] text-xs sm:text-sm font-semibold flex items-center gap-1">{t('dashboard.presence_rate')} {presentRate}%</div>
         </div>
         <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
             <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{activeCaregivers}</span>
             <span className="rounded-full p-2" style={{ background: '#f7f4d7', color: '#08323a' }}><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21C7 21 2 17 2 12V7a5 5 0 0 1 10 0v5c0 5-5 9-10 9z"/></svg></span>
           </div>
-          <div className="text-gray-500 font-medium text-sm sm:text-base">Intervenants actifs</div>
-          <div className="text-gray-400 text-xs sm:text-sm font-medium flex items-center gap-1">— Pas de changement</div>
+          <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.active_caregivers')}</div>
+          <div className="text-gray-400 text-xs sm:text-sm font-medium flex items-center gap-1">{t('dashboard.no_change')}</div>
         </div>
         <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{weeklyAverage}%</span>
             <span className="rounded-full p-2" style={{ background: '#fcdcdf', color: '#08323a' }}><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 17l4-4 4 4"/></svg></span>
           </div>
-          <div className="text-gray-500 font-medium text-sm sm:text-base">Moyenne hebdomadaire</div>
-          <div className={`${weeklyChangePercent !== null && weeklyChangePercent < 0 ? 'text-red-500' : 'text-[#0b5566]'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{weeklyChangePercent === null ? '—' : `${weeklyChangePercent > 0 ? '+' : ''}${weeklyChangePercent}%`} depuis la semaine dernière</div>
+          <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.weekly_average')}</div>
+          <div className={`${weeklyChangePercent !== null && weeklyChangePercent < 0 ? 'text-red-500' : 'text-[#0b5566]'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{weeklyChangePercent === null ? '—' : `${weeklyChangePercent > 0 ? '+' : ''}${weeklyChangePercent}%`} {t('dashboard.since_last_week')}</div>
         </div>
       </div>
       <div className="bg-white rounded-2xl shadow p-4 md:p-6 border border-[#f3f3fa] w-full mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-6 gap-2">
-            <div className="text-lg md:text-2xl font-bold text-gray-900">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-6 gap-2">
+      <div className="text-lg md:text-2xl font-bold text-gray-900">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
           <div className="flex items-center gap-2">
             <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></button>
             <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
@@ -344,7 +354,7 @@ export default function Dashboard() {
         </div>
         <div className="block sm:hidden w-full overflow-x-auto">
           <div className="grid grid-cols-7 gap-1 w-full">
-            {weekDays.map((day, i) => (
+            {shortWeekDays.map((day, i) => (
               <div key={i} className="text-center text-gray-500 font-semibold text-xs py-1">{day}</div>
             ))}
             {monthGrid.flat().map((day, idx) => {
@@ -370,7 +380,7 @@ export default function Dashboard() {
                       className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}
                       onClick={() => {
                         setDayModalAssignments(assigns);
-                        setDayModalDate(day.toLocaleDateString());
+                        setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
                         setDayModalOpen(true);
                       }}
                       title="Voir la liste des enfants gardés ce jour"
@@ -399,9 +409,9 @@ export default function Dashboard() {
                   )}
                   {assigns.length > 2 && (
                     <button
-                      onClick={() => { setDayModalAssignments(assigns); setDayModalDate(day.toLocaleDateString()); setDayModalOpen(true); }}
+                      onClick={() => { setDayModalAssignments(assigns); setDayModalDate(new Intl.DateTimeFormat(locale).format(day)); setDayModalOpen(true); }}
                       className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200"
-                      title={`Voir ${assigns.length - 2} autres enfants`}
+                      title={t('common.view_more', { n: String(assigns.length - 2) })}
                     >
                       +{assigns.length - 2}
                     </button>
@@ -415,7 +425,7 @@ export default function Dashboard() {
           <table className="w-full table-fixed bg-white rounded-lg">
             <thead>
               <tr>
-                {weekDays.map((day, i) => (
+                {shortWeekDays.map((day, i) => (
                   <th key={i} className="p-2 text-center text-gray-500 font-semibold text-base">
                     {day}
                   </th>
@@ -448,7 +458,7 @@ export default function Dashboard() {
                             className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}
                             onClick={() => {
                               setDayModalAssignments(assigns);
-                              setDayModalDate(day.toLocaleDateString());
+                              setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
                               setDayModalOpen(true);
                             }}
                             title="Voir la liste des enfants gardés ce jour"
@@ -477,7 +487,7 @@ export default function Dashboard() {
                             ))}
                             {assigns.length > 2 && (
                               <button
-                                onClick={() => { setDayModalAssignments(assigns); setDayModalDate(day.toLocaleDateString()); setDayModalOpen(true); }}
+                                onClick={() => { setDayModalAssignments(assigns); setDayModalDate(new Intl.DateTimeFormat(locale).format(day)); setDayModalOpen(true); }}
                                 className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200"
                                 title={`Voir ${assigns.length - 2} autres enfants`}
                               >
@@ -516,8 +526,8 @@ export default function Dashboard() {
                 <div className="bg-red-100 rounded-full p-4 mb-2">
                   <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Confirmer la suppression</h3>
-                <p className="text-gray-600 text-center mb-1">Voulez-vous vraiment supprimer cette affectation ? Cette action est irréversible.</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">{t('modal.delete.title')}</h3>
+                <p className="text-gray-600 text-center mb-1">{t('modal.delete.body.generic')}</p>
                 {selectedAssignment && (
                   <p className="text-gray-700 font-semibold text-center">Enfant concerné : <span className="text-gray-900">{selectedAssignment.child.name}</span></p>
                 )}
@@ -525,7 +535,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => setSelectedId(null)}
                   className="flex-1 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition"
-                >Annuler</button>
+                >{t('modal.cancel')}</button>
                 <button
                   onClick={async () => {
                     await fetchWithRefresh(`api/assignments/${selectedId}`, {
@@ -543,7 +553,7 @@ export default function Dashboard() {
                   className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white font-bold shadow-lg hover:from-red-600 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 transition-all duration-150"
                   aria-label="Supprimer l’affectation"
                 >
-                  Supprimer
+                  {t('modal.delete.confirm')}
                 </button>
               </div>
             </div>
@@ -554,9 +564,9 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
             <button onClick={() => setDayModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-            <h2 className="text-xl font-bold mb-4 text-center">Enfants gardés le {dayModalDate}</h2>
+            <h2 className="text-xl font-bold mb-4 text-center">{t('page.children')} {t('common.on_date', { date: dayModalDate })}</h2>
             {dayModalAssignments.length === 0 ? (
-              <div className="text-gray-500 text-center">Aucun enfant gardé ce jour.</div>
+              <div className="text-gray-500 text-center">{t('children.none_on_date', { date: dayModalDate })}</div>
             ) : (
               <div className="space-y-4">
                 {Object.entries(dayModalAssignments.reduce((acc, a) => {

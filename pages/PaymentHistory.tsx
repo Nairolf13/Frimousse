@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
@@ -9,6 +10,7 @@ type Detail = { childName: string; daysPresent: number; ratePerDay: number; subt
 type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean };
 
 export default function PaymentHistoryPage() {
+  const { t, locale } = useI18n();
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [data, setData] = useState<RecordType[]>([]);
@@ -95,10 +97,10 @@ export default function PaymentHistoryPage() {
       const res = await fetchWithRefresh(`${API_URL}/payment-history/invoice/${paymentId}`, { credentials: 'include' });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
-        // For 403 we show a friendly modal message to the user instead of raw server text
-        if (res.status === 403) {
+          // For 403 we show a friendly modal message to the user instead of raw server text
+          if (res.status === 403) {
           // Try to extract a clean message from JSON or plain text.
-          let friendly = "Le mois en cours n'est pas fini : vous ne pouvez pas télécharger cette facture.";
+          let friendly = t('payments.errors.invoice_not_ready');
           if (text && text.trim().length > 0) {
             const t = text.trim();
             try {
@@ -153,8 +155,8 @@ export default function PaymentHistoryPage() {
         if (isErrWithMessage(err)) return err.message;
         try { return JSON.stringify(err); } catch { return String(err); }
       })();
-      // Use the app modal instead of a native alert for nicer UX
-      showModal(msg || 'Erreur lors du téléchargement de la facture');
+  // Use the app modal instead of a native alert for nicer UX
+  showModal(msg || t('payments.errors.invoice_download'));
     } finally {
       setLoading(false);
     }
@@ -192,8 +194,8 @@ export default function PaymentHistoryPage() {
       <div className="max-w-7xl mx-auto w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Historique des paiements</h1>
-            <div className="text-gray-400 text-base">Consultez les totaux mensuels calculés pour chaque parent.</div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">{t('page.payments')}</h1>
+            <div className="text-gray-400 text-base">{t('page.payments.description')}</div>
           </div>
         </div>
 
@@ -210,7 +212,7 @@ export default function PaymentHistoryPage() {
               </div>
               <div className="flex flex-1 w-full">
                 <select value={parentFilter} onChange={e => setParentFilter(e.target.value)} className="border p-2 rounded w-full md:w-64">
-                  <option value="">Tous les parents</option>
+                  <option value="">{t('payments.filter.all_parents')}</option>
                   {parents.map((p, idx) => {
                     const name = p ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : '—';
                     return <option key={p?.id || idx} value={p?.id || ''}>{name}</option>;
@@ -221,28 +223,28 @@ export default function PaymentHistoryPage() {
 
             <div className="flex flex-col md:flex-row gap-2 md:space-x-2">
               <button onClick={async () => {
-                if (!parentFilter) { showModal("Sélectionnez d'abord un parent pour générer la facture."); return; }
+                if (!parentFilter) { showModal(t('payments.errors.select_parent')); return; }
                 const rec = data.find(r => r.parent && r.parent.id === parentFilter);
-                if (!rec) { showModal('Aucun enregistrement pour ce parent ce mois.'); return; }
+                if (!rec) { showModal(t('payments.errors.no_record_parent')); return; }
                 await downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`);
-              }} className="bg-blue-500 text-white px-4 py-2 rounded w-full md:w-32 text-center">Facture</button>
-              <button onClick={downloadCSVForAll} className="bg-green-500 text-white px-4 py-2 rounded w-full md:w-32 text-center">Excel</button>
-              <button onClick={() => window.print()} className="bg-red-500 text-white px-4 py-2 rounded w-full md:w-32 text-center">PDF</button>
+              }} className="bg-blue-500 text-white px-4 py-2 rounded w-full md:w-32 text-center">{t('payments.download_invoice')}</button>
+              <button onClick={downloadCSVForAll} className="bg-green-500 text-white px-4 py-2 rounded w-full md:w-32 text-center">{t('payments.export_csv')}</button>
+              <button onClick={() => window.print()} className="bg-red-500 text-white px-4 py-2 rounded w-full md:w-32 text-center">{t('payments.print')}</button>
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <div className="bg-white rounded-xl shadow border border-gray-100 p-4">
-            <div className="text-sm text-gray-500">Revenus du Mois</div>
-            <div className="text-2xl font-bold mt-1">€{totalRevenue.toFixed(2)}</div>
+            <div className="text-sm text-gray-500">{t('payments.card.month_revenue')}</div>
+            <div className="text-2xl font-bold mt-1">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(totalRevenue)}</div>
           </div>
           <div className="bg-white rounded-xl shadow border border-gray-100 p-4">
-            <div className="text-sm text-gray-500">Familles Actives</div>
+            <div className="text-sm text-gray-500">{t('payments.card.families_active')}</div>
             <div className="text-2xl font-bold mt-1">{familiesActive}</div>
           </div>
           <div className="bg-white rounded-xl shadow border border-gray-100 p-4">
-            <div className="text-sm text-gray-500">Paiements en attente</div>
+            <div className="text-sm text-gray-500">{t('payments.card.unpaid')}</div>
             <div className="text-2xl font-bold mt-1">{unpaidCount}</div>
           </div>
         </div>
@@ -261,8 +263,8 @@ export default function PaymentHistoryPage() {
               </div>
             )}
           {error && <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded">{error}</div>}
-          {loading && <div>Chargement...</div>}
-          {!loading && filtered.length === 0 && <div className="text-gray-500">Aucun enregistrement pour cette période.</div>}
+          {loading && <div>{t('loading')}</div>}
+          {!loading && filtered.length === 0 && <div className="text-gray-500">{t('payments.history.empty')}</div>}
           {filtered.map(rec => (
             <div key={rec.id} className="rounded-lg overflow-hidden shadow">
               {/* Family header gradient */}
@@ -270,16 +272,16 @@ export default function PaymentHistoryPage() {
                  <div className="flex items-center gap-4">
                    <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">{(rec.parent ? `${rec.parent.firstName || ''}`.slice(0,1) + (rec.parent?.lastName || '').slice(0,1) : '--').toUpperCase()}</div>
                    <div>
-                     <div className="text-lg font-bold text-gray-900">{rec.parent ? `${rec.parent.firstName || ''} ${rec.parent.lastName || ''}`.trim() : '—'}</div>
+                     <div className="text-lg font-bold text-gray-900">{rec.parent ? `${rec.parent.firstName || ''} ${rec.parent.lastName || ''}`.trim() : t('common.none')}</div>
                      <div className="text-sm text-gray-500">{rec.parent?.email ?? ''}{rec.parent?.phone ? ` • ${rec.parent?.phone}` : ''}</div>
                    </div>
                  </div>
                  <div className="text-right">
                    <div className="flex items-center justify-end gap-2">
                      <div className="text-xs text-gray-500">{rec.createdAt ? new Date(rec.createdAt).toLocaleDateString('fr-FR') : ''}</div>
-                     { rec.paid ? <div className="text-sm text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full">Payé</div> : <div className="text-sm text-gray-500">Non payé</div> }
+                     { rec.paid ? <div className="text-sm text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full">{t('payments.status.paid')}</div> : <div className="text-sm text-gray-500">{t('payments.status.unpaid')}</div> }
                      {user && (user.role === 'admin' || (user.role && user.role.toLowerCase().includes('super'))) && (
-                       <button onClick={() => togglePaid(rec.id, !rec.paid)} className="text-sm px-2 py-1 bg-blue-500 text-white rounded">{rec.paid ? 'Marquer non payé' : 'Marquer payé'}</button>
+                       <button onClick={() => togglePaid(rec.id, !rec.paid)} className="text-sm px-2 py-1 bg-blue-500 text-white rounded">{rec.paid ? t('payments.actions.mark_unpaid') : t('payments.actions.mark_paid')}</button>
                      )}
                    </div>
                  </div>
@@ -287,7 +289,7 @@ export default function PaymentHistoryPage() {
 
                {/* Detail by child header */}
                <div className="px-6 py-4 bg-white border-t">
-                 <div className="text-sm text-gray-600 font-medium mb-3">Détail par enfant - {new Date(year, month-1).toLocaleString('fr-FR', { month: 'long', year: 'numeric' })}</div>
+                 <div className="text-sm text-gray-600 font-medium mb-3">{t('payments.detail.header', { month: new Date(year, month-1).toLocaleString(locale || 'fr-FR', { month: 'long', year: 'numeric' }) })}</div>
                  <div className="space-y-3">
                    {Array.isArray(rec.details) && rec.details.length > 0 ? rec.details.map((d, idx) => (
                     <div key={idx} className="bg-gray-50 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -299,25 +301,25 @@ export default function PaymentHistoryPage() {
                         </div>
                       </div>
                       <div className="text-right text-sm">
-                        <div className="text-gray-500"><span className="inline-block mr-2">📅</span>{d.daysPresent} jours</div>
-                        <div className="text-green-600 font-semibold mt-1">{d.daysPresent} × €{d.ratePerDay.toFixed(2)} = €{d.subtotal.toFixed(2)}</div>
+                    <div className="text-gray-500"><span className="inline-block mr-2">📅</span>{d.daysPresent} {t('payments.days')}</div>
+                    <div className="text-green-600 font-semibold mt-1">{d.daysPresent} × {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.ratePerDay)} = {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.subtotal)}</div>
                       </div>
                     </div>
                    )) : (
-                     <div className="text-gray-500">Aucun enfant présent ce mois.</div>
+                     <div className="text-gray-500">{t('payments.no_child_this_month')}</div>
                    )}
                  </div>
                </div>
 
               <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 md:p-6 bg-gradient-to-r from-green-50 to-green-100 gap-3">
                 <div>
-                  <div className="text-sm font-semibold text-gray-800">Total Famille</div>
-                  <div className="text-xs text-gray-500">{Array.isArray(rec.details) ? `${rec.details.length} enfant(s) • ${rec.details.reduce((s,d)=>s+(d.daysPresent||0),0)} jours total` : ''}</div>
+                  <div className="text-sm font-semibold text-gray-800">{t('payments.family.total_label')}</div>
+                  <div className="text-xs text-gray-500">{Array.isArray(rec.details) ? t('payments.family.summary', { n: String(rec.details.length), days: String(rec.details.reduce((s,d)=>s+(d.daysPresent||0),0)) }) : ''}</div>
                 </div>
                 <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
-                  <div className="text-2xl font-extrabold text-green-700">€{Number(rec.total).toFixed(2)}</div>
+                  <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
                   <div className="w-full md:w-auto flex justify-center md:justify-end">
-                    <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">Facture</a>
+                    <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{t('payments.download_invoice')}</a>
                   </div>
                 </div>
               </div>
