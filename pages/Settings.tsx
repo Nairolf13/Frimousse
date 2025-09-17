@@ -272,8 +272,8 @@ export default function Settings() {
         <div className="max-w-3xl mx-auto p-6">
           <h1 className="text-3xl sm:text-4xl font-bold mb-6 text-gray-900">Paramètres</h1>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-stretch">
+            <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">
               <div>
                 <div className="font-semibold text-gray-800">Notifications par email</div>
                 <div className="text-gray-500 text-sm">Recevoir un email pour chaque nouveau rapport ou affectation</div>
@@ -281,6 +281,55 @@ export default function Settings() {
               <div className="mt-4">
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={emailNotifications} onChange={e => setEmailNotifications(e.target.checked)} className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">
+              <div>
+                <div className="font-semibold text-gray-800">Notifications push</div>
+                <div className="text-gray-500 text-sm">Recevoir des notifications sur votre navigateur (rappels et annonces)</div>
+              </div>
+              <div className="mt-4">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" checked={!!pushEnabled} onChange={async (e) => {
+                    const enable = e.target.checked;
+                    try {
+                      if (!enable) {
+                        // disable: unsubscribe client and notify backend
+                        try { await unsubscribeFromPush(); } catch { /* ignore client-side unsubscribe errors */ }
+                        try {
+                          if (pushSubId) {
+                            await fetchWithRefresh(`/api/push-subscriptions/${encodeURIComponent(pushSubId)}`, { method: 'DELETE', credentials: 'include' });
+                          } else {
+                            await fetchWithRefresh('/api/push-subscriptions/me', { method: 'DELETE', credentials: 'include' });
+                          }
+                        } catch (be) {
+                          console.error('Failed to delete subscription on server', be);
+                        }
+                        setPushEnabled(false);
+                        setPushSubId(null);
+                        return;
+                      }
+
+                      const vapid = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+                      if (!vapid) return alert('VAPID_PUBLIC_KEY non défini en front');
+                      const { subscription } = await subscribeToPush(vapid);
+                      // send to backend and capture id
+                      try {
+                        const res = await fetchWithRefresh('/api/push-subscriptions/save', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription }) });
+                        if (res.ok) {
+                          const json = await res.json();
+                          if (json && json.id) setPushSubId(json.id);
+                        }
+                      } catch { /* ignore backend save errors */ }
+                      setPushEnabled(true);
+                    } catch (err) {
+                      const msg = err instanceof Error ? err.message : String(err);
+                      alert('Impossible d\'activer les notifications push: ' + msg);
+                    }
+                  }} className="sr-only peer" />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
                 </label>
               </div>
@@ -297,56 +346,6 @@ export default function Settings() {
               </select>
             </div>
 
-            <div className="bg-white rounded-2xl shadow p-4 md:col-span-2 flex items-center justify-between">
-              <div>
-                <div className="font-semibold text-gray-800">Notifications push</div>
-                <div className="text-gray-500 text-sm">Recevoir des notifications sur votre navigateur (rappels et annonces)</div>
-              </div>
-              <div>
-                <button
-                  className={`px-4 py-2 rounded font-medium ${pushEnabled ? 'bg-red-200 text-red-700' : 'bg-[#a9ddf2] text-[#0b5566]'}`}
-                  onClick={async () => {
-                    try {
-                      if (pushEnabled) {
-                        // client-side unsubscribe
-                        try { await unsubscribeFromPush(); } catch { /* ignore client-side unsubscribe errors */ }
-                        // notify backend to remove any server-side subscriptions for this user
-                        try {
-                          if (pushSubId) {
-                            await fetchWithRefresh(`/api/push-subscriptions/${encodeURIComponent(pushSubId)}`, { method: 'DELETE', credentials: 'include' });
-                          } else {
-                            await fetchWithRefresh('/api/push-subscriptions/me', { method: 'DELETE', credentials: 'include' });
-                          }
-                        } catch (be) {
-                          console.error('Failed to delete subscription on server', be);
-                        }
-                        setPushEnabled(false);
-                        setPushSubId(null);
-                        return;
-                      }
-                      const vapid = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-                      if (!vapid) return alert('VAPID_PUBLIC_KEY non défini en front');
-                      const { subscription } = await subscribeToPush(vapid);
-                      // send to backend and capture id
-                      try {
-                        const res = await fetchWithRefresh('/api/push-subscriptions/save', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription }) });
-                        if (res.ok) {
-                          const json = await res.json();
-                          if (json && json.id) setPushSubId(json.id);
-                        }
-                      } catch { /* ignore backend save errors */ }
-                      setPushEnabled(true);
-                    } catch (e: unknown) {
-                      const msg = e instanceof Error ? e.message : String(e);
-                      alert('Impossible d\'activer les notifications push: ' + msg);
-                    }
-                  }}
-                >
-                  {pushEnabled ? 'Désactiver' : 'Activer'}
-                </button>
-              </div>
-            </div>
-
             <div className="bg-white rounded-2xl shadow p-4 md:col-span-2">
               <div className="font-semibold text-gray-800 mb-4">Gestion du compte</div>
               <div className="flex flex-col sm:flex-row gap-3">
@@ -359,7 +358,6 @@ export default function Settings() {
 
                 <div className="md:col-span-2">
               <button className="w-full bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" style={{marginTop: '8px'}} onClick={async () => {
-                // Use a relative path so the browser sends cookies to the same origin (Vite dev proxy)
                 try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
                 // Clear client storage
                 try { localStorage.clear(); } catch { /* ignore */ }
@@ -368,13 +366,10 @@ export default function Settings() {
                 try {
                   document.cookie.split(';').forEach(function(c) {
                     const name = c.split('=')[0].trim();
-                    // expire cookie for current path
                     document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-                    // also try to clear for domain
                     document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname;
                   });
                 } catch { /* ignore */ }
-                // Redirect to login
                 window.location.href = '/login';
                }}>Se déconnecter</button>
             </div>
