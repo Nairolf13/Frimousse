@@ -1,37 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { HiOutlineViewGrid, HiOutlineBell, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar } from 'react-icons/hi';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import { useI18n } from '../src/lib/useI18n';
+import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
 
-function getNavLinks(user: { role?: string | null; nannyId?: string | null } | null) {
+function getNavLinks(user: { role?: string | null; nannyId?: string | null } | null, t: (k: string, p?: Record<string, string>) => string) {
   // Parents 
   if (user && user.role === 'parent') {
     return [
-      { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
-      { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      { to: '/notifications', label: 'Notifications', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
-      { to: '/children', label: 'Mes enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-      { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-      { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      { to: '/activites', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
-        { to: '/payment-history', label: 'Historique paiements', icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
-      { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
+      { to: '/dashboard', label: t('nav.dashboard'), icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
+      { to: '/feed', label: t('nav.feed'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/notifications', label: t('nav.notifications'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
+      { to: '/children', label: t('nav.children_my'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
+        { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
+      { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
   }
   // Nanny 
   if (user && user.nannyId) {
     return [
-      { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
-      { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      { to: '/notifications', label: 'Notifications', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
-      { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-      { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-      { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
-      { to: '/activites', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
-      { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      { to: '/payment-history', label: 'Historique paiements', icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
-      { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
+      { to: '/dashboard', label: t('nav.dashboard'), icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
+      { to: '/feed', label: t('nav.feed'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/notifications', label: t('nav.notifications'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
+      { to: '/children', label: t('nav.children'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/nannies', label: t('nav.nannies'), icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
+      { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
+      { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
+      { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
   }
   // (admin)
@@ -53,11 +55,22 @@ export default function MobileMenu() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const { user } = useAuth();
+  const { t } = useI18n();
   const [centerName, setCenterName] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const centerRateLimitUntilRef = useRef<number>(0);
 
   useEffect(() => {
     let mounted = true;
+  
+    try {
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(min-width: 768px)').matches) {
+        return;
+      }
+    } catch {
+      // ignore matchMedia errors in exotic environments
+    }
+
     async function loadUnread() {
       try {
         const res = await fetchWithRefresh('/api/notifications/unread-count', { credentials: 'include' });
@@ -82,12 +95,35 @@ export default function MobileMenu() {
     let mounted = true;
     async function loadCenter() {
       try {
-        if (user && user.centerId) {
-          const res = await fetch(`/centers/${user.centerId}`, { credentials: 'include' });
+  const centerId = user?.centerId;
+        if (centerId) {
+          const now = Date.now();
+          if (centerRateLimitUntilRef.current > now) {
+            if (import.meta.env.DEV) console.warn('Skipping centers fetch due to client rate-limit until', new Date(centerRateLimitUntilRef.current).toISOString());
+            return;
+          }
+
+          const cacheKey = `/api/centers/${centerId}`;
+          const cached = getCached<{ name?: string }>(cacheKey);
+          if (cached) {
+            setCenterName(cached.name || null);
+            return;
+          }
+
+          const res = await fetch(`/centers/${centerId}`, { credentials: 'include' });
           if (!mounted) return;
+          if (res.status === 429) {
+            const ra = res.headers.get('Retry-After');
+            const retry = ra ? parseInt(ra, 10) : NaN;
+            const waitMs = !Number.isNaN(retry) ? retry * 1000 : 10_000;
+            centerRateLimitUntilRef.current = Date.now() + waitMs;
+            if (import.meta.env.DEV) console.warn('Centers request rate-limited, suppressing until', new Date(centerRateLimitUntilRef.current).toISOString());
+            return;
+          }
           if (res.ok) {
             const data = await res.json();
             setCenterName(data.name || null);
+            setCached(cacheKey, { name: data.name || null }, DEFAULT_TTL);
             return;
           }
         }
@@ -133,7 +169,7 @@ export default function MobileMenu() {
           </div>
           <nav className="flex-1 px-2">
             <ul className="space-y-1">
-              {getNavLinks(user).map((link) => (
+              {getNavLinks(user, t).map((link) => (
                 <li key={link.to}>
                   <Link
                     to={link.to}

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 
 type Activity = {
   id: string;
@@ -17,13 +18,15 @@ export default function ActivityDetailModal({ activities, onClose }: { activitie
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  const { t, locale } = useI18n();
+
   if (!activities || activities.length === 0) {
     return (
       <div className="fixed inset-0 z-60 bg-white/40 backdrop-blur-[2px] flex items-center justify-center" role="dialog" aria-modal="true">
         <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md relative border border-gray-100">
-          <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="Fermer">✕</button>
-          <h3 className="text-lg font-semibold mb-2">Aucune activité prévue</h3>
-          <p className="text-sm text-gray-600">Il n'y a pas d'activité planifiée par la nounou pour ce jour.</p>
+          <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label={t('common.close')}>{'✕'}</button>
+          <h3 className="text-lg font-semibold mb-2">{t('activities.none')}</h3>
+          <p className="text-sm text-gray-600">{t('activities.none')}{' '}{t('common.no')}</p>
         </div>
       </div>
     );
@@ -32,14 +35,14 @@ export default function ActivityDetailModal({ activities, onClose }: { activitie
   return (
     <div className="fixed inset-0 z-60 bg-white/40 backdrop-blur-[2px] flex items-center justify-center" role="dialog" aria-modal="true">
       <div className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-2xl relative border border-gray-100">
-        <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="Fermer">✕</button>
-        <h3 className="text-xl font-semibold mb-4">Activités prévues</h3>
+  <button onClick={onClose} className="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label={t('common.close')}>{'✕'}</button>
+  <h3 className="text-xl font-semibold mb-4">{t('page.activities')}</h3>
         <div className="space-y-4">
           {activities.map(act => (
             <div key={act.id} className="p-4 rounded-xl border bg-blue-50 border-blue-100">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-bold text-lg">{act.name}</div>
-                <div className="text-sm text-gray-600">{act.date.split('T')[0]} • {act.startTime} - {act.endTime}</div>
+                <div className="text-sm text-gray-600">{new Intl.DateTimeFormat(locale).format(new Date(act.date))} • {act.startTime} - {act.endTime}</div>
               </div>
               {act.comment && <div className="text-sm text-gray-700 mb-2">{act.comment}</div>}
               {act.nannies && act.nannies.length > 0 && (

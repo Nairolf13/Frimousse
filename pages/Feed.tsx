@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useAuth } from '../src/context/AuthContext';
 import type { User as AuthUser } from '../src/context/AuthContext';
+import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
+import { publishRateLimit, subscribeRateLimit } from '../src/utils/rateLimitSync';
 
 type Media = { id: string; url: string; thumbnailUrl?: string };
 type Comment = { id?: string; authorName: string; authorId?: string; timeAgo: string; text: string };
@@ -18,15 +21,18 @@ function timeAgo(dateStr: string) {
 
 function CommentBox({ postId, onSubmit }: { postId: string; onSubmit: (postId: string, text: string) => Promise<void> }) {
   const [val, setVal] = useState('');
+  const { t } = useI18n();
+
   return (
     <form onSubmit={e => { e.preventDefault(); if (val.trim()) { onSubmit(postId, val.trim()); setVal(''); } }} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-      <input value={val} onChange={e => setVal(e.target.value)} placeholder="Écrire un commentaire..." className="flex-1 border rounded px-2 py-2 sm:px-3 sm:py-2 text-sm" />
-      <button type="submit" className="text-indigo-600 px-3 py-2 text-sm sm:text-base whitespace-nowrap w-full sm:w-auto">Envoyer</button>
+      <input value={val} onChange={e => setVal(e.target.value)} placeholder={t('feed.write_comment', 'Écrire un commentaire...')} className="flex-1 border rounded px-2 py-2 sm:px-3 sm:py-2 text-sm" />
+      <button type="submit" className="text-indigo-600 px-3 py-2 text-sm sm:text-base whitespace-nowrap w-full sm:w-auto">{t('feed.send', 'Envoyer')}</button>
     </form>
   );
 }
 
 export default function Feed() {
+  const { t } = useI18n();
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [availableChildren, setAvailableChildren] = useState<{ id: string; name: string; allowed?: boolean }[]>([]);
@@ -53,6 +59,16 @@ export default function Feed() {
   // AuthContext's User may include extra runtime fields (id, centerId) returned by the API
   const currentUser = user as (AuthUser & { id?: string; centerId?: string }) | null;
   const [centerName, setCenterName] = useState<string | null>(null);
+  const centerRateLimitUntilRef = useRef<number>(0);
+  useEffect(() => {
+    const unsub = subscribeRateLimit((rec) => {
+      if (!rec || !rec.key) return;
+      if (rec.key === `/api/centers/${currentUser?.centerId}`) {
+        centerRateLimitUntilRef.current = Math.max(centerRateLimitUntilRef.current, rec.until || 0);
+      }
+    });
+    return () => unsub();
+  }, [currentUser]);
   const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsForPost, setCommentsForPost] = useState<Record<string, Comment[]>>({});
@@ -88,7 +104,25 @@ export default function Feed() {
   }
 
   useEffect(() => {
-    loadPosts();
+    async function loadPostsWithCache() {
+      const cacheKey = '/api/feed';
+      const cached = getCached<{ posts: Post[] }>(cacheKey);
+      if (cached) {
+        setPosts(cached.posts || []);
+        return;
+      }
+      try {
+        const res = await fetchWithRefresh('api/feed');
+        if (!res || !res.ok) return;
+        const body = await res.json();
+        setPosts(body.posts || []);
+        setCached(cacheKey, { posts: body.posts || [] }, DEFAULT_TTL);
+      } catch (e) {
+        if (import.meta.env.DEV) console.error('Failed to load feed (cached)', e);
+      }
+    }
+
+    loadPostsWithCache();
   }, []);
 
   // load center name when AuthContext user is available ( mirrors Sidebar behaviour )
@@ -98,15 +132,41 @@ export default function Feed() {
       try {
         const centerId = currentUser?.centerId;
         if (centerId) {
+          // Respect client-side rate-limit suppression if set
+          const now = Date.now();
+          if (centerRateLimitUntilRef.current > now) {
+            if (import.meta.env.DEV) console.warn('Skipping centers fetch due to client rate-limit until', new Date(centerRateLimitUntilRef.current).toISOString());
+            return;
+          }
+
+          const cacheKey = `/api/centers/${centerId}`;
+          const cached = getCached<{ name?: string }>(cacheKey);
+          if (cached) {
+            setCenterName(cached.name || null);
+            return;
+          }
+
           const res = await fetch(`api/centers/${centerId}`, { credentials: 'include' });
           if (!mounted) return;
+          if (res.status === 429) {
+            // parse Retry-After and set suppression window (and publish to other tabs)
+            const ra = res.headers.get('Retry-After');
+            const retry = ra ? parseInt(ra, 10) : NaN;
+            const waitMs = !Number.isNaN(retry) ? retry * 1000 : 10_000;
+            centerRateLimitUntilRef.current = Math.max(centerRateLimitUntilRef.current, Date.now() + waitMs);
+            publishRateLimit(`/api/centers/${centerId}`, centerRateLimitUntilRef.current);
+            if (import.meta.env.DEV) console.warn('Centers request rate-limited, suppressing until', new Date(centerRateLimitUntilRef.current).toISOString());
+            return;
+          }
           if (res.ok) {
             const data = await res.json();
             setCenterName(data.name || null);
+            setCached(cacheKey, { name: data.name || null }, DEFAULT_TTL);
             return;
           }
         }
-      } catch {
+      }
+      catch {
         // ignore
       }
       if (mounted) setCenterName(null);
@@ -165,18 +225,7 @@ export default function Feed() {
     return () => { mounted = false; };
   }, [files]);
 
-  async function loadPosts() {
-    try {
-      const res = await fetchWithRefresh('api/feed');
-      if (!res.ok) return;
-      const body = await res.json();
-      setPosts(body.posts || []);
-    } catch (e) {
-      const err = e as unknown;
-      if (import.meta.env.DEV) console.error('Failed to load feed', err);
-      else console.error('Failed to load feed', err instanceof Error ? err.message : String(err));
-    }
-  }
+  
 
   async function toggleLike(postId: string) {
     try {
@@ -379,8 +428,8 @@ export default function Feed() {
               <div className="bg-white/30 backdrop-blur-sm rounded-3xl p-4 md:p-6 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">Fil d'Actualité</h1>
-            <div className="text-gray-400 text-base text-left">{centerName ? `• ${centerName}` : "Actualités de votre centre"}</div>
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">{t('page.feed')}</h1>
+            <div className="text-gray-400 text-base text-left">{centerName ? `• ${centerName}` : t('feed.center_news')}</div>
           </div>
         </div>
 
@@ -390,7 +439,7 @@ export default function Feed() {
             <div className="flex-1">
               <div className="text-xs sm:text-sm font-semibold text-gray-700">{currentUser?.name || 'Utilisateur'}</div>
               <div className="text-xs text-gray-400 mb-2">{centerName ? `• ${centerName}` : ''}</div>
-              <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Que voulez-vous partager aujourd'hui ?" className="w-full border rounded p-2 sm:p-3 bg-gray-50 min-h-[60px] sm:min-h-[80px] text-sm sm:text-base" />
+              <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t('feed.composer_placeholder')} className="w-full border rounded p-2 sm:p-3 bg-gray-50 min-h-[60px] sm:min-h-[80px] text-sm sm:text-base" />
               <div className="flex flex-col sm:flex-row items-center justify-between mt-3 gap-2">
                 <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 w-full sm:w-auto">
                   {/* Camera capture input (opens device camera on supported mobile) */}
@@ -409,7 +458,7 @@ export default function Feed() {
                         input.value = '';
                       }}
                     />
-                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">📷 Photo</span>
+                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">📷 {t('feed.photo')}</span>
                   </label>
                   {/* Gallery input (choose existing images) */}
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -426,9 +475,9 @@ export default function Feed() {
                         input.value = '';
                       }}
                     />
-                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-xs sm:text-sm">🖼 Galerie</span>
+                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-xs sm:text-sm">🖼 {t('feed.gallery')}</span>
                   </label>
-                  <span className="text-xs text-gray-400">{files.length === 0 ? 'Aucune image sélectionnée' : `${files.length} image(s)`}</span>
+                  <span className="text-xs text-gray-400">{files.length === 0 ? t('feed.no_images') : `${files.length} ${t('feed.images')}`}</span>
                 </div>
                 {/* Tagging UI: responsive — dropdown on desktop, full-screen modal on mobile */}
                 <div className="w-full sm:w-auto mt-2 flex justify-center sm:justify-start">
@@ -440,10 +489,10 @@ export default function Feed() {
                           onClick={() => setShowTagMenu(prev => !prev)}
                           aria-haspopup="true"
                           aria-expanded={showTagMenu}
-                          aria-label="Identifier"
+                          aria-label={t('feed.identify')}
                           className="inline-flex items-center justify-center gap-2 px-4 py-2 sm:px-3 sm:py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 text-sm w-full sm:w-auto shadow-sm"
                         >
-                          Identifier
+                          {t('feed.identify')}
                           {selectedChildIds.length > 0 && (
                             <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700">{selectedChildIds.length}</span>
                           )}
@@ -454,9 +503,9 @@ export default function Feed() {
                       <div className="hidden sm:block">
                         {showTagMenu && (
                           <div className="absolute z-40 mt-2 w-64 bg-white border rounded shadow-lg p-3 max-h-56 overflow-auto">
-                            <div className="text-sm font-semibold mb-2">Sélectionner des enfants</div>
+                            <div className="text-sm font-semibold mb-2">{t('feed.select_children')}</div>
                             {availableChildren.length === 0 ? (
-                              <div className="text-sm text-gray-500">Aucun enfant disponible</div>
+                              <div className="text-sm text-gray-500">{t('feed.no_children_available')}</div>
                             ) : (
                               <div className="grid gap-2">
                                 {/* 'Pas d'enfant' option at top */}
@@ -470,7 +519,7 @@ export default function Feed() {
                                                 }
                                                 setShowIdentifyWarning(false);
                                               }} />
-                                              <span className="font-medium">Pas d'enfant</span>
+                                              <span className="font-medium">{t('feed.no_child')}</span>
                                             </label>
                                 {availableChildren.map(c => {
                                   const allowed = consentMap[c.id] ?? false;
@@ -493,7 +542,7 @@ export default function Feed() {
                               </div>
                             )}
                             <div className="mt-3 flex justify-end">
-                              <button onClick={() => setShowTagMenu(false)} className="px-3 py-1 bg-gray-100 rounded text-sm">Fermer</button>
+                              <button onClick={() => setShowTagMenu(false)} className="px-3 py-1 bg-gray-100 rounded text-sm">{t('common.close')}</button>
                             </div>
                           </div>
                         )}
@@ -503,12 +552,12 @@ export default function Feed() {
                       {showTagMenu && (
                         <div className="sm:hidden fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 pt-10">
                           <div className="mx-4 w-full max-w-md bg-white rounded-xl p-4 max-h-[85vh] overflow-auto shadow-lg">
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="text-lg font-semibold">Taguer des enfants</div>
-                              <button onClick={() => setShowTagMenu(false)} className="text-gray-600">Fermer</button>
+                              <div className="flex items-center justify-between mb-3">
+                              <div className="text-lg font-semibold">{t('feed.tag_children')}</div>
+                              <button onClick={() => setShowTagMenu(false)} className="text-gray-600">{t('common.close')}</button>
                             </div>
                               {availableChildren.length === 0 ? (
-                                <div className="text-sm text-gray-500">Aucun enfant disponible</div>
+                                <div className="text-sm text-gray-500">{t('feed.no_children_available')}</div>
                               ) : (
                                 <div className="space-y-2">
                                   {/* top: Pas d'enfant */}
@@ -521,7 +570,7 @@ export default function Feed() {
                                         } else setNoChildSelected(false);
                                         setShowIdentifyWarning(false);
                                       }} />
-                                      <span className="break-words font-medium">Pas d'enfant</span>
+                                      <span className="break-words font-medium">{t('feed.no_child')}</span>
                                     </div>
                                     <span className="text-xs text-gray-500 sm:ml-2">Cocher si aucune personne identifiable</span>
                                   </label>
@@ -540,14 +589,14 @@ export default function Feed() {
                                           }} />
                                           <span className="break-words">{c.name}</span>
                                         </div>
-                                        {!allowed && <span className="text-xs text-red-500 sm:ml-2">Pas d'autorisation</span>}
+                                        {!allowed && <span className="text-xs text-red-500 sm:ml-2">{t('feed.no_authorization')}</span>}
                                       </label>
                                     );
                                   })}
                                 </div>
                               )}
-                            <div className="mt-4">
-                              <button onClick={() => setShowTagMenu(false)} className="w-full px-4 py-2 bg-indigo-600 text-white rounded">Valider</button>
+                              <div className="mt-4">
+                              <button onClick={() => setShowTagMenu(false)} className="w-full px-4 py-2 bg-indigo-600 text-white rounded">{t('common.confirm')}</button>
                             </div>
                           </div>
                         </div>
