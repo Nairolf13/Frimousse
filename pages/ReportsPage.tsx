@@ -1,24 +1,26 @@
 import { useState, useEffect } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 const childGroups = [
-  { key: 'G1', label: 'Groupe 1 (0-1 ans)' },
-  { key: 'G2', label: 'Groupe 2 (1-2 ans)' },
-  { key: 'G3', label: 'Groupe 3 (2-3 ans)' },
-  { key: 'G4', label: 'Groupe 4 (3-4 ans)' },
-  { key: 'G5', label: 'Groupe 5 (4-5 ans)' },
-  { key: 'G6', label: 'Groupe 6 (5-6 ans)' },
+  { key: 'G1', label: 'children.group.G1' },
+  { key: 'G2', label: 'children.group.G2' },
+  { key: 'G3', label: 'children.group.G3' },
+  { key: 'G4', label: 'children.group.G4' },
+  { key: 'G5', label: 'children.group.G5' },
+  { key: 'G6', label: 'children.group.G6' },
 ];
 const nannyRoles = [
-  { key: 'Nounou_Senior', label: 'Nounou Senior' },
-  { key: 'Responsable', label: 'Responsable' },
-  { key: 'Stagiaire', label: 'Stagiaire' },
-  { key: 'Remplacante', label: 'Remplaçante' },
-  { key: 'Autre', label: 'Autre' },
+  { key: 'Nounou_Senior', label: 'nanny.role.senior' },
+  { key: 'Responsable', label: 'nanny.role.manager' },
+  { key: 'Stagiaire', label: 'nanny.role.trainee' },
+  { key: 'Remplacante', label: 'nanny.role.substitute' },
+  { key: 'Autre', label: 'nanny.role.other' },
 ];
 
 interface Report {
@@ -54,29 +56,57 @@ const priorityStyles = {
   basse: 'bg-[#a9ddf2] border-[#cfeef9]',
 };
 const priorityLabel = {
-  haute: 'PRIORITÉ HAUTE',
-  moyenne: 'MOYENNE',
-  basse: 'BASSE',
+  haute: 'reports.priority.haute',
+  moyenne: 'reports.priority.moyenne',
+  basse: 'reports.priority.basse',
 };
 const typeLabel = {
-  incident: 'INCIDENT',
-  comportement: 'COMPORTEMENT',
-  soin: 'SOINS',
+  incident: 'reports.type.incident',
+  comportement: 'reports.type.comportement',
+  soin: 'reports.type.soin',
 };
 
 export default function ReportsPage() {
 
   const { user } = useAuth();
+  const { t, locale } = useI18n();
 
   useEffect(() => {
-    fetchWithRefresh(`${API_URL}/children`)
-      .then(res => res.json())
-      .then(data => setChildrenList(data))
-      .catch(() => setChildrenList([]));
-    fetchWithRefresh(`${API_URL}/nannies`)
-      .then(res => res.json())
-      .then(data => setNanniesList(data))
-      .catch(() => setNanniesList([]));
+    let mounted = true;
+    const cacheKeyChildren = `${API_URL}/children`;
+    const cacheKeyNannies = `${API_URL}/nannies`;
+    async function loadLists() {
+      try {
+        const cachedChildren = getCached<{id:string,name:string,age:number,group:string}[]>(cacheKeyChildren);
+        const cachedNannies = getCached<{id:string,name:string,role:string}[]>(cacheKeyNannies);
+        if (cachedChildren) setChildrenList(cachedChildren);
+        if (cachedNannies) setNanniesList(cachedNannies);
+
+        // Fetch in parallel but avoid overwriting already set state if unmounted
+        const promises: Promise<Response>[] = [];
+        if (!cachedChildren) promises.push(fetchWithRefresh(`${API_URL}/children`));
+        else promises.push(Promise.resolve(new Response(JSON.stringify(cachedChildren))));
+        if (!cachedNannies) promises.push(fetchWithRefresh(`${API_URL}/nannies`));
+        else promises.push(Promise.resolve(new Response(JSON.stringify(cachedNannies))));
+
+        const [childrenRes, nanniesRes] = await Promise.all(promises);
+        if (!mounted) return;
+        try {
+          const childrenData = await childrenRes.json();
+          setChildrenList(Array.isArray(childrenData) ? childrenData : []);
+          setCached(cacheKeyChildren, Array.isArray(childrenData) ? childrenData : [], DEFAULT_TTL);
+        } catch { setChildrenList([]); }
+        try {
+          const nanniesData = await nanniesRes.json();
+          setNanniesList(Array.isArray(nanniesData) ? nanniesData : []);
+          setCached(cacheKeyNannies, Array.isArray(nanniesData) ? nanniesData : [], DEFAULT_TTL);
+        } catch { setNanniesList([]); }
+      } catch {
+        if (mounted) { setChildrenList([]); setNanniesList([]); }
+      }
+    }
+    loadLists();
+    return () => { mounted = false; };
   }, []);
   const [reports, setReports] = useState<Report[]>([]);
 
@@ -212,29 +242,29 @@ export default function ReportsPage() {
       <Sidebar />
       <main className="flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-2 md:ml-64">
         <div className="w-full max-w-5xl mx-auto">
-          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>Rapports d'Incidents</h1>
-          <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>Consultez tous les signalements des nounous concernant les incidents, comportements et observations quotidiennes des enfants.</div>
+          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.reports')}</h1>
+          <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.reports.description')}</div>
           <div className="flex flex-col md:flex-row flex-wrap gap-2 mb-4 md:mb-6 items-stretch md:items-center">
             <div className="flex gap-2 flex-wrap">
               <button
                 className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg border text-sm md:text-base font-medium ${filterLast30Days ? 'bg-[#a9ddf2] border-[#fcdcdf] text-[#0b5566]' : 'bg-white border-gray-100 text-gray-500'}`}
                 onClick={e => {e.preventDefault(); setFilterLast30Days(v => !v);}}
               >
-                <span>📅</span> 30 derniers jours
+                <span>📅</span> {t('reports.filter.last30')}
               </button>
               <select
                 value={filterType}
                 onChange={e => setFilterType(e.target.value)}
                 className="px-3 md:px-4 py-2 rounded-lg border border-gray-100 bg-white text-sm md:text-base font-medium"
               >
-                <option value="">Tous les types</option>
-                <option value="incident">Incident</option>
-                <option value="comportement">Comportement</option>
-                <option value="soin">Soin</option>
+                <option value="">{t('reports.filter.allTypes')}</option>
+                <option value="incident">{t('reports.type.incident')}</option>
+                <option value="comportement">{t('reports.type.comportement')}</option>
+                <option value="soin">{t('reports.type.soin')}</option>
               </select>
               <input
                 type="text"
-                placeholder="Rechercher par nom d'enfant"
+                placeholder={t('reports.search.placeholder')}
                 value={searchText}
                 onChange={e => setSearchText(e.target.value)}
                 className="px-3 md:px-4 py-2 rounded-lg border border-gray-100 bg-white text-sm md:text-base w-full md:w-64"
@@ -262,17 +292,17 @@ export default function ReportsPage() {
                   childrenInvolved: '',
                 });
                 setModalOpen(true);
-              }}>Nouveau Rapport</button>
+              }}>{t('reports.new')}</button>
             )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-4 md:mb-6">
             <div className="bg-white rounded-xl shadow border border-gray-100 p-3 md:p-4 flex flex-col items-center">
               <div className="text-2xl md:text-3xl font-extrabold" style={{ color: '#0b5566' }}>{total}</div>
-              <div className="text-xs text-gray-500 mt-1">Total Rapports</div>
+              <div className="text-xs text-gray-500 mt-1">{t('reports.card.total')}</div>
             </div>
             <div className="bg-white rounded-xl shadow border border-gray-100 p-3 md:p-4 flex flex-col items-center">
               <div className="text-xl md:text-2xl font-extrabold" style={{ color: '#08323a' }}>{week}</div>
-              <div className="text-xs text-gray-500 mt-1">Cette Semaine</div>
+              <div className="text-xs text-gray-500 mt-1">{t('reports.card.week')}</div>
             </div>
           </div>
         <div className="flex flex-col gap-4 md:gap-6">
@@ -283,8 +313,8 @@ export default function ReportsPage() {
               <div key={report.id} className={`rounded-xl shadow border-2 ${priorityStyles[report.priority as keyof typeof priorityStyles] || ''} p-0 overflow-hidden`} style={{ minWidth: 0 }}>
                 <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 md:px-6 py-2`}> 
                   <div className="flex items-center gap-2 md:gap-3 mb-2 sm:mb-0">
-                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.type === 'incident' ? '#ffeaea' : report.type === 'comportement' ? '#fff7e6' : '#a9ddf2', color: report.type === 'incident' ? '#7a2a2a' : report.type === 'comportement' ? '#856400' : '#08323a' }}>{typeLabel[report.type as keyof typeof typeLabel] || report.type}</span>
-                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.priority === 'haute' ? '#dc2626' : report.priority === 'moyenne' ? '#f59e0b' : '#0b5566', color: '#ffffff' }}>{priorityLabel[report.priority as keyof typeof priorityLabel] || report.priority}</span>
+                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.type === 'incident' ? '#ffeaea' : report.type === 'comportement' ? '#fff7e6' : '#a9ddf2', color: report.type === 'incident' ? '#7a2a2a' : report.type === 'comportement' ? '#856400' : '#08323a' }}>{t(typeLabel[report.type as keyof typeof typeLabel] || report.type)}</span>
+                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.priority === 'haute' ? '#dc2626' : report.priority === 'moyenne' ? '#f59e0b' : '#0b5566', color: '#ffffff' }}>{t(priorityLabel[report.priority as keyof typeof priorityLabel] || report.priority)}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold border" style={{ background: '#a9ddf2', color: '#08323a', borderColor: '#cfeef9' }}>{childInitials}</span>
@@ -322,12 +352,12 @@ export default function ReportsPage() {
                   </div>
                 </div>
                 <div className="px-4 md:px-6 pb-4">
-                  <div className="font-bold text-gray-700 mb-1 text-sm md:text-base">{report.type === 'incident' ? 'Résumé du Rapport' : report.type === 'comportement' ? 'Observation Comportementale' : 'Observation de Soin'}</div>
+                  <div className="font-bold text-gray-700 mb-1 text-sm md:text-base">{report.type === 'incident' ? t('reports.summary.incident') : report.type === 'comportement' ? t('reports.summary.comportement') : t('reports.summary.soin')}</div>
                   <div className="text-gray-700 text-sm md:text-base mb-2">{report.summary}</div>
                   {report.type === 'comportement' && (
                     <div className="flex gap-4 md:gap-6 items-center text-xs text-gray-500 mt-2 flex-wrap">
-                      <span className="flex items-center gap-1"><span>⏱️</span> Durée : {report.duration}</span>
-                      <span className="flex items-center gap-1"><span>👧</span> {report.childrenInvolved} enfants impliqués</span>
+                        <span className="flex items-center gap-1"><span>⏱️</span> {t('reports.card.duration')} : {report.duration}</span>
+                        <span className="flex items-center gap-1"><span>👧</span> {t('reports.card.childrenInvolved', { n: String(report.childrenInvolved ?? 0) })}</span>
                     </div>
                   )}
                   <div className="flex flex-col items-end mt-4">
@@ -344,9 +374,9 @@ export default function ReportsPage() {
                         }
                         if (dateObj && !isNaN(dateObj.getTime())) {
                           const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'long', year: 'numeric' };
-                          const dateStr = dateObj.toLocaleDateString('fr-FR', options);
+                          const dateStr = dateObj.toLocaleDateString(locale || 'fr-FR', options);
                           const heure = report.time ? report.time.slice(0,5).replace(':', 'h') : '';
-                          return `${dateStr}${heure ? ' à ' + heure : ''}`;
+                          return `${dateStr}${heure ? ' ' + t('common.at') + ' ' + heure : ''}`;
                         }
                         return `${report.date}${report.time ? ' à ' + report.time : ''}`;
                       })()}
@@ -361,7 +391,7 @@ export default function ReportsPage() {
             <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative flex flex-col gap-6 animate-fade-in" style={{ border: '4px solid #fcdcdf' }}>
               <button onClick={() => setModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-              <h2 className="text-2xl font-extrabold mb-2 text-center" style={{ color: '#0b5566' }}>{editingReport ? 'Modifier le Rapport' : 'Nouveau Rapport'}</h2>
+              <h2 className="text-2xl font-extrabold mb-2 text-center" style={{ color: '#0b5566' }}>{editingReport ? t('reports.modal.title.edit') : t('reports.modal.title.new')}</h2>
               <form className="space-y-3" onSubmit={async (e) => {
                 if (editingReport) {
                   e.preventDefault();
@@ -392,17 +422,17 @@ export default function ReportsPage() {
               }}>
                 <div className="flex gap-2">
                   <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as 'haute' | 'moyenne' | 'basse' }))} className="border rounded px-3 py-2 w-1/2">
-                    <option value="haute">Priorité Haute</option>
-                    <option value="moyenne">Moyenne</option>
-                    <option value="basse">Basse</option>
+                    <option value="haute">{t('reports.priority.haute')}</option>
+                    <option value="moyenne">{t('reports.priority.moyenne')}</option>
+                    <option value="basse">{t('reports.priority.basse')}</option>
                   </select>
                   <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as 'incident' | 'comportement' | 'soin' }))} className="border rounded px-3 py-2 w-1/2">
-                    <option value="incident">Incident</option>
-                    <option value="comportement">Comportement</option>
-                    <option value="soin">Soin</option>
+                    <option value="incident">{t('reports.type.incident')}</option>
+                    <option value="comportement">{t('reports.type.comportement')}</option>
+                    <option value="soin">{t('reports.type.soin')}</option>
                   </select>
                 </div>
-                <select value={form.childId} onChange={e => {
+                  <select value={form.childId} onChange={e => {
                   const selected = childrenList.find(c => c.id === e.target.value);
                   setForm(f => ({
                     ...f,
@@ -412,21 +442,21 @@ export default function ReportsPage() {
                     childGroup: selected ? selected.group : '',
                   }));
                 }} className="border rounded px-3 py-2 w-full" required>
-                  <option value="">Sélectionner l'enfant</option>
+                  <option value="">{t('reports.field.child')}</option>
                   {childrenList.map(child => (
                     <option key={child.id} value={child.id}>{child.name}</option>
                   ))}
                 </select>
                 <div className="flex gap-2">
-                  <input type="number" min={1} max={18} placeholder="Âge" value={form.childAge} onChange={e => setForm(f => ({ ...f, childAge: Number(e.target.value) }))} className="border rounded px-3 py-2 w-1/2" required />
+                  <input type="number" min={1} max={18} placeholder={t('label.age') || 'Âge'} value={form.childAge} onChange={e => setForm(f => ({ ...f, childAge: Number(e.target.value) }))} className="border rounded px-3 py-2 w-1/2" required />
                   <select value={form.childGroup} onChange={e => setForm(f => ({ ...f, childGroup: e.target.value }))} className="border rounded px-3 py-2 w-1/2" required>
-                    <option value="">Sélectionner le groupe</option>
+                    <option value="">{t('reports.field.group')}</option>
                     {childGroups.map(g => (
-                      <option key={g.key} value={g.key}>{g.label}</option>
+                      <option key={g.key} value={g.key}>{t(g.label)}</option>
                     ))}
                   </select>
                 </div>
-                <select value={form.nannyId} onChange={e => {
+                  <select value={form.nannyId} onChange={e => {
                   const selected = nanniesList.find(n => n.id === e.target.value);
                   setForm(f => ({
                     ...f,
@@ -435,37 +465,37 @@ export default function ReportsPage() {
                     nannyRole: selected ? selected.role : '',
                   }));
                 }} className="border rounded px-3 py-2 w-full" required>
-                  <option value="">Sélectionner la nounou</option>
+                  <option value="">{t('reports.field.nanny')}</option>
                   {nanniesList.map(nanny => (
                     <option key={nanny.id} value={nanny.id}>{nanny.name}</option>
                   ))}
                 </select>
                 <select value={form.nannyRole} onChange={e => setForm(f => ({ ...f, nannyRole: e.target.value }))} className="border rounded px-3 py-2 w-full" required>
-                  <option value="">Sélectionner le rôle</option>
+                  <option value="">{t('reports.field.role')}</option>
                   {nannyRoles.map(role => (
-                    <option key={role.key} value={role.key}>{role.label}</option>
+                    <option key={role.key} value={role.key}>{t(role.label)}</option>
                   ))}
                 </select>
                 <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
                 <input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
-                <textarea placeholder="Résumé du rapport" value={form.summary} onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
+                <textarea placeholder={t('reports.field.summary')} value={form.summary} onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
                 {form.type === 'comportement' && (
                   <div className="flex gap-2">
-                    <input type="text" placeholder="Durée" value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} className="border rounded px-3 py-2 w-1/2" />
-                    <input type="number" min={1} placeholder="Nb enfants impliqués" value={form.childrenInvolved} onChange={e => setForm(f => ({ ...f, childrenInvolved: e.target.value }))} className="border rounded px-3 py-2 w-1/2" />
+                    <input type="text" placeholder={t('reports.field.duration') || 'Durée'} value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} className="border rounded px-3 py-2 w-1/2" />
+                    <input type="number" min={1} placeholder={t('reports.field.childrenInvolved') || 'Nb enfants impliqués'} value={form.childrenInvolved} onChange={e => setForm(f => ({ ...f, childrenInvolved: e.target.value }))} className="border rounded px-3 py-2 w-1/2" />
                   </div>
                 )}
                 <div className="flex gap-2 mt-2">
-                  <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingReport ? 'Sauvegarder' : 'Créer'}</button>
+                  <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingReport ? t('reports.save') : t('reports.create')}</button>
                   {editingReport && (
                     <button type="button" onClick={async () => {
                       if (!editingReport) return; 
                       await fetchWithRefresh(`${API_URL}/reports/${editingReport.id}`, { method: 'DELETE' });
                       fetchWithRefresh(`${API_URL}/reports`).then(res => res.json()).then(data => setReports(data)).catch(() => setReports([]));
                       setModalOpen(false); setEditingReport(null);
-                    }} className="bg-red-500 text-white px-4 py-2 rounded">Supprimer</button>
+                    }} className="bg-red-500 text-white px-4 py-2 rounded">{t('reports.delete')}</button>
                   )}
-                  <button type="button" onClick={() => { setModalOpen(false); setEditingReport(null); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
+                  <button type="button" onClick={() => { setModalOpen(false); setEditingReport(null); }} className="bg-gray-300 px-4 py-2 rounded">{t('reports.cancel')}</button>
                 </div>
               </form>
             </div>

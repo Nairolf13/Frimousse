@@ -6,8 +6,10 @@ import tseslint from 'typescript-eslint'
 import { globalIgnores } from 'eslint/config'
 
 export default tseslint.config([
-  globalIgnores(['dist']),
+  // Skip common generated and dependency folders
+  globalIgnores(['dist', 'node_modules', 'backend/generated', 'backend/node_modules']),
   {
+    ignores: ['**/generated/**', 'backend/generated/**', 'node_modules/**'],
     files: ['**/*.{ts,tsx}'],
     extends: [
       js.configs.recommended,

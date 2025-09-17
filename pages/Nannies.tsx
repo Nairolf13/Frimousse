@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import '../styles/filter-responsive.css';
 import NannyCalendar from '../components/NannyCalendar';
 import { useAuth } from '../src/context/AuthContext';
@@ -9,11 +10,12 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 
 function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
         <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-        <h2 className="text-xl font-bold mb-4 text-center">Planning de {nanny.name}</h2>
+        <h2 className="text-xl font-bold mb-4 text-center">{t('nanny.planning.of', { name: nanny.name })}</h2>
         <NannyCalendar nannyId={nanny.id} />
       </div>
     </div>
@@ -21,6 +23,7 @@ function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }
 }
 
 import { useEffect, useState, useRef } from 'react';
+import { getCached, setCached } from '../src/utils/apiCache';
 
 interface Child {
   id: string;
@@ -56,6 +59,7 @@ const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; pass
 const avatarEmojis = ['🦁', '🐻', '🐱', '🐶', '🦊', '🐼', '🐵', '🐯'];
 
 export default function Nannies() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const [nannies, setNannies] = useState<Nanny[]>([]);
   const [cotisationStatus, setCotisationStatus] = useState<Record<string, { paidUntil: string | null; loading: boolean }>>({});
@@ -108,13 +112,13 @@ export default function Nannies() {
       const res = await fetchWithRefresh(`${API_URL}/nannies/${nannyId}/cotisation`, { method: 'PUT', credentials: 'include', headers: body ? { 'Content-Type': 'application/json' } : undefined, body });
       const data = await res.json();
       setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: data.cotisationPaidUntil, loading: false } }));
-      setMessages(m => ({ ...m, [nannyId]: { text: 'Paiement enregistré', type: 'success' } }));
+  setMessages(m => ({ ...m, [nannyId]: { text: t('nanny.payment.success'), type: 'success' } }));
       if (data.lastCotisationAmount) setCotisationAmounts(prev => ({ ...prev, [nannyId]: Number(data.lastCotisationAmount) }));
       setTimeout(() => setMessages(m => ({ ...m, [nannyId]: null })), 3000);
       await fetchCotisation(nannyId);
       } catch {
       setCotisationStatus(s => ({ ...s, [nannyId]: { paidUntil: null, loading: false } }));
-      setMessages(m => ({ ...m, [nannyId]: { text: 'Erreur lors du paiement', type: 'error' } }));
+  setMessages(m => ({ ...m, [nannyId]: { text: t('nanny.payment.error'), type: 'error' } }));
       setTimeout(() => setMessages(m => ({ ...m, [nannyId]: null })), 4000);
     }
   };
@@ -133,6 +137,16 @@ export default function Nannies() {
 
   const fetchNannies = React.useCallback(() => {
     setLoading(true);
+    const cacheKeyNannies = `${API_URL}/nannies`;
+    const cached = getCached<Nanny[]>(cacheKeyNannies);
+    if (cached) {
+      setNannies(cached);
+      const amounts: Record<string, number> = {};
+      cached.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); });
+      setCotisationAmounts(amounts);
+      setLoading(false);
+      return;
+    }
     fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
       .then(res => res.json())
       .then((nannies: Nanny[]) => {
@@ -140,6 +154,7 @@ export default function Nannies() {
   const amounts: Record<string, number> = {};
   nannies.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); });
   setCotisationAmounts(amounts);
+  setCached(cacheKeyNannies, nannies);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -333,17 +348,17 @@ export default function Nannies() {
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des nounous</h1>
-            <div className="text-gray-400 text-base">Gérez les profils, plannings, qualifications et affectations des intervenants.</div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">{t('page.nannies')}</h1>
+            <div className="text-gray-400 text-base">{t('page.nannies.description')}</div>
           </div>
           <div className="flex gap-2 items-center self-start md:ml-auto">
             {(user && typeof user.role === 'string' && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'))) && (
-              <button
+                <button
                 type="button"
                 onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
                 className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px]"
               >
-                Ajouter une nounou
+                {t('nanny.add')}
               </button>
             )}
           </div>
@@ -353,61 +368,61 @@ export default function Nannies() {
           
           <div className="flex gap-2 flex-wrap justify-start w-full">
             <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
-              <div className="text-xs text-gray-400">Total</div>
+              <div className="text-xs text-gray-400">{t('stats.total')}</div>
               <div className="text-base md:text-lg font-bold text-[#0b5566]">{totalNannies}</div>
             </div>
             <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
-              <div className="text-xs text-gray-400">Disponibles</div>
+              <div className="text-xs text-gray-400">{t('nanny.available_label')}</div>
               <div className="text-base md:text-lg font-bold text-[#0b5566]">{availableToday}</div>
             </div>
             <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
-              <div className="text-xs text-gray-400">En congé</div>
+              <div className="text-xs text-gray-400">{t('nanny.on_leave_label')}</div>
               <div className="text-base md:text-lg font-bold text-[#0b5566]">{onLeave}</div>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-6 w-full filter-responsive">
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher par nom..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('nanny.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
           <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border rounded px-3 py-2 text-xs md:text-base bg-white text-gray-700 shadow-sm w-full md:w-auto">
-            <option value="">Toute disponibilité</option>
-            <option value="Disponible">Disponible</option>
-            <option value="En congé">En congé</option>
+            <option value="">{t('nanny.filter.any')}</option>
+            <option value="Disponible">{t('nanny.filter.disponible')}</option>
+            <option value="En congé">{t('nanny.filter.en_conge')}</option>
           </select>
           <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-xs md:text-base w-full md:w-auto">
-            <option value="">Toute expérience</option>
-            <option value="junior">Junior (-3 ans)</option>
-            <option value="senior">Senior (3+ ans)</option>
+            <option value="">{t('nanny.filter.experience_any')}</option>
+            <option value="junior">{t('nanny.filter.experience_junior')}</option>
+            <option value="senior">{t('nanny.filter.experience_senior')}</option>
           </select>
           <div className="flex-1"></div>
         </div>
 
         {(adding || editingId) && (
           <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-            <input name="name" value={form.name} onChange={handleChange} placeholder="Nom" required className="border rounded px-3 py-2 text-base" />
+            <input name="name" value={form.name} onChange={handleChange} placeholder={t('nanny.form.name')} required className="border rounded px-3 py-2 text-base" />
             <select name="availability" value={form.availability} onChange={handleChange} required className="border rounded px-3 py-2 text-xs md:text-base">
-              <option value="Disponible">Disponible</option>
-              <option value="En_congé">En congé</option>
-              <option value="Maladie">Maladie</option>
+              <option value="Disponible">{t('nanny.availability.available')}</option>
+              <option value="En_congé">{t('nanny.availability.on_leave')}</option>
+              <option value="Maladie">{t('nanny.availability.sick')}</option>
             </select>
-            <input name="experience" type="number" value={form.experience} onChange={handleChange} placeholder="Expérience (années)" required className="border rounded px-3 py-2 text-base" />
-            <input name="birthDate" type="date" value={form.birthDate || ''} onChange={handleChange} placeholder="Date de naissance" className="border rounded px-3 py-2 text-base" />
-            <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder="Spécialisations (séparées par virgule)" className="border rounded px-3 py-2 text-base md:col-span-2" />
-            <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder="Téléphone" className="border rounded px-3 py-2 text-base" />
-            <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder="Email " className="border rounded px-3 py-2 text-base" />
+            <input name="experience" type="number" value={form.experience} onChange={handleChange} placeholder={t('nanny.form.experience')} required className="border rounded px-3 py-2 text-base" />
+            <input name="birthDate" type="date" value={form.birthDate || ''} onChange={handleChange} placeholder={t('nanny.form.birthDate')} className="border rounded px-3 py-2 text-base" />
+            <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder={t('nanny.form.specializations')} className="border rounded px-3 py-2 text-base md:col-span-2" />
+            <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder={t('nanny.form.contact')} className="border rounded px-3 py-2 text-base" />
+            <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className="border rounded px-3 py-2 text-base" />
             <div className="relative md:col-span-1">
-              <input name="password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder="Mot de passe" className="border rounded px-3 py-2 text-base w-full pr-10" />
+              <input name="password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className="border rounded px-3 py-2 text-base w-full pr-10" />
               <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
             </div>
             <div className="relative md:col-span-1">
-              <input name="confirmPassword" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirmer le mot de passe" className="border rounded px-3 py-2 text-base w-full pr-10" />
+              <input name="confirmPassword" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('nanny.form.confirmPassword')} className="border rounded px-3 py-2 text-base w-full pr-10" />
               <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
             </div>
             <div className="md:col-span-2 flex gap-2">
               <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">
-                {editingId ? 'Modifier' : 'Ajouter'}
+                {editingId ? t('global.save') : t('global.add')}
               </button>
-              <button type="button" onClick={() => { setForm(emptyForm); setConfirmPassword(''); setEditingId(null); setAdding(false); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
+              <button type="button" onClick={() => { setForm(emptyForm); setConfirmPassword(''); setEditingId(null); setAdding(false); }} className="bg-gray-300 px-4 py-2 rounded">{t('global.cancel')}</button>
             </div>
             {error && <div className="text-red-600 md:col-span-2">{error}</div>}
           </form>
@@ -446,7 +461,7 @@ export default function Nannies() {
                     className={`absolute text-xs font-bold px-3 py-1 rounded-full shadow border whitespace-nowrap transform left-1/2 -translate-x-1/2 top-3`}
                     style={{zIndex:2, background: nanny.availability === 'Disponible' ? '#a9ddf2' : nanny.availability === 'En_congé' ? '#fff4d6' : '#ffeaea', color: nanny.availability === 'Disponible' ? '#08323a' : nanny.availability === 'En_congé' ? '#856400' : '#7a2a2a', borderColor: nanny.availability === 'Disponible' ? '#a9ddf2' : nanny.availability === 'En_congé' ? '#fff4d6' : '#ffeaea'}}
                   >
-                    {nanny.availability === 'En_congé' ? 'En congé' : nanny.availability}
+                    {nanny.availability === 'En_congé' ? t('nanny.availability.on_leave') : (nanny.availability === 'Disponible' ? t('nanny.availability.available') : t('nanny.availability.sick'))}
                   </span>
                   <div
                     className={`w-full h-full transition-transform duration-500 ${isDeleting ? 'rotate-y-180' : ''}`}
@@ -463,7 +478,7 @@ export default function Nannies() {
                       </div>
                       {nanny.birthDate && (
                         <div className="text-xs sm:text-sm text-gray-600 mb-1 text-center">
-                          Né(e) le {new Date(nanny.birthDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          {t('nanny.birth.label')} {new Date(nanny.birthDate).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                         </div>
                       )}
                       <div className="flex flex-col gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4">
@@ -493,7 +508,7 @@ export default function Nannies() {
                       )}
                       <div className="text-xs sm:text-sm text-gray-700 mb-2 w-full flex flex-col items-center">
                         <span className="block font-medium mb-1 text-center">
-                          Affectations aujourd'hui
+                          {t('nanny.assignments_today')}
                           <span className="inline-block bg-white text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 ml-1">
                             {assignedTodayCount}
                           </span>
@@ -501,9 +516,9 @@ export default function Nannies() {
                       </div>
                       <div className="flex flex-col gap-2 mt-auto mb-4 w-full min-w-0">
                         <div className="flex items-center justify-center gap-2">
-                          <span className="text-xs font-semibold text-gray-700">Cotisation mensuel :</span>
+                          <span className="text-xs font-semibold text-gray-700">{t('nanny.cotisation.label')}</span>
                           {cotisation?.loading ? (
-                            <span className="text-sm text-gray-500">Chargement...</span>
+                            <span className="text-sm text-gray-500">{t('loading')}</span>
                           ) : daysRemaining > 0 ? (
                             <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
                           ) : isAdmin ? (
@@ -529,15 +544,15 @@ export default function Nannies() {
                               disabled={cotisation?.loading || isPaymentModalOpen}
                               onClick={() => requestPay(nanny.id)}
                             >
-                              {cotisation?.loading ? "Paiement..." : isPaymentModalOpen ? "Confirmation..." : "Payer"}
+                              {cotisation?.loading ? t('nanny.payment.loading') : isPaymentModalOpen ? t('nanny.payment.confirming') : t('nanny.payment.pay')}
                             </button>
                           )}
                         </div>
                         <div className="flex flex-col items-center">
                           <span className="text-xs text-gray-500 text-center">
                             {cotisation ? (
-                              cotisation.loading ? 'Chargement...' : (
-                                cotisation.paidUntil ? (daysRemaining > 0 ? `${daysRemaining} jour${daysRemaining > 1 ? 's' : ''} restants` : 'Cotisation à renouveler') : 'Cotisation à renouveler'
+                              cotisation.loading ? t('loading') : (
+                                cotisation.paidUntil ? (daysRemaining > 0 ? t('nanny.cotisation.days_remaining', { n: String(daysRemaining) }) : t('nanny.cotisation.renew')) : t('nanny.cotisation.renew')
                               )
                             ) : '—'}
                           </span>
@@ -551,20 +566,20 @@ export default function Nannies() {
                           <button
                             onClick={() => setPlanningNanny(nanny)}
                             className="w-[120px] min-w-[100px] bg-[#a9ddf2] text-[#0b5566] px-3 py-2 rounded-full font-semibold border border-[#a9ddf2] shadow-sm hover:bg-[#f7f4d7] transition text-xs text-center mx-auto"
-                          >Planning</button>
+                          >{t('nanny.planning.button')}</button>
                           <div className="flex gap-1">
-                            <button
-                              onClick={() => handleEdit(nanny)}
-                              className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
-                              title="Éditer"
-                            >
+                              <button
+                                onClick={() => handleEdit(nanny)}
+                                className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
+                                title={t('children.action.edit')}
+                              >
                               <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
                             </button>
                             <button
-                              onClick={() => setDeleteId(nanny.id)}
-                              className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm"
-                              title="Supprimer"
-                            >
+                                onClick={() => setDeleteId(nanny.id)}
+                                className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm"
+                                title={t('children.action.delete')}
+                              >
                               <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             </button>
                           </div>
@@ -576,17 +591,17 @@ export default function Nannies() {
                       style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
                     >
                       <div className="text-red-500 text-4xl mb-2">🗑️</div>
-                      <div className="text-lg font-semibold mb-2 text-gray-900 text-center">Confirmer la suppression</div>
-                      <div className="text-gray-500 mb-6 text-center">Voulez-vous vraiment supprimer cette nounou ? <br/>Cette action est irréversible.</div>
+                      <div className="text-lg font-semibold mb-2 text-gray-900 text-center">{t('modal.delete.title')}</div>
+                      <div className="text-gray-500 mb-6 text-center">{t('nanny.delete.confirm_body')}</div>
                       <div className="flex gap-3 w-full">
                         <button
                           onClick={() => setDeleteId(null)}
                           className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 font-medium hover:bg-gray-200 transition"
-                        >Annuler</button>
+                        >{t('modal.cancel')}</button>
                         <button
                           onClick={handleDelete}
                           className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 font-medium hover:bg-red-600 transition shadow"
-                        >Supprimer</button>
+                        >{t('children.action.delete')}</button>
                       </div>
                     </div>
                   </div>
@@ -599,17 +614,17 @@ export default function Nannies() {
       {confirmPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-2">Confirmer le paiement</h3>
-            <p className="mb-4">Voulez-vous enregistrer le paiement de <span className="font-semibold">{confirmPayment.amount}€</span> pour cette nounou ?</p>
+            <h3 className="text-lg font-bold mb-2">{t('nanny.payment.confirm_title')}</h3>
+            <p className="mb-4">{t('nanny.payment.confirm_body', { amount: String(confirmPayment.amount) })}</p>
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmPayment(null)}
                 className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2"
-              >Annuler</button>
+              >{t('modal.cancel')}</button>
               <button
                 onClick={confirmPay}
                 className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2"
-              >Confirmer</button>
+              >{t('common.confirm')}</button>
             </div>
           </div>
         </div>
@@ -622,11 +637,11 @@ export default function Nannies() {
       {adminResetModal && adminResetModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-2">Confirmer la réinitialisation du mot de passe</h3>
-            <p className="mb-4">Vous allez réinitialiser le mot de passe de cette nounou. Voulez-vous continuer ?</p>
+            <h3 className="text-lg font-bold mb-2">{t('parent.reset.confirm_title')}</h3>
+            <p className="mb-4">{t('parent.reset.confirm_body')}</p>
             <div className="flex gap-3">
-              <button onClick={cancelAdminReset} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2">Annuler</button>
-              <button onClick={confirmAdminReset} className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2">Confirmer</button>
+              <button onClick={cancelAdminReset} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2">{t('modal.cancel')}</button>
+              <button onClick={confirmAdminReset} className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2">{t('parent.reset.confirm')}</button>
             </div>
           </div>
         </div>

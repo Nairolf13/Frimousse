@@ -2,103 +2,71 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 import type { User as AuthUser } from '../src/context/AuthContext';
 import { useEffect, useState } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell, HiOutlineCurrencyDollar } from 'react-icons/hi';
 import MobileMenu from './MobileMenu';
-import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+// caching and rate-limit managed by hooks
+import { useNotificationsContext } from '../src/context/notificationsContext';
+import { useCenterInfo } from '../src/hooks/useCenterInfo';
 
 
-function getNavLinks(user: AuthUser | null) {
+function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, string>) => string) {
   // Parents should see a limited set of links
   if (user && user.role === 'parent') {
     return [
-      { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
-      { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      { to: '/notifications', label: 'Notifications', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
-      { to: '/children', label: 'Mes enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-      { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-      { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      { to: '/activites', label: 'Planning d\'activités', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
-      { to: '/payment-history', label: 'Historique paiements', icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
-      { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
+      { to: '/dashboard', label: t('nav.dashboard'), icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
+      { to: '/feed', label: t('nav.feed'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/notifications', label: t('nav.notifications'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
+      { to: '/children', label: t('nav.children_my'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
+      { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
+      { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
   }
 
   if (user && user.nannyId) {
   return [
-      { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
-      { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      { to: '/notifications', label: 'Notifications', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
-      { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-      { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-      { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
-      { to: '/activites', label: 'Planning d\'activités', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
-      { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      { to: '/payment-history', label: 'Historique paiements', icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
-      { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
+      { to: '/dashboard', label: t('nav.dashboard'), icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
+      { to: '/feed', label: t('nav.feed'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/notifications', label: t('nav.notifications'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
+      { to: '/children', label: t('nav.children'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+      { to: '/nannies', label: t('nav.nannies'), icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
+      { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
+      { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
+      { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
 
     ];
   }
   return [
-    { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
-    { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-    { to: '/notifications', label: 'Notifications', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
-    { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-    { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-    { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
-    { to: '/activites', label: 'Planning d\'activités', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
-    { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-    { to: '/payment-history', label: 'Historique paiements', icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
-    { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
+    { to: '/feed', label: t('nav.feed'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+    { to: '/notifications', label: t('nav.notifications'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
+    { to: '/children', label: t('nav.children'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+    { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+    { to: '/nannies', label: t('nav.nannies'), icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
+    { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
+    { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+    { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
+    { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
   ];
 }
 
 export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
-  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const { t } = useI18n();
+  // consume the global notifications context (single-tab polling)
+  const { unreadCount } = useNotificationsContext();
+  const centerId = user && (user as { centerId?: string }).centerId;
+  const { center } = useCenterInfo(centerId ?? null);
   const [centerName, setCenterName] = useState<string | null>(null);
   useEffect(() => {
-    let mounted = true;
-    async function loadUnread() {
-      try {
-        const res = await fetchWithRefresh('/api/notifications/unread-count', { credentials: 'include' });
-        if (!mounted) return;
-        if (!res.ok) return setUnreadCount(0);
-        const j = await res.json();
-        setUnreadCount(Number(j.unread) || 0);
-      } catch {
-        if (mounted) setUnreadCount(0);
-      }
-    }
-    loadUnread();
-    const iv = setInterval(loadUnread, 30000);
-    function onChange() { loadUnread(); }
-    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-      window.addEventListener('notifications:changed', onChange as EventListener);
-    }
-    return () => { mounted = false; clearInterval(iv); if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') { window.removeEventListener('notifications:changed', onChange as EventListener); } };
-  }, []);
-  useEffect(() => {
-    let mounted = true;
-    async function loadCenter() {
-      try {
-        if (user && user.centerId) {
-          const res = await fetch(`/centers/${user.centerId}`, { credentials: 'include' });
-          if (!mounted) return;
-          if (res.ok) {
-            const data = await res.json();
-            setCenterName(data.name || null);
-            return;
-          }
-        }
-      } catch {
-        // ignore network errors
-      }
-      if (mounted) setCenterName(null);
-    }
-    loadCenter();
-    return () => { mounted = false; };
-  }, [user]);
+    setCenterName(center?.name ?? null);
+  }, [center]);
   function displayCenterName(name: string | null) {
     if (!name) return 'Frimousse';
     const trimmed = name.trim();
@@ -133,7 +101,7 @@ export default function Sidebar() {
         </div>
         <nav className="flex-1 px-2">
           <ul className="space-y-1">
-            {getNavLinks(user).map(link => (
+            {getNavLinks(user, t).map(link => (
               <li key={link.to}>
                 <Link
                   to={link.to}

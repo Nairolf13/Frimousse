@@ -4,7 +4,6 @@ const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// GET /api/notifications - list notifications for current user (paginated)
 router.get('/', auth, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -23,7 +22,6 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// GET /api/notifications/unread-count - return number of unread notifications for current user
 router.get('/unread-count', auth, async (req, res) => {
   try {
     const userId = req.user.id;

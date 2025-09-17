@@ -65,8 +65,6 @@ app.use(
   })
 );
 
-app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
-
 app.use(express.json());
 app.use(cookieParser());
 

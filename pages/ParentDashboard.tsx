@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 import ParentCard from '../components/ParentCard';
@@ -26,6 +27,7 @@ type UserInfo = {
 
 const ParentDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useI18n();
   const authUser = user as AuthUser;
   const isAdminView = (u: AuthUser) => {
     if (!u) return false;
@@ -165,8 +167,8 @@ const ParentDashboard: React.FC = () => {
         children: children.map(c => ({ child: c }))
       } : null;
 
-  if (loading) return <div className="p-6">Chargement...</div>;
-  if (error) return <div className="p-6 text-red-600">Erreur: {error}</div>;
+  if (loading) return <div className="p-6">{t('loading')}</div>;
+  if (error) return <div className="p-6 text-red-600">{t('global.error') || 'Erreur'}: {error}</div>;
 
 
   if (isAdminView(authUser)) {
@@ -177,12 +179,12 @@ const ParentDashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto w-full">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">Gestion des parents</h1>
-              <div className="text-gray-400 text-base">Gérez les comptes parents, contacts et enfants associés.</div>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">{t('page.parent')}</h1>
+              <div className="text-gray-400 text-base">{t('page.parent.description')}</div>
             </div>
             <div className="flex gap-2 items-center">
               {(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.nannyId == null)) && (
-                <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center">Ajouter un parent</button>
+                <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center">{t('parent.add')}</button>
               )}
             </div>
           </div>
@@ -191,15 +193,15 @@ const ParentDashboard: React.FC = () => {
             <div className="w-full">
               <div className="flex gap-2 items-center flex-wrap w-full">
                 <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
-                  <div className="text-xs text-gray-400">Total</div>
+                  <div className="text-xs text-gray-400">{t('stats.total')}</div>
                   <div className="text-lg font-bold text-gray-900">{stats.parentsCount}</div>
                 </div>
                 <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
-                  <div className="text-xs text-gray-400">Actifs</div>
+                  <div className="text-xs text-gray-400">{t('stats.active')}</div>
                   <div className="text-lg font-bold text-gray-900">{parents.filter(p => p.children && p.children.length > 0).length}</div>
                 </div>
                 <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
-                  <div className="text-xs text-gray-400">Nouveaux</div>
+                  <div className="text-xs text-gray-400">{t('stats.new')}</div>
                   <div className="text-lg font-bold text-gray-900">{parents.filter(p => {
                     if (!p.createdAt) return false;
                     const created = new Date(p.createdAt);
@@ -212,7 +214,7 @@ const ParentDashboard: React.FC = () => {
               </div>
             </div>
             <div className="w-full md:w-auto">
-              <input type="text" placeholder="Rechercher par nom, email..." className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
+              <input type="text" placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
             </div>
           </div>
 
@@ -294,21 +296,21 @@ const ParentDashboard: React.FC = () => {
                 else setFormError('Erreur');
               }
             }} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-              <input name="firstName" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} placeholder="Prénom" required className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="lastName" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder="Nom" required className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="Email" required className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="phone" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="Téléphone" className="border rounded px-3 py-2 text-xs md:text-base" />
+              <input name="firstName" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} placeholder={t('parent.form.firstName')} required className="border rounded px-3 py-2 text-xs md:text-base" />
+              <input name="lastName" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder={t('parent.form.lastName')} required className="border rounded px-3 py-2 text-xs md:text-base" />
+              <input name="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={t('parent.form.email')} required className="border rounded px-3 py-2 text-xs md:text-base" />
+              <input name="phone" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder={t('parent.form.phone')} className="border rounded px-3 py-2 text-xs md:text-base" />
               <div className="relative">
-                <input name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder="Mot de passe (laisser vide pour envoyer une invitation)" className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
+                <input name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={t('parent.form.password.placeholder')} className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
                 <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button>
               </div>
               <div className="relative">
-                <input name="confirmPassword" type={showPw ? 'text' : 'password'} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder="Confirmer le mot de passe" className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
+                <input name="confirmPassword" type={showPw ? 'text' : 'password'} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder={t('parent.form.confirmPassword.placeholder')} className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
                 <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button>
               </div>
               <div className="md:col-span-2 flex gap-2">
-                <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingParent ? 'Enregistrer' : 'Ajouter'}</button>
-                <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); setFormError(null); }} className="bg-gray-300 px-4 py-2 rounded">Annuler</button>
+                <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingParent ? t('parent.form.submit.save') : t('parent.form.submit.add')}</button>
+                <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); setFormError(null); }} className="bg-gray-300 px-4 py-2 rounded">{t('parent.form.cancel')}</button>
               </div>
               {formError && <div className="text-red-600 md:col-span-2">{formError}</div>}
               {successMessage && <div className="md:col-span-2 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMessage}</div>}
@@ -339,10 +341,10 @@ const ParentDashboard: React.FC = () => {
           {deletingParentId && (
             <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
               <div className="bg-white rounded-lg shadow p-6 w-full max-w-md">
-                <div className="text-lg font-semibold mb-4 text-gray-900">Confirmer la suppression</div>
-                <div className="text-sm text-gray-600 mb-4">Voulez-vous vraiment supprimer ce parent ? Cette action est irréversible.</div>
+                <div className="text-lg font-semibold mb-4 text-gray-900">{t('modal.delete.title')}</div>
+                <div className="text-sm text-gray-600 mb-4">{t('parent.delete.confirm_body')}</div>
                 <div className="flex gap-3">
-                  <button onClick={() => setDeletingParentId(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2">Annuler</button>
+                  <button onClick={() => setDeletingParentId(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2">{t('modal.cancel')}</button>
                   <button onClick={async () => {
                     try {
                       const res = await fetchWithRefresh(`api/parent/${deletingParentId}`, { method: 'DELETE', credentials: 'include' });
@@ -371,7 +373,7 @@ const ParentDashboard: React.FC = () => {
                       }
                       setDeletingParentId(null);
                     }
-                  }} className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2">Supprimer</button>
+                  }} className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2">{t('children.action.delete')}</button>
                 </div>
               </div>
             </div>

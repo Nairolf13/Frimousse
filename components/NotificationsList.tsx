@@ -1,5 +1,6 @@
 // React import not required with new JSX runtime
 import { useState } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 
 export type NotificationItem = {
   id: string;
@@ -20,17 +21,18 @@ type Props = {
 export default function NotificationsList({ items = [], loading = false, onRefresh = () => {}, onDeleted = () => {} }: Props) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const { t } = useI18n();
 
   function relativeTime(dateLike: string | Date) {
     const d = new Date(String(dateLike));
     const diff = Date.now() - d.getTime();
     const mins = Math.round(diff / 60000);
-    if (mins < 1) return 'now';
-    if (mins < 60) return `${mins} min`;
+    if (mins < 1) return t('time.now');
+    if (mins < 60) return t('time.minutes', { n: String(mins) });
     const hours = Math.round(mins / 60);
-    if (hours < 24) return `${hours}h`;
+    if (hours < 24) return t('time.hours', { n: String(hours) });
     const days = Math.round(hours / 24);
-    return `${days}j`;
+    return t('time.days', { n: String(days) });
   }
 
   async function markRead(id: string) {
@@ -69,8 +71,8 @@ export default function NotificationsList({ items = [], loading = false, onRefre
     }
   }
 
-  if (loading) return <div className="text-gray-600">Chargement...</div>;
-  if (!items || items.length === 0) return <div className="text-gray-500">Aucune notification.</div>;
+  if (loading) return <div className="text-gray-600">{t('notifications.loading')}</div>;
+  if (!items || items.length === 0) return <div className="text-gray-500">{t('notifications.none')}</div>;
 
   const cardColors = [
     'bg-blue-50',
@@ -85,8 +87,8 @@ export default function NotificationsList({ items = [], loading = false, onRefre
     <>
     <ul className="space-y-4">
       {items.map((n: NotificationItem, idx: number) => {
-        const maybeData = n.data && typeof n.data === 'object' ? n.data as Record<string, unknown> : null;
-        const t = (maybeData && typeof maybeData.type === 'string') ? (maybeData.type as string) : '';
+  const maybeData = n.data && typeof n.data === 'object' ? n.data as Record<string, unknown> : null;
+  const dtype = (maybeData && typeof maybeData.type === 'string') ? (maybeData.type as string) : '';
         const map: Record<string, string> = {
           activity: 'bg-emerald-500',
           message: 'bg-sky-500',
@@ -94,7 +96,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
           report: 'bg-violet-500',
           system: 'bg-red-500'
         };
-        const bg = map[t] || 'bg-indigo-500';
+  const bg = map[dtype] || 'bg-indigo-500';
         const tags = maybeData && Array.isArray(maybeData.tags) ? (maybeData.tags as string[]) : [];
 
         function renderIcon(type: string, small = false) {
@@ -135,7 +137,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
             {/* mobile top: icon left, time right */}
             <div className="w-full flex items-center justify-between sm:hidden">
               <div className="flex items-center">
-                <div className={`w-8 h-8 rounded-lg ${iconCls} flex items-center justify-center text-base font-bold`}>{renderIcon(t, true)}</div>
+                <div className={`w-8 h-8 rounded-lg ${iconCls} flex items-center justify-center text-base font-bold`}>{renderIcon(dtype, true)}</div>
               </div>
               <div className="text-xs text-gray-500">{relativeTime(n.createdAt)}</div>
             </div>
@@ -143,7 +145,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
             {/* desktop row */}
             <div className="hidden sm:flex items-start gap-3">
               <div className="w-12 flex-shrink-0">
-                <div className={`w-12 h-12 rounded-lg ${iconCls} flex items-center justify-center text-xl font-bold`}>{renderIcon(t, false)}</div>
+                <div className={`w-12 h-12 rounded-lg ${iconCls} flex items-center justify-center text-xl font-bold`}>{renderIcon(dtype, false)}</div>
               </div>
 
               <div className="flex-1 px-3">
@@ -165,7 +167,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
                     const isRead = !!n.read;
                     const btnCls = isRead ? 'px-3 py-2 rounded-full bg-gray-100 text-gray-600 border border-gray-100' : 'px-3 py-2 rounded-full bg-blue-600 text-white border border-blue-600';
                     return (
-                      <button onClick={() => isRead ? markUnread(n.id) : markRead(n.id)} className={btnCls} title={isRead ? 'Marquer comme non lu' : 'Marquer comme lu'}>
+                      <button onClick={() => isRead ? markUnread(n.id) : markRead(n.id)} className={btnCls} title={isRead ? t('notifications.mark_unread') : t('notifications.mark_read')}>
                         {isRead ? (
                           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12a9 9 0 1 0-9 9" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 3l6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
                         ) : (
@@ -204,7 +206,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
                 const isRead = !!n.read;
                 const btnCls = isRead ? 'px-3 py-2 rounded-full bg-gray-100 text-gray-600 border border-gray-100' : 'px-3 py-2 rounded-full bg-blue-600 text-white border border-blue-600';
                 return (
-                  <button onClick={() => isRead ? markUnread(n.id) : markRead(n.id)} className={btnCls} title={isRead ? 'Marquer comme non lu' : 'Marquer comme lu'}>
+                  <button onClick={() => isRead ? markUnread(n.id) : markRead(n.id)} className={btnCls} title={isRead ? t('notifications.mark_unread') : t('notifications.mark_read')}>
                     {isRead ? (
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12a9 9 0 1 0-9 9" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 3l6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     ) : (
@@ -231,17 +233,18 @@ export default function NotificationsList({ items = [], loading = false, onRefre
 }
 
 function DeleteModal({ id, open, onCancel, onConfirm, loading }: { id: string | null; open: boolean; onCancel: () => void; onConfirm: (id: string) => void; loading: boolean; }) {
+  const { t } = useI18n();
   if (!open || !id) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
         <button onClick={onCancel} className="absolute top-3 right-3 text-gray-500">×</button>
   <div className="text-red-500 text-4xl mb-2 mt-2 flex justify-center">🗑️</div>
-        <div className="text-lg font-semibold mb-2 text-gray-900 text-center">Confirmer la suppression</div>
-        <div className="text-gray-500 mb-6 text-center">Voulez-vous vraiment supprimer cette notification ?</div>
+        <div className="text-lg font-semibold mb-2 text-gray-900 text-center">{t('notifications.confirm_delete.title')}</div>
+        <div className="text-gray-500 mb-6 text-center">{t('notifications.confirm_delete.body')}</div>
         <div className="flex gap-3 w-full">
-          <button onClick={onCancel} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 font-medium hover:bg-gray-200 transition" disabled={loading}>Annuler</button>
-          <button onClick={() => onConfirm(id)} className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 font-medium hover:bg-red-600 transition shadow" disabled={loading}>{loading ? 'Suppression...' : 'Supprimer'}</button>
+          <button onClick={onCancel} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 font-medium hover:bg-gray-200 transition" disabled={loading}>{t('notifications.confirm_delete.cancel')}</button>
+          <button onClick={() => onConfirm(id)} className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 font-medium hover:bg-red-600 transition shadow" disabled={loading}>{loading ? t('notifications.deleting') : t('notifications.confirm_delete.confirm')}</button>
         </div>
       </div>
     </div>

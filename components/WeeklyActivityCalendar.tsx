@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import Select from 'react-select';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -21,15 +22,7 @@ interface Nanny {
   name: string;
 }
 
-const weekDays = [
-  { label: 'Lundi', short: 'Lun' },
-  { label: 'Mardi', short: 'Mar' },
-  { label: 'Mercredi', short: 'Mer' },
-  { label: 'Jeudi', short: 'Jeu' },
-  { label: 'Vendredi', short: 'Ven' },
-  { label: 'Samedi', short: 'Sam' },
-  { label: 'Dimanche', short: 'Dim' },
-];
+// weekday labels are computed dynamically using the current locale
 
 function getWeekDates(date: Date) {
   const monday = new Date(date);
@@ -185,7 +178,13 @@ export default function WeeklyActivityCalendar() {
   }
 
   const weekDates = getWeekDates(currentDate);
-  const weekLabel = `${weekDates[0].toLocaleDateString()} - ${weekDates[6].toLocaleDateString()}`;
+  const { locale, t } = useI18n();
+  const weekdayLabels = weekDates.map(d => ({
+    label: new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(d),
+    short: new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(d),
+  }));
+
+  const weekLabel = `${new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(weekDates[0])} - ${new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(weekDates[6])}`;
 
   const { user } = useAuth();
   const isParent = !!user && String(user.role || '').toLowerCase() === 'parent';
@@ -195,14 +194,14 @@ export default function WeeklyActivityCalendar() {
       <div className="w-full max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">Planning des activités</h1>
+            <h1 className="text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">{t('activities.title')}</h1>
             <div className="text-lg text-gray-500 font-medium">{weekLabel}</div>
           </div>
           <div className="flex items-center gap-2 mt-2 md:mt-0">
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#60;</button>
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#62;</button>
             {!isParent && (
-              <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base ml-2">+ Ajouter une activité</button>
+              <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base ml-2">{t('activities.add')}</button>
             )}
           </div>
         </div>
@@ -211,11 +210,11 @@ export default function WeeklyActivityCalendar() {
             <table className="min-w-[600px] w-full border-separate border-spacing-0 bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 rounded-2xl shadow-xl border border-blue-100" style={{ tableLayout: 'fixed' }}>
               <thead>
                 <tr>
-                  <th className="font-bold text-xs md:text-base p-2 md:p-3 border-b w-16 md:w-20" style={{ background: '#f7f4d7', color: '#08323a', borderColor: '#cfeef9' }}>Heure</th>
+                  <th className="font-bold text-xs md:text-base p-2 md:p-3 border-b w-16 md:w-20" style={{ background: '#f7f4d7', color: '#08323a', borderColor: '#cfeef9' }}>{t('activities.table.hour')}</th>
                   {weekDates.map((date, i) => (
                     <th key={i} className="font-bold p-2 md:p-3 text-center border-b" style={{ width: '12.5%', background: '#f7f4d7', color: '#08323a', borderColor: '#cfeef9' }}>
-                      <div className="text-xs md:text-base">{weekDays[i].label}</div>
-                      <div className="text-[10px] md:text-xs text-gray-400">{date.toLocaleDateString()}</div>
+                      <div className="text-xs md:text-base">{weekdayLabels[i].label}</div>
+                      <div className="text-[10px] md:text-xs text-gray-400">{new Intl.DateTimeFormat(locale).format(date)}</div>
                     </th>
                   ))}
                 </tr>
@@ -288,14 +287,14 @@ export default function WeeklyActivityCalendar() {
               const dayActivities = activities.filter(a => a.date.split('T')[0] === dateStr);
               const slots = [
                 {
-                  label: 'Matin ',
+                  label: t('activities.slot.morning'),
                   color: 'bg-yellow-50 border-yellow-200 text-yellow-800',
                   emoji: '🌞',
                   start: 7,
                   end: 12,
                 },
                 {
-                  label: 'Après-midi ',
+                  label: t('activities.slot.afternoon'),
                   color: 'bg-blue-50 border-blue-200 text-blue-800',
                   emoji: '🌤️',
                   start: 12,
@@ -305,11 +304,11 @@ export default function WeeklyActivityCalendar() {
               return (
                 <div key={i} className="bg-white rounded-2xl shadow border border-gray-100 p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold text-base text-gray-700">{weekDays[i].label}</span>
-                    <span className="text-xs text-gray-400">{date.toLocaleDateString()}</span>
+                    <span className="font-bold text-base text-gray-700">{weekdayLabels[i].label}</span>
+                    <span className="text-xs text-gray-400">{new Intl.DateTimeFormat(locale).format(date)}</span>
                   </div>
                   {dayActivities.length === 0 ? (
-                    <div className="text-xs text-gray-400 italic">Aucune activité</div>
+                    <div className="text-xs text-gray-400 italic">{t('activities.none')}</div>
                   ) : (
                     <div className="flex flex-col gap-4">
                       {slots.map(slot => {
@@ -363,15 +362,15 @@ export default function WeeklyActivityCalendar() {
                 <span className="font-extrabold text-xl text-pink-700 mb-2">{selectedActivity.name}</span>
               </div>
               <div className="w-full flex flex-col gap-2 mb-2">
-                <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">Date :</span> <span>{selectedActivity.date ? selectedActivity.date.split('T')[0] : ''}</span></div>
-                <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">Début :</span> <span>{selectedActivity.startTime}</span></div>
-                <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">Fin :</span> <span>{selectedActivity.endTime}</span></div>
+                <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">{t('assignment.modal.date')}:</span> <span>{selectedActivity.date ? selectedActivity.date.split('T')[0] : ''}</span></div>
+                <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">{t('label.start')}:</span> <span>{selectedActivity.startTime}</span></div>
+                <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">{t('label.end')}:</span> <span>{selectedActivity.endTime}</span></div>
                 {selectedActivity.comment && (
-                  <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">Commentaire :</span> <span>{selectedActivity.comment}</span></div>
+                  <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">{t('label.comment')}:</span> <span>{selectedActivity.comment}</span></div>
                 )}
                 {(selectedActivity.nannies && selectedActivity.nannies.length > 0) ? (
                   <div className="flex flex-col gap-2 text-gray-700 text-base">
-                    <span className="font-semibold">Nounous :</span>
+                    <span className="font-semibold">{t('activities.modal.nannies_label')}:</span>
                     <div className="flex flex-wrap gap-2 min-h-[40px]">
                       {selectedActivity.nannies.map(nanny => (
                         <span key={nanny.id} className="px-3 py-1 rounded-full font-semibold text-sm shadow flex items-center justify-center text-center min-w-[80px]" style={{ background: '#a9ddf2', color: '#08323a', border: '1px solid #cfeef9' }}>
@@ -382,9 +381,9 @@ export default function WeeklyActivityCalendar() {
                   </div>
                 ) : (selectedActivity.nannyIds && selectedActivity.nannyIds.length > 0) ? (
                   <div className="flex flex-col gap-2 text-gray-700 text-base">
-                    <span className="font-semibold">Nounous :</span>
+                    <span className="font-semibold">{t('activities.modal.nannies_label')}:</span>
                     {nannies.length === 0 && (
-                      <span className="text-red-500">Aucune nounou chargée (vérifie l'API ou la base de données)</span>
+                      <span className="text-red-500">{t('activities.modal.no_nannies_loaded')}</span>
                     )}
                     <div className="flex flex-wrap gap-2 min-h-[40px]">
                       {selectedActivity.nannyIds.map(id => {
@@ -422,7 +421,7 @@ export default function WeeklyActivityCalendar() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
     <div className="rounded-2xl shadow-2xl p-8 w-full max-w-md relative bg-white border border-gray-100">
             <button onClick={() => setAdding(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-            <h2 className="text-2xl font-extrabold mb-4 text-center" style={{ color: '#0b5566' }}>{selectedActivity ? 'Modifier une activité' : 'Ajouter une activité'}</h2>
+            <h2 className="text-2xl font-extrabold mb-4 text-center" style={{ color: '#0b5566' }}>{selectedActivity ? t('activities.modal.edit') : t('activities.modal.add')}</h2>
             <form className="space-y-4 mb-2" onSubmit={e => { e.preventDefault(); handleAddActivity(); }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -439,22 +438,22 @@ export default function WeeklyActivityCalendar() {
                 </div>
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Début</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">{t('label.start')}</label>
           <input type="time" min="07:00" max="19:00" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Fin</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">{t('label.end')}</label>
           <input type="time" min="07:00" max="19:00" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Nom de l'activité</label>
-        <input type="text" placeholder="Nom de l'activité" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
+    <label className="block text-sm font-semibold text-gray-700 mb-1">{t('label.activityName') || 'Nom de l\'activité'}</label>
+  <input type="text" placeholder={t('label.activityName') || 'Nom de l\'activité'} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Commentaire (optionnel)</label>
-                <input type="text" placeholder="Commentaire" value={form.comment} onChange={e => setForm(f => ({ ...f, comment: e.target.value }))} className="border border-blue-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400" />
+                <label className="block text-sm font-semibold text-gray-700 mb-1">{t('label.comment.optional') || 'Commentaire (optionnel)'}</label>
+                <input type="text" placeholder={t('label.comment') || 'Commentaire'} value={form.comment} onChange={e => setForm(f => ({ ...f, comment: e.target.value }))} className="border border-blue-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Nannies assignées</label>
@@ -465,7 +464,7 @@ export default function WeeklyActivityCalendar() {
                   onChange={selected => {
                     setForm(f => ({ ...f, nannyIds: selected ? (selected as { value: string; label: string }[]).map(s => s.value) : [] }));
                   }}
-                  placeholder="Sélectionne les nounous..."
+                  placeholder={t('children.nannies.label')}
                   className="react-select-container"
                   classNamePrefix="react-select"
                   styles={{
@@ -475,9 +474,9 @@ export default function WeeklyActivityCalendar() {
                   }}
                 />
               </div>
-              <div className="flex gap-2 mt-4">
-                <button type="submit" className="flex-1 bg-[#0b5566] text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition">{selectedActivity ? 'Modifier' : 'Ajouter'}</button>
-                <button type="button" onClick={() => setAdding(false)} className="flex-1 bg-gray-300 px-4 py-2 rounded-lg font-bold">Annuler</button>
+                <div className="flex gap-2 mt-4">
+                <button type="submit" className="flex-1 bg-[#0b5566] text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition">{selectedActivity ? t('activities.modal.edit') ?? 'Modifier' : t('activities.modal.add') ?? 'Ajouter'}</button>
+                <button type="button" onClick={() => setAdding(false)} className="flex-1 bg-gray-300 px-4 py-2 rounded-lg font-bold">{t('global.cancel') ?? 'Annuler'}</button>
               </div>
             </form>
           </div>
