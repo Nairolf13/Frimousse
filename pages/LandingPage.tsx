@@ -269,9 +269,38 @@
                     </ul>
 
                     {/* Testimonial snippet - small social proof to increase CTR */}
-                    <div className="mt-6 bg-white rounded-lg p-4 shadow-sm border border-[#f0e9e6] max-w-xl mx-auto text-left">
-                      <div className="font-semibold text-[#0b5566]">« Frimousse a transformé notre gestion quotidienne — inscription, planning et communication en un seul outil. »</div>
-                      <div className="text-sm text-gray-600">— Association Les Petits Pas</div>
+                    <div className="mt-6 max-w-xl mx-auto">
+                      <div className="bg-white rounded-lg p-6 shadow-sm border border-[#f0e9e6]">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1" aria-hidden>
+                            {/* 5 filled stars */}
+                            <svg className="w-5 h-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.487 2.678c-.785.57-1.84-.197-1.54-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.525 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.05 2.927z" />
+                            </svg>
+                            <svg className="w-5 h-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.487 2.678c-.785.57-1.84-.197-1.54-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.525 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.05 2.927z" />
+                            </svg>
+                            <svg className="w-5 h-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.487 2.678c-.785.57-1.84-.197-1.54-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.525 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.05 2.927z" />
+                            </svg>
+                            <svg className="w-5 h-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.487 2.678c-.785.57-1.84-.197-1.54-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.525 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.05 2.927z" />
+                            </svg>
+                            <svg className="w-5 h-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.487 2.678c-.785.57-1.84-.197-1.54-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.525 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.05 2.927z" />
+                            </svg>
+                          </div>
+                          <div className="text-sm text-gray-500">Note moyenne : <span className="font-semibold text-[#0b5566]">5/5</span></div>
+                        </div>
+
+                        <blockquote className="mt-3 text-[#0b5566] font-semibold text-lg leading-relaxed">« Frimousse a transformé notre gestion quotidienne, inscription, planning et communication en un seul outil. »</blockquote>
+                        <cite className="block mt-3 text-sm text-gray-600 not-italic">Association Les Petites Frimousses</cite>
+
+                        <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+                          <div>Publié le 12 septembre 2025</div>
+                          {/* <a href="/about#testimonials" className="text-[#0b5566] underline hover:no-underline">Voir plus d'avis</a> */}
+                        </div>
+                      </div>
                     </div>
 
 
