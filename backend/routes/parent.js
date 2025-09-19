@@ -215,15 +215,8 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
             html = null;
           }
 
-          const subjects = { fr: 'Invitation - Accès Frimousse', en: 'Invitation - Access Frimousse' };
-          const mailOptions = {
-            from: process.env.SMTP_FROM || `no-reply@${process.env.SMTP_HOST || 'example.com'}`,
-            to: email,
-            subject: subjects[lang] || subjects.fr,
-            text: `Bonjour ${firstName || ''},\n\nUn compte parent a été créé pour vous sur Frimousse.\n\nCliquez ici pour définir votre mot de passe : ${inviteUrl}\n\nCe lien expirera dans 7 jours.\n\nMerci,\nL'équipe Frimousse`,
-            html: html || undefined,
-          };
-          await transporter.sendMail(mailOptions);
+          const subject = lang === 'fr' ? 'Invitation - Accès Frimousse' : 'Invitation - Access Frimousse';
+          await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_parent', lang, to: email, subject, substitutions: { name: firstName || '', inviteUrl }, prisma });
           
         } catch (err) {
           console.error('Failed to send invite email', err && err.message ? err.message : err);
