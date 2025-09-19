@@ -34,7 +34,7 @@ async function resolveUserCenter(prismaClient, userRecord) {
 router.get('/me', auth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
-    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true }
+    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true }
   });
   if (!user) return res.status(404).json({ message: 'User not found' });
   res.json(user);
@@ -88,12 +88,7 @@ router.delete('/', auth, async (req, res) => {
       // Remove the user record (after we've removed records that reference the user)
       await tx.user.delete({ where: { id: user.id } });
 
-  // Do NOT delete Parent or Nanny entities or their histories.
-  // Preserve:
-  // - assignments, reports for nannies
-  // - paymentHistory, parentChild, photoConsents for parents
-  // We only remove user-owned data (tokens, posts, likes, comments, notifications, push subscriptions, subscriptions)
-  // Defensive cleanup of user-scoped things (in case anything remains)
+  
   await tx.pushSubscription.deleteMany({ where: { userId: user.id } });
   await tx.notification.deleteMany({ where: { userId: user.id } });
     });
@@ -108,14 +103,15 @@ router.delete('/', auth, async (req, res) => {
 // Update current user's basic info (name, email)
 router.put('/me', auth, async (req, res) => {
   try {
-  const { name, email } = req.body || {};
-    if (!name && !email) return res.status(400).json({ error: 'No fields to update' });
+  const { name, email, notifyByEmail } = req.body || {};
+    if (!name && !email && typeof notifyByEmail === 'undefined') return res.status(400).json({ error: 'No fields to update' });
 
     const data = {};
     if (typeof name === 'string') data.name = name;
-  if (typeof email === 'string') data.email = String(email || '').trim().toLowerCase();
+    if (typeof email === 'string') data.email = String(email || '').trim().toLowerCase();
+    if (typeof notifyByEmail === 'boolean') data.notifyByEmail = notifyByEmail;
 
-    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true } });
+    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true } });
     res.json(updated);
   } catch (e) {
     const msg = e && e.code === 'P2002' ? 'Email déjà utilisé' : (e && e.message ? e.message : String(e));
@@ -147,8 +143,6 @@ router.put('/password', auth, async (req, res) => {
   }
 });
 
-// Admin: change another user's password (admin/super-admin only)
-// PUT /api/user/:id/password with body { newPassword }
 router.put('/:id/password', auth, async (req, res) => {
   try {
     const { id } = req.params;

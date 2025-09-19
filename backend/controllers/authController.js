@@ -100,7 +100,7 @@ exports.register = async (req, res) => {
 
   (async () => {
     try {
-      if (process.env.SMTP_HOST && user.email) {
+  if (process.env.SMTP_HOST && user.email) {
         const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
           port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
@@ -119,15 +119,8 @@ exports.register = async (req, res) => {
         } catch (e) {
           html = null;
         }
-        const subjects = { fr: 'Bienvenue sur Frimousse', en: 'Welcome to Frimousse' };
-        const mailOptions = {
-          from: process.env.SMTP_FROM || `no-reply@${process.env.SMTP_HOST || 'example.com'}`,
-          to: user.email,
-          subject: subjects[lang] || subjects.fr,
-          text: `Bonjour ${user.name || ''},\n\nBienvenue sur Frimousse ! Connectez-vous: ${frontendUrl}/login`,
-          html: html || undefined,
-        };
-        await transporter.sendMail(mailOptions);
+        const subject = lang === 'fr' ? 'Bienvenue sur Frimousse' : 'Welcome to Frimousse';
+        await require('../lib/email').sendTemplatedMail({ templateName: 'welcome', lang, to: user.email, subject, substitutions: { name: user.name || '', loginUrl: `${frontendUrl}/login` }, prisma });
       }
     } catch (err) {
       console.error('Failed to send welcome email', err);
@@ -163,30 +156,24 @@ exports.registerSubscribeInit = async (req, res) => {
       userData.centerId = center.id;
     }
 
-    let user;
-    try {
-      user = await prisma.user.create({ data: userData });
-    } catch (err) {
-      if (err && err.code === 'P2002') return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
-      console.error('registerSubscribeInit user create error', err);
-      return res.status(500).json({ error: 'Erreur lors de la création du compte' });
-    }
-
-    const customer = await stripe.customers.create({ email: user.email, name: user.name });
-    await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customer.id } });
-
-    const setupIntent = await stripe.setupIntents.create({ customer: customer.id, payment_method_types: ['card'] });
-
-    (async () => {
-      try {
+        try {
+        // fallback SMTP path is handled here (this area uses nodemailer directly and not sendTemplatedMail)
         const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
         const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-        await sendTemplatedMail({ templateName: 'welcome', lang, to: user.email, subject: lang === 'fr' ? 'Bienvenue sur Frimousse' : 'Welcome to Frimousse', substitutions: { name: user.name, loginUrl: process.env.FRONTEND_URL ? `${process.env.FRONTEND_URL}/login` : 'http://localhost:5173/login' } });
-      } catch (e) {
-        console.error('Failed to send welcome email (registerSubscribeInit)', e && e.message ? e.message : e);
+        const templatePath = `${__dirname}/../emailTemplates/welcome_${lang}.html`;
+        const fs = require('fs');
+        let html = null;
+        try {
+          html = fs.readFileSync(templatePath, 'utf8');
+          html = html.replace(/{{name}}/g, user.name || '').replace(/{{loginUrl}}/g, `${frontendUrl}/login`);
+        } catch (e) {
+          html = null;
+        }
+        const subject = lang === 'fr' ? 'Bienvenue sur Frimousse' : 'Welcome to Frimousse';
+        await require('../lib/email').sendTemplatedMail({ templateName: 'welcome', lang, to: user.email, subject, substitutions: { name: user.name || '', loginUrl: `${frontendUrl}/login` }, prisma });
+      } catch (err) {
+        console.error('Failed to send welcome email', err);
       }
-    })();
-
     // create a short-lived subscribe token so we can start a Checkout session without being logged in
     const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
 
@@ -455,7 +442,7 @@ exports.forgotPassword = async (req, res) => {
     const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
     const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
     try {
-      await sendTemplatedMail({ templateName: 'reset', lang, to: user.email, subject: lang === 'fr' ? 'Réinitialiser votre mot de passe' : 'Reset your password', substitutions: { name: user.name || '', resetUrl } });
+  await sendTemplatedMail({ templateName: 'reset', lang, to: user.email, subject: lang === 'fr' ? 'Réinitialiser votre mot de passe' : 'Reset your password', substitutions: { name: user.name || '', resetUrl }, prisma });
     } catch (e) {
       console.error('Failed to send reset email', e && e.message ? e.message : e);
     }

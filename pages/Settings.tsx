@@ -255,6 +255,19 @@ export default function Settings() {
   const { t, setLocale } = useI18n();
 
   useEffect(() => {
+    // load current user's notifyByEmail preference
+    (async () => {
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/user/me`, { credentials: 'include' });
+        if (res.ok) {
+          const u = await res.json();
+          if (u && typeof u.notifyByEmail === 'boolean') setEmailNotifications(!!u.notifyByEmail);
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
     (async () => {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         setPushEnabled(false);
@@ -296,7 +309,13 @@ export default function Settings() {
               </div>
               <div className="mt-4">
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" checked={emailNotifications} onChange={e => setEmailNotifications(e.target.checked)} className="sr-only peer" />
+                  <input type="checkbox" checked={emailNotifications} onChange={async e => {
+                    const val = e.target.checked;
+                    setEmailNotifications(val);
+                    try {
+                      await fetchWithRefresh(`${API_URL}/user/me`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notifyByEmail: val }) });
+                    } catch { /* ignore */ }
+                  }} className="sr-only peer" />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
                 </label>
               </div>
