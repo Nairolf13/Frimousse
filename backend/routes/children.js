@@ -285,10 +285,10 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
           if (nannyUserId) {
             // send email to user account if configured
             try {
-              if (process.env.SMTP_HOST) {
+                  if (process.env.SMTP_HOST) {
                 const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
                 if (nannyUser && nannyUser.email) {
-                  await sendTemplatedMail({ templateName: 'assignment', lang, to: [nannyUser.email], subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' } });
+                  await sendTemplatedMail({ templateName: 'assignment', lang, to: [nannyUser.email], subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' }, prisma });
                 }
               }
             } catch (e) {
@@ -303,9 +303,9 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
             // fallback: email to nanny record if available
             logger.warn('No linked user for nanny when creating child; attempting fallback email', nanny && nanny.id ? nanny.id : null);
             try {
-              if (process.env.SMTP_HOST && (nanny.email || nanny.contactEmail)) {
+                if (process.env.SMTP_HOST && (nanny.email || nanny.contactEmail)) {
                 const to = nanny.email ? [nanny.email] : [nanny.contactEmail];
-                await sendTemplatedMail({ templateName: 'assignment', lang, to, subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' } });
+                await sendTemplatedMail({ templateName: 'assignment', lang, to, subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' }, prisma });
               }
             } catch (e) {
               logger.error('Fallback email to nanny failed when creating child', e && e.message ? e.message : e);
@@ -461,7 +461,7 @@ router.delete('/:id', auth, async (req, res) => {
               if (process.env.SMTP_HOST) {
                 const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
                 if (nannyUser && nannyUser.email) {
-                  await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: [nannyUser.email], subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' } });
+                  await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: [nannyUser.email], subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' }, prisma });
                 }
               }
             } catch (e) {
@@ -477,7 +477,7 @@ router.delete('/:id', auth, async (req, res) => {
             try {
               if (process.env.SMTP_HOST && (nanny.email || nanny.contactEmail)) {
                 const to = nanny.email ? [nanny.email] : [nanny.contactEmail];
-                await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to, subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' } });
+                await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to, subject: title, text, substitutions: { childName: childRec.name || '', nannyName: nanny ? nanny.name : '' }, prisma });
               }
             } catch (e) {
               logger.error('Fallback email to nanny failed on delete', e && e.message ? e.message : e);

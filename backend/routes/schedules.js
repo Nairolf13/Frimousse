@@ -66,9 +66,9 @@ router.post('/schedules', auth, async (req, res) => {
               const nannyUserRec = await prisma.user.findFirst({ where: { nannyId: nid }, select: { id: true, email: true } }).catch(() => null);
               if (nannyUserRec && nannyUserRec.id) nannyUserId = nannyUserRec.id;
               // send email to nanny user if configured
-              if (nannyUserRec && nannyUserRec.email && process.env.SMTP_HOST) {
+                  if (nannyUserRec && nannyUserRec.email && process.env.SMTP_HOST) {
                 try {
-                  await sendTemplatedMail({ templateName: 'activity', lang, to: [nannyUserRec.email], subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' } });
+                  await sendTemplatedMail({ templateName: 'activity', lang, to: [nannyUserRec.email], subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' }, prisma });
                 } catch (e) { logger.error('Failed to send activity email to nanny user', e && e.message ? e.message : e); }
               }
               if (nannyUserId) {
@@ -78,7 +78,7 @@ router.post('/schedules', auth, async (req, res) => {
                 if (process.env.SMTP_HOST && (nannyRec.email || nannyRec.contactEmail)) {
                   try {
                     const to = nannyRec.email ? [nannyRec.email] : [nannyRec.contactEmail];
-                    await sendTemplatedMail({ templateName: 'activity', lang, to, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' } });
+                    await sendTemplatedMail({ templateName: 'activity', lang, to, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' }, prisma });
                   } catch (e) { logger.error('Fallback activity email to nanny failed', e && e.message ? e.message : e); }
                 }
               }
@@ -105,7 +105,7 @@ router.post('/schedules', auth, async (req, res) => {
             // send emails
             if (process.env.SMTP_HOST && parentEmailList.length) {
               try {
-                await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmailList, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' } });
+                await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmailList, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' }, prisma });
               } catch (e) { logger.error('Failed to send activity emails to parents', e && e.message ? e.message : e); }
             }
             // push to parent users (resolve users by parentId)
@@ -151,7 +151,7 @@ router.put('/schedules/:scheduleId', auth, async (req, res) => {
           if (!parentEmails.length) return;
           const subject = (lang === 'fr') ? `Activité mise à jour : ${name || ''}` : `Activity updated: ${name || ''}`;
           const text = (lang === 'fr') ? `Une activité a été mise à jour pour ${new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' })}` : `An activity has been updated for ${new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' })}`;
-          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp' } });
+          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp' }, prisma });
         } catch (err) {
           console.error('Failed to send activity update notification', err && err.message ? err.message : err);
         }
@@ -182,7 +182,7 @@ router.delete('/schedules/:scheduleId', auth, async (req, res) => {
           if (!parentEmails.length) return;
           const subject = (lang === 'fr') ? `Activité supprimée : ${existing.name || ''}` : `Activity removed: ${existing.name || ''}`;
           const text = (lang === 'fr') ? `Une activité a été supprimée pour ${existing.date ? new Date(existing.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }) : ''}` : `An activity has been removed for ${existing.date ? new Date(existing.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }) : ''}`;
-          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: existing.name || '', comment: existing.comment || '', date: existing.date ? new Date(existing.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }) : '', startTime: existing.startTime || '', endTime: existing.endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp' } });
+          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: existing.name || '', comment: existing.comment || '', date: existing.date ? new Date(existing.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }) : '', startTime: existing.startTime || '', endTime: existing.endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/LogoFrimousse.webp' }, prisma });
         } catch (err) {
           console.error('Failed to send activity deletion notification', err && err.message ? err.message : err);
         }

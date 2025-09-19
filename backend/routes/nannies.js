@@ -64,46 +64,23 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
       return res.status(409).json({ message: 'Un utilisateur avec cet email existe déjà et n\'est pas une nounou.' });
     }
 
-    // Send invite email if we created a new user with email
-    if (result.user && process.env.SMTP_HOST) {
-      (async () => {
-        try {
-          const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
-            secure: process.env.SMTP_SECURE === 'true',
-            auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-          });
-          const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-          const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
-          const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
-          const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-          const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-          const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-          const templatePath = `${__dirname}/../emailTemplates/welcome_nanny_${lang}.html`;
-          const fs = require('fs');
-          let html = null;
+      // Send invite email if we created a new user with email using templated mail (respects notifyByEmail)
+      if (result.user && process.env.SMTP_HOST) {
+        (async () => {
           try {
-            html = fs.readFileSync(templatePath, 'utf8');
-            html = html.replace(/{{name}}/g, result.user.name || '').replace(/{{inviteUrl}}/g, inviteUrl);
-          } catch (e) {
-            html = null;
+            const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
+            const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
+            const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
+            const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
+            const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+            const subject = lang === 'fr' ? 'Invitation - Accès Frimousse' : 'Invitation - Access Frimousse';
+            await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_nanny', lang, to: result.user.email, subject, substitutions: { name: result.user.name || '', inviteUrl }, prisma });
+          } catch (err) {
+            console.error('Failed to send nanny invite email', err && err.message ? err.message : err);
           }
-          const subjects = { fr: 'Invitation - Accès Frimousse', en: 'Invitation - Access Frimousse' };
-          const mailOptions = {
-            from: process.env.SMTP_FROM || `no-reply@${process.env.SMTP_HOST || 'example.com'}`,
-            to: result.user.email,
-            subject: subjects[lang] || subjects.fr,
-            text: `Bonjour ${(result.user.name || '').split(/\s+/)[0] || ''},\n\nVous avez reçu une invitation pour rejoindre Frimousse. Connectez-vous ici: ${inviteUrl}`,
-            html: html || undefined,
-          };
-          await transporter.sendMail(mailOptions);
-        } catch (err) {
-          console.error('Failed to send nanny invite email', err && err.message ? err.message : err);
-        }
-      })();
-    }
+        })();
+      }
 
     res.status(201).json(result);
   } catch (e) {

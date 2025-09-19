@@ -45,14 +45,9 @@ async function main() {
       try { html = fs.readFileSync(templatePath, 'utf8'); } catch (e) { html = null; }
       if (!html) continue;
       html = html.replace(/{{name}}/g, u.name || '').replace(/{{frontendUrl}}/g, frontendUrl);
-      const mailOptions = {
-        from: process.env.SMTP_FROM || `no-reply@${process.env.SMTP_HOST || 'example.com'}`,
-        to: u.email,
-        subject: lang === 'fr' ? 'Finalisez votre inscription sur Frimousse' : 'Finish your Frimousse signup',
-        html
-      };
       try {
-        await transporter.sendMail(mailOptions);
+        const subject = lang === 'fr' ? 'Finalisez votre inscription sur Frimousse' : 'Finish your Frimousse signup';
+        await require('../lib/email').sendTemplatedMail({ templateName: 'abandoned_signup', lang, to: u.email, subject, substitutions: { name: u.name || '', frontendUrl }, prisma });
         await prisma.abandonedSignupReminder.update({ where: { id: reminder.id }, data: { sentCount: reminder.sentCount + 1, lastSentAt: new Date() } });
         console.log(`Reminder sent to ${u.email}`);
       } catch (e) {

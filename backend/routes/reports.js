@@ -92,7 +92,7 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('report'), asyn
         // send emails
         if (process.env.SMTP_HOST && parentEmails.size) {
           try {
-            await sendTemplatedMail({ templateName: 'report', lang, to: Array.from(parentEmails), subject, text, substitutions: { reportSummary: report.summary || '', reportDetails: report.details || '' } });
+            await sendTemplatedMail({ templateName: 'report', lang, to: Array.from(parentEmails), subject, text, substitutions: { reportSummary: report.summary || '', reportDetails: report.details || '' }, prisma });
           } catch (e) { logger.error('Failed to send report emails to parents', e && e.message ? e.message : e); }
         }
 

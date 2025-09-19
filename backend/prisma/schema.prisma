@@ -87,6 +87,7 @@ model User {
   feedPosts        FeedPost[]
   feedLikes        FeedLike[]
   feedComments     FeedComment[]
+  notifyByEmail    Boolean        @default(true)
 }
 
 model RefreshToken {
@@ -215,6 +216,7 @@ model Center {
   reports     Report[]
   feedPosts   FeedPost[]
   createdAt   DateTime     @default(now())
+  notifyByEmail    Boolean   @default(true)
 }
 
 model Subscription {
