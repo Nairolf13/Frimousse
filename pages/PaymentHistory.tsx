@@ -11,6 +11,17 @@ type RecordType = { id: string; parent: { id?: string; firstName?: string; lastN
 
 export default function PaymentHistoryPage() {
   const { t, locale } = useI18n();
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [data, setData] = useState<RecordType[]>([]);
@@ -190,7 +201,7 @@ export default function PaymentHistoryPage() {
 
 
   return (
-    <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
+    <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
           <div>

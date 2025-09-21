@@ -59,6 +59,7 @@ export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
   const { t } = useI18n();
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
   // consume the global notifications context (single-tab polling)
   const { unreadCount } = useNotificationsContext();
   const centerId = user && (user as { centerId?: string }).centerId;
@@ -67,6 +68,32 @@ export default function Sidebar() {
   useEffect(() => {
     setCenterName(center?.name ?? null);
   }, [center]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(min-width: 768px) and (max-height: 600px)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    // modern API
+    if (typeof mql.addEventListener === 'function') {
+      mql.addEventListener('change', onChange);
+    } else if (typeof mql.addListener === 'function') {
+      // legacy
+      mql.addListener(onChange);
+    }
+    const onResize = () => onChange();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    return () => {
+      if (typeof mql.removeEventListener === 'function') {
+        mql.removeEventListener('change', onChange);
+      } else if (typeof mql.removeListener === 'function') {
+        mql.removeListener(onChange);
+      }
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', onResize);
+    };
+  }, []);
   function displayCenterName(name: string | null) {
     if (!name) return 'Frimousse';
     const trimmed = name.trim();
@@ -91,8 +118,9 @@ export default function Sidebar() {
   }
   return (
     <>
-  <MobileMenu />
-      <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white shadow-lg flex-col p-0 border-r border-gray-100 z-30">
+      <MobileMenu />
+      {!isShortLandscape && (
+        <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white shadow-lg flex-col p-0 border-r border-gray-100 z-30">
          <div className="flex items-center gap-3 px-6 pt-8 pb-6">
           <div className="w-20 h-16 rounded-full overflow-hidden bg-white flex items-center justify-center">
             <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
@@ -124,7 +152,8 @@ export default function Sidebar() {
             <div className="text-xs text-gray-400">{userRole}</div>
           </div>
         </div>
-      </aside>
+        </aside>
+      )}
     </>
   );
 }

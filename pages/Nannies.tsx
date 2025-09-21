@@ -61,6 +61,17 @@ const avatarEmojis = ['🦁', '🐻', '🐱', '🐶', '🦊', '🐼', '🐵', '�
 export default function Nannies() {
   const { t } = useI18n();
   const { user } = useAuth();
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
   const [nannies, setNannies] = useState<Nanny[]>([]);
   const [cotisationStatus, setCotisationStatus] = useState<Record<string, { paidUntil: string | null; loading: boolean }>>({});
   const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number>>({});
@@ -342,9 +353,9 @@ export default function Nannies() {
     (!experienceFilter || (experienceFilter === 'junior' ? n.experience < 3 : n.experience >= 3))
   );
 
+  // remove desktop left padding when device is short landscape so page occupies full width
   return (
-
-    <div className="min-h-screen bg-[#fcfcff] p-2 sm:p-4 md:pl-64 w-full">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full">
           <div>
@@ -356,7 +367,8 @@ export default function Nannies() {
                 <button
                 type="button"
                 onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
-                className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px]"
+                className={`bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] ${isShortLandscape ? '-translate-x-3' : ''}`}
+                style={{transform: isShortLandscape ? 'translateX(-12px)' : undefined}}
               >
                 {t('nanny.add')}
               </button>

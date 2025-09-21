@@ -131,6 +131,17 @@ const emojiBySexe = {
 };
 
 export default function Children() {
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
   const { t } = useI18n();
   const [billings, setBillings] = useState<Record<string, Billing>>({});
   const [children, setChildren] = useState<Child[]>([]);
@@ -434,20 +445,20 @@ export default function Children() {
   ];
 
   return (
-    <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
+    <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full children-responsive-row">
-  {/* Minimal badge for assigned nannies (no dropdown) */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full children-responsive-header">
           <div>
             <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">{t('page.children.title')}</h1>
             <div className="text-gray-400 text-base">{t('page.children.description')}</div>
           </div>
-          <div className="flex gap-2 items-center self-start md:ml-auto children-responsive-btn">
+          <div className="flex gap-2 items-center">
             {isAdminUser && (
               <button
                 type="button"
                 onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
-                className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center"
+                className={`bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center ${isShortLandscape ? '-translate-x-3' : ''}`}
+                style={{transform: isShortLandscape ? 'translateX(-12px)' : undefined}}
               >
                 {t('children.add')}
               </button>
@@ -455,26 +466,36 @@ export default function Children() {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6 w-full filter-responsive-row children-responsive-filters">
-          <div className="flex flex-col md:flex-row gap-3 w-full children-responsive-filters-inner">
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
-            <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base">
-              <option value="">{t('children.group.all')}</option>
-              {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
-            </select>
-            <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base">
-              <option value="name">{t('children.sort.name')}</option>
-              <option value="age">{t('children.sort.age')}</option>
-            </select>
-          </div>
-          <div className="flex gap-2 items-center children-responsive-indicators">
-            <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] min-h-[44px] md:h-[60px] justify-center">
-              <div className="text-xs text-gray-400">{t('children.total')}</div>
-              <div className="text-lg font-bold text-gray-900">{totalChildren}</div>
+        <div className="flex flex-col md:items-start gap-3 mb-6 w-full">
+          <div className="w-full">
+            <div className="flex gap-2 items-center flex-wrap w-full">
+              <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
+                <div className="text-xs text-gray-400">{t('children.total')}</div>
+                <div className="text-lg font-bold text-gray-900">{totalChildren}</div>
+              </div>
+              <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
+                <div className="text-xs text-gray-400">{t('children.present')}</div>
+                <div className="text-lg font-bold text-gray-900">{presentToday}</div>
+              </div>
+              <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
+                <div className="text-xs text-gray-400">{t('children.new_badge')}</div>
+                <div className="text-lg font-bold text-gray-900">{children.filter(c => c.newThisMonth).length}</div>
+              </div>
             </div>
-            <div className="bg-white rounded-xl shadow px-4 py-2 flex flex-col items-center min-w-[90px] min-h-[44px] md:h-[60px] justify-center">
-              <div className="text-xs text-gray-400">{t('children.present')}</div>
-              <div className="text-lg font-bold text-gray-900">{presentToday}</div>
+          </div>
+          <div className="w-full md:w-auto">
+            <div className="flex flex-col md:flex-row md:items-center gap-2">
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
+              <div className="flex gap-2">
+                <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm">
+                  <option value="">{t('children.group.all')}</option>
+                  {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+                </select>
+                <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm">
+                  <option value="name">{t('children.sort.name')}</option>
+                  <option value="age">{t('children.sort.age')}</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>

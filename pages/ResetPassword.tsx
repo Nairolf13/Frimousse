@@ -6,6 +6,7 @@ export default function ResetPassword() {
   const [token, setToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -41,10 +42,25 @@ export default function ResetPassword() {
         <h2 className="text-2xl font-bold mb-4">Réinitialiser le mot de passe</h2>
         {message && <div className="mb-4 text-center text-sm">{message}</div>}
         <label className="block w-full mb-3">Nouveau mot de passe
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2" />
+          <div className="relative mt-1">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(s => !s)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-gray-500 hover:text-gray-700"
+              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+            >
+              {showPassword ? '🙈' : '👁️'}
+            </button>
+          </div>
         </label>
         <label className="block w-full mb-3">Confirmer mot de passe
-          <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2" />
+          <input type={showPassword ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2" />
         </label>
         <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded">Valider</button>
       </form>

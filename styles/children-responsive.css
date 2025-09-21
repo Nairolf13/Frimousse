@@ -7,9 +7,9 @@
     width: 100% !important;
   }
   .children-responsive-header {
-    flex-direction: column !important;
+    flex-direction: row !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: space-between !important;
     width: 100% !important;
     gap: 1rem !important;
   }
@@ -52,9 +52,9 @@
     width: 100% !important;
   }
   .children-responsive-header {
-    flex-direction: column !important;
+    flex-direction: row !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: space-between !important;
     width: 100% !important;
     gap: 1rem !important;
   }

@@ -28,6 +28,17 @@ type UserInfo = {
 const ParentDashboard: React.FC = () => {
   const { user } = useAuth();
   const { t } = useI18n();
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
   const authUser = user as AuthUser;
   const isAdminView = (u: AuthUser) => {
     if (!u) return false;
@@ -175,7 +186,7 @@ const ParentDashboard: React.FC = () => {
   const stats: AdminStats = adminData?.stats ?? { parentsCount: 0, childrenCount: 0, presentToday: 0 };
   const parents: Parent[] = adminData?.parents ?? [];
     return (
-      <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
+      <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
         <div className="max-w-7xl mx-auto w-full">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
             <div>
@@ -184,7 +195,7 @@ const ParentDashboard: React.FC = () => {
             </div>
             <div className="flex gap-2 items-center">
               {(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.nannyId == null)) && (
-                <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className="bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center">{t('parent.add')}</button>
+                <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className={`bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center ${isShortLandscape ? '-translate-x-3' : ''}`} style={{transform: isShortLandscape ? 'translateX(-12px)' : undefined}}>{t('parent.add')}</button>
               )}
             </div>
           </div>
@@ -420,7 +431,7 @@ const ParentDashboard: React.FC = () => {
 
   // Parent view (their children)
   return (
-    <div className="min-h-screen bg-[#fcfcff] p-2 sm:p-4 md:pl-64 w-full">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <h1 className="text-2xl font-semibold mb-4">Espace Parent</h1>
       {parentForCard ? (
