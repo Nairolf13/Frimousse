@@ -33,6 +33,17 @@ function CommentBox({ postId, onSubmit }: { postId: string; onSubmit: (postId: s
 
 export default function Feed() {
   const { t } = useI18n();
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [availableChildren, setAvailableChildren] = useState<{ id: string; name: string; allowed?: boolean }[]>([]);
@@ -421,7 +432,7 @@ export default function Feed() {
   }
 
   return (
-    <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full max-w-full overflow-x-hidden box-border">
+    <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full max-w-full overflow-x-hidden box-border`}>
       <div className="max-w-7xl mx-auto w-full max-w-full px-2 sm:px-4 md:px-6 overflow-x-hidden box-border children-responsive-row">
           <div className="max-w-4xl mx-auto w-full">
             <div className="mb-6 p-0">

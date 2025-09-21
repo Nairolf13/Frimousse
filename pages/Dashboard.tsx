@@ -52,11 +52,23 @@ export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { t, locale } = useI18n();
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
   useEffect(() => {
     if (user && user.nannyId) {
       navigate('/mon-planning', { replace: true });
     }
   }, [user, navigate]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [childrenCount, setChildrenCount] = useState<number>(0);
   const [activeCaregivers, setActiveCaregivers] = useState<number>(0);
@@ -295,7 +307,7 @@ export default function Dashboard() {
   const selectedAssignment = selectedId ? assignments.find(a => a.id === selectedId) : undefined;
 
   return (
-    <div className="relative z-0 min-h-screen bg-[#fcfcff] p-4 md:pl-64 w-full">
+  <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
         <div className="flex-1 min-w-0">
@@ -527,9 +539,21 @@ export default function Dashboard() {
                   <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">{t('modal.delete.title')}</h3>
-                <p className="text-gray-600 text-center mb-1">{t('modal.delete.body.generic')}</p>
+                {/* Render child name and date on separate lines for better presentation */}
                 {selectedAssignment && (
-                  <p className="text-gray-700 font-semibold text-center">Enfant concerné : <span className="text-gray-900">{selectedAssignment.child.name}</span></p>
+                  <div className="text-center">
+                    <p className="text-gray-700 font-semibold">{`Voulez-vous supprimer ${selectedAssignment.child.name}`}</p>
+                    <p className="text-gray-700 font-semibold mt-1">{(() => {
+                      const d = modalInitial?.date || selectedAssignment.date;
+                      let formatted = d;
+                      try {
+                        formatted = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(d));
+                      } catch {
+                        /* ignore formatting errors */
+                      }
+                      return `le ${formatted} ?`;
+                    })()}</p>
+                  </div>
                 )}
               <div className="flex gap-3 w-full">
                 <button
@@ -564,21 +588,37 @@ export default function Dashboard() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
             <button onClick={() => setDayModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-            <h2 className="text-xl font-bold mb-4 text-center">{t('page.children')} {t('common.on_date', { date: dayModalDate })}</h2>
+            <h2 className="text-xl font-bold mb-1 text-center">{t('page.children')}</h2>
+            <div className="text-sm text-gray-500 mb-4 text-center">{dayModalDate}</div>
             {dayModalAssignments.length === 0 ? (
               <div className="text-gray-500 text-center">{t('children.none_on_date', { date: dayModalDate })}</div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-64 overflow-y-auto">
                 {Object.entries(dayModalAssignments.reduce((acc, a) => {
                   if (!acc[a.nanny.name]) acc[a.nanny.name] = [];
-                  acc[a.nanny.name].push(a.child);
+                  acc[a.nanny.name].push(a);
                   return acc;
-                }, {} as Record<string, {id: string, name: string}[]>)).map(([nannyName, children]) => (
+                }, {} as Record<string, Assignment[]>)).map(([nannyName, assigns]) => (
                   <div key={nannyName}>
                     <div className="font-bold text-blue-700 mb-2 text-center">{nannyName}</div>
                     <ul className="space-y-2">
-                      {children.map(child => (
-                        <li key={child.id} className="bg-blue-50 rounded px-3 py-2 text-gray-800 font-semibold text-center border border-blue-100">{child.name}</li>
+                      {assigns.map(a => (
+                        <li
+                          key={a.id}
+                          className="bg-blue-50 rounded px-3 py-2 text-gray-800 font-semibold text-center border border-blue-100 cursor-pointer hover:bg-blue-100 flex items-center justify-between"
+                          title={t('dashboard.click_to_delete_assignment')}
+                          onClick={() => {
+                            // reuse existing delete modal: set selectedId and close the day modal
+                            setSelectedId(a.id);
+                            // close the day modal to show the global delete modal
+                            setDayModalOpen(false);
+                            // set modal initial so the delete modal shows correct child/date context
+                            setModalInitial({ date: a.date.split('T')[0], childId: a.child.id, nannyId: a.nanny.id });
+                          }}
+                        >
+                          <span>{a.child.name}</span>
+                          <span className="text-xs text-red-600 ml-2">{t('modal.delete.confirm')}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>
