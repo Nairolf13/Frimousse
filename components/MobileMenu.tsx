@@ -51,6 +51,56 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null } | n
   ];
 }
 
+function MobileMenuButton({ showOnMd = false, onOpen }: { showOnMd?: boolean; onOpen: () => void }) {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') { setShow(true); return; }
+      const mqlSmall = window.matchMedia('(max-width: 767px)');
+      const mqlShortLandscape = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+
+      const computeShortLandscape = () => {
+        try {
+          // prefer a robust check: orientation + a reasonable viewport height threshold
+          const orientLandscape = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(orientation: landscape)').matches;
+          const h = typeof window !== 'undefined' ? window.innerHeight : Infinity;
+          return orientLandscape && h <= 700;
+        } catch {
+          return mqlShortLandscape.matches;
+        }
+      };
+
+      const update = () => setShow(mqlSmall.matches || (showOnMd && computeShortLandscape()));
+      update();
+
+      // listen to media query changes and also resize/orientation as fallback
+      if (typeof mqlSmall.addEventListener === 'function') mqlSmall.addEventListener('change', update); else mqlSmall.addListener(update);
+      if (typeof mqlShortLandscape.addEventListener === 'function') mqlShortLandscape.addEventListener('change', update); else mqlShortLandscape.addListener(update);
+      window.addEventListener('resize', update);
+      window.addEventListener('orientationchange', update);
+
+      return () => {
+        try { if (typeof mqlSmall.removeEventListener === 'function') mqlSmall.removeEventListener('change', update); else mqlSmall.removeListener(update); } catch { /* ignore */ }
+        try { if (typeof mqlShortLandscape.removeEventListener === 'function') mqlShortLandscape.removeEventListener('change', update); else mqlShortLandscape.removeListener(update); } catch { /* ignore */ }
+        try { window.removeEventListener('resize', update); } catch { /* ignore */ }
+        try { window.removeEventListener('orientationchange', update); } catch { /* ignore */ }
+      };
+    } catch {
+      setShow(true);
+    }
+  }, [showOnMd]);
+  if (!show) return null;
+  return (
+    <button
+      className="fixed top-4 right-4 z-60 bg-white rounded-full p-2 shadow-lg border border-gray-200"
+      onClick={onOpen}
+      aria-label="Ouvrir le menu"
+    >
+      <HiOutlineMenu className="w-7 h-7 text-gray-700" />
+    </button>
+  );
+}
+
 export default function MobileMenu() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
@@ -90,6 +140,20 @@ export default function MobileMenu() {
     }
     return () => { mounted = false; clearInterval(iv); if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') { window.removeEventListener('notifications:changed', onChange as EventListener); } };
   }, []);
+
+  // lock page scroll when mobile menu is open so touch scroll targets the menu
+  useEffect(() => {
+    try {
+      if (open) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    } catch {
+      // ignore in non-browser environments
+    }
+    return () => { try { document.body.style.overflow = ''; } catch { /* ignore */ } };
+  }, [open]);
 
   useEffect(() => {
     let mounted = true;
@@ -145,15 +209,11 @@ export default function MobileMenu() {
 
   return (
     <>
-      <button
-        className="fixed top-4 right-4 z-40 md:hidden bg-white rounded-full p-2 shadow-lg border border-gray-200"
-        onClick={() => setOpen(true)}
-        aria-label="Ouvrir le menu"
-      >
-        <HiOutlineMenu className="w-7 h-7 text-gray-700" />
-      </button>
+      {/* show button on small screens, and also on short landscape (e.g. mobile landscape)
+          but hide the floating burger when the overlay menu is open (so it doesn't remain fixed) */}
+      {!open && <MobileMenuButton showOnMd={true} onOpen={() => setOpen(true)} />}
       {open && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+        <div className="fixed inset-0 z-50 bg-white flex flex-col" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex items-center gap-3 px-6 pt-8 pb-6">
             <div className="w-12 h-12 rounded-full overflow-hidden bg-white flex items-center justify-center">
               <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
@@ -167,8 +227,8 @@ export default function MobileMenu() {
               <HiOutlineX className="w-6 h-6 text-gray-700" />
             </button>
           </div>
-          <nav className="flex-1 px-2">
-            <ul className="space-y-1">
+          <nav className="flex-1 px-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+            <ul className="space-y-1" style={{ paddingBottom: '96px' }}>
               {getNavLinks(user, t).map((link) => (
                 <li key={link.to}>
                   <Link

@@ -180,6 +180,18 @@ export default function ReportsPage() {
   const [childrenList, setChildrenList] = useState<{id: string, name: string, age: number, group: string}[]>([]);
   const [nanniesList, setNanniesList] = useState<{id: string, name: string, role: string}[]>([]);
 
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
+
   useEffect(() => {
     fetchWithRefresh(`${API_URL}/children`)
       .then(res => res.json())
@@ -239,8 +251,8 @@ export default function ReportsPage() {
 
   return (
     <div className="min-h-screen bg-[#f7f8fa] flex flex-col md:flex-row">
-      <Sidebar />
-      <main className="flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-2 md:ml-64">
+      {!isShortLandscape && <Sidebar />}
+      <main className={`flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-2 ${!isShortLandscape ? 'md:ml-64' : ''}`}>
         <div className="w-full max-w-5xl mx-auto">
           <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.reports')}</h1>
           <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.reports.description')}</div>
