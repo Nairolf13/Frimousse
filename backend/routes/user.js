@@ -100,19 +100,51 @@ router.delete('/', auth, async (req, res) => {
   }
 });
 
-// Update current user's basic info (name, email)
+// Update current user's basic info (name, email, address, etc.)
 router.put('/me', auth, async (req, res) => {
   try {
-  const { name, email, notifyByEmail } = req.body || {};
-    if (!name && !email && typeof notifyByEmail === 'undefined') return res.status(400).json({ error: 'No fields to update' });
+    const { name, email, notifyByEmail, address, postalCode, city, region, country, phone, birthDate } = req.body || {};
+    if (!name && !email && typeof notifyByEmail === 'undefined' && typeof address === 'undefined' && typeof postalCode === 'undefined' && typeof city === 'undefined' && typeof region === 'undefined' && typeof country === 'undefined' && typeof phone === 'undefined' && typeof birthDate === 'undefined') {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
 
     const data = {};
     if (typeof name === 'string') data.name = name;
     if (typeof email === 'string') data.email = String(email || '').trim().toLowerCase();
     if (typeof notifyByEmail === 'boolean') data.notifyByEmail = notifyByEmail;
+    // allow updating address fields on the User record (User owns address)
+    if (typeof address !== 'undefined') data.address = address || null;
+    if (typeof postalCode !== 'undefined') data.postalCode = postalCode || null;
+    if (typeof city !== 'undefined') data.city = city || null;
+    if (typeof region !== 'undefined') data.region = region || null;
+    if (typeof country !== 'undefined') data.country = country || null;
 
-    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true } });
-    res.json(updated);
+    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, parentId: true, nannyId: true } });
+
+    // If phone provided, update linked Parent or Nanny contact as appropriate
+    try {
+      if (typeof phone !== 'undefined') {
+        if (updated.parentId) {
+          // update Parent.phone
+          await prisma.parent.update({ where: { id: updated.parentId }, data: { phone: phone || null } });
+        } else if (updated.nannyId) {
+          // update Nanny.contact
+          await prisma.nanny.update({ where: { id: updated.nannyId }, data: { contact: phone || null } });
+        }
+      }
+
+      // If birthDate provided and user is linked to a nanny, update nanny.birthDate
+      if (typeof birthDate !== 'undefined' && updated.nannyId) {
+        await prisma.nanny.update({ where: { id: updated.nannyId }, data: { birthDate: birthDate ? new Date(birthDate) : null } });
+      }
+    } catch (innerErr) {
+      // log but don't fail the whole request
+      console.error('Failed to update linked parent/nanny from /user/me', innerErr && innerErr.message ? innerErr.message : innerErr);
+    }
+
+    // Return freshly updated user (including address fields)
+    const fresh = await prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true } });
+    res.json(fresh);
   } catch (e) {
     const msg = e && e.code === 'P2002' ? 'Email déjà utilisé' : (e && e.message ? e.message : String(e));
     res.status(400).json({ error: msg });

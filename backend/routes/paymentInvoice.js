@@ -44,14 +44,16 @@ function renderHeader(doc, ph, parentName, invoiceNumber, invoiceDate, dueDate, 
     doc.fontSize(10).fillColor('#2563eb').text('contact@lesfrimousses.fr');
   }
   // meta boxes top-right (anchored to page top-right for consistent placement)
-  const boxW = Math.min(240, Math.floor(pageWidth * 0.38));
+  // narrower meta boxes so number/date/due don't take too much horizontal space
+  const boxW = Math.min(180, Math.floor(pageWidth * 0.3));
   const metaX = doc.page.width - doc.page.margins.right - boxW;
   // nudge meta boxes a bit higher (but keep within a safe distance from page top)
   const startY = Math.max(doc.page.margins.top - 6, 8);
   function metaBox(y, label, value) {
-    doc.roundedRect(metaX, y, boxW, 30, 6).fill('#f8fafc');
-    doc.fillColor('#374151').fontSize(8).text(label, metaX + 8, y + 5);
-    doc.fillColor('#111').font('Helvetica-Bold').fontSize(10).text(value, metaX + 8, y + 15);
+    // slightly shorter box height to save vertical space
+    doc.roundedRect(metaX, y, boxW, 28, 6).fill('#f8fafc');
+    doc.fillColor('#374151').fontSize(8).text(label, metaX + 8, y + 4);
+    doc.fillColor('#111').font('Helvetica-Bold').fontSize(10).text(value, metaX + 8, y + 14);
   }
   metaBox(startY, 'Facture N°', invoiceNumber);
   metaBox(startY + 38, 'Date', invoiceDate.toLocaleDateString('fr-FR'));
@@ -280,36 +282,42 @@ router.get('/invoice/:id', auth, async (req, res) => {
     const leftColX = contactX;
     const rightColX = contactX + leftColW + innerPadding;
 
-    // Left column: parent address lines from linked user
+    // Left column: email and phone (fall back to parentEmail / ph.parent.phone)
+    // position at the same vertical level as the contact start
     let leftY = currentContactY;
-    if (parentUser && (parentUser.address || parentUser.postalCode || parentUser.city || parentUser.country)) {
-      if (parentUser.address) {
-        doc.fontSize(8.5).fillColor('#374151').text(parentUser.address, leftColX, leftY, { width: leftColW });
-        leftY += doc.heightOfString(parentUser.address, { width: leftColW }) + 4;
-      }
-      const parentCityLine = [parentUser.postalCode, parentUser.city].filter(Boolean).join(' ');
-      if (parentCityLine) {
-        doc.fontSize(8.5).fillColor('#374151').text(parentCityLine, leftColX, leftY, { width: leftColW });
-        leftY += doc.heightOfString(parentCityLine, { width: leftColW }) + 4;
-      }
-      if (parentUser.country) {
-        doc.fontSize(8.5).fillColor('#374151').text(parentUser.country, leftColX, leftY, { width: leftColW });
-        leftY += doc.heightOfString(parentUser.country, { width: leftColW }) + 4;
-      }
-    }
-
-  // Right column: email and phone (fall back to parentEmail / ph.parent.phone)
-  // position at the same vertical level as the contact start (raise email/phone)
-  let rightY = currentContactY;
     const emailToShow = parentEmail || (parentUser && parentUser.email) || '';
     const phoneToShow = (ph.parent && ph.parent.phone) || (parentUser && parentUser.phone) || '';
     if (emailToShow) {
-      doc.fontSize(8.5).fillColor('#2563eb').text(emailToShow, rightColX, rightY, { width: rightColW });
-      rightY += doc.heightOfString(emailToShow, { width: rightColW }) + 4;
+      doc.fontSize(8.5).fillColor('#2563eb').text(emailToShow, leftColX, leftY, { width: leftColW });
+      leftY += doc.heightOfString(emailToShow, { width: leftColW }) + 4;
     }
     if (phoneToShow) {
-      doc.fontSize(8.5).fillColor('#374151').text(phoneToShow, rightColX, rightY, { width: rightColW });
-      rightY += doc.heightOfString(phoneToShow, { width: rightColW }) + 4;
+      doc.fontSize(8.5).fillColor('#374151').text(phoneToShow, leftColX, leftY, { width: leftColW });
+      leftY += doc.heightOfString(phoneToShow, { width: leftColW }) + 4;
+    }
+
+    // Right column: parent address lines from linked user, or fallback to ph.parent fields
+    let rightY = currentContactY;
+    const addrSource = parentUser || (ph.parent ? {
+      address: ph.parent.address || '',
+      postalCode: ph.parent.postalCode || '',
+      city: ph.parent.city || '',
+      country: ph.parent.country || ''
+    } : null);
+    if (addrSource && (addrSource.address || addrSource.postalCode || addrSource.city || addrSource.country)) {
+      if (addrSource.address) {
+        doc.fontSize(8.5).fillColor('#374151').text(addrSource.address, rightColX, rightY, { width: rightColW });
+        rightY += doc.heightOfString(addrSource.address, { width: rightColW }) + 4;
+      }
+      const parentCityLine = [addrSource.postalCode, addrSource.city].filter(Boolean).join(' ');
+      if (parentCityLine) {
+        doc.fontSize(8.5).fillColor('#374151').text(parentCityLine, rightColX, rightY, { width: rightColW });
+        rightY += doc.heightOfString(parentCityLine, { width: rightColW }) + 4;
+      }
+      if (addrSource.country) {
+        doc.fontSize(8.5).fillColor('#374151').text(addrSource.country, rightColX, rightY, { width: rightColW });
+        rightY += doc.heightOfString(addrSource.country, { width: rightColW }) + 4;
+      }
     }
 
     // Period card
