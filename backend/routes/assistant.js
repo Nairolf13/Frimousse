@@ -10,9 +10,8 @@ router.post('/', async (req, res) => {
   if (!userMessage || typeof userMessage !== 'string') return res.status(400).json({ error: 'message required' });
 
   try {
-    // Debug: log incoming request body to verify context arrives
     try {
-      console.log('[assistant] received body:', JSON.stringify(req.body).slice(0, 2000));
+      console.log('[assistant] received body:');
     } catch (e) {
       console.log('[assistant] received body (non-serializable)');
     }
@@ -27,11 +26,10 @@ router.post('/', async (req, res) => {
           base += `\n\nContexte de l'interface: suggestions rapides = [${suggested}]`;
           if (summary) base += `; Dernier résumé enfant = ${summary}`;
         } catch (e) {
-          // ignore parse errors
         }
       }
       base += "\n\nImportant: utilise les informations fournies dans 'Dernier résumé enfant' (lastChildSummary) si elles existent — mentionne le prénom de l'enfant et propose des actions adaptées. Ne PAS inventer d'informations non présentes dans le résumé; si une information manque, demande une précision. Si le résumé n'est pas pertinent, répond de façon générale mais claire.";
-      console.log('[assistant] system prompt:', base.substring(0, 2000));
+      console.log('[assistant] system prompt:');
       return base;
     })();
 
@@ -53,7 +51,7 @@ router.post('/', async (req, res) => {
       messages: messagesForModel,
     };
     try {
-      console.log('[assistant] sending payload to Mistral:', JSON.stringify(payload).slice(0, 2000));
+      console.log('[assistant] sending payload to Mistral:');
     } catch (e) {
       console.log('[assistant] sending payload to Mistral (non-serializable)');
     }
@@ -74,7 +72,6 @@ router.post('/', async (req, res) => {
     }
 
     const data = await response.json();
-    // Try to extract common fields
     let reply = '';
     if (data.choices && data.choices[0] && data.choices[0].message) reply = data.choices[0].message.content || '';
     else if (data.output_text) reply = data.output_text;
