@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe';
 import { useI18n } from '../src/lib/useI18n';
@@ -6,9 +6,9 @@ import LanguageDropdown from '../components/LanguageDropdown';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-type ParentForm = { role: 'parent'; id: string; firstName: string; lastName: string; email: string; phone?: string };
+type ParentForm = { role: 'parent'; id: string; firstName: string; lastName: string; email: string; phone?: string; address?: string; postalCode?: string; city?: string; region?: string; country?: string; birthDate?: string; lat?: number | null; lon?: number | null; geodataRaw?: unknown };
 type NannyForm = { role: 'nanny'; id: string; name: string; availability?: string; experience?: number; contact?: string; email?: string; birthDate?: string };
-type UserForm = { role: 'user'; id: string; name?: string; email?: string };
+type UserForm = { role: 'user'; id: string; name?: string; email?: string; phone?: string; address?: string; postalCode?: string; city?: string; region?: string; country?: string; birthDate?: string; lat?: number | null; lon?: number | null; geodataRaw?: unknown };
 type ProfileForm = ParentForm | NannyForm | UserForm | null;
 
 function ProfileEditor({ onClose }: { onClose: () => void }) {
@@ -19,7 +19,61 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // --- geodata/autocomplete ---
+  type GeodataPlace = { id?: string | number; name?: string; lat?: number | null; lon?: number | null; house_number?: string | null; street?: string | null; city?: string | null; state?: string | null; country?: string | null; postcode?: string | null; raw?: unknown };
+  const [placeSuggestions, setPlaceSuggestions] = useState<GeodataPlace[]>([]);
+  const [openAddress, setOpenAddress] = useState(false);
+
+  const fetchGeodata = useCallback(async (query: string) => {
+    try {
+  if (!query || query.length < 3) { setPlaceSuggestions([]); return; }
+      const res = await fetch(`/api/geodata/positionstack?q=${encodeURIComponent(query)}&limit=12`);
+      if (!res.ok) { setPlaceSuggestions([]); throw new Error('Impossible de récupérer les suggestions'); }
+      const data = (await res.json()) as GeodataPlace[];
+      const addresses = data.filter(d => d.street || d.house_number || (d.name && /\d/.test(String(d.name))));
+      setPlaceSuggestions(addresses.slice(0, 8));
+    } catch (err) {
+      console.error('geodata fetch error', err);
+      setPlaceSuggestions([]);
+    }
+  }, []);
+
+  const selectPlace = async (p: GeodataPlace) => {
+  setPlaceSuggestions([]);
+    setOpenAddress(false);
+    const addr = [p.house_number, p.street].filter(Boolean).join(' ').trim();
+    const city = p.city || p.name || '';
+    setForm(prev => {
+      const newForm = prev ? { ...prev } : null;
+      if (!newForm) return newForm;
+      if (newForm.role === 'user') {
+        const u = newForm as UserForm;
+        return { ...(newForm as UserForm), address: addr || u.address, city: city || u.city, postalCode: p.postcode || u.postalCode, region: p.state || u.region, country: p.country || u.country, lat: p.lat ?? null, lon: p.lon ?? null, geodataRaw: p.raw ?? p };
+      }
+      if (newForm.role === 'parent') {
+        const pa = newForm as ParentForm;
+        return { ...(newForm as ParentForm), address: addr || pa.address, city: city || pa.city, postalCode: p.postcode || pa.postalCode, region: p.state || pa.region, country: p.country || pa.country, lat: p.lat ?? null, lon: p.lon ?? null, geodataRaw: p.raw ?? p };
+      }
+      return newForm;
+    });
+  };
+
   const [form, setForm] = useState<ProfileForm>(null);
+
+  // debounce fetch for address suggestions
+  useEffect(() => {
+    if (!form) return;
+    const getAddress = (fr: ProfileForm) => {
+      if (!fr) return '';
+      if (fr.role === 'user') return (fr as UserForm).address || '';
+      if (fr.role === 'parent') return (fr as ParentForm).address || '';
+      return '';
+    };
+    const currentAddress = getAddress(form);
+  if (!currentAddress || currentAddress.length < 3) { setPlaceSuggestions([]); return; }
+    const id = setTimeout(() => fetchGeodata(currentAddress), 650);
+    return () => clearTimeout(id);
+  }, [form, fetchGeodata]);
 
   useEffect(() => {
     let mounted = true;
@@ -34,11 +88,11 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
         if (u && u.parentId) {
           const r = await fetchWithRefresh(`${API_URL}/parent/${encodeURIComponent(String(u.parentId))}`, { credentials: 'include' });
           if (r.ok) {
-            const p = await r.json();
-            if (!mounted) return;
-            setForm({ role: 'parent', id: p.id, firstName: p.firstName || '', lastName: p.lastName || '', email: p.email || '', phone: p.phone || '' });
-            return;
-          }
+              const p = await r.json();
+              if (!mounted) return;
+              setForm({ role: 'parent', id: p.id, firstName: p.firstName || '', lastName: p.lastName || '', email: p.email || '', phone: (u && u.phone) ? u.phone : (p.phone || ''), address: (u && u.address) ? u.address : (p.address || ''), postalCode: (u && u.postalCode) ? u.postalCode : (p.postalCode || ''), city: (u && u.city) ? u.city : (p.city || ''), region: (u && u.region) ? u.region : (p.region || ''), country: (u && u.country) ? u.country : (p.country || ''), birthDate: p.birthDate ? new Date(p.birthDate).toISOString().slice(0,10) : (u && u.birthDate ? new Date(u.birthDate).toISOString().slice(0,10) : ''), lat: (u && typeof u.lat !== 'undefined' ? u.lat : (p.lat ?? null)), lon: (u && typeof u.lon !== 'undefined' ? u.lon : (p.lon ?? null)), geodataRaw: (u && typeof u.geodataRaw !== 'undefined') ? u.geodataRaw : (p.geodataRaw ?? null) });
+              return;
+            }
         }
 
         if (u && u.nannyId) {
@@ -58,7 +112,7 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
             if (r2.ok) {
               const p2 = await r2.json();
               if (!mounted) return;
-              setForm({ role: 'parent', id: p2.id, firstName: p2.firstName || '', lastName: p2.lastName || '', email: p2.email || '', phone: p2.phone || '' });
+                setForm({ role: 'parent', id: p2.id, firstName: p2.firstName || '', lastName: p2.lastName || '', email: p2.email || '', phone: (u && u.phone) ? u.phone : (p2.phone || ''), address: (u && u.address) ? u.address : (p2.address || ''), postalCode: (u && u.postalCode) ? u.postalCode : (p2.postalCode || ''), city: (u && u.city) ? u.city : (p2.city || ''), region: (u && u.region) ? u.region : (p2.region || ''), country: (u && u.country) ? u.country : (p2.country || ''), birthDate: p2.birthDate ? new Date(p2.birthDate).toISOString().slice(0,10) : (u && u.birthDate ? new Date(u.birthDate).toISOString().slice(0,10) : ''), lat: (u && typeof u.lat !== 'undefined' ? u.lat : (p2.lat ?? null)), lon: (u && typeof u.lon !== 'undefined' ? u.lon : (p2.lon ?? null)), geodataRaw: (u && typeof u.geodataRaw !== 'undefined') ? u.geodataRaw : (p2.geodataRaw ?? null) });
               return;
             }
           } catch {
@@ -66,7 +120,7 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
           }
         }
 
-        if (u) setForm({ role: 'user', id: u.id, name: u.name || '', email: u.email || '' });
+  if (u) setForm({ role: 'user', id: u.id, name: u.name || '', email: u.email || '', phone: u.phone || '', address: u.address || '', postalCode: u.postalCode || '', city: u.city || '', region: u.region || '', country: u.country || '', birthDate: u.birthDate ? new Date(u.birthDate).toISOString().slice(0,10) : '', lat: u.lat ?? null, lon: u.lon ?? null, geodataRaw: u.geodataRaw ?? null });
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         setError(msg);
@@ -86,15 +140,25 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
     setError('');
     try {
   if (form.role === 'parent') {
-        const body = { firstName: form.firstName, lastName: form.lastName, email: form.email, phone: form.phone };
-        const res = await fetchWithRefresh(`${API_URL}/parent/${encodeURIComponent(String(form.id))}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-        if (!res.ok) throw new Error('Erreur lors de la mise à jour du parent');
+    const parent = form as ParentForm;
+  const body: Record<string, unknown> = { firstName: parent.firstName, lastName: parent.lastName, email: parent.email, phone: parent.phone, address: parent.address, postalCode: parent.postalCode, city: parent.city, region: parent.region, country: parent.country };
+    if (parent.birthDate) body.birthDate = parent.birthDate;
+    if (typeof parent.lat !== 'undefined') body.lat = parent.lat;
+    if (typeof parent.lon !== 'undefined') body.lon = parent.lon;
+    if (parent.geodataRaw) body.geodataRaw = parent.geodataRaw;
+    const res = await fetchWithRefresh(`${API_URL}/parent/${encodeURIComponent(String(form.id))}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error('Erreur lors de la mise à jour du parent');
       } else if (form.role === 'nanny') {
         const body = { name: form.name, availability: form.availability, experience: Number(form.experience || 0), contact: form.contact, email: form.email, birthDate: form.birthDate || null };
         const res = await fetchWithRefresh(`${API_URL}/nannies/${encodeURIComponent(String(form.id))}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!res.ok) throw new Error('Erreur lors de la mise à jour de la nounou');
       } else {
-        const body = { name: form.name, email: form.email };
+        const u = form as UserForm;
+  const body: Record<string, unknown> = { name: u.name, email: u.email, phone: u.phone, address: u.address, postalCode: u.postalCode, city: u.city, region: u.region, country: u.country };
+        if (u.birthDate) body.birthDate = u.birthDate;
+        if (typeof u.lat !== 'undefined') body.lat = u.lat;
+        if (typeof u.lon !== 'undefined') body.lon = u.lon;
+        if (u.geodataRaw) body.geodataRaw = u.geodataRaw;
         const res = await fetchWithRefresh(`${API_URL}/user/me`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
@@ -141,6 +205,19 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
             <label className="text-sm">{t('label.phone')}</label>
             <input className="border rounded px-2 py-1 w-full" value={form.phone} onChange={e => handleChange('phone', e.target.value)} />
           </div>
+          <div className="sm:col-span-2">
+            <label className="text-sm">{t('parent.form.address') || 'Adresse'}</label>
+            <input className="border rounded px-2 py-1 w-full" value={form.address || ''} onChange={e => { handleChange('address', e.target.value); setOpenAddress(true); }} />
+            {openAddress && placeSuggestions && placeSuggestions.length > 0 && (
+              <div className="border rounded bg-white mt-1 max-h-48 overflow-auto">
+                {placeSuggestions.map((p, i) => (
+                  <div key={i} className="px-2 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => selectPlace(p)}>
+                    {(p.house_number || '') + ' ' + (p.street || p.name || '')} {p.postcode ? ` - ${p.postcode}` : ''}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
       {form.role === 'nanny' && (
@@ -176,11 +253,48 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
         </div>
       )}
       {form.role === 'user' && (
-        <div>
-          <label className="text-sm">{t('label.name')}</label>
-          <input className="border rounded px-2 py-1 w-full" value={form.name} onChange={e => handleChange('name', e.target.value)} />
-          <label className="text-sm mt-2">{t('label.email')}</label>
-          <input className="border rounded px-2 py-1 w-full" value={form.email} onChange={e => handleChange('email', e.target.value)} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm">{t('label.name')}</label>
+            <input className="border rounded px-2 py-1 w-full" value={form.name} onChange={e => handleChange('name', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm">{t('label.email')}</label>
+            <input className="border rounded px-2 py-1 w-full" value={form.email} onChange={e => handleChange('email', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm">{t('label.phone')}</label>
+            <input className="border rounded px-2 py-1 w-full" value={(form as UserForm).phone || ''} onChange={e => handleChange('phone', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm">{t('parent.form.postalCode') || 'Code postal'}</label>
+            <input className="border rounded px-2 py-1 w-full" value={(form as UserForm).postalCode || ''} onChange={e => handleChange('postalCode', e.target.value)} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-sm">{t('parent.form.address') || 'Adresse'}</label>
+            <input className="border rounded px-2 py-1 w-full" value={(form as UserForm).address || ''} onChange={e => { handleChange('address', e.target.value); setOpenAddress(true); }} />
+            {openAddress && placeSuggestions && placeSuggestions.length > 0 && (
+              <div className="border rounded bg-white mt-1 max-h-48 overflow-auto">
+                {placeSuggestions.map((p, i) => (
+                  <div key={i} className="px-2 py-2 hover:bg-gray-100 cursor-pointer" onClick={() => selectPlace(p)}>
+                    {(p.house_number || '') + ' ' + (p.street || p.name || '')} {p.postcode ? ` - ${p.postcode}` : ''}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="text-sm">{t('parent.form.city') || 'Ville'}</label>
+            <input className="border rounded px-2 py-1 w-full" value={(form as UserForm).city || ''} onChange={e => handleChange('city', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm">{t('parent.form.region') || 'Région'}</label>
+            <input className="border rounded px-2 py-1 w-full" value={(form as UserForm).region || ''} onChange={e => handleChange('region', e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm">{t('parent.form.country') || 'Pays'}</label>
+            <input className="border rounded px-2 py-1 w-full" value={(form as UserForm).country || ''} onChange={e => handleChange('country', e.target.value)} />
+          </div>
         </div>
       )}
 
