@@ -5,8 +5,8 @@ import type { Locale } from './i18nContext';
 const translations: Record<Locale, Record<string, string>> = {
   fr: {
     'nav.assistant': 'Assistant IA',
-    'assistant.title': "Assistant",
-    'assistant.header.title': "Assistant Les Frimousses",
+  'assistant.title': "Assistant Frimousse",
+  'assistant.header.title': "Assistant Frimousse",
     'assistant.header.subtitle': "· Conseils et aide pour la petite enfance",
     'assistant.intro.title': "Assistant",
     'assistant.intro.description': "Je suis votre assistant pour la petite enfance. Je peux vous aider avec :",
