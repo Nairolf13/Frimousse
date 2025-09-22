@@ -99,4 +99,15 @@ router.put('/mark-all-read', auth, async (req, res) => {
   }
 });
 
+// DELETE /api/notifications - delete all notifications for current user
+router.delete('/', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const result = await prisma.notification.deleteMany({ where: { userId } });
+    res.json({ success: true, deleted: result.count });
+  } catch (e) {
+    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+  }
+});
+
 module.exports = router;

@@ -71,12 +71,12 @@
                     "name": "Frimousse",
                     "url": "https://frimousse-asso.fr/",
                     "logo": "https://frimousse-asso.fr/imgs/LogoFrimousse.webp",
-                    "sameAs": [
-                      "https://www.facebook.com/frimousse",
-                      "https://twitter.com/frimousse",
-                      "https://www.linkedin.com/company/frimousse",
-                      "https://www.instagram.com/frimousse",
-                    ],
+                    // "sameAs": [
+                    //   "https://www.facebook.com/frimousse",
+                    //   "https://twitter.com/frimousse",
+                    //   "https://www.linkedin.com/company/frimousse",
+                    //   "https://www.instagram.com/frimousse",
+                    // ],
                   }`}
                 </script>
                 <script type="application/ld+json">

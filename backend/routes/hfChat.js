@@ -26,7 +26,6 @@ router.post('/', async (req, res) => {
 
     const prompt = buildPrompt(question);
 
-    // If Mistral is configured, call it first (non-stream). Otherwise fall back to HF inference.
     let answer = '';
     if (MISTRAL_API_KEY) {
       try {
@@ -56,11 +55,9 @@ router.post('/', async (req, res) => {
         clearTimeout(mTimeout);
         if (mr.ok) {
           const mj = await mr.json();
-          // Try multiple common fields to extract text safely
           if (mj.output_text) answer = String(mj.output_text);
           else if (mj.choices && mj.choices[0]) answer = (mj.choices[0].message?.content) || (mj.choices[0].text) || '';
           else if (mj.outputs && mj.outputs[0] && mj.outputs[0].content) {
-            // content can be array or string
             const c = mj.outputs[0].content;
             if (Array.isArray(c)) answer = c.map(x => x.text || x).join(' ');
             else answer = String(c);
@@ -75,15 +72,12 @@ router.post('/', async (req, res) => {
         } else {
           const txt = await mr.text();
           console.error('Mistral error', mr.status, txt);
-          // fall through to HF below
         }
       } catch (e) {
         console.error('Mistral call failed', e);
-        // fall through to HF below
       }
     }
 
-    // Hugging Face inference fallback
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 20000);
 

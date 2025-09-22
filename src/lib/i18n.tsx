@@ -169,6 +169,11 @@ const translations: Record<Locale, Record<string, string>> = {
   'parent.form.lastName': 'Nom',
   'parent.form.email': 'Email',
   'parent.form.phone': 'Téléphone',
+  'parent.form.address': 'Adresse',
+  'parent.form.postalCode': 'Code postal',
+  'parent.form.city': 'Ville',
+  'parent.form.region': 'Région',
+  'parent.form.country': 'Pays',
   'parent.form.password.placeholder': 'Mot de passe (laisser vide pour envoyer une invitation)',
   'parent.form.confirmPassword.placeholder': 'Confirmer le mot de passe',
   'parent.form.submit.add': 'Ajouter',
@@ -646,7 +651,7 @@ translations.fr['nanny.cotisation.label'] = 'Cotisation mensuelle :';
 translations.fr['nanny.payment.loading'] = 'Paiement...';
 translations.fr['nanny.payment.confirming'] = 'Confirmation...';
 translations.fr['nanny.payment.pay'] = 'Payer';
-translations.fr['nanny.cotisation.days_remaining'] = '{days} jour{days, plural, one {} other {s}} restants';
+translations.fr['nanny.cotisation.days_remaining'] = '{n} jour(s) restants';
 translations.fr['nanny.cotisation.renew'] = 'Cotisation à renouveler';
 translations.fr['nanny.delete.confirm_body'] = "Voulez-vous vraiment supprimer cette nounou ? Cette action est irréversible.";
 
@@ -657,7 +662,7 @@ translations.en['nanny.cotisation.label'] = 'Monthly fee:';
 translations.en['nanny.payment.loading'] = 'Payment...';
 translations.en['nanny.payment.confirming'] = 'Confirming...';
 translations.en['nanny.payment.pay'] = 'Pay';
-translations.en['nanny.cotisation.days_remaining'] = '{days} day{days, plural, one {} other {s}} remaining';
+translations.en['nanny.cotisation.days_remaining'] = '{n} day(s) remaining';
 translations.en['nanny.cotisation.renew'] = 'Fee needs renewal';
 translations.en['nanny.delete.confirm_body'] = 'Are you sure you want to delete this nanny? This action is irreversible.';
 
@@ -677,6 +682,9 @@ translations.fr['notifications.confirm_delete.confirm'] = 'Supprimer';
 translations.fr['notifications.deleting'] = 'Suppression...';
 translations.fr['notifications.mark_read'] = 'Marquer comme lu';
 translations.fr['notifications.mark_unread'] = 'Marquer comme non lu';
+translations.fr['notifications.delete_all'] = 'Tout supprimer';
+translations.fr['notifications.confirm_delete_all'] = 'Voulez-vous vraiment supprimer toutes les notifications ?';
+translations.fr['notifications.delete_all_failed'] = 'Échec de la suppression de toutes les notifications';
 
 translations.fr['time.now'] = 'à l\'instant';
 translations.fr['time.minutes'] = '{n} min';
@@ -698,6 +706,9 @@ translations.en['notifications.confirm_delete.confirm'] = 'Delete';
 translations.en['notifications.deleting'] = 'Deleting...';
 translations.en['notifications.mark_read'] = 'Mark as read';
 translations.en['notifications.mark_unread'] = 'Mark as unread';
+translations.en['notifications.delete_all'] = 'Delete all';
+translations.en['notifications.confirm_delete_all'] = 'Are you sure you want to delete all notifications?';
+translations.en['notifications.delete_all_failed'] = 'Failed to delete all notifications';
 
 translations.en['time.now'] = 'now';
 translations.en['time.minutes'] = '{n} min';
@@ -766,6 +777,11 @@ translations.en['parent.form.firstName'] = 'First name';
 translations.en['parent.form.lastName'] = 'Last name';
 translations.en['parent.form.email'] = 'Email';
 translations.en['parent.form.phone'] = 'Phone';
+translations.en['parent.form.address'] = 'Address';
+translations.en['parent.form.postalCode'] = 'Postal code';
+translations.en['parent.form.city'] = 'City';
+translations.en['parent.form.region'] = 'Region';
+translations.en['parent.form.country'] = 'Country';
 translations.en['parent.form.password.placeholder'] = 'Password (leave empty to send an invite)';
 translations.en['parent.form.confirmPassword.placeholder'] = 'Confirm password';
 translations.en['parent.form.submit.add'] = 'Add';

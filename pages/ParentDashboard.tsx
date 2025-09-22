@@ -55,7 +55,91 @@ const ParentDashboard: React.FC = () => {
   const [adding, setAdding] = useState(false);
   const [editingParent, setEditingParent] = useState<Parent | null>(null);
   const [deletingParentId, setDeletingParentId] = useState<string | null>(null);
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' });
+  // --- geodata/autocomplete (copied from RegisterPage for address suggestions) ---
+  type GeodataPlace = { house_number?: string | null; street?: string | null; city?: string | null; state?: string | null; country?: string | null; postcode?: string | null; name?: string };
+  const [placeSuggestions, setPlaceSuggestions] = useState<GeodataPlace[]>([]);
+  const [openAddress, setOpenAddress] = useState(false);
+  const [geodataError, setGeodataError] = useState<string | null>(null);
+  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null);
+  const searchTimer = React.useRef<number | null>(null);
+
+  const fetchGeodata = React.useCallback(async (query: string) => {
+    // respect server-side rate-limits cooldown
+    if (rateLimitedUntil && Date.now() < rateLimitedUntil) {
+      return;
+    }
+    // positionstack requires at least 3 characters
+    if (!query || query.length < 3) { setPlaceSuggestions([]); setGeodataError(null); return; }
+    try {
+      setGeodataError(null);
+      const res = await fetch(`/api/geodata/positionstack?q=${encodeURIComponent(query)}&limit=12`);
+      if (res.status === 422) {
+        // validation error from API (query too short or invalid)
+        setPlaceSuggestions([]);
+        setGeodataError('Tapez au moins 3 caractères pour obtenir des suggestions');
+        return;
+      }
+      if (res.status === 429) {
+        // rate limit reached: apply a cooldown on client (60s)
+        const cooldownMs = 60_000;
+        setRateLimitedUntil(Date.now() + cooldownMs);
+        setPlaceSuggestions([]);
+        setGeodataError('Trop de requêtes vers le service d’adresses — réessayez dans 1 minute');
+        return;
+      }
+      if (!res.ok) { setPlaceSuggestions([]); setGeodataError('Impossible de récupérer les suggestions'); return; }
+      const data = (await res.json()) as GeodataPlace[];
+      const arr = data || [];
+      const addresses = arr.filter((p) => !!(p.house_number || p.street));
+      setPlaceSuggestions(addresses);
+    } catch (err) {
+      console.error('geodata fetch error', err);
+      setPlaceSuggestions([]);
+      setGeodataError('Erreur réseau lors de la recherche d’adresse');
+    }
+  }, [rateLimitedUntil]);
+
+  React.useEffect(() => {
+    const q = (form.address || form.city || '').trim();
+    if (searchTimer.current) window.clearTimeout(searchTimer.current);
+    searchTimer.current = window.setTimeout(() => {
+      const bias = form.city ? ` ${form.city}` : '';
+      fetchGeodata(`${q}${bias}`.trim());
+    }, 600);
+    return () => { if (searchTimer.current) window.clearTimeout(searchTimer.current); };
+  }, [form.address, form.city, fetchGeodata]);
+
+  React.useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!target) return;
+      const addrEl = document.querySelector('#parent-form-address');
+      if (addrEl && addrEl.contains(target)) return;
+      setOpenAddress(false);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
+
+  const selectPlace = (p: GeodataPlace) => {
+    const house = p.house_number ? String(p.house_number).trim() : '';
+    const road = p.street ? String(p.street).trim() : '';
+    const streetPart = (house ? `${house} ${road}`.trim() : (road || ''));
+    const displayStreet = streetPart || p.name || '';
+    const userTyped = String(form.address || '').trim();
+    let composed = displayStreet;
+    if (!house) {
+      const m = userTyped.match(/^(\d+)\s+(.+)$/);
+      if (m && m[1]) {
+        const typedNum = m[1];
+        if (!displayStreet.startsWith(typedNum + ' ')) composed = `${typedNum} ${displayStreet}`.trim();
+      }
+    }
+    setForm({ ...form, address: composed, city: p.city || '', postalCode: p.postcode || '', region: p.state || '', country: p.country || '' });
+    setPlaceSuggestions([]);
+    setOpenAddress(false);
+  };
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [adminResetModal, setAdminResetModal] = useState<{ open: boolean; parentId?: string; password?: string } | null>(null);
@@ -195,7 +279,7 @@ const ParentDashboard: React.FC = () => {
             </div>
             <div className="flex gap-2 items-center">
               {(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.nannyId == null)) && (
-                <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); }} className={`bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center ${isShortLandscape ? '-translate-x-3' : ''}`} style={{transform: isShortLandscape ? 'translateX(-12px)' : undefined}}>{t('parent.add')}</button>
+                <button onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' }); }} className={`bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center ${isShortLandscape ? '-translate-x-3' : ''}`} style={{transform: isShortLandscape ? 'translateX(-12px)' : undefined}}>{t('parent.add')}</button>
               )}
             </div>
           </div>
@@ -256,6 +340,12 @@ const ParentDashboard: React.FC = () => {
                     email: form.email,
                   };
                   if (form.phone) sendPayload.phone = form.phone;
+                  // include address fields when provided
+                  if (form.address) sendPayload.address = form.address;
+                  if (form.postalCode) sendPayload.postalCode = form.postalCode;
+                  if (form.city) sendPayload.city = form.city;
+                  if (form.region) sendPayload.region = form.region;
+                  if (form.country) sendPayload.country = form.country;
 
                   // If editing and admin provided password for another parent, map to newPassword and show modal
                   if (editingParent && form.password && (isAdmin && !isEditingOwnParent)) {
@@ -300,7 +390,7 @@ const ParentDashboard: React.FC = () => {
                 setAdding(false);
                 setEditingParent(null);
                 // clear form and errors
-                setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' });
+                setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' });
               } catch (err: unknown) {
                 console.error('Add parent failed', err);
                 if (err instanceof Error) setFormError(err.message);
@@ -311,6 +401,24 @@ const ParentDashboard: React.FC = () => {
               <input name="lastName" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder={t('parent.form.lastName')} required className="border rounded px-3 py-2 text-xs md:text-base" />
               <input name="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={t('parent.form.email')} required className="border rounded px-3 py-2 text-xs md:text-base" />
               <input name="phone" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder={t('parent.form.phone')} className="border rounded px-3 py-2 text-xs md:text-base" />
+              <div id="parent-form-address" className="relative">
+                <input name="address" value={form.address} onChange={e => { setForm({ ...form, address: e.target.value }); setOpenAddress(true); }} onFocus={() => setOpenAddress(true)} placeholder={t('parent.form.address') || 'Adresse'} className="border rounded px-3 py-2 text-xs md:text-base w-full" autoComplete="off" />
+                {geodataError && <div className="text-sm text-red-500 mt-1">{geodataError}</div>}
+                {openAddress && placeSuggestions && placeSuggestions.length > 0 && (
+                  <div className="absolute z-50 bg-white shadow rounded mt-1 w-full max-h-40 overflow-auto border">
+                    {placeSuggestions.map((p, i) => (
+                      <div key={i} className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm" onClick={() => selectPlace(p)}>
+                        <div className="font-medium">{(p.house_number ? `${p.house_number} ` : '') + (p.street || p.name || '')}</div>
+                        <div className="text-xs text-gray-500">{[p.postcode, p.city, p.state, p.country].filter(Boolean).join(' • ')}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <input name="postalCode" value={form.postalCode} onChange={e => setForm({ ...form, postalCode: e.target.value })} placeholder={t('parent.form.postalCode') || 'Code postal'} className="border rounded px-3 py-2 text-xs md:text-base" />
+              <input name="city" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder={t('parent.form.city') || 'Ville'} className="border rounded px-3 py-2 text-xs md:text-base" />
+              <input name="region" value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} placeholder={t('parent.form.region') || 'Région'} className="border rounded px-3 py-2 text-xs md:text-base" />
+              <input name="country" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} placeholder={t('parent.form.country') || 'Pays'} className="border rounded px-3 py-2 text-xs md:text-base" />
               <div className="relative">
                 <input name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={t('parent.form.password.placeholder')} className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
                 <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button>
@@ -321,7 +429,7 @@ const ParentDashboard: React.FC = () => {
               </div>
               <div className="md:col-span-2 flex gap-2">
                 <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingParent ? t('parent.form.submit.save') : t('parent.form.submit.add')}</button>
-                <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' }); setFormError(null); }} className="bg-gray-300 px-4 py-2 rounded">{t('parent.form.cancel')}</button>
+                <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' }); setFormError(null); }} className="bg-gray-300 px-4 py-2 rounded">{t('parent.form.cancel')}</button>
               </div>
               {formError && <div className="text-red-600 md:col-span-2">{formError}</div>}
               {successMessage && <div className="md:col-span-2 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMessage}</div>}
@@ -329,22 +437,59 @@ const ParentDashboard: React.FC = () => {
           )}
 
           <div>
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full">
+            <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr items-stretch w-full">
               {(() => {
                 const cardColors = ['bg-blue-50','bg-yellow-50','bg-purple-50','bg-[#a9ddf2]','bg-pink-50','bg-orange-50'];
                 return parents.map((p, idx) => {
                   const color = cardColors[idx % cardColors.length];
                   return (
-                      <ParentCard
-                        key={p.id}
-                        parent={p}
-                        color={color}
-                        parentDue={parentBilling[String(p.id)] || 0}
-                        onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }}
-                        onEdit={(par) => { setEditingParent(par); setAdding(false); setFormError(null); setForm({ firstName: par.firstName || '', lastName: par.lastName || '', email: par.email || '', phone: par.phone || '', password: '', confirmPassword: '' }); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                        onDelete={(id) => { setDeletingParentId(id); }}
-                      />
-                    );
+                        <ParentCard
+                          key={p.id}
+                          parent={p}
+                          color={color}
+                          parentDue={parentBilling[String(p.id)] || 0}
+                          onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }}
+                          onEdit={async (par) => {
+                            // prefill with available fields immediately
+                            setEditingParent(par);
+                            setAdding(false);
+                            setFormError(null);
+                            setForm({ firstName: par.firstName || '', lastName: par.lastName || '', email: par.email || '', phone: par.phone || '', address: '', postalCode: '', city: '', region: '', country: '', password: '', confirmPassword: '' });
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+                            // If email or phone are missing in the summary payload, fetch full details
+                            try {
+                              if ((!par.email || !par.phone) && par.id) {
+                                const res = await fetchWithRefresh(`api/parent/${par.id}`, { credentials: 'include' });
+                                if (res.ok) {
+                                  const full = await res.json();
+                                  // Some backends return { parent: {...} } or the parent object directly; handle both
+                                  const parentObj = full && typeof full === 'object' && 'parent' in (full as Record<string, unknown>) ? (full as Record<string, unknown>)['parent'] as Record<string, unknown> : full as Record<string, unknown>;
+                                if (parentObj) {
+                                  setForm({
+                                    firstName: String((parentObj as Record<string, unknown>)['firstName'] ?? (parentObj as Record<string, unknown>)['name'] ?? ''),
+                                    lastName: String((parentObj as Record<string, unknown>)['lastName'] ?? ''),
+                                    email: String((parentObj as Record<string, unknown>)['email'] ?? ''),
+                                    phone: String((parentObj as Record<string, unknown>)['phone'] ?? ''),
+                                    address: String((parentObj as Record<string, unknown>)['address'] ?? ''),
+                                    postalCode: String((parentObj as Record<string, unknown>)['postalCode'] ?? ''),
+                                    city: String((parentObj as Record<string, unknown>)['city'] ?? ''),
+                                    region: String((parentObj as Record<string, unknown>)['region'] ?? ''),
+                                    country: String((parentObj as Record<string, unknown>)['country'] ?? ''),
+                                    password: '',
+                                    confirmPassword: ''
+                                  });
+                                }
+                                }
+                              }
+                            } catch (err) {
+                              // ignore fetch errors; keep what we have
+                              if (import.meta.env.DEV) console.error('Failed to fetch parent details', err);
+                            }
+                          }}
+                          onDelete={(id) => { setDeletingParentId(id); }}
+                        />
+                      );
                 });
               })()}
             </div>
@@ -412,7 +557,7 @@ const ParentDashboard: React.FC = () => {
                       setAdminResetModal(null);
                       setEditingParent(null);
                       setAdding(false);
-                      setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '' });
+                      setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' });
                     } catch (err) {
                       console.error('Parent reset failed', err);
                       setPendingSave(null);
