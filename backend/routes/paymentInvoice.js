@@ -11,16 +11,45 @@ function fmt(v) {
 
 
 // Render header (utilisé aussi après addPage)
-function renderHeader(doc, ph, parentName, invoiceNumber, invoiceDate, dueDate) {
+function renderHeader(doc, ph, parentName, invoiceNumber, invoiceDate, dueDate, centerName, adminIssuer) {
   const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  doc.font('Helvetica-Bold').fontSize(20).fillColor('#0f172a').text('Les Frimousses', { continued: false });
-  doc.font('Helvetica').fontSize(12).fillColor('#2563eb').text('Crèche & Garderie');
-  doc.fontSize(10).fillColor('#2563eb').text('contact@lesfrimousses.fr');
-  // meta boxes top-right
-  const metaX = doc.page.margins.left + pageWidth * 0.58;
-  const startY = doc.y - 44;
+  // Top-left: center name and admin address/email
+  const title = centerName || 'Les Frimousses';
+  doc.font('Helvetica-Bold').fontSize(20).fillColor('#0f172a').text(title, { continued: false });
+  // add a small gap between the center title and the following address lines
+  doc.moveDown(0.5);
+  // adminIssuer may contain address/email to print below the title
+  if (adminIssuer) {
+    const addrLines = [];
+    if (adminIssuer.address) addrLines.push(adminIssuer.address);
+    const cityLine = [adminIssuer.postalCode, adminIssuer.city].filter(Boolean).join(' ');
+    if (cityLine) addrLines.push(cityLine);
+    if (adminIssuer.country) addrLines.push(adminIssuer.country);
+    // print address lines (one per line)
+    if (addrLines.length > 0) {
+      doc.font('Helvetica').fontSize(10).fillColor('#374151');
+      for (const line of addrLines) {
+        doc.text(line);
+      }
+  // add a clearer gap between address block and admin email
+  doc.moveDown(1);
+    }
+    // print admin email in a blue link-like color (separate line)
+    if (adminIssuer.email) {
+      doc.fontSize(10).fillColor('#2563eb').text(adminIssuer.email);
+    }
+  } else {
+    // fallback subtitle
+    doc.font('Helvetica').fontSize(12).fillColor('#2563eb').text('Crèche & Garderie');
+    doc.fontSize(10).fillColor('#2563eb').text('contact@lesfrimousses.fr');
+  }
+  // meta boxes top-right (anchored to page top-right for consistent placement)
+  const boxW = Math.min(240, Math.floor(pageWidth * 0.38));
+  const metaX = doc.page.width - doc.page.margins.right - boxW;
+  // nudge meta boxes a bit higher (but keep within a safe distance from page top)
+  const startY = Math.max(doc.page.margins.top - 6, 8);
   function metaBox(y, label, value) {
-    doc.roundedRect(metaX, y, pageWidth * 0.4, 30, 6).fill('#f8fafc');
+    doc.roundedRect(metaX, y, boxW, 30, 6).fill('#f8fafc');
     doc.fillColor('#374151').fontSize(8).text(label, metaX + 8, y + 5);
     doc.fillColor('#111').font('Helvetica-Bold').fontSize(10).text(value, metaX + 8, y + 15);
   }
@@ -108,6 +137,68 @@ router.get('/invoice/:id', auth, async (req, res) => {
 
     const parentName = ph.parent ? `${ph.parent.firstName || ''} ${ph.parent.lastName || ''}`.trim() : '';
     const parentEmail = ph.parent?.email || '';
+    // try to find the User linked to this parent to get address fields
+    let parentUser = null;
+    try {
+      if (ph.parentId) {
+        parentUser = await prisma.user.findFirst({ where: { parentId: ph.parentId } });
+      }
+    } catch (e) {
+      console.error('Failed to lookup parent user for invoice', e && e.message ? e.message : e);
+    }
+    // resolve center name and admin issuer address for header
+    let centerName = null;
+    let adminIssuer = null; // { address, postalCode, city, country, email }
+    try {
+      if (ph.parent && ph.parent.centerId) {
+        const center = await prisma.center.findUnique({ where: { id: ph.parent.centerId } });
+        if (center) centerName = center.name || null;
+        const adminUser = await prisma.user.findFirst({ where: { centerId: ph.parent.centerId, role: { contains: 'admin', mode: 'insensitive' } } });
+        if (adminUser) {
+          adminIssuer = {
+            address: adminUser.address || '',
+            postalCode: adminUser.postalCode || '',
+            city: adminUser.city || '',
+            country: adminUser.country || '',
+            email: adminUser.email || ''
+          };
+        }
+      }
+    } catch (e) {
+      console.error('Failed to resolve center/admin for invoice header', e && e.message ? e.message : e);
+    }
+    // Try to resolve the issuing address: prefer an admin user linked to the same center as the parent
+    let issuer = null; // will hold user-like object with name, address, postalCode, city, country, email
+    try {
+      if (ph.parent && ph.parent.centerId) {
+        // find an admin user for that center
+        const adminUser = await prisma.user.findFirst({ where: { centerId: ph.parent.centerId, role: { contains: 'admin', mode: 'insensitive' } } });
+        if (adminUser) {
+          issuer = {
+            name: adminUser.name || `${adminUser.email}`,
+            address: adminUser.address || '',
+            postalCode: adminUser.postalCode || '',
+            city: adminUser.city || '',
+            country: adminUser.country || '',
+            email: adminUser.email || ''
+          };
+        }
+      }
+    } catch (e) {
+      // fail quietly and fallback below
+      console.error('Failed to lookup center admin for invoice issuer', e && e.message ? e.message : e);
+    }
+    // Fallback to current authenticated user (req.user) if no center admin found
+    if (!issuer && user) {
+      issuer = {
+        name: user.name || user.email,
+        address: user.address || '',
+        postalCode: user.postalCode || '',
+        city: user.city || '',
+        country: user.country || '',
+        email: user.email || ''
+      };
+    }
     const now = new Date();
     const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : now;
     const dueDate = new Date(invoiceDate.getTime() + 15 * 24 * 3600 * 1000);
@@ -158,19 +249,68 @@ router.get('/invoice/:id', auth, async (req, res) => {
       subtotal: { x: colSubtotalX, w: colSubtotalW }
     };
 
-    // Header
-    renderHeader(doc, ph, parentName, invoiceNumber, invoiceDate, dueDate);
+  // Header (pass center name and admin issuer info)
+  renderHeader(doc, ph, parentName, invoiceNumber, invoiceDate, dueDate, centerName, adminIssuer);
 
     // Client & period cards (compact)
     const cardW = (pageWidth - 20) / 2;
     const cardH = 70;
     const cardY = doc.y;
 
-    // Billing card
+    // Billing card: label at left, parent name to the right; contact/address lines constrained to card width
     doc.roundedRect(leftX, cardY, cardW, cardH, 6).fill('#f8fafc');
-    doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(10).text('FACTURÉ À :', leftX + 10, cardY + 10);
-    doc.font('Helvetica').fontSize(9).fillColor('#374151').text(parentName || '—', leftX + 10, cardY + 28);
-    if (parentEmail) doc.fontSize(8.5).fillColor('#2563eb').text(parentEmail, leftX + 10, cardY + 44);
+    const label = 'FACTURÉ À :';
+    const labelX = leftX + 10;
+    const labelY = cardY + 10;
+    doc.fillColor('#0f172a').font('Helvetica-Bold').fontSize(10).text(label, labelX, labelY);
+    const billedName = parentName || '—';
+    // compute name position just to the right of the label and limit its width so it wraps inside the card
+    const nameX = labelX + doc.widthOfString(label) + 8;
+    const nameAvailableW = cardW - (nameX - leftX) - 12; // right padding
+    doc.font('Helvetica').fontSize(9).fillColor('#374151').text(billedName, nameX, labelY, { width: nameAvailableW });
+    // compute current Y below the name block to start printing address/email/phone
+    const nameH = doc.heightOfString(billedName, { width: nameAvailableW });
+    const currentContactY = labelY + nameH + 6;
+    const contactX = leftX + 10;
+    const contactW = cardW - 20; // left+right padding
+    // two-column layout inside card: left for address, right for email/phone
+    const innerPadding = 8;
+    const leftColW = Math.floor((contactW - innerPadding) * 0.65);
+    const rightColW = contactW - innerPadding - leftColW;
+    const leftColX = contactX;
+    const rightColX = contactX + leftColW + innerPadding;
+
+    // Left column: parent address lines from linked user
+    let leftY = currentContactY;
+    if (parentUser && (parentUser.address || parentUser.postalCode || parentUser.city || parentUser.country)) {
+      if (parentUser.address) {
+        doc.fontSize(8.5).fillColor('#374151').text(parentUser.address, leftColX, leftY, { width: leftColW });
+        leftY += doc.heightOfString(parentUser.address, { width: leftColW }) + 4;
+      }
+      const parentCityLine = [parentUser.postalCode, parentUser.city].filter(Boolean).join(' ');
+      if (parentCityLine) {
+        doc.fontSize(8.5).fillColor('#374151').text(parentCityLine, leftColX, leftY, { width: leftColW });
+        leftY += doc.heightOfString(parentCityLine, { width: leftColW }) + 4;
+      }
+      if (parentUser.country) {
+        doc.fontSize(8.5).fillColor('#374151').text(parentUser.country, leftColX, leftY, { width: leftColW });
+        leftY += doc.heightOfString(parentUser.country, { width: leftColW }) + 4;
+      }
+    }
+
+  // Right column: email and phone (fall back to parentEmail / ph.parent.phone)
+  // position at the same vertical level as the contact start (raise email/phone)
+  let rightY = currentContactY;
+    const emailToShow = parentEmail || (parentUser && parentUser.email) || '';
+    const phoneToShow = (ph.parent && ph.parent.phone) || (parentUser && parentUser.phone) || '';
+    if (emailToShow) {
+      doc.fontSize(8.5).fillColor('#2563eb').text(emailToShow, rightColX, rightY, { width: rightColW });
+      rightY += doc.heightOfString(emailToShow, { width: rightColW }) + 4;
+    }
+    if (phoneToShow) {
+      doc.fontSize(8.5).fillColor('#374151').text(phoneToShow, rightColX, rightY, { width: rightColW });
+      rightY += doc.heightOfString(phoneToShow, { width: rightColW }) + 4;
+    }
 
     // Period card
     const rightX = leftX + cardW + 20;
@@ -178,7 +318,8 @@ router.get('/invoice/:id', auth, async (req, res) => {
     doc.fillColor('#065f46').font('Helvetica-Bold').fontSize(10).text(`Période: ${ph.month}/${ph.year}`, rightX + 10, cardY + 14);
     doc.font('Helvetica').fontSize(9).fillColor('#065f46').text(`Du 01/${ph.month}/${ph.year} au 31/${ph.month}/${ph.year}`, rightX + 10, cardY + 34);
 
-    doc.moveDown(6);
+  // add extra vertical breathing room between the billing/period cards and the items table
+  doc.moveDown(10);
 
     // Table header (and prepare row loop)
     const headerInfo = renderTableHeader(doc, leftX, pageWidth, cols);
@@ -186,7 +327,7 @@ router.get('/invoice/:id', auth, async (req, res) => {
     doc.y = currentY;
 
     // page max Y before footer area
-    const footerReserve = 140; // espace réservé pour totaux + footer
+  const footerReserve = 180; // espace réservé pour totaux + footer (increased for breathing room)
     const pageMaxY = doc.page.height - bottomMargin - footerReserve;
 
     const items = Array.isArray(ph.details) ? ph.details : [];
@@ -195,7 +336,7 @@ router.get('/invoice/:id', auth, async (req, res) => {
     function addNewPage() {
       doc.addPage();
       // reset layout constants on new page
-      renderHeader(doc, ph, parentName, invoiceNumber, invoiceDate, dueDate);
+      renderHeader(doc, ph, parentName, invoiceNumber, invoiceDate, dueDate, centerName, adminIssuer);
       doc.moveDown(4);
       const h = renderTableHeader(doc, leftX, pageWidth, cols);
       currentY = h.headerY + 4;
@@ -250,7 +391,8 @@ router.get('/invoice/:id', auth, async (req, res) => {
       doc.y = currentY;
     }
 
-    doc.moveDown(1.5);
+  // create more space between table rows and totals to make the invoice less compact
+  doc.moveDown(3);
 
     // --- Totals area (placed after rows) ---
     // Recompute subtotal
@@ -263,29 +405,47 @@ router.get('/invoice/:id', auth, async (req, res) => {
     // Ensure totals fit; if not, new page
     if (currentY + 120 > pageMaxY) addNewPage();
 
-    const totalsX = cols.rate.x;
-    const totalsValX = cols.subtotal.x;
+  // Bring labels closer to the numeric totals column for a tighter look
+  const totalsValX = cols.subtotal.x;
+  // position labels a bit to the left of the values column (previously used cols.rate.x which left a large gap)
+  const labelOffset = 12; // smaller offset keeps label close to the numbers
+  const totalsX = Math.max(cols.rate.x + 20, totalsValX - 120) + labelOffset;
 
-    doc.font('Helvetica').fontSize(10).fillColor('#374151').text('Sous-total:', totalsX, currentY + 6);
-    doc.font('Helvetica-Bold').text(fmt(subtotal), totalsValX, currentY + 6, { align: 'right' });
+  // Measure label width and position it so its right edge sits a few points left of the totals value column
+  doc.font('Helvetica').fontSize(10).fillColor('#374151');
+  const labelGap = 4; // gap in points between label right edge and value
+  const subtotalLabel = 'Sous-total:';
+  const subtotalLabelW = doc.widthOfString(subtotalLabel);
+  const subtotalLabelX = Math.max(totalsValX - subtotalLabelW - labelGap, leftX + 10);
+  doc.text(subtotalLabel, subtotalLabelX, currentY + 6);
+  doc.font('Helvetica-Bold').text(fmt(subtotal), totalsValX, currentY + 6, { align: 'right' });
 
     let offset = 24;
     if (discount) {
-      doc.font('Helvetica').fillColor('#10b981').text('Remise:', totalsX, currentY + 6 + offset);
-      doc.text(fmt(-Math.abs(discount)), totalsValX, currentY + 6 + offset, { align: 'right' });
+  // Discount label positioned to hug the amounts column
+  const discountLabel = 'Remise:';
+  const discountLabelW = doc.widthOfString(discountLabel);
+  const discountLabelX = Math.max(totalsValX - discountLabelW - labelGap, leftX + 10);
+  doc.font('Helvetica').fillColor('#10b981').text(discountLabel, discountLabelX, currentY + 6 + offset);
+  doc.text(fmt(-Math.abs(discount)), totalsValX, currentY + 6 + offset, { align: 'right' });
       offset += 18;
     }
 
     if (taxRate) {
-      doc.fillColor('#374151').text(`TVA (${taxRate}%):`, totalsX, currentY + 6 + offset);
-      doc.text(fmt(taxValue), totalsValX, currentY + 6 + offset, { align: 'right' });
+  const taxLabel = `TVA (${taxRate}%):`;
+  const taxLabelW = doc.widthOfString(taxLabel);
+  const taxLabelX = Math.max(totalsValX - taxLabelW - labelGap, leftX + 10);
+  doc.fillColor('#374151').text(taxLabel, taxLabelX, currentY + 6 + offset);
+  doc.text(fmt(taxValue), totalsValX, currentY + 6 + offset, { align: 'right' });
       offset += 18;
     }
 
-    // Total box
-    const totalBoxW = 180;
-    const totalBoxX = doc.page.width - doc.page.margins.right - totalBoxW;
-    const totalBoxY = currentY + 6 + offset + 10;
+  // Add a bit more vertical space between the last totals line and the TOTAL TTC box
+  const extraGapBeforeTotalBox = 12; // increase this if you want more breathing room
+  // Total box
+  const totalBoxW = 180;
+  const totalBoxX = doc.page.width - doc.page.margins.right - totalBoxW;
+  const totalBoxY = currentY + 6 + offset + 10 + extraGapBeforeTotalBox;
     doc.roundedRect(totalBoxX, totalBoxY, totalBoxW, 46, 6).fill('#2563eb');
     doc.fillColor('#fff').font('Helvetica-Bold').fontSize(10).text('TOTAL TTC', totalBoxX + 12, totalBoxY + 8);
     doc.fontSize(14).text(fmt(total), totalBoxX + 12, totalBoxY + 24);

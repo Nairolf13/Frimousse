@@ -25,7 +25,7 @@ const plans = [
     features: [
       'Jusqu’à 10 enfants',
       'Notifications email',
-      'Support prioritaire',
+      'Support par email',
     ],
     cta: 'Choisir Essentiel',
     highlight: false,
@@ -39,7 +39,8 @@ const plans = [
     features: [
       'Création de comptes illimités',
       'facturations détaillées',
-      'Support téléphonique',
+      'Assistant IA',
+      'Support prioritaire',
     ],
     cta: 'Choisir Pro',
     highlight: true,

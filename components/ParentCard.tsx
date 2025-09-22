@@ -19,7 +19,7 @@ type Parent = {
 
 export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete, annualPerChild }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; annualPerChild?: number }) {
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const initials = ((parent.firstName && parent.lastName) ? `${parent.firstName[0] || ''}${parent.lastName[0] || ''}` : (parent.name || 'U')).toUpperCase().slice(0,2);
   const [isDeleting, setIsDeleting] = useState(false);
   const API_URL = import.meta.env.VITE_API_URL;
@@ -33,6 +33,19 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
   const { user } = useAuth();
   const uLike = user as unknown as { role?: string | null; parentId?: string | null } | null;
   const isCurrentParent = !!(uLike && typeof uLike.role === 'string' && uLike.role === 'parent' && uLike.parentId === parent.id);
+
+  // try to tolerate different backend field names for phone/email
+  const parentRecord = parent as Record<string, unknown>;
+  const phoneVal = String(parentRecord['phone'] ?? parentRecord['telephone'] ?? parentRecord['tel'] ?? parentRecord['mobile'] ?? '');
+  const emailVal = String(parentRecord['email'] ?? parentRecord['mail'] ?? parentRecord['emailAddress'] ?? '');
+  const addressVal = String(parentRecord['address'] ?? '');
+  const postalCodeVal = String(parentRecord['postalCode'] ?? '');
+  const cityVal = String(parentRecord['city'] ?? '');
+  // do not display region/country in the card per UX request
+  if (import.meta.env.DEV && !phoneVal && !emailVal) {
+    // helpful debug when admin summary lacks contact fields
+    console.debug('ParentCard: missing phone/email for parent', parent);
+  }
 
   const uploadPrescription = async (childId: string, file: File | null) => {
     if (!file) return;
@@ -99,38 +112,75 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
             <div className="truncate flex-1">
               <div className="font-semibold text-lg text-gray-900 truncate">{(parent.firstName || parent.lastName) ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : (parent.name || '—')}</div>
             </div>
-            <div className="ml-auto text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">{(parent.children && parent.children.length) ? t('parent.children.count', { n: String(parent.children.length) }) : t('parent.children.count', { n: '0' })}</div>
+              <div className="ml-auto text-xs font-bold bg-white text-green-600 px-3 py-1 rounded-full shadow border border-green-100">
+                {(() => {
+                  const childCount = parent.children ? parent.children.length : 0;
+                  if (locale === 'en') return `${childCount} ${childCount === 1 ? 'child' : 'children'}`;
+                  // default to French rules
+                  return `${childCount} ${childCount > 1 ? 'enfants' : 'enfant'}`;
+                })()}
+              </div>
           </div>
 
-          <div className="text-sm text-gray-700 mb-4 max-h-14 overflow-hidden">
+          <div className="text-sm text-gray-700 mb-4">
             <div className="flex flex-col gap-1">
-              <div className="text-sm text-gray-600 truncate">{parent.phone ? <span>📞 <a href={`tel:${parent.phone.replace(/\s+/g, '')}`} className="text-blue-600 hover:underline touch-manipulation" title={t('parent.form.phone')}>{parent.phone}</a></span> : '—'}</div>
-              <div className="text-sm text-gray-600 truncate">{parent.email ? <span>✉️ <a href={`mailto:${parent.email}`} className="text-blue-600 hover:underline touch-manipulation" title={t('parent.form.email')}>{parent.email}</a></span> : null}</div>
+              <div className="text-sm text-gray-600 truncate flex items-center gap-2">
+                <span aria-hidden className={`inline-block ${phoneVal ? '' : 'text-gray-300'}`}>📞</span>
+                {phoneVal ? (
+                  <a href={`tel:${phoneVal.replace(/\s+/g, '')}`} className="text-blue-600 hover:underline touch-manipulation" title={t('parent.form.phone')}>{phoneVal}</a>
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
+              </div>
+              <div className="text-sm text-gray-600 truncate flex items-center gap-2">
+                <span aria-hidden className={`inline-block ${emailVal ? '' : 'text-gray-300'}`}>✉️</span>
+                {emailVal ? (
+                  <a href={`mailto:${emailVal}`} className="text-blue-600 hover:underline touch-manipulation" title={t('parent.form.email')}>{emailVal}</a>
+                ) : (
+                  <span className="text-gray-400">—</span>
+                )}
+              </div>
+              <div className="text-sm text-gray-600 truncate flex items-start gap-2">
+                <span aria-hidden className={`inline-block ${addressVal ? '' : 'text-gray-300'}`}>📍</span>
+                <div className="leading-snug">
+                  {addressVal ? <div className="truncate">{addressVal}</div> : <div className="text-gray-300">—</div>}
+                  {(postalCodeVal || cityVal) ? <div className="truncate">{[postalCodeVal, cityVal].filter(Boolean).join(' ')}</div> : <div className="text-gray-300">—</div>}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="mb-3">
-            <div className="text-sm font-medium text-gray-700 mb-2">{t('page.children')}</div>
-            <div className="flex flex-wrap gap-2 max-h-[180px] overflow-auto">
+          <div className="mb-3 flex-1 overflow-auto">
+            <div className="text-sm font-medium text-gray-700 mb-2">{(() => {
+              const childCount = parent.children ? parent.children.length : 0;
+              // singular for 0 or 1, plural for >1
+              if (locale === 'en') return childCount <= 1 ? 'Child' : 'Children';
+              return childCount <= 1 ? 'Enfant' : 'Enfants';
+            })()}</div>
+            <div className="flex flex-wrap gap-2 min-h-[120px]">
               {(parent.children || []).map(c => (
-                <div key={c.child.id} className="bg-white rounded p-2 border">
+                <div key={c.child.id} className="bg-white rounded p-2 border w-32 h-20 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
-                    <div className="w-28 min-w-[7rem]">{/* fixed width area for name/group/prescription to avoid layout shift */}
+                    <div className="w-20 min-w-[5rem]">{/* compact width for name/group/prescription */}
                       <button
                         onClick={() => { if (onChildClick) { onChildClick(c.child); } else navigate(`/parent/child/${c.child.id}/reports`); }}
                         className="text-left text-sm font-medium text-blue-700 hover:underline w-full text-ellipsis overflow-hidden block"
                         aria-label={`Voir les rapports de ${c.child.name}`}>
-                        <div className="truncate">{c.child.name}</div>
-                        <div className="text-xs text-gray-500">{t('children.group.all')}: {c.child.group || '—'}</div>
+                        <div className="truncate">
+                          <div className="truncate flex items-baseline gap-1">
+                            <span className="truncate">{c.child.name}</span>
+                            {c.child.group ? <span className="text-xs text-gray-500">({c.child.group})</span> : null}
+                          </div>
+                        </div>
                       </button>
                     </div>
                   </div>
                   {/* Voir l'ordonnance placé sous le groupe — espace réservé pour éviter le décalage entre cartes */}
-                  <div className="mt-1 min-h-[20px] flex items-center">
+                  <div className="mt-1 min-h-[18px] flex items-center">
                     {(() => {
                       const known = (c.child as { prescriptionUrl?: string | null }).prescriptionUrl || (prescriptions[c.child.id] && prescriptions[c.child.id].url);
                       const shouldShow = isCurrentParent || !!known;
-                      if (!shouldShow) return <div className="w-full h-5" aria-hidden />;
+                      if (!shouldShow) return <div className="w-full h-4" aria-hidden />;
                       return (
                         <button onClick={async () => {
                           const knownUrl = (prescriptions[c.child.id] && prescriptions[c.child.id].url) || (c.child as { prescriptionUrl?: string | null }).prescriptionUrl;
@@ -141,7 +191,7 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
                       );
                     })()}
                   </div>
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mt-1 flex items-center gap-1 justify-end">
                     {isCurrentParent ? (
                       <>
                         <input id={`presc-${c.child.id}`} type="file" accept="image/*,.pdf" className="hidden" onChange={async (e) => {
@@ -162,12 +212,12 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col justify-end">
             <div className="text-sm text-gray-700 mb-3 text-center">
               <div className="mb-1">{t('parent.cotisation.this_month')}: <span className="font-bold text-blue-700">{(parentDue || 0)}€</span></div>
               <div className="text-xs">{t('parent.cotisation.annual_total')}: <span className="font-bold text-gray-900">{((parent.children?.length || 0) * (annualPerChild ?? 15))}€</span></div>
             </div>
-            <div className="flex justify-center gap-2 mt-auto">
+            <div className="flex justify-center gap-2">
               <button onClick={() => { if (onEdit) onEdit(parent); }} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center" title={t('children.action.edit')}>
                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
               </button>

@@ -682,7 +682,7 @@ export default function Children() {
                           <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap" title="Sexe">{child.sexe === 'masculin' ? t('children.form.sexe.m') : t('children.form.sexe.f')}</span>
                           {child.birthDate ? (
                             <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap" title={t('label.birthDate')}>
-                              🎂 {new Date(child.birthDate).toLocaleDateString(undefined)}
+                              🎂 {new Date(child.birthDate).toLocaleDateString('fr-FR')}
                             </span>
                           ) : (
                               <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap" title={t('label.birthDate')}>

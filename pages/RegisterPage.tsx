@@ -588,7 +588,7 @@ export default function RegisterPage() {
 
             <button type="button" onClick={() => setInitialPlan('pro')} className={`p-3 rounded-lg border text-sm focus:outline-none flex flex-col items-center text-center min-h-[140px] ${initialPlan === 'pro' ? 'border-[#0b5566] bg-white shadow' : 'border-gray-200 bg-white hover:shadow-sm'}`}>
               <div><div className="font-semibold text-[#0b5566]">Pro</div><div className="text-xs text-gray-600">Pour structures avancées</div></div>
-              <div className="mt-3 text-xs text-gray-600">Enfants illimités, RH & facturation</div>
+              <div className="mt-3 text-xs text-gray-600">Enfants illimités, Assistant IA </div>
               <div className="mt-auto text-base font-bold text-[#0b5566]">59,99€ <span className="text-xs text-gray-500">/ mois</span></div>
             </button>
           </div>

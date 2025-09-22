@@ -42,21 +42,30 @@ interface Nanny {
   email?: string;
   cotisationPaidUntil?: string | null;
   birthDate?: string | null;
+  address?: string | null;
+  postalCode?: string | null;
+  city?: string | null;
+  region?: string | null;
+  country?: string | null;
 }
 
 const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; password?: string } = {
   name: '',
   availability: 'Disponible',
-  experience: 0,
+  // keep runtime empty so placeholder shows; cast to satisfy TS (Nanny.experience is number)
+  experience: '' as unknown as number,
   specializations: [],
   status: 'Disponible',
   contact: '',
   email: '',
   password: '',
   birthDate: undefined,
+  address: '',
+  postalCode: '',
+  city: '',
+  region: '',
+  country: '',
 };
-
-const avatarEmojis = ['🦁', '🐻', '🐱', '🐶', '🦊', '🐼', '🐵', '🐯'];
 
 export default function Nannies() {
   const { t } = useI18n();
@@ -85,7 +94,81 @@ export default function Nannies() {
     const [assignments, setAssignments] = useState<Assignment[]>([]); 
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(emptyForm);
+  // --- geodata/autocomplete (copied from ParentDashboard/RegisterPage)
+  type GeodataPlace = { house_number?: string | null; street?: string | null; city?: string | null; state?: string | null; country?: string | null; postcode?: string | null; name?: string };
+  const [placeSuggestions, setPlaceSuggestions] = useState<GeodataPlace[]>([]);
+  const [openAddress, setOpenAddress] = useState(false);
+  const [rateLimitedUntil, setRateLimitedUntil] = useState<number | null>(null);
+  const searchTimer = React.useRef<number | null>(null);
+
+  const fetchGeodata = React.useCallback(async (query: string) => {
+    if (rateLimitedUntil && Date.now() < rateLimitedUntil) return;
+    if (!query || query.length < 3) { setPlaceSuggestions([]); return; }
+    try {
+      const res = await fetch(`/api/geodata/positionstack?q=${encodeURIComponent(query)}&limit=12`);
+      if (res.status === 422) {
+        setPlaceSuggestions([]);
+        return;
+      }
+      if (res.status === 429) {
+        const cooldownMs = 60_000;
+        setRateLimitedUntil(Date.now() + cooldownMs);
+        setPlaceSuggestions([]);
+        return;
+      }
+      if (!res.ok) { setPlaceSuggestions([]); return; }
+      const data = (await res.json()) as GeodataPlace[];
+      const arr = data || [];
+      const addresses = arr.filter((p) => !!(p.house_number || p.street));
+      setPlaceSuggestions(addresses);
+    } catch (err) {
+      console.error('geodata fetch error', err);
+      setPlaceSuggestions([]);
+    }
+  }, [rateLimitedUntil]);
+
+  React.useEffect(() => {
+    const q = (form.address || form.city || '').trim();
+    if (searchTimer.current) window.clearTimeout(searchTimer.current);
+    searchTimer.current = window.setTimeout(() => {
+      const bias = form.city ? ` ${form.city}` : '';
+      fetchGeodata(`${q}${bias}`.trim());
+    }, 600);
+    return () => { if (searchTimer.current) window.clearTimeout(searchTimer.current); };
+  }, [form.address, form.city, fetchGeodata]);
+
+  React.useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!target) return;
+      const addrEl = document.querySelector('#nanny-form-address');
+      if (addrEl && addrEl.contains(target)) return;
+      setOpenAddress(false);
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, []);
+
+  const selectPlace = (p: GeodataPlace) => {
+    const house = p.house_number ? String(p.house_number).trim() : '';
+    const road = p.street ? String(p.street).trim() : '';
+    const streetPart = (house ? `${house} ${road}`.trim() : (road || ''));
+    const displayStreet = streetPart || p.name || '';
+    const userTyped = String(form.address || '').trim();
+    let composed = displayStreet;
+    if (!house) {
+      const m = userTyped.match(/^(\d+)\s+(.+)$/);
+      if (m && m[1]) {
+        const typedNum = m[1];
+        if (!displayStreet.startsWith(typedNum + ' ')) composed = `${typedNum} ${displayStreet}`.trim();
+      }
+    }
+    setForm({ ...form, address: composed, city: p.city || '', postalCode: p.postcode || '', region: p.state || '', country: p.country || '' });
+    setPlaceSuggestions([]);
+    setOpenAddress(false);
+  };
   const [showPw, setShowPw] = useState(false);
+  const [birthInputType, setBirthInputType] = useState<'text' | 'date'>('text');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -289,9 +372,26 @@ export default function Nannies() {
   };
 
   const handleEdit = (nanny: Nanny) => {
-    setForm({ name: nanny.name, availability: nanny.availability, experience: nanny.experience, specializations: nanny.specializations || [], status: nanny.status || 'Disponible', contact: nanny.contact, email: nanny.email, birthDate: nanny.birthDate });
+    setForm({
+      name: nanny.name,
+      availability: nanny.availability,
+      experience: nanny.experience,
+      specializations: nanny.specializations || [],
+      status: nanny.status || 'Disponible',
+      contact: nanny.contact,
+      email: nanny.email,
+      birthDate: nanny.birthDate,
+      address: nanny.address || '',
+      postalCode: nanny.postalCode || '',
+      city: nanny.city || '',
+      region: nanny.region || '',
+      country: nanny.country || '',
+      password: '',
+    });
     setEditingId(nanny.id);
     setAdding(false);
+    setConfirmPassword('');
+    setShowPw(false);
     // scroll to the form so the user doesn't have to manually scroll
     // timeout lets React render the form before we attempt to scroll
     setTimeout(() => {
@@ -410,24 +510,78 @@ export default function Nannies() {
         </div>
 
         {(adding || editingId) && (
-          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-            <input name="name" value={form.name} onChange={handleChange} placeholder={t('nanny.form.name')} required className="border rounded px-3 py-2 text-base" />
-            <select name="availability" value={form.availability} onChange={handleChange} required className="border rounded px-3 py-2 text-xs md:text-base">
+          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-4 md:grid-cols-3 lg:grid-cols-3">
+            {/* Shared input class ensures consistent widths and appearance */}
+            <input name="name" value={form.name} onChange={handleChange} placeholder={t('nanny.form.name')} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            <select name="availability" value={form.availability} onChange={handleChange} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]">
               <option value="Disponible">{t('nanny.availability.available')}</option>
               <option value="En_congé">{t('nanny.availability.on_leave')}</option>
               <option value="Maladie">{t('nanny.availability.sick')}</option>
             </select>
-            <input name="experience" type="number" value={form.experience} onChange={handleChange} placeholder={t('nanny.form.experience')} required className="border rounded px-3 py-2 text-base" />
-            <input name="birthDate" type="date" value={form.birthDate || ''} onChange={handleChange} placeholder={t('nanny.form.birthDate')} className="border rounded px-3 py-2 text-base" />
-            <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder={t('nanny.form.specializations')} className="border rounded px-3 py-2 text-base md:col-span-2" />
-            <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder={t('nanny.form.contact')} className="border rounded px-3 py-2 text-base" />
-            <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className="border rounded px-3 py-2 text-base" />
+              <div id="nanny-form-address" className="md:col-span-2">
+                <label className="block text-left font-medium text-[#08323a]">
+                  <div className="relative">
+                    <input name="address" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t('parent.form.address')} className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" onFocus={() => setOpenAddress(true)} />
+                    {openAddress && placeSuggestions.length > 0 && (
+                      <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-56 overflow-auto rounded shadow">
+                        {placeSuggestions.map((p, idx) => {
+                          const summary = [p.house_number && `${p.house_number} ${p.street}`, p.street || p.name, p.postcode, p.state, p.country].filter(Boolean).join(', ');
+                          const label = p.name || (p.house_number ? `${p.house_number} ${p.street}` : p.street || '');
+                          return (
+                            <li key={idx} role="button" tabIndex={0} onClick={() => { selectPlace(p); }} className="px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                              <div className="text-sm font-medium">{label}</div>
+                              <div className="text-xs text-gray-500">{summary}</div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </label>
+              </div>
+              <label className="block text-left font-medium">
+                <span className="sr-only">{t('parent.form.postalCode')}</span>
+                <input name="postalCode" value={form.postalCode || ''} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} placeholder={t('parent.form.postalCode')} className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              </label>
+              <input name="city" value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder={t('parent.form.city')} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <input name="region" value={form.region || ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder={t('parent.form.region') || 'Région'} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <input name="country" value={form.country || ''} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder={t('parent.form.country') || 'Pays'} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            <input name="experience" type="number" value={form.experience || ''} onChange={handleChange} placeholder={t('nanny.form.experience') || 'Expérience'} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            {/* Display formatted dd/mm/yyyy when not editing; keep ISO value for type=date */}
+            <input
+              name="birthDate"
+              type={birthInputType}
+              value={birthInputType === 'date' ? (form.birthDate || '') : (form.birthDate ? ((): string => {
+                // robustly format any parsable date as DD/MM/YYYY
+                try {
+                  const d = new Date(String(form.birthDate));
+                  if (!isNaN(d.getTime())) {
+                    const dd = String(d.getDate()).padStart(2, '0');
+                    const mm = String(d.getMonth() + 1).padStart(2, '0');
+                    const yyyy = String(d.getFullYear());
+                    return `${dd}/${mm}/${yyyy}`;
+                  }
+                } catch (e) {
+                  void e;
+                }
+                return String(form.birthDate);
+              })() : '')}
+              onChange={handleChange}
+              placeholder={t('nanny.form.birthDate') || 'Date de naissance'}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]"
+              onFocus={() => setBirthInputType('date')}
+              onBlur={() => setBirthInputType('text')}
+              readOnly={birthInputType === 'text'}
+            />
+            <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder={t('nanny.form.specializations')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base md:col-span-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder={t('nanny.form.contact')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
             <div className="relative md:col-span-1">
-              <input name="password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className="border rounded px-3 py-2 text-base w-full pr-10" />
+              <input name="password" autoComplete="new-password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base pr-10 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
               <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
             </div>
             <div className="relative md:col-span-1">
-              <input name="confirmPassword" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('nanny.form.confirmPassword')} className="border rounded px-3 py-2 text-base w-full pr-10" />
+              <input name="confirmPassword" autoComplete="new-password" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('nanny.form.confirmPassword')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base pr-10 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
               <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
             </div>
             <div className="md:col-span-2 flex gap-2">
@@ -449,7 +603,6 @@ export default function Nannies() {
               .map((nanny, idx) => {
               const cotisation = cotisationStatus[nanny.id];
               const daysRemaining = cotisation && cotisation.paidUntil ? Math.max(0, Math.ceil((new Date(cotisation.paidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
-              const avatar = avatarEmojis[idx % avatarEmojis.length];
               const cardColors = [
                 'bg-blue-50',
                 'bg-yellow-50',
@@ -463,18 +616,26 @@ export default function Nannies() {
               const todayStr = new Date().toISOString().split('T')[0];
               const assignedTodayCount = assignments.filter(a => a.nanny && a.nanny.id === nanny.id && a.date.split('T')[0] === todayStr).length;
               const isPaymentModalOpen = confirmPayment?.nannyId === nanny.id;
+              // Normalize availability and compute label + classes for colored pill
+              const _availRaw = String(nanny.availability || '').toLowerCase();
+              const availabilityLabel = (nanny.availability === 'En_congé' || nanny.availability === 'En congé')
+                ? t('nanny.availability.on_leave')
+                : (nanny.availability === 'Disponible' ? t('nanny.availability.available') : t('nanny.availability.sick'));
+              let availabilityClasses = 'px-2 py-1 rounded-full text-xs font-medium ';
+              if (_availRaw.includes('dispon')) {
+                availabilityClasses += 'bg-green-100 text-green-800 border border-green-200';
+              } else if (_availRaw.includes('malad') || _availRaw.includes('cong')) {
+                availabilityClasses += 'bg-red-100 text-red-700 border border-red-200';
+              } else {
+                availabilityClasses += 'bg-white border border-gray-200 text-gray-600';
+              }
               return (
                 <div
                   key={nanny.id}
                   className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[440px] h-full transition-transform duration-500 perspective-1000 overflow-hidden`}
                   style={{ height: '100%', perspective: '1000px' }}
                 >
-                  <span
-                    className={`absolute text-xs font-bold px-3 py-1 rounded-full shadow border whitespace-nowrap transform left-1/2 -translate-x-1/2 top-3`}
-                    style={{zIndex:2, background: nanny.availability === 'Disponible' ? '#a9ddf2' : nanny.availability === 'En_congé' ? '#fff4d6' : '#ffeaea', color: nanny.availability === 'Disponible' ? '#08323a' : nanny.availability === 'En_congé' ? '#856400' : '#7a2a2a', borderColor: nanny.availability === 'Disponible' ? '#a9ddf2' : nanny.availability === 'En_congé' ? '#fff4d6' : '#ffeaea'}}
-                  >
-                    {nanny.availability === 'En_congé' ? t('nanny.availability.on_leave') : (nanny.availability === 'Disponible' ? t('nanny.availability.available') : t('nanny.availability.sick'))}
-                  </span>
+                  {/* availability badge moved into header below name */}
                   <div
                     className={`w-full h-full transition-transform duration-500 ${isDeleting ? 'rotate-y-180' : ''}`}
                     style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
@@ -483,29 +644,47 @@ export default function Nannies() {
                       className={`absolute inset-0 w-full h-full p-3 sm:p-4 md:p-6 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
                       style={{ backfaceVisibility: 'hidden' }}
                     >
-                        <div className="flex items-center gap-2 sm:gap-3 mb-2 min-w-0 pt-8 sm:pt-10 md:pt-12 pb-2">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white flex items-center justify-center text-lg sm:text-2xl shadow border border-gray-100">{avatar}</div>
-                        <span className="font-semibold text-base sm:text-lg text-[#08323a] ml-1 sm:ml-2 max-w-full sm:max-w-[120px] sm:truncate min-w-0" title={nanny.name}>{nanny.name}</span>
-                        <span className="ml-auto text-xs font-bold bg-white text-[#08323a] px-2 sm:px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{nanny.experience} ans</span>
-                      </div>
-                      {nanny.birthDate && (
-                        <div className="text-xs sm:text-sm text-gray-600 mb-1 text-center">
-                          {t('nanny.birth.label')} {new Date(nanny.birthDate).toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        <div className="w-full pt-2 sm:pt-3 text-center">
+                          <div className="flex items-center justify-center">
+                            <h3 className="font-semibold text-lg sm:text-xl text-[#08323a] truncate max-w-[220px] -mt-1 -translate-y-0.5" title={nanny.name} style={{transform: 'translateY(-2px)'}}>{nanny.name}</h3>
+                          </div>
+                          <div className="mt-2 flex items-center justify-center gap-4 text-sm text-gray-600">
+                            <span className={availabilityClasses}>
+                              {availabilityLabel}
+                            </span>
+                            <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs font-medium">{`${nanny.experience} ${nanny.experience === 1 ? 'an' : 'ans'} exp`}</span>
+                            {nanny.birthDate ? (
+                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap" title={t('label.birthDate')}>
+                                🎂 {new Date(nanny.birthDate).toLocaleDateString('fr-FR')}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap" title={t('label.birthDate')}>
+                                🎂 {t('children.birthDate.undefined')}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      <div className="flex flex-col gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4">
-                        <span className="flex items-center gap-2 w-full justify-center">
-                          <span role="img" aria-label="Téléphone" className="text-sm sm:text-base">📞</span>
-                          {nanny.contact ? (
-                            <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
+                      {/* birthday now shown in header pill; detailed date removed to avoid duplication */}
+                      <div className="mt-4 flex flex-col gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4">
+                        <span className="flex items-start gap-2 w-full justify-start">
+                          <span aria-hidden className={`inline-block ${nanny.address ? '' : 'text-gray-300'}`}>📍</span>
+                          <div className="leading-snug">
+                            {nanny.address ? <div className="truncate">{nanny.address}</div> : <div className="text-gray-300">—</div>}
+                            {(nanny.postalCode || nanny.city) ? <div className="truncate">{[nanny.postalCode, nanny.city].filter(Boolean).join(' ')}</div> : <div className="text-gray-300">—</div>}
+                          </div>
+                        </span>
+                        <span className="flex items-center gap-2 w-full justify-start">
+                          <span className="w-5 text-center text-sm sm:text-base" role="img" aria-label="Email">✉️</span>
+                          {nanny.email ? (
+                            <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
                           ) : (
                             <span className="text-gray-400 text-xs sm:text-sm">—</span>
                           )}
                         </span>
-                        <span className="flex items-center gap-2 w-full justify-center">
-                          <span role="img" aria-label="Email" className="text-sm sm:text-base">✉️</span>
-                          {nanny.email ? (
-                            <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
+                        <span className="flex items-center gap-2 w-full justify-start">
+                          <span aria-hidden className={`inline-block ${nanny.contact ? '' : 'text-gray-300'}`}>📞</span>
+                          {nanny.contact ? (
+                            <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
                           ) : (
                             <span className="text-gray-400 text-xs sm:text-sm">—</span>
                           )}
@@ -526,65 +705,78 @@ export default function Nannies() {
                           </span>
                         </span>
                       </div>
-                      <div className="flex flex-col gap-2 mt-auto mb-4 w-full min-w-0">
-                        <div className="flex items-center justify-center gap-2">
-                          <span className="text-xs font-semibold text-gray-700">{t('nanny.cotisation.label')}</span>
-                          {cotisation?.loading ? (
-                            <span className="text-sm text-gray-500">{t('loading')}</span>
-                          ) : daysRemaining > 0 ? (
-                            <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
-                          ) : isAdmin ? (
-                            <input
-                              type="number"
-                              className="w-20 px-2 py-1 border rounded text-sm"
-                              value={cotisationAmounts[nanny.id] ?? 10}
-                              onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
-                            />
-                          ) : (
-                            <span className="text-base font-bold text-[#08323a]">10€</span>
-                          )}
-                          {cotisation?.loading ? (
-                            <span className="text-gray-400 text-xl">…</span>
-                          ) : daysRemaining > 0 ? (
-                            <span className="text-[#0b5566] text-xl">✔️</span>
-                          ) : (
-                            <span className="text-red-500 text-xl">❌</span>
-                          )}
-                          {daysRemaining <= 0 && isAdmin && (
-                            <button
-                              className="text-[#0b5566] text-xs font-semibold px-2 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition ml-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={cotisation?.loading || isPaymentModalOpen}
-                              onClick={() => requestPay(nanny.id)}
-                            >
-                              {cotisation?.loading ? t('nanny.payment.loading') : isPaymentModalOpen ? t('nanny.payment.confirming') : t('nanny.payment.pay')}
-                            </button>
-                          )}
-                        </div>
+                      <div className="flex flex-col gap-2 mt-auto mb-4 w-full min-w-0 items-center">
                         <div className="flex flex-col items-center">
-                          <span className="text-xs text-gray-500 text-center">
+                          <span className="text-xs font-semibold text-gray-700">{t('nanny.cotisation.label')}</span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-2">
+                              {cotisation?.loading ? (
+                                <span className="text-sm text-gray-500">{t('loading')}</span>
+                              ) : daysRemaining > 0 ? (
+                                <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
+                              ) : isAdmin ? (
+                                <input
+                                  type="number"
+                                  className="w-20 px-2 py-1 border rounded text-sm"
+                                  value={cotisationAmounts[nanny.id] ?? 10}
+                                  onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
+                                />
+                              ) : (
+                                <span className="text-base font-bold text-[#08323a]">10€</span>
+                              )}
+
+                              {cotisation?.loading ? (
+                                <span className="text-gray-400 text-xl">…</span>
+                              ) : daysRemaining > 0 ? (
+                                <span className="text-[#0b5566] text-xl">✔️</span>
+                              ) : (
+                                <span className="text-red-500 text-xl">❌</span>
+                              )}
+                            </div>
+
+                            {/* Pay button placed to the right of the amount/input and status icon */}
+                            {daysRemaining <= 0 && isAdmin && (
+                              <button
+                                className="ml-2 text-[#0b5566] text-xs font-semibold px-3 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={cotisation?.loading || isPaymentModalOpen}
+                                onClick={() => requestPay(nanny.id)}
+                              >
+                                {cotisation?.loading ? t('nanny.payment.loading') : isPaymentModalOpen ? t('nanny.payment.confirming') : t('nanny.payment.pay')}
+                              </button>
+                            )}
+                          </div>
+
+                          <span className="text-xs text-gray-500 text-center mt-1">
                             {cotisation ? (
                               cotisation.loading ? t('loading') : (
                                 cotisation.paidUntil ? (daysRemaining > 0 ? t('nanny.cotisation.days_remaining', { n: String(daysRemaining) }) : t('nanny.cotisation.renew')) : t('nanny.cotisation.renew')
                               )
                             ) : '—'}
                           </span>
+
                           {daysRemaining <= 0 && messages[nanny.id] && (
                             <div className={`mt-1 text-xs ${messages[nanny.id]?.type === 'success' ? 'text-[#0b5566]' : 'text-red-600'}`}>
                               {messages[nanny.id]?.text}
                             </div>
                           )}
                         </div>
-                        <div className="flex flex-col items-center gap-2 mt-2">
-                          <button
-                            onClick={() => setPlanningNanny(nanny)}
-                            className="w-[120px] min-w-[100px] bg-[#a9ddf2] text-[#0b5566] px-3 py-2 rounded-full font-semibold border border-[#a9ddf2] shadow-sm hover:bg-[#f7f4d7] transition text-xs text-center mx-auto"
-                          >{t('nanny.planning.button')}</button>
+
+                        <div className="flex items-center gap-2 mt-4">
                           <div className="flex gap-1">
-                              <button
-                                onClick={() => handleEdit(nanny)}
-                                className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
-                                title={t('children.action.edit')}
-                              >
+                            <button
+                              onClick={() => setPlanningNanny(nanny)}
+                              className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
+                              title={t('nanny.planning.button')}
+                              aria-label={t('nanny.planning.button') as string}
+                            >
+                              {/* Calendar icon */}
+                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-current"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                            </button>
+                            <button
+                              onClick={() => handleEdit(nanny)}
+                              className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
+                              title={t('children.action.edit')}
+                            >
                               <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
                             </button>
                             <button

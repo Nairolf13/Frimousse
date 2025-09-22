@@ -111,6 +111,18 @@ app.use('/api/uploads', uploadsRoutes);
 const notificationsRoutes = require('./routes/notifications');
 app.use('/api/notifications', notificationsRoutes);
 
+// Hugging Face parental assistant route
+const hfChatRoutes = require('./routes/hfChat');
+app.use('/api/hf-chat', hfChatRoutes);
+
+// Assistant route (Mistral proxy)
+try {
+  const assistantRoutes = require('./routes/assistant');
+  app.use('/api/assistant', assistantRoutes);
+} catch (e) {
+  console.warn('assistant route not available:', e.message);
+}
+
 // paymentHistoryRoutes mounted later after invoice and admin routes
 
 const paymentInvoiceRoutes = require('./routes/paymentInvoice');

@@ -1,6 +1,7 @@
 import AppRoutes from '../routes';
 import { useEffect, useState } from 'react';
 import { AuthContext } from './context/AuthContext';
+import { AssistantProvider } from './context/AssistantContext';
 import type { User } from './context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { HelmetProvider } from 'react-helmet-async';
@@ -59,7 +60,9 @@ function App() {
   return (
     <HelmetProvider>
       <AuthContext.Provider value={{ user }}>
-        <AppRoutes />
+        <AssistantProvider>
+          <AppRoutes />
+        </AssistantProvider>
       </AuthContext.Provider>
     </HelmetProvider>
   );

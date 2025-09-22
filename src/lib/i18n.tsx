@@ -4,6 +4,23 @@ import type { Locale } from './i18nContext';
 
 const translations: Record<Locale, Record<string, string>> = {
   fr: {
+    'nav.assistant': 'Assistant IA',
+    'assistant.title': "Assistant",
+    'assistant.header.title': "Assistant Les Frimousses",
+    'assistant.header.subtitle': "· Conseils et aide pour la petite enfance",
+    'assistant.intro.title': "Assistant",
+    'assistant.intro.description': "Je suis votre assistant pour la petite enfance. Je peux vous aider avec :",
+    'assistant.option.nutrition': "Conseils nutrition",
+    'assistant.option.nutrition.example': "Que cuisiner pour mon enfant ?",
+    'assistant.option.education': "Conseils pédagogiques",
+    'assistant.option.education.example': "Développement et apprentissages adaptés à l'âge",
+    'assistant.option.activities': "Activités suggérées",
+    'assistant.option.activities.example': "Jeux et exercices selon l'âge",
+    'assistant.user.fallback': 'Vous',
+    'assistant.input.aria': "Votre question",
+    'assistant.input.placeholder': "Posez votre question à l'assistant...",
+    'assistant.loading': 'Chargement...',
+    'assistant.send.button': 'Envoyer',
     'common.none': '—',
     'payments.history.title': 'Historique des paiements',
     'payments.history.empty': "Aucun enregistrement pour cette période.",
@@ -152,6 +169,11 @@ const translations: Record<Locale, Record<string, string>> = {
   'parent.form.lastName': 'Nom',
   'parent.form.email': 'Email',
   'parent.form.phone': 'Téléphone',
+  'parent.form.address': 'Adresse',
+  'parent.form.postalCode': 'Code postal',
+  'parent.form.city': 'Ville',
+  'parent.form.region': 'Région',
+  'parent.form.country': 'Pays',
   'parent.form.password.placeholder': 'Mot de passe (laisser vide pour envoyer une invitation)',
   'parent.form.confirmPassword.placeholder': 'Confirmer le mot de passe',
   'parent.form.submit.add': 'Ajouter',
@@ -275,6 +297,8 @@ const translations: Record<Locale, Record<string, string>> = {
     'no_profile': 'Aucune donnée de profil disponible'
   },
   en: {
+    // nav
+    'nav.assistant': 'Assistant IA',
     'common.none': '—',
     'payments.history.title': 'Payment history',
     'payments.history.empty': 'No records for this period.',
@@ -627,7 +651,7 @@ translations.fr['nanny.cotisation.label'] = 'Cotisation mensuelle :';
 translations.fr['nanny.payment.loading'] = 'Paiement...';
 translations.fr['nanny.payment.confirming'] = 'Confirmation...';
 translations.fr['nanny.payment.pay'] = 'Payer';
-translations.fr['nanny.cotisation.days_remaining'] = '{days} jour{days, plural, one {} other {s}} restants';
+translations.fr['nanny.cotisation.days_remaining'] = '{n} jour(s) restants';
 translations.fr['nanny.cotisation.renew'] = 'Cotisation à renouveler';
 translations.fr['nanny.delete.confirm_body'] = "Voulez-vous vraiment supprimer cette nounou ? Cette action est irréversible.";
 
@@ -638,7 +662,7 @@ translations.en['nanny.cotisation.label'] = 'Monthly fee:';
 translations.en['nanny.payment.loading'] = 'Payment...';
 translations.en['nanny.payment.confirming'] = 'Confirming...';
 translations.en['nanny.payment.pay'] = 'Pay';
-translations.en['nanny.cotisation.days_remaining'] = '{days} day{days, plural, one {} other {s}} remaining';
+translations.en['nanny.cotisation.days_remaining'] = '{n} day(s) remaining';
 translations.en['nanny.cotisation.renew'] = 'Fee needs renewal';
 translations.en['nanny.delete.confirm_body'] = 'Are you sure you want to delete this nanny? This action is irreversible.';
 
@@ -658,6 +682,9 @@ translations.fr['notifications.confirm_delete.confirm'] = 'Supprimer';
 translations.fr['notifications.deleting'] = 'Suppression...';
 translations.fr['notifications.mark_read'] = 'Marquer comme lu';
 translations.fr['notifications.mark_unread'] = 'Marquer comme non lu';
+translations.fr['notifications.delete_all'] = 'Tout supprimer';
+translations.fr['notifications.confirm_delete_all'] = 'Voulez-vous vraiment supprimer toutes les notifications ?';
+translations.fr['notifications.delete_all_failed'] = 'Échec de la suppression de toutes les notifications';
 
 translations.fr['time.now'] = 'à l\'instant';
 translations.fr['time.minutes'] = '{n} min';
@@ -679,6 +706,9 @@ translations.en['notifications.confirm_delete.confirm'] = 'Delete';
 translations.en['notifications.deleting'] = 'Deleting...';
 translations.en['notifications.mark_read'] = 'Mark as read';
 translations.en['notifications.mark_unread'] = 'Mark as unread';
+translations.en['notifications.delete_all'] = 'Delete all';
+translations.en['notifications.confirm_delete_all'] = 'Are you sure you want to delete all notifications?';
+translations.en['notifications.delete_all_failed'] = 'Failed to delete all notifications';
 
 translations.en['time.now'] = 'now';
 translations.en['time.minutes'] = '{n} min';
@@ -747,6 +777,11 @@ translations.en['parent.form.firstName'] = 'First name';
 translations.en['parent.form.lastName'] = 'Last name';
 translations.en['parent.form.email'] = 'Email';
 translations.en['parent.form.phone'] = 'Phone';
+translations.en['parent.form.address'] = 'Address';
+translations.en['parent.form.postalCode'] = 'Postal code';
+translations.en['parent.form.city'] = 'City';
+translations.en['parent.form.region'] = 'Region';
+translations.en['parent.form.country'] = 'Country';
 translations.en['parent.form.password.placeholder'] = 'Password (leave empty to send an invite)';
 translations.en['parent.form.confirmPassword.placeholder'] = 'Confirm password';
 translations.en['parent.form.submit.add'] = 'Add';
@@ -797,13 +832,27 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.lang = locale === 'en' ? 'en' : 'fr';
       localStorage.setItem('site_language', locale);
       document.cookie = `site_language=${locale};path=/;max-age=${60 * 60 * 24 * 365}`;
+      // expose small debug surface to help diagnose missing translations at runtime
+      try {
+        (window as unknown as { __FRIMOUSSE_I18N?: unknown }).__FRIMOUSSE_I18N = { locale, translations };
+      } catch (e) {
+        // ignore in strict environments (security policies)
+        void e;
+      }
     } catch {
       // ignore
     }
   }, [locale]);
 
   const t = useMemo(() => (key: string, params?: Record<string, string> | string) => {
-    const raw = translations[locale][key] ?? (typeof params === 'string' ? params : key);
+    const raw = translations[locale] && translations[locale][key] ? translations[locale][key] : (typeof params === 'string' ? params : key);
+    if (!(translations[locale] && translations[locale][key])) {
+      try {
+        console.warn(`[i18n] missing translation for key "${key}" (locale=${locale})`);
+      } catch (e) {
+        void e;
+      }
+    }
     if (!params || typeof params === 'string') return raw;
     // simple interpolation: replace {name} tokens
     return Object.keys(params).reduce((acc, k) => acc.replace(new RegExp(`\\{${k}\\}`, 'g'), String(params[k] ?? '')), raw);

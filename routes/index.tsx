@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import GuideStartPage from '../pages/GuideStartPage';
 import GuideAddChildPage from '../pages/GuideAddChildPage';
 import GuidePlanningPage from '../pages/GuidePlanningPage';
@@ -37,6 +38,7 @@ import LegalNoticePage from '../pages/LegalNoticePage';
 
 
 export default function AppRoutes() {
+  const AssistantPage = lazy(() => import('../pages/Assistant'));
   return (
     <BrowserRouter>
       <Routes>
@@ -71,6 +73,7 @@ export default function AppRoutes() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/payment-history" element={<PaymentHistory />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/assistant" element={<Suspense fallback={<div>Loading...</div>}><AssistantPage /></Suspense>} />
         </Route>
       </Routes>
     </BrowserRouter>

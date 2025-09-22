@@ -16,8 +16,20 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 router.get('/', auth, async (req, res) => {
   const where = {};
   if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
-  const nannies = await prisma.nanny.findMany({ where, include: { assignedChildren: true } });
-  res.json(nannies);
+  // include linked user so we can return address fields stored on User
+  const nannies = await prisma.nanny.findMany({ where, include: { assignedChildren: true, user: true } });
+  // flatten user address fields onto the nanny object for frontend convenience
+  const mapped = nannies.map(n => {
+    const u = n.user || {};
+    return Object.assign({}, n, {
+      address: u.address || null,
+      postalCode: u.postalCode || null,
+      city: u.city || null,
+      region: u.region || null,
+      country: u.country || null,
+    });
+  });
+  res.json(mapped);
 });
 
 router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
@@ -25,7 +37,7 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
     const userReq = req.user || {};
     // Only admins or nannies themselves (or super-admin) can create nannies
     if (!(userReq.role === 'admin' || userReq.nannyId || userReq.role === 'super-admin')) return res.status(403).json({ message: 'Forbidden' });
-  const { name, availability, experience, contact, birthDate, password } = req.body;
+  const { name, availability, experience, contact, birthDate, password, address, postalCode, city, region, country } = req.body;
     const email = String(req.body.email || '').trim().toLowerCase();
     const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
     if (isNaN(parsedExperience)) {
@@ -33,7 +45,8 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-  const nannyData = { name, availability, experience: parsedExperience, contact, email, birthDate: birthDate ? new Date(birthDate) : null, centerId: req.user.centerId || null };
+    // Nanny table does not store address fields - address is stored on the related User record
+    const nannyData = { name, availability, experience: parsedExperience, contact, email, birthDate: birthDate ? new Date(birthDate) : null, centerId: req.user.centerId || null };
       const nanny = await tx.nanny.create({ data: nannyData });
 
       if (!email) return { nanny, user: null };
@@ -45,8 +58,14 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
           // Signal conflict to outer scope by returning a marker
           return { nanny, user: null, existingUserConflict: true };
         }
-        // Attach existing user to this nanny
-        await tx.user.update({ where: { id: existingUser.id }, data: { nannyId: nanny.id } });
+        // Attach existing user to this nanny and update address fields when provided
+        const userUpdateData = { nannyId: nanny.id };
+        if (address !== undefined) userUpdateData.address = address || null;
+        if (postalCode !== undefined) userUpdateData.postalCode = postalCode || null;
+        if (city !== undefined) userUpdateData.city = city || null;
+        if (region !== undefined) userUpdateData.region = region || null;
+        if (country !== undefined) userUpdateData.country = country || null;
+        await tx.user.update({ where: { id: existingUser.id }, data: userUpdateData });
         return { nanny, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
       }
 
@@ -54,8 +73,13 @@ router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
   const initialPassword = (typeof password === 'string' && password.trim() !== '') ? password : crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
   const hash = await bcrypt.hash(initialPassword, 10);
   const userData = { email, password: hash, name, role: 'nanny', nannyId: nanny.id };
-      if (userReq.centerId) userData.centerId = userReq.centerId;
-      const user = await tx.user.create({ data: userData });
+    if (userReq.centerId) userData.centerId = userReq.centerId;
+    if (address !== undefined) userData.address = address || null;
+    if (postalCode !== undefined) userData.postalCode = postalCode || null;
+    if (city !== undefined) userData.city = city || null;
+    if (region !== undefined) userData.region = region || null;
+    if (country !== undefined) userData.country = country || null;
+    const user = await tx.user.create({ data: userData });
       return { nanny, user };
     });
 
@@ -114,7 +138,7 @@ router.post('/accept-invite', async (req, res) => {
 
 router.put('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const { name, availability, experience, contact, birthDate, newPassword } = req.body;
+  const { name, availability, experience, contact, birthDate, newPassword, address, postalCode, city, region, country } = req.body;
   const email = req.body.email !== undefined ? String(req.body.email || '').trim().toLowerCase() : undefined;
   if (!isSuperAdmin(req.user)) {
     const existing = await prisma.nanny.findUnique({ where: { id } });
@@ -123,6 +147,24 @@ router.put('/:id', auth, async (req, res) => {
   const updateData = { name, availability, experience, contact, birthDate: birthDate ? new Date(birthDate) : null };
   if (email !== undefined) updateData.email = email;
   const nanny = await prisma.nanny.update({ where: { id }, data: updateData });
+
+  // If address fields were provided, update the linked user(s) instead (User holds address info)
+  try {
+    const addrUpdate = {};
+    if (address !== undefined) addrUpdate.address = address || null;
+    if (postalCode !== undefined) addrUpdate.postalCode = postalCode || null;
+    if (city !== undefined) addrUpdate.city = city || null;
+    if (region !== undefined) addrUpdate.region = region || null;
+    if (country !== undefined) addrUpdate.country = country || null;
+    if (Object.keys(addrUpdate).length > 0) {
+      const users = await prisma.user.findMany({ where: { nannyId: id } });
+      for (const u of users) {
+        await prisma.user.update({ where: { id: u.id }, data: addrUpdate });
+      }
+    }
+  } catch (e) {
+    console.error('Failed to update linked user address fields', e && e.message ? e.message : e);
+  }
 
   // If an admin provided newPassword, update the linked user password
   try {
@@ -182,9 +224,17 @@ router.delete('/:id', auth, async (req, res) => {
 
 router.get('/:id', auth, async (req, res) => {
   const { id } = req.params;
-  const nanny = await prisma.nanny.findUnique({ where: { id }, include: { assignedChildren: true } });
+  const nanny = await prisma.nanny.findUnique({ where: { id }, include: { assignedChildren: true, user: true } });
   if (!nanny) return res.status(404).json({ message: 'Not found' });
-  res.json(nanny);
+  const u = nanny.user || {};
+  const mapped = Object.assign({}, nanny, {
+    address: u.address || null,
+    postalCode: u.postalCode || null,
+    city: u.city || null,
+    region: u.region || null,
+    country: u.country || null,
+  });
+  res.json(mapped);
 });
 
 router.get('/:id/cotisation', auth, async (req, res) => {

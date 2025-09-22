@@ -57,12 +57,12 @@ router.get('/admin', requireAuth, async (req, res) => {
         } else {
           parents = await prisma.parent.findMany({
             where: { ...where, children: { some: { child: { childNannies: { some: { nannyId: nannyRec.id } } } } } },
-            include: { children: { include: { child: true } } },
+            include: { children: { include: { child: true } }, user: true },
             orderBy: { createdAt: 'desc' }
           });
         }
       } else {
-        parents = await prisma.parent.findMany({ where, include: { children: { include: { child: true } } }, orderBy: { createdAt: 'desc' } });
+  parents = await prisma.parent.findMany({ where, include: { children: { include: { child: true } }, user: true }, orderBy: { createdAt: 'desc' } });
       }
     } else {
       const users = await prisma.user.findMany({ where: { role: 'parent' }, orderBy: { createdAt: 'desc' } });
@@ -88,7 +88,7 @@ router.get('/admin', requireAuth, async (req, res) => {
         const childrenFromName = fullName ? (byName.get(fullName) || []) : [];
         const merged = [...childrenFromEmail, ...childrenFromName];
         const unique = Array.from(new Map(merged.map(item => [item.child.id, item])).values());
-        return { id: u.id, firstName: u.name, lastName: '', email: u.email, phone: u.parentPhone || u.phone || null, children: unique };
+        return { id: u.id, firstName: u.name, lastName: '', email: u.email, phone: u.parentPhone || u.phone || null, children: unique, address: u.address || null, postalCode: u.postalCode || null, city: u.city || null, region: u.region || null, country: u.country || null };
       });
     }
 
@@ -103,9 +103,26 @@ router.get('/admin', requireAuth, async (req, res) => {
     if (!isSuperAdmin(user) && user.centerId) assignmentWhere.centerId = user.centerId;
     const presentAssignments = await prisma.assignment.count({ where: assignmentWhere });
 
+    // ensure address fields come from linked user when present
+    const normalizedParents = (parents || []).map(p => {
+      try {
+        const rec = Object.assign({}, p);
+        const userRec = p && p.user ? p.user : null;
+        rec.address = (userRec && userRec.address) ? userRec.address : (p.address || null);
+        rec.postalCode = (userRec && userRec.postalCode) ? userRec.postalCode : (p.postalCode || null);
+        rec.city = (userRec && userRec.city) ? userRec.city : (p.city || null);
+        rec.region = (userRec && userRec.region) ? userRec.region : (p.region || null);
+        rec.country = (userRec && userRec.country) ? userRec.country : (p.country || null);
+        if (rec.user) delete rec.user;
+        return rec;
+      } catch (e) {
+        return p;
+      }
+    });
+
     res.json({
       stats: { parentsCount, childrenCount, presentToday: presentAssignments },
-      parents
+      parents: normalizedParents
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -140,7 +157,7 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
   if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
 
   // normalize email to avoid case-sensitivity issues
-  const { name, phone, password } = req.body;
+  const { name, phone, password, address, postalCode, city, region, country } = req.body;
   const email = String(req.body.email || '').trim().toLowerCase();
     if (!name || !email) return res.status(400).json({ message: 'Missing fields: name and email required' });
 
@@ -149,7 +166,7 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
     const lastName = parts.join(' ') || '';
   const existingUser = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
     const result = await prisma.$transaction(async (tx) => {
-    const data = { firstName, lastName, email, phone };
+  const data = { firstName, lastName, email, phone };
       // Assign centerId:
       // - if creator is super-admin allow explicit centerId in body
       // - otherwise inherit creator's centerId when present
@@ -162,7 +179,7 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
       if (existingUser) {
         // Ensure existing user is linked to the created parent and centered correctly
         // If the found user is not already an admin/super-admin, promote them to 'parent'.
-        const updateData = { parentId: parent.id };
+  const updateData = { parentId: parent.id };
         // Only change role to 'parent' when the existing user is not an admin/super-admin
         // AND is not a nanny (we must not overwrite nanny role)
         if (!isSuperAdmin(existingUser) && !isAdminRole(existingUser) && !existingUser.nannyId) {
@@ -173,13 +190,19 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
         } else if (userReq.centerId) {
           updateData.centerId = userReq.centerId;
         }
+        // include address fields when provided so the existing user gets the address
+        if (address !== undefined) updateData.address = address;
+        if (postalCode !== undefined) updateData.postalCode = postalCode;
+        if (city !== undefined) updateData.city = city;
+        if (region !== undefined) updateData.region = region;
+        if (country !== undefined) updateData.country = country;
         await tx.user.update({ where: { id: existingUser.id }, data: updateData });
         return { parent, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
       } else {
 
     const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
     const hash = await bcrypt.hash(tempPassword, 10);
-  const userData = { email, password: hash, name: `${firstName} ${lastName}`, role: 'parent', parentId: parent.id };
+  const userData = { email, password: hash, name: `${firstName} ${lastName}`, role: 'parent', parentId: parent.id, address: address || undefined, postalCode: postalCode || undefined, city: city || undefined, region: region || undefined, country: country || undefined };
   if (isSuperAdmin(userReq)) {
     if (req.body.centerId) userData.centerId = req.body.centerId;
   } else if (userReq.centerId) {
@@ -238,7 +261,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     const userReq = req.user || {};
     // allow if user can manage parents (admin/nanny/super-admin) OR the parent is updating their own record
     if (!(canManageParents(userReq) || (userReq.parentId && String(userReq.parentId) === String(id)))) return res.status(403).json({ message: 'Forbidden' });
-  const { name, phone, firstName, lastName } = req.body;
+  const { name, phone, firstName, lastName, address, postalCode, city, region, country } = req.body;
   const email = req.body.email !== undefined ? String(req.body.email || '').trim().toLowerCase() : undefined;
     let data = {};
     if (name) {
@@ -249,7 +272,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     if (firstName !== undefined) data.firstName = firstName;
     if (lastName !== undefined) data.lastName = lastName;
   if (email !== undefined) data.email = email;
-    if (phone !== undefined) data.phone = phone;
+  if (phone !== undefined) data.phone = phone;
 
     // Ensure the parent belongs to the same center (unless super-admin)
     if (!isSuperAdmin(userReq)) {
@@ -257,6 +280,26 @@ router.put('/:id', requireAuth, async (req, res) => {
       if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent not found' });
     }
     const updated = await prisma.parent.update({ where: { id }, data });
+
+    // Also update any linked user records so User.address etc. stay in sync
+    try {
+      const linkedUsers = await prisma.user.findMany({ where: { parentId: id } });
+      if (linkedUsers && linkedUsers.length > 0) {
+  const userUpdate = {};
+        if (address !== undefined) userUpdate.address = address;
+        if (postalCode !== undefined) userUpdate.postalCode = postalCode;
+        if (city !== undefined) userUpdate.city = city;
+        if (region !== undefined) userUpdate.region = region;
+        if (country !== undefined) userUpdate.country = country;
+        if (Object.keys(userUpdate).length > 0) {
+          for (const u of linkedUsers) {
+            try { await prisma.user.update({ where: { id: u.id }, data: userUpdate }); } catch (e) { /* ignore per-user failure */ }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to sync parent address to users', e && e.message ? e.message : e);
+    }
 
     // If newPassword provided, allow admins or the parent themself to update linked user password(s)
     try {
