@@ -4,6 +4,23 @@ import type { Locale } from './i18nContext';
 
 const translations: Record<Locale, Record<string, string>> = {
   fr: {
+    'nav.assistant': 'Assistant IA',
+    'assistant.title': "Assistant",
+    'assistant.header.title': "Assistant Les Frimousses",
+    'assistant.header.subtitle': "· Conseils et aide pour la petite enfance",
+    'assistant.intro.title': "Assistant",
+    'assistant.intro.description': "Je suis votre assistant pour la petite enfance. Je peux vous aider avec :",
+    'assistant.option.nutrition': "Conseils nutrition",
+    'assistant.option.nutrition.example': "Que cuisiner pour mon enfant ?",
+    'assistant.option.education': "Conseils pédagogiques",
+    'assistant.option.education.example': "Développement et apprentissages adaptés à l'âge",
+    'assistant.option.activities': "Activités suggérées",
+    'assistant.option.activities.example': "Jeux et exercices selon l'âge",
+    'assistant.user.fallback': 'Vous',
+    'assistant.input.aria': "Votre question",
+    'assistant.input.placeholder': "Posez votre question à l'assistant...",
+    'assistant.loading': 'Chargement...',
+    'assistant.send.button': 'Envoyer',
     'common.none': '—',
     'payments.history.title': 'Historique des paiements',
     'payments.history.empty': "Aucun enregistrement pour cette période.",
@@ -275,6 +292,8 @@ const translations: Record<Locale, Record<string, string>> = {
     'no_profile': 'Aucune donnée de profil disponible'
   },
   en: {
+    // nav
+    'nav.assistant': 'Assistant IA',
     'common.none': '—',
     'payments.history.title': 'Payment history',
     'payments.history.empty': 'No records for this period.',
@@ -797,13 +816,27 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       document.documentElement.lang = locale === 'en' ? 'en' : 'fr';
       localStorage.setItem('site_language', locale);
       document.cookie = `site_language=${locale};path=/;max-age=${60 * 60 * 24 * 365}`;
+      // expose small debug surface to help diagnose missing translations at runtime
+      try {
+        (window as unknown as { __FRIMOUSSE_I18N?: unknown }).__FRIMOUSSE_I18N = { locale, translations };
+      } catch (e) {
+        // ignore in strict environments (security policies)
+        void e;
+      }
     } catch {
       // ignore
     }
   }, [locale]);
 
   const t = useMemo(() => (key: string, params?: Record<string, string> | string) => {
-    const raw = translations[locale][key] ?? (typeof params === 'string' ? params : key);
+    const raw = translations[locale] && translations[locale][key] ? translations[locale][key] : (typeof params === 'string' ? params : key);
+    if (!(translations[locale] && translations[locale][key])) {
+      try {
+        console.warn(`[i18n] missing translation for key "${key}" (locale=${locale})`);
+      } catch (e) {
+        void e;
+      }
+    }
     if (!params || typeof params === 'string') return raw;
     // simple interpolation: replace {name} tokens
     return Object.keys(params).reduce((acc, k) => acc.replace(new RegExp(`\\{${k}\\}`, 'g'), String(params[k] ?? '')), raw);
