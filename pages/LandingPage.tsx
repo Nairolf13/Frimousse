@@ -77,12 +77,6 @@
                       "https://www.linkedin.com/company/frimousse",
                       "https://www.instagram.com/frimousse",
                     ],
-                    "contactPoint": [{
-                      "@type": "ContactPoint",
-                      "telephone": "+33 6 47 48 67 34",
-                      "contactType": "customer support",
-                      "areaServed": "FR"
-                    }]
                   }`}
                 </script>
                 <script type="application/ld+json">
