@@ -1,6 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+
+// Supabase client config for direct uploads (read from Vite env)
+const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const VITE_SUPABASE_BUCKET = import.meta.env.VITE_SUPABASE_BUCKET || 'PrivacyPictures';
 import { useAuth } from '../src/context/AuthContext';
 import type { User as AuthUser } from '../src/context/AuthContext';
 import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
@@ -353,47 +359,107 @@ export default function Feed() {
         return;
       }
 
-      // Server-only upload: always POST FormData to api/feed (safer for private photos)
+      // Validate files client-side before attempting upload (prevent proxy/network errors)
       if (files.length > 0) {
-        const fd = new FormData();
-        fd.append('text', text);
-        for (const f of files) fd.append('images', f, f.name);
-        if (selectedChildIds && selectedChildIds.length) {
-          for (const cid of selectedChildIds) fd.append('taggedChildIds[]', cid);
+        const ALLOWED_VIDEO = ['video/mp4', 'video/webm', 'video/quicktime'];
+        const ALLOWED_IMAGE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
+        const PER_FILE_LIMIT = 1 * 1024 * 1024 * 1024; // 1 GB
+        const TOTAL_LIMIT = 1 * 1024 * 1024 * 1024; // 1 GB
+
+        const formatBytes = (bytes: number) => {
+          if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+          return `${Math.round(bytes / (1024 * 1024))} MB`;
+        };
+
+        let totalSize = 0;
+        for (const f of files) {
+          totalSize += f.size;
+          const isImage = f.type.startsWith('image/');
+          const isVideo = f.type.startsWith('video/');
+          if (!isImage && !isVideo) return showError('Fichier non supporté', `Le fichier ${f.name} n'est pas un image/vidéo supporté.`);
+          if (isVideo && !ALLOWED_VIDEO.includes(f.type)) return showError('Format vidéo non supporté', `Le format de ${f.name} (${f.type}) n'est pas pris en charge. Formats acceptés: mp4, webm, mov.`);
+          if (isImage && !ALLOWED_IMAGE.includes(f.type) && !f.type.startsWith('image/')) return showError('Format image non supporté', `Le format de ${f.name} (${f.type}) n'est pas pris en charge.`);
+          if (f.size > PER_FILE_LIMIT) return showError('Fichier trop volumineux', `Le fichier ${f.name} est trop volumineux (${formatBytes(f.size)}). Taille max par fichier: ${formatBytes(PER_FILE_LIMIT)}.`);
+        }
+  if (totalSize > TOTAL_LIMIT) return showError('Taille totale trop importante', `La taille totale des fichiers (${formatBytes(totalSize)}) dépasse la limite de ${formatBytes(TOTAL_LIMIT)}.`);
+      }
+
+  // If files are large or videos, use direct-to-Supabase upload flow to avoid proxy limits.
+  const shouldDirect = files.some(f => f.size > 8 * 1024 * 1024 || f.type.startsWith('video/'));
+  if (files.length > 0 && shouldDirect && VITE_SUPABASE_URL && VITE_SUPABASE_ANON_KEY) {
+        // 1) create post without files
+  const createFd = new FormData();
+  createFd.append('text', text || '');
+  const createRes = await fetchWithRefresh('api/feed', { method: 'POST', body: createFd });
+        if (!createRes.ok) {
+          const body = await createRes.json().catch(() => ({}));
+          return showError('Échec de la publication', mapServerMessage(body.message || '', createRes.status));
+        }
+        const created = await createRes.json();
+        // push created post immediately (will be updated as media finalize)
+        setPosts(prev => [created, ...prev]);
+
+        // init supabase client with anon key for direct browser upload
+        const supabaseClient = createSupabaseClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY);
+
+        // For each file: sign -> upload -> finalize
+        for (const f of files) {
+          try {
+            const signRes = await fetchWithRefresh('api/uploads/supabase/sign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: f.name, contentType: f.type, prefix: 'feed' }) });
+            if (!signRes.ok) {
+              const b = await signRes.json().catch(() => ({}));
+              console.error('Sign failed', b);
+              continue;
+            }
+            const signBody = await signRes.json();
+            const storagePath = signBody.storagePath;
+            const bucket = signBody.bucket || VITE_SUPABASE_BUCKET;
+
+            const { error: upErr } = await supabaseClient.storage.from(bucket).upload(storagePath, f, { contentType: f.type, upsert: false });
+            if (upErr) {
+              console.error('Direct upload error', upErr);
+              continue;
+            }
+
+            // finalize so backend can create DB rows
+            const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: created.id, size: f.size, originalName: f.name }) });
+            if (!finRes.ok) {
+              const b = await finRes.json().catch(() => ({}));
+              console.error('Finalize failed', b);
+              continue;
+            }
+            const finBody = await finRes.json();
+            const newMedias = finBody.medias || [];
+            // update UI post with returned medias
+            setPosts(prev => prev.map(p => p.id === created.id ? { ...p, medias: (p.medias || []).concat(newMedias) } : p));
+          } catch (e) {
+            console.error('Direct upload loop error', e);
+            continue;
+          }
         }
 
-        const res = await fetchWithRefresh('api/feed', { method: 'POST', body: fd });
-        if (res.ok) {
-          const created = await res.json();
-          setPosts(prev => [created, ...prev]);
-          setText(''); setFiles([]); setShowIdentifyWarning(false);
-        } else {
-          const body = await res.json().catch(() => ({}));
-          const serverMsg = (body && body.message) ? String(body.message) : '';
-          showError('Échec de la publication', mapServerMessage(serverMsg, res.status));
-        }
+        // finished
+        setText(''); setFiles([]); setShowIdentifyWarning(false);
+        return;
+      }
+
+      // fallback: server upload (multipart)
+      const fd = new FormData();
+      fd.append('text', text);
+      for (const f of files) fd.append('images', f, f.name);
+      if (selectedChildIds && selectedChildIds.length) {
+        for (const cid of selectedChildIds) fd.append('taggedChildIds[]', cid);
+      }
+
+      const res = await fetchWithRefresh('api/feed', { method: 'POST', body: fd });
+      if (res.ok) {
+        const created = await res.json();
+        setPosts(prev => [created, ...prev]);
+        setText(''); setFiles([]); setShowIdentifyWarning(false);
       } else {
-
-        // Fallback server upload when no anon key available or no files
-        const fd = new FormData();
-        fd.append('text', text);
-        for (const f of files) fd.append('images', f, f.name);
-        // include tagged children when present
-        if (selectedChildIds && selectedChildIds.length) {
-          for (const cid of selectedChildIds) fd.append('taggedChildIds[]', cid);
-        }
-
-        const res = await fetchWithRefresh('api/feed', { method: 'POST', body: fd });
-        if (res.ok) {
-          const created = await res.json();
-          setPosts(prev => [created, ...prev]);
-          setText(''); setFiles([]); setShowIdentifyWarning(false);
-        } else {
-          const body = await res.json().catch(() => ({}));
-          const serverMsg = (body && body.message) ? String(body.message) : '';
-          showError('Échec de la publication', mapServerMessage(serverMsg, res.status));
-        }
-
+        const body = await res.json().catch(() => ({}));
+        const serverMsg = (body && body.message) ? String(body.message) : '';
+        showError('Échec de la publication', mapServerMessage(serverMsg, res.status));
       }
     } catch (err) {
       console.error(err);
@@ -457,7 +523,7 @@ export default function Feed() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
                       capture="environment"
                       className="hidden"
                       onChange={e => {
@@ -475,7 +541,7 @@ export default function Feed() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
                       multiple
                       className="hidden"
                       onChange={e => {
@@ -655,8 +721,35 @@ export default function Feed() {
               {previews.length > 0 && (
                 <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {previews.map((p, i) => (
-                        <div key={i} className="w-full h-16 sm:h-20 md:h-24 bg-gray-100 rounded overflow-hidden flex items-center justify-center">
-                          <img src={p} className="w-full h-full object-contain" />
+                        <div key={i} className="w-full h-16 sm:h-20 md:h-24 bg-gray-100 rounded overflow-hidden flex items-center justify-center relative">
+                          {/* determine if this preview is video by checking files[i].type */}
+                          {files[i] && files[i].type && files[i].type.startsWith('video/') ? (
+                            <video src={p} className="w-full h-full object-contain" controls />
+                          ) : (
+                            <img src={p} className="w-full h-full object-contain" />
+                          )}
+                          <button
+                            type="button"
+                            aria-label={`Retirer le fichier ${i + 1}`}
+                            onClick={() => {
+                              // remove file at index i
+                              setFiles(prev => {
+                                const next = prev.slice();
+                                next.splice(i, 1);
+                                return next;
+                              });
+                              setPreviews(prev => {
+                                const next = prev.slice();
+                                // revoke URL to free memory
+                                try { URL.revokeObjectURL(next[i]); } catch { /* ignore */ }
+                                next.splice(i, 1);
+                                return next;
+                              });
+                            }}
+                            className="absolute top-1 right-1 bg-white/90 text-red-600 rounded-full p-1 shadow hover:bg-white"
+                          >
+                            ✕
+                          </button>
                         </div>
                       ))}
                 </div>
@@ -1007,14 +1100,86 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
     const maxAllowed = 6;
     const remaining = Math.max(0, maxAllowed - currentCount);
     if (remaining === 0) {
-      return alert(`Vous avez déjà ${currentCount} images. Le maximum est ${maxAllowed}.`);
+      return alert(`Vous avez déjà ${currentCount} fichiers. Le maximum est ${maxAllowed}.`);
     }
     const fileArray = Array.from(files);
     if (fileArray.length > remaining) {
-      alert(`Vous pouvez ajouter seulement ${remaining} image(s) supplémentaires. Seules les ${remaining} premières seront prises.`);
+      alert(`Vous pouvez ajouter seulement ${remaining} fichier(s) supplémentaires. Seules les ${remaining} premières seront prises.`);
     }
+    // Client-side validation to avoid sending huge files that may be rejected by the proxy/server
+    const ALLOWED_VIDEO = ['video/mp4', 'video/webm', 'video/quicktime'];
+    const ALLOWED_IMAGE = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
+    const PER_FILE_LIMIT = 1 * 1024 * 1024 * 1024; // 1 GB (server multipart limit)
+    const TOTAL_LIMIT = 1 * 1024 * 1024 * 1024; // 1 GB (server multipart aggregate)
+
+    const formatBytes = (bytes: number) => {
+      if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+      return `${Math.round(bytes / (1024 * 1024))} MB`;
+    };
+
+    const toUpload = fileArray.slice(0, remaining);
+    let totalSize = 0;
+    // Determine if at least one file would be uploaded directly (video or large)
+    const anyDirectCandidate = toUpload.some(ff => ff.size > 8 * 1024 * 1024 || ff.type.startsWith('video/'));
+    for (const f of toUpload) {
+      totalSize += f.size;
+      const isImage = f.type.startsWith('image/');
+      const isVideo = f.type.startsWith('video/');
+      if (!isImage && !isVideo) {
+        return alert(`Type de fichier non supporté: ${f.name}`);
+      }
+      if (isVideo && !ALLOWED_VIDEO.includes(f.type)) {
+        return alert(`Format vidéo non supporté: ${f.name} (${f.type}). Formats acceptés: mp4, webm, mov.`);
+      }
+      if (isImage && !ALLOWED_IMAGE.includes(f.type) && !f.type.startsWith('image/')) {
+        return alert(`Format d'image non supporté: ${f.name} (${f.type})`);
+      }
+      // If file exceeds server per-file limit but we have direct upload available and file is a direct candidate, allow it.
+      const isDirectCandidate = (f.size > 8 * 1024 * 1024) || f.type.startsWith('video/');
+      if (f.size > PER_FILE_LIMIT && !(isDirectCandidate && VITE_SUPABASE_ANON_KEY)) {
+  return alert(`Le fichier ${f.name} est trop volumineux (${formatBytes(f.size)}). Taille max par fichier via le serveur: ${formatBytes(PER_FILE_LIMIT)}.`);
+      }
+    }
+    // If total size exceeds server aggregate limit and no direct upload is possible, reject.
+    if (totalSize > TOTAL_LIMIT && !(anyDirectCandidate && VITE_SUPABASE_ANON_KEY)) {
+  return alert(`La taille totale des fichiers sélectionnés est trop importante (${formatBytes(totalSize)}). Limite via le serveur: ${formatBytes(TOTAL_LIMIT)}.`);
+    }
+
+    // If any file is a direct candidate (video or >8MB) and we have anon key, use direct upload
+  const anyDirect = toUpload.some(f => f.size > 8 * 1024 * 1024 || f.type.startsWith('video/')) && VITE_SUPABASE_URL && VITE_SUPABASE_ANON_KEY;
+
+    if (anyDirect) {
+      const supabaseClient = createSupabaseClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY);
+      for (const f of toUpload) {
+        try {
+          const signRes = await fetchWithRefresh('api/uploads/supabase/sign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: f.name, contentType: f.type, prefix: 'feed' }) });
+          if (!signRes.ok) {
+            const b = await signRes.json().catch(() => ({}));
+            console.error('Sign failed', b);
+            continue;
+          }
+          const signBody = await signRes.json();
+          const storagePath = signBody.storagePath;
+          const bucket = signBody.bucket || VITE_SUPABASE_BUCKET;
+
+          const { error: upErr } = await supabaseClient.storage.from(bucket).upload(storagePath, f, { contentType: f.type, upsert: false });
+          if (upErr) { console.error('Direct upload error', upErr); continue; }
+
+          const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: post.id, size: f.size, originalName: f.name }) });
+          if (!finRes.ok) { const b = await finRes.json().catch(() => ({})); console.error('Finalize failed', b); continue; }
+          const finBody = await finRes.json();
+          const newMedias: Media[] = finBody.medias || [];
+          if (onMediasChange) onMediasChange(post.id, (post.medias || []).concat(newMedias));
+        } catch (e) {
+          console.error('Direct upload loop error', e);
+        }
+      }
+      return;
+    }
+
+    // fallback to server multipart upload (subject to server per-file limits)
     const fd = new FormData();
-    for (const f of fileArray.slice(0, remaining)) fd.append('images', f, f.name);
+    for (const f of toUpload) fd.append('images', f, f.name);
     try {
       const res = await fetchWithRefresh(`api/feed/${post.id}/media`, { method: 'POST', body: fd });
       if (!res.ok) {
@@ -1119,9 +1284,9 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
       )}
       {canEdit && editing && (
         <div className="mt-3">
-          <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="file" accept="image/*" multiple className="hidden" onChange={e => handleUploadImages(e.target.files)} />
-            <span className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">Ajouter des images (max 6)</span>
+            <label className="inline-flex items-center gap-2 cursor-pointer">
+            <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={e => handleUploadImages(e.target.files)} />
+            <span className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">Ajouter des fichiers (images/vidéos, max 6)</span>
           </label>
         </div>
       )}

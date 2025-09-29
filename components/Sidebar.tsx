@@ -3,7 +3,7 @@ import { useAuth } from '../src/context/AuthContext';
 import type { User as AuthUser } from '../src/context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useI18n } from '../src/lib/useI18n';
-import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell, HiOutlineCurrencyDollar } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell, HiOutlineCurrencyDollar, HiOutlineChatAlt } from 'react-icons/hi';
 import { FaRobot } from 'react-icons/fa';
 import MobileMenu from './MobileMenu';
 // caching and rate-limit managed by hooks
@@ -54,6 +54,7 @@ function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, st
     { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
     { to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> },
     { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
+    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/reviews', label: 'Avis', icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }] : []),
     { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
   ];
 }
@@ -64,7 +65,7 @@ export default function Sidebar() {
   const { t } = useI18n();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   // consume the global notifications context (single-tab polling)
-  const { unreadCount } = useNotificationsContext();
+  const { unreadCount, unreadReviews } = useNotificationsContext();
   const centerId = user && (user as { centerId?: string }).centerId;
   const { center } = useCenterInfo(centerId ?? null);
   const [centerName, setCenterName] = useState<string | null>(null);
@@ -142,6 +143,9 @@ export default function Sidebar() {
                   <span className="flex-1">{link.label}</span>
                   {link.to === '/notifications' && unreadCount > 0 ? (
                     <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-600 text-white">{unreadCount}</span>
+                  ) : null}
+                  {link.to === '/admin/reviews' && typeof unreadReviews === 'number' && unreadReviews > 0 ? (
+                    <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white">{unreadReviews}</span>
                   ) : null}
                 </Link>
               </li>

@@ -46,6 +46,19 @@ export default function NotificationsPage() {
   }
 
   useEffect(() => {
+    // when the user opens the Notifications page: mark as viewed locally and on the server
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('notifications:viewed'));
+    }
+    // mark-all-read on the server so the unread count won't reappear after the next poll
+    (async () => {
+      try {
+        await fetchWithRefresh('/api/notifications/mark-all-read', { method: 'PUT', credentials: 'include' });
+      } catch (e) {
+        // ignore errors — we still load stats which will reflect server state
+        console.debug('mark-all-read on mount failed', e);
+      }
+    })();
     loadStats();
     const handler = () => { loadStats(); load(page); };
     window.addEventListener('notifications:changed', handler as EventListener);
@@ -81,7 +94,10 @@ export default function NotificationsPage() {
                   await fetchWithRefresh('/api/notifications/mark-all-read', { method: 'PUT', credentials: 'include' });
                   loadStats();
                   load(1);
-                  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new CustomEvent('notifications:changed'));
+                    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                      window.dispatchEvent(new CustomEvent('notifications:changed'));
+                      window.dispatchEvent(new CustomEvent('notifications:viewed'));
+                    }
                 } catch (e) {
                   console.error('Failed to mark all read', e);
                 }
@@ -136,7 +152,10 @@ export default function NotificationsPage() {
               setConfirmOpen(false);
               loadStats();
               load(1);
-              if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') window.dispatchEvent(new CustomEvent('notifications:changed'));
+                if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                  window.dispatchEvent(new CustomEvent('notifications:changed'));
+                  window.dispatchEvent(new CustomEvent('notifications:viewed'));
+                }
             } catch (e) {
               console.error('Failed to delete all notifications', e);
               alert(t('notifications.delete_all_failed') || 'Échec de la suppression');

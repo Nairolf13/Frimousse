@@ -15,15 +15,15 @@ const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const sharp = require('sharp');
 const path = require('path');
-// Per-file upload limit increased to 20MB for higher-quality uploads
-const PER_FILE_LIMIT = 20 * 1024 * 1024; // 20MB
-const MAX_TOTAL_PER_POST = 120 * 1024 * 1024; // 120MB aggregate
+// Per-file upload limit increased to 1GB for higher-quality uploads
+const PER_FILE_LIMIT = 1 * 1024 * 1024 * 1024; // 1GB
+const MAX_TOTAL_PER_POST = 1 * 1024 * 1024 * 1024; // 1GB aggregate
 // Use disk storage to avoid holding files in memory
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, os.tmpdir()),
   filename: (req, file, cb) => cb(null, `${Date.now()}_${Math.random().toString(36).slice(2,8)}${path.extname(file.originalname)}`)
 });
-const upload = multer({ storage, limits: { fileSize: PER_FILE_LIMIT } }); // 20MB
+const upload = multer({ storage, limits: { fileSize: PER_FILE_LIMIT } }); // per-file limit set via PER_FILE_LIMIT (1GB)
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
