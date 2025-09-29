@@ -37,6 +37,15 @@ router.get('/me', auth, async (req, res) => {
     select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true }
   });
   if (!user) return res.status(404).json({ message: 'User not found' });
+  try {
+    // If the user record doesn't contain a centerId, try resolving it from linked parent/nanny
+    if (!user.centerId) {
+      const resolved = await resolveUserCenter(prisma, user);
+      if (resolved) user.centerId = resolved;
+    }
+  } catch (e) {
+    // ignore resolution errors and return whatever we have
+  }
   res.json(user);
 });
 

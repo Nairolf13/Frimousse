@@ -7,6 +7,8 @@ const API_URL = import.meta.env.VITE_API_URL;
 interface Child {
   id: string;
   name: string;
+  // optional list of assigned nanny ids coming from the API
+  nannyIds?: string[];
 }
 interface Nanny {
   id: string;
@@ -36,6 +38,21 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
     }
   }, [open, initial]);
 
+  // When a child is selected, prefer showing only the nannies assigned to that child.
+  const selectedChild = children.find(c => c.id === form.childId);
+  const visibleNannyIds = selectedChild && Array.isArray(selectedChild.nannyIds) && selectedChild.nannyIds.length > 0
+    ? new Set(selectedChild.nannyIds)
+    : null;
+  const visibleNannies = visibleNannyIds ? nannies.filter(n => visibleNannyIds.has(n.id)) : nannies;
+
+  // If the currently selected nanny is not in the visible list, clear it.
+  useEffect(() => {
+    if (!form.nannyId) return;
+    const selChild = children.find(c => c.id === form.childId);
+    const isVisible = selChild && Array.isArray(selChild.nannyIds) ? selChild.nannyIds.includes(form.nannyId) : true;
+    if (!isVisible) setForm(f => ({ ...f, nannyId: '' }));
+  }, [form.childId, form.nannyId, children]);
+
   const { t } = useI18n();
 
   if (!open) return null;
@@ -58,7 +75,7 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
           <label className="text-[#08323a] font-medium">{t('assignment.modal.nanny')}
             <select value={form.nannyId} onChange={e => setForm(f => ({ ...f, nannyId: e.target.value }))} required className="border border-gray-200 rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]">
               <option value="">{t('assignment.modal.select')}</option>
-              {nannies.map(nanny => <option key={nanny.id} value={nanny.id}>{nanny.name}</option>)}
+              {visibleNannies.map(nanny => <option key={nanny.id} value={nanny.id}>{nanny.name}</option>)}
             </select>
           </label>
           <button type="submit" className="bg-[#0b5566] text-white py-2 rounded hover:bg-[#08323a] transition font-semibold">{initial ? t('global.add') : t('global.edit') || t('global.save')}</button>

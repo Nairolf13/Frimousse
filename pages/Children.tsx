@@ -404,7 +404,18 @@ export default function Children() {
         method: 'DELETE',
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Erreur lors de la suppression');
+      if (!res.ok) {
+        // try to extract a helpful error from the server response
+        let serverMsg = 'Erreur lors de la suppression';
+        try {
+          const body = await res.json();
+          if (body) serverMsg = body.error || body.message || JSON.stringify(body);
+        } catch {
+          // ignore parse errors
+        }
+        if (import.meta.env.DEV) console.error('Delete child failed', res.status, serverMsg);
+        throw new Error(serverMsg);
+      }
       setDeleteId(null);
       fetchChildren();
     } catch (err: unknown) {

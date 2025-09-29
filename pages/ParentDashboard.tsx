@@ -176,33 +176,20 @@ const ParentDashboard: React.FC = () => {
             throw new Error(message);
           }
           setAdminData(json as AdminData);
-          try {
-            const now = new Date();
-            const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const payload = (json && typeof json === 'object') ? (json as AdminData) : null;
-            const parentsList: Parent[] = payload?.parents ?? [];
-            const billingMap: Record<string, number> = {};
-            type ChildRef = { child?: Child; id?: string };
-            await Promise.all(parentsList.map(async (p: Parent) => {
-              let total = 0;
-              const childrenArr = Array.isArray(p.children) ? p.children : [];
-              await Promise.all(childrenArr.map(async (ci: ChildRef) => {
-                const childId = ci?.child?.id || ci?.id;
-                if (!childId) return;
-                try {
-                  const res = await fetchWithRefresh(`api/children/${childId}/billing?month=${month}`, { credentials: 'include' });
-                  if (!res.ok) return;
-                  const data = await res.json();
-                  if (data && typeof (data as Record<string, unknown>).amount === 'number') total += (data as { amount: number }).amount;
-                } catch {
-                  /* noop - ignore per-child failure */
-                }
-              }));
-              billingMap[String((p as Parent).id)] = total;
-            }));
-            setParentBilling(billingMap);
-            } catch {
-              /* noop - ignore billing errors */
+            try {
+              const now = new Date();
+              const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+              // single aggregated call
+              const billRes = await fetchWithRefresh(`api/parent/billing?month=${month}`, { credentials: 'include' });
+              if (billRes.ok) {
+                const billJson = await billRes.json();
+                // billJson is expected to be { [parentId]: total }
+                setParentBilling(billJson || {});
+              } else {
+                if (import.meta.env.DEV) console.error('Failed to fetch aggregated parent billing', await billRes.text());
+              }
+            } catch (e) {
+              if (import.meta.env.DEV) console.error('Error fetching aggregated parent billing', e);
             }
         } else {
           const res = await fetchWithRefresh(`api/parent/children`, { credentials: 'include' });
@@ -219,21 +206,11 @@ const ParentDashboard: React.FC = () => {
           try {
             const now = new Date();
             const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const parentId = (user as UserInfo)?.parentId ?? (user as UserInfo)?.id ?? 'me';
-            let total = 0;
-            await Promise.all((childrenList || []).map(async (c: Child) => {
-              const childId = c.id;
-              if (!childId) return;
-              try {
-                const r = await fetchWithRefresh(`api/children/${childId}/billing?month=${month}`, { credentials: 'include' });
-                if (!r.ok) return;
-                const data = await r.json();
-                if (data && typeof (data as Record<string, unknown>).amount === 'number') total += (data as { amount: number }).amount;
-              } catch {
-                // ignore per-child billing errors
-              }
-            }));
-            setParentBilling({ [String(parentId)]: total });
+            const billRes = await fetchWithRefresh(`api/parent/billing?month=${month}`, { credentials: 'include' });
+            if (billRes.ok) {
+              const billJson = await billRes.json();
+              setParentBilling(billJson || {});
+            }
           } catch {
             // ignore billing computation errors for parent view
           }

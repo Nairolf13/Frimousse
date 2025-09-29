@@ -1,4 +1,3 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
@@ -9,7 +8,7 @@ import { I18nProvider } from './lib/i18n'
 import NotificationsProvider from './context/NotificationsProvider'
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  <>
     <CheckoutSuccessHandler />
     <CookieConsent />
     <I18nProvider>
@@ -18,5 +17,6 @@ createRoot(document.getElementById('root')!).render(
         <UpgradeModalProvider />
       </NotificationsProvider>
     </I18nProvider>
-  </StrictMode>,
+  </>
+  
 )
