@@ -79,6 +79,9 @@ app.use('/api/parent', parentRoutes);
 const centersRoutes = require('./routes/centers');
 app.use('/api/centers', centersRoutes);
 
+const reviewsRoutes = require('./routes/reviews');
+app.use('/api/reviews', reviewsRoutes);
+
 
 
 const userRoutes = require('./routes/user');

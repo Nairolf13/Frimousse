@@ -9,7 +9,15 @@ declare global {
 export default function CookieConsent() {
   const [consent, setConsent] = useState<ConsentState>(() => {
     try {
-      const v = localStorage.getItem('cookie_consent');
+      let v = null;
+      try { v = localStorage.getItem('cookie_consent'); } catch { v = null; }
+      if (!v) {
+        // fallback: try reading a non-HTTP-only cookie so the preference survives localStorage.clear()
+        try {
+          const m = document.cookie.match(/(?:^|; )cookie_consent=([^;]+)/);
+          if (m && m[1]) v = decodeURIComponent(m[1]);
+        } catch { /* ignore cookie read failures */ }
+      }
       if (!v) return 'unknown';
       return v === 'all' ? 'all' : 'essential';
     } catch (e) {
@@ -21,6 +29,11 @@ export default function CookieConsent() {
   useEffect(() => {
     if (consent === 'unknown') return;
     try { localStorage.setItem('cookie_consent', consent); } catch (e) { console.warn('cookie consent write failed', e); }
+    try {
+      // also write a non-HTTP-only cookie so the preference survives localStorage.clear() and redirects
+      // 60 * 60 * 24 * 365 = 31536000 (1 year)
+      document.cookie = `cookie_consent=${encodeURIComponent(consent)};path=/;max-age=31536000`;
+  } catch { /* ignore cookie write failures */ }
     // If gtag exists, update consent state: ad_storage and analytics_storage
     // all -> grant both, essential -> deny optional storage
     if (typeof window.gtag === 'function') {

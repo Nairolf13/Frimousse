@@ -215,6 +215,7 @@ model Center {
   schedules   Schedule[]
   reports     Report[]
   feedPosts   FeedPost[]
+  reviews     Review[]
   createdAt   DateTime     @default(now())
   notifyByEmail    Boolean   @default(true)
 }
@@ -354,4 +355,17 @@ model PaymentHistory {
   details    Json
   paid       Boolean  @default(false)
   createdAt  DateTime @default(now())
+}
+
+// Public reviews / testimonials left by parents or visitors (shown on Landing page)
+model Review {
+  id         String   @id @default(uuid())
+  authorName String?
+  content    String
+  rating     Int?     // optional 1-5 rating
+  approved   Boolean  @default(false)
+  center     Center?  @relation(fields: [centerId], references: [id])
+  centerId   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

@@ -14,9 +14,9 @@ const prisma = new PrismaClient();
 const authMiddleware = require('../middleware/authMiddleware');
 const { sendFeedPostNotification, sendLikeNotification, sendCommentNotification } = require('../lib/pushNotifications');
 
-// Increase per-file upload limit to 20MB. Allow up to 6 files per post.
-const PER_FILE_LIMIT = 20 * 1024 * 1024; // 20MB
-const MAX_TOTAL_PER_POST = 120 * 1024 * 1024; // 120MB aggregate
+// Per-file upload limit increased to 1GB. Allow up to 6 files per post.
+const PER_FILE_LIMIT = 1 * 1024 * 1024 * 1024; // 1GB
+const MAX_TOTAL_PER_POST = 1 * 1024 * 1024 * 1024; // 1GB aggregate
 // Use diskStorage to avoid holding large files in memory. Temp files are stored in OS tmp dir and removed after processing.
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, os.tmpdir()),
@@ -25,7 +25,7 @@ const storage = multer.diskStorage({
     cb(null, unique);
   }
 });
-const upload = multer({ storage, limits: { fileSize: PER_FILE_LIMIT } }); // 20MB per file
+const upload = multer({ storage, limits: { fileSize: PER_FILE_LIMIT } }); // per-file limit set via PER_FILE_LIMIT (1GB)
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -37,12 +37,39 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false } });
 
+// Middleware to reject overly large Content-Length before multer tries to process
+function checkContentLength(req, res, next) {
+  try {
+    const cl = parseInt(req.headers['content-length'] || '0', 10) || 0;
+    if (cl > MAX_TOTAL_PER_POST) {
+      console.warn('Rejecting request early due to Content-Length exceeding MAX_TOTAL_PER_POST', { contentLength: cl, max: MAX_TOTAL_PER_POST });
+      return res.status(413).json({ message: 'Total upload size too large' });
+    }
+  } catch (err) {
+    // ignore parsing errors and continue
+  }
+  next();
+}
+
+// Multer error handler for this router: map common multer errors to friendly HTTP responses
+router.use((err, req, res, next) => {
+  if (!err) return next();
+  if (err && err.name === 'MulterError') {
+    // Multer specific errors
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ message: 'File size limit exceeded' });
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') return res.status(400).json({ message: 'Too many files uploaded' });
+    return res.status(400).json({ message: err.message || 'Upload error' });
+  }
+  return next(err);
+});
+
 function validateMime(mimetype) {
-  return ['image/jpeg', 'image/png', 'image/webp'].includes(mimetype);
+  // allow common image types and mp4/webm videos
+  return ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'].includes(mimetype);
 }
 
 // Create a feed post with optional images
-router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => {
+router.post('/', authMiddleware, checkContentLength, upload.array('images', 6), async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
@@ -100,8 +127,8 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
       if (!validateMime(file.mimetype)) continue;
 
       // Calculate MD5 hash of the original file
-  const fileBufForHash = file.buffer || (file.path ? fs.readFileSync(file.path) : Buffer.alloc(0));
-  const hash = crypto.createHash('md5').update(fileBufForHash).digest('hex');
+      const fileBufForHash = file.buffer || (file.path ? fs.readFileSync(file.path) : Buffer.alloc(0));
+      const hash = crypto.createHash('md5').update(fileBufForHash).digest('hex');
 
       // Check if a media with this hash already exists for this post (though post is new, but to be safe)
       const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: post.id, hash: hash } });
@@ -110,19 +137,53 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
         continue;
       }
 
-      // Process main image (resize to max width 1600) and thumbnail (300)
-  // Read file from disk (multer.diskStorage places path in file.path)
-  const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
-  const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
-  const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
+      // Determine if file is image or video
+      const isVideo = file.mimetype && file.mimetype.startsWith('video/');
+      const baseName = `${post.id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+      const retry = require('../lib/retry');
+
+      if (isVideo) {
+        // For videos: upload raw file to Supabase and do not attempt to transcode here
+        const ext = path.extname(file.originalname) || '.mp4';
+        const mainPath = path.posix.join('feed', `${baseName}${ext}`);
+        const fileBuffer = file.buffer || (file.path ? fs.readFileSync(file.path) : null);
+        try {
+          const upMain = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, fileBuffer, { contentType: file.mimetype, upsert: false }));
+          if (upMain.error) { console.error('Supabase video upload error', upMain.error); continue; }
+        } catch (err) {
+          console.error('Supabase video upload failed after retries', err);
+          continue;
+        }
+
+        const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
+        const mainUrl = publicMain?.data?.publicUrl || null;
+
+        const media = await prisma.feedMedia.create({ data: {
+          postId: post.id,
+          type: 'video',
+          url: mainUrl,
+          thumbnailUrl: null,
+          size: file.size,
+          hash: hash,
+          storagePath: mainPath,
+          thumbnailPath: null,
+        }});
+        savedMedias.push(media);
+        // cleanup temp file
+        try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
+        continue;
+      }
+
+      // Otherwise treat as image: process main image (resize to max width 1600) and thumbnail (300)
+      const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
+      const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
+      const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
 
       const ext = 'webp';
-      const baseName = `${post.id}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
       const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
       const thumbPath = path.posix.join('feed', `thumb_${baseName}.${ext}`);
 
       // Upload main (with retries)
-      const retry = require('../lib/retry');
       try {
         const upMain = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, mainBuffer, { contentType: 'image/webp', upsert: false }));
         if (upMain.error) { console.error('Supabase upload error', upMain.error); continue; }
@@ -138,13 +199,13 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
         console.error('Supabase thumb upload failed after retries', err);
       }
 
-  // For public bucket: return public URLs and store storage paths so we can delete later
-  const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
-  const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
-  const mainUrl = publicMain?.data?.publicUrl || null;
-  const thumbUrl = publicThumb?.data?.publicUrl || null;
+      // For public bucket: return public URLs and store storage paths so we can delete later
+      const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
+      const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
+      const mainUrl = publicMain?.data?.publicUrl || null;
+      const thumbUrl = publicThumb?.data?.publicUrl || null;
 
-  const media = await prisma.feedMedia.create({
+      const media = await prisma.feedMedia.create({
         data: {
           postId: post.id,
           type: 'image',
@@ -157,8 +218,8 @@ router.post('/', authMiddleware, upload.array('images', 6), async (req, res) => 
         }
       });
       savedMedias.push(media);
-  // cleanup temp file
-  try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
+      // cleanup temp file
+      try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
     }
 
     const result = await prisma.feedPost.findUnique({ where: { id: post.id }, include: { medias: true, author: true } });
@@ -436,7 +497,7 @@ router.delete('/:postId', authMiddleware, async (req, res) => {
 });
 
 // Add media to an existing post
-router.post('/:postId/media', authMiddleware, upload.array('images', 6), async (req, res) => {
+router.post('/:postId/media', authMiddleware, checkContentLength, upload.array('images', 6), async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const { postId } = req.params;
