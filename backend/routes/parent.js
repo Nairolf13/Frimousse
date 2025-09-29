@@ -129,6 +129,58 @@ router.get('/admin', requireAuth, async (req, res) => {
   }
 });
 
+// Aggregated billing per parent for a given month: returns { [parentId]: total }
+router.get('/billing', requireAuth, async (req, res) => {
+  try {
+    const userReq = req.user || {};
+    if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
+    const month = String(req.query.month || '').trim();
+    if (!/^[0-9]{4}-[0-9]{2}$/.test(month)) return res.status(400).json({ message: 'Invalid month parameter, expected YYYY-MM' });
+    const [year, mon] = month.split('-').map(Number);
+    const startDate = new Date(year, mon - 1, 1);
+    const endDate = new Date(year, mon, 1);
+
+    // Build parent list scope similar to /admin. If nanny or non-super-admin, restrict by center.
+    const whereParent = {};
+    if (!isSuperAdmin(userReq) && userReq.centerId) whereParent.centerId = userReq.centerId;
+
+    // fetch parents in scope with their children ids
+    const parents = await prisma.parent.findMany({ where: whereParent, include: { children: { include: { child: true } } } });
+
+    // Build a map parentId -> [childIds]
+    const parentChildMap = new Map();
+    const allChildIds = new Set();
+    for (const p of parents) {
+      const arr = (p.children || []).map(pc => pc.childId).filter(Boolean);
+      parentChildMap.set(p.id, arr);
+      arr.forEach(id => allChildIds.add(id));
+    }
+
+    // If no children in scope, return empty map
+    if (allChildIds.size === 0) return res.json({});
+
+    // fetch assignments grouped by childId and count days
+    const assignments = await prisma.assignment.findMany({ where: { childId: { in: Array.from(allChildIds) }, date: { gte: startDate, lt: endDate } }, select: { childId: true } });
+    // count days per child
+    const childCounts = assignments.reduce((acc, a) => { acc[a.childId] = (acc[a.childId] || 0) + 1; return acc; }, {});
+
+    // build totals per parent (amount = days * 2 as per billing logic)
+    const result = {};
+    for (const [pid, childIds] of parentChildMap.entries()) {
+      let tot = 0;
+      for (const cid of childIds) {
+        const days = childCounts[cid] || 0;
+        tot += days * 2;
+      }
+      result[pid] = tot;
+    }
+    return res.json(result);
+  } catch (err) {
+    console.error('GET /api/parent/billing error', err);
+    return res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
 // Get parent by id (allow owner or managers)
 router.get('/:id', requireAuth, async (req, res) => {
   try {

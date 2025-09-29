@@ -180,6 +180,20 @@ export default function ReportsPage() {
   const [childrenList, setChildrenList] = useState<{id: string, name: string, age: number, group: string}[]>([]);
   const [nanniesList, setNanniesList] = useState<{id: string, name: string, role: string}[]>([]);
 
+  // When a child is selected, prefer showing only the nannies assigned to that child
+  type ChildWithNannies = { id: string; name: string; age: number; group: string; nannyIds?: string[] };
+  const selectedChild = childrenList.find(c => c.id === form.childId) as ChildWithNannies | undefined;
+  const visibleNannies = (selectedChild && Array.isArray(selectedChild.nannyIds) && selectedChild.nannyIds.length > 0)
+    ? nanniesList.filter(n => selectedChild.nannyIds!.includes(n.id))
+    : nanniesList;
+
+  // If the currently selected nanny is no longer visible for the chosen child, clear it
+  useEffect(() => {
+    if (!form.nannyId) return;
+    const ok = visibleNannies.some(n => n.id === form.nannyId);
+    if (!ok) setForm(f => ({ ...f, nannyId: '', nannyName: '', nannyRole: '' }));
+  }, [form.childId, form.nannyId, visibleNannies]);
+
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -478,7 +492,7 @@ export default function ReportsPage() {
                   }));
                 }} className="border rounded px-3 py-2 w-full" required>
                   <option value="">{t('reports.field.nanny')}</option>
-                  {nanniesList.map(nanny => (
+                  {visibleNannies.map(nanny => (
                     <option key={nanny.id} value={nanny.id}>{nanny.name}</option>
                   ))}
                 </select>

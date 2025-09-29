@@ -425,12 +425,62 @@ router.delete('/:id', auth, async (req, res) => {
     if (!fullExisting) return res.status(404).json({ error: 'Child not found' });
     if (!isSuperAdmin(req.user) && fullExisting.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
 
+    // Collect storage paths to remove (prescription + any feed media)
+    const toRemoveStorage = [];
+    if (fullExisting.prescriptionPath) toRemoveStorage.push(fullExisting.prescriptionPath);
+
+    // find feed posts and media related to this child
+    const posts = await prisma.feedPost.findMany({ where: { childId: id }, select: { id: true } });
+    const postIds = posts.map(p => p.id);
+    if (postIds.length > 0) {
+      const medias = await prisma.feedMedia.findMany({ where: { postId: { in: postIds } }, select: { storagePath: true, thumbnailPath: true } });
+      medias.forEach(m => { if (m.storagePath) toRemoveStorage.push(m.storagePath); if (m.thumbnailPath) toRemoveStorage.push(m.thumbnailPath); });
+    }
+
+    // attempt best-effort removal of storage objects (won't block DB delete on failure)
+    if (toRemoveStorage.length > 0 && SUPABASE_URL && SUPABASE_KEY) {
+      try {
+        // Supabase remove expects array of paths; remove in chunks of 100
+        const chunkSize = 100;
+        for (let i = 0; i < toRemoveStorage.length; i += chunkSize) {
+          const chunk = toRemoveStorage.slice(i, i + chunkSize).filter(Boolean);
+          if (chunk.length === 0) continue;
+          try {
+            const up = await supabase.storage.from(SUPABASE_BUCKET).remove(chunk);
+            if (up.error) {
+              // log but continue
+              console.error('Supabase remove error for child deletion', { error: up.error, paths: chunk });
+            }
+          } catch (e) {
+            console.error('Supabase remove failed for child deletion', e);
+          }
+        }
+      } catch (e) {
+        console.error('Error while removing storage for child deletion', e);
+      }
+    }
+
+    // perform DB cleanup inside a transaction
     await prisma.$transaction(async (tx) => {
+      // remove feed related records
+      if (postIds.length > 0) {
+        await tx.feedLike.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.feedComment.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.feedMedia.deleteMany({ where: { postId: { in: postIds } } });
+        await tx.feedPost.deleteMany({ where: { id: { in: postIds } } });
+      }
+
+      // remove other child-related records
+      await tx.photoConsent.deleteMany({ where: { childId: id } });
+      await tx.childNanny.deleteMany({ where: { childId: id } });
       await tx.parentChild.deleteMany({ where: { childId: id } });
       await tx.assignment.deleteMany({ where: { childId: id } });
       await tx.report.deleteMany({ where: { childId: id } });
+
+      // finally remove child record
       await tx.child.delete({ where: { id } });
     });
+
     res.json({ message: 'Child deleted' });
 
     // background notify previously assigned nannies (email fallback + push)
