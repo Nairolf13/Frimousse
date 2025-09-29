@@ -28,6 +28,10 @@ const features = [
     description: 'Alertes pour les événements importants, rappels et communications.'
   },
   {
+    title: 'Assistant IA',
+    description: 'Obtiens des réponses rapides, des modèles de messages et de l’aide administrative pour gérer ton association.'
+  },
+  {
     title: 'Accessibilité',
     description: 'Respect des standards d’accessibilité pour tous les utilisateurs.'
   },
