@@ -9,7 +9,7 @@ import { HelmetProvider } from 'react-helmet-async';
 function App() {
   const [user, setUser] = useState<User | null>(null);
   useEffect(() => {
-    fetchWithRefresh('/api/user/me')
+    fetchWithRefresh('/api/user/me', { headers: { 'x-skip-refresh': '1' } })
       .then(res => res && res.ok ? res.json() : null)
       .then(async data => {
         setUser(data);

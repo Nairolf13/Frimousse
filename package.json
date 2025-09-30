@@ -67,4 +67,14 @@
   "keywords": [],
   "author": "",
   "license": "ISC"
+  ,"browserslist": [
+    ">0.2%",
+    "not dead",
+    "not op_mini all",
+    "chrome >= 94",
+    "edge >= 95",
+    "firefox >= 90",
+    "safari >= 14",
+    "ios_saf >= 14"
+  ]
 }

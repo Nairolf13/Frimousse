@@ -18,6 +18,19 @@ function renderTemplate(templateName, lang, substitutions = {}) {
 }
 
 async function sendMail({ to, subject, text, html, attachments, prisma = null, paymentHistoryId = null, bypassOptOut = false } = {}) {
+  // Allow an env toggle to completely disable outgoing emails (useful for staging/testing)
+  const emailEnabled = process.env.EMAIL_SEND_ENABLED !== 'false';
+  if (!emailEnabled) {
+    if (prisma) {
+      try {
+        await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: null, status: 'skipped', errorText: 'EMAIL_SEND_ENABLED=false', bypassOptOut: !!bypassOptOut } });
+      } catch (e) {
+        console.error('Failed to write EmailLog (skipped):', e && e.message ? e.message : e);
+      }
+    }
+    console.log('Emails are disabled by EMAIL_SEND_ENABLED=false — skipping sendMail');
+    return;
+  }
   if (!process.env.SMTP_HOST) return;
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
