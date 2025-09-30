@@ -1,21 +1,16 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { useNavigate } from 'react-router-dom';
 
 export default function AboutPage() {
   const navigate = useNavigate();
   return (
   <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
-      <Helmet>
-        <title>À propos de Frimousse | Application de gestion de garde d’enfants, sécurité, RGPD, avantages</title>
-        <meta name="description" content="Frimousse, la solution digitale complète pour la gestion des associations de garde d’enfants : sécurité, RGPD, communication, planning, témoignages, FAQ, et bien plus." />
-        <meta name="keywords" content="garde d'enfants, application gestion, association, crèche, micro-crèche, MAM, planning, sécurité, RGPD, communication parents, logiciel, solution digitale, Frimousse, gestion enfants, gestion intervenants, facturation, attestations, notifications, familles, témoignages, FAQ" />
-        <meta property="og:title" content="À propos de Frimousse | Application de gestion de garde d’enfants" />
-        <meta property="og:description" content="Découvrez Frimousse, la solution digitale moderne et sécurisée pour la gestion des associations de garde d’enfants : centralisation, sécurité, RGPD, communication, planning, témoignages, FAQ, et bien plus." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://frimousse.asso/a-propos" />
-        <meta property="og:image" content="https://frimousse.asso/og-image.jpg" />
-        <link rel="canonical" href="https://frimousse.asso/a-propos" />
-      </Helmet>
+      <SEO
+        title={"À propos de Frimousse | Application de gestion de garde d'enfants"}
+        description={"Frimousse, la solution digitale complète pour la gestion des associations de garde d'enfants : sécurité, RGPD, communication, planning, témoignages, FAQ, et bien plus."}
+        url={"https://frimousse-asso.fr/a-propos"}
+        image={"https://frimousse-asso.fr/imgs/LogoFrimousse.webp"}
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

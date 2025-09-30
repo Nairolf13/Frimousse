@@ -1,14 +1,15 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { useNavigate } from 'react-router-dom';
 
 export default function GuideStartPage() {
   const navigate = useNavigate();
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
-      <Helmet>
-        <title>Guide de démarrage rapide | Frimousse</title>
-        <meta name="description" content="Premiers pas sur Frimousse : connexion, navigation, ajout d’enfants, gestion du planning, accès aux rapports." />
-      </Helmet>
+      <SEO
+        title={"Guide de démarrage rapide | Frimousse"}
+        description={"Premiers pas sur Frimousse : connexion, navigation, ajout d'enfants, gestion du planning, accès aux rapports."}
+        url={"https://frimousse-asso.fr/guide-demarrage"}
+      />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
           <div className="flex items-center gap-3">

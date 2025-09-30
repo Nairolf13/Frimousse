@@ -1,23 +1,22 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { useNavigate } from 'react-router-dom';
 
 export default function GuideExportReportPage() {
   const navigate = useNavigate();
   return (
   <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
-      <Helmet>
-        <title>Rapport | Guide Frimousse</title>
-        <meta name="description" content="Tutoriel pour exporter un rapport dans Frimousse : consultation, filtrage, export PDF ou Excel des rapports d’activité." />
-      </Helmet>
-      <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
-              <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
-            </div>
-            <div className="w-full text-center">
-              <span className="font-bold text-base text-[#08323a]">Les Frimousses</span>
-            </div>
+      <SEO
+        title={"Rapport | Guide Frimousse"}
+        description={"Tutoriel pour exporter un rapport dans Frimousse : consultation, filtrage, export PDF ou Excel des rapports d'activité."}
+        url={"https://frimousse-asso.fr/guide-export-rapport"}
+      />
+      <header className="w-full py-6 bg-white border-b border-[#fcdcdf]">
+        <div className="max-w-4xl mx-auto flex items-center gap-4 px-6">
+          <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
+            <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
+          </div>
+          <div className="w-full text-left">
+            <span className="font-bold text-base text-[#08323a]">Les Frimousses</span>
           </div>
         </div>
       </header>

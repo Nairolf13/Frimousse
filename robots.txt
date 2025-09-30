@@ -1,3 +1,11 @@
 User-agent: *
-Disallow:
-Sitemap: https://www.lesfrimousses.com/sitemap.xml
+# Disallow obvious non-public folders and admin/backend routes
+Disallow: /admin
+Disallow: /api
+Disallow: /backend
+Disallow: /private
+
+Allow: /
+
+Sitemap: https://lesfrimousses.com/sitemap.xml
+
