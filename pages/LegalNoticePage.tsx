@@ -8,7 +8,7 @@ export default function LegalNoticePage() {
       <SEO
         title={"Mentions légales | Frimousse Association"}
         description={"Mentions légales de Frimousse : éditeur, hébergeur, propriété intellectuelle, contact, conformité légale."}
-        url={"https://frimousse-asso.fr/mentions-legales"}
+        url={"https://lesfrimousses.com/mentions-legales"}
       />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">

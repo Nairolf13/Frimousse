@@ -8,7 +8,7 @@ export default function SupportPage() {
       <SEO
         title={"Support | Frimousse Association"}
         description={"Besoin d'aide sur Frimousse? Contact, guides, assistance technique, documentation et ressources pour les associations, crèches, MAM, garderies."}
-        url={"https://frimousse-asso.fr/support"}
+        url={"https://lesfrimousses.com/support"}
         image={"/frimousse-cover.png"}
       />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">

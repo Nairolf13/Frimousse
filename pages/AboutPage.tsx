@@ -8,8 +8,8 @@ export default function AboutPage() {
       <SEO
         title={"À propos de Frimousse | Application de gestion de garde d'enfants"}
         description={"Frimousse, la solution digitale complète pour la gestion des associations de garde d'enfants : sécurité, RGPD, communication, planning, témoignages, FAQ, et bien plus."}
-        url={"https://frimousse-asso.fr/a-propos"}
-        image={"https://frimousse-asso.fr/imgs/LogoFrimousse.webp"}
+        url={"https://lesfrimousses.com/a-propos"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
       />
       <script
         type="application/ld+json"

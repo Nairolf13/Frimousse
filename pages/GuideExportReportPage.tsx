@@ -8,7 +8,7 @@ export default function GuideExportReportPage() {
       <SEO
         title={"Rapport | Guide Frimousse"}
         description={"Tutoriel pour exporter un rapport dans Frimousse : consultation, filtrage, export PDF ou Excel des rapports d'activité."}
-        url={"https://frimousse-asso.fr/guide-export-rapport"}
+        url={"https://lesfrimousses.com/guide-export-rapport"}
       />
       <header className="w-full py-6 bg-white border-b border-[#fcdcdf]">
         <div className="max-w-4xl mx-auto flex items-center gap-4 px-6">

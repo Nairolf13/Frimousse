@@ -8,7 +8,7 @@ export default function GuideSecurityPage() {
       <SEO
         title={"Sécurité & RGPD | Guide Frimousse"}
         description={"Bonnes pratiques de sécurité et conformité RGPD sur Frimousse : gestion des accès, confidentialité, droits des utilisateurs."}
-        url={"https://frimousse-asso.fr/guide-securite"}
+        url={"https://lesfrimousses.com/guide-securite"}
       />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
