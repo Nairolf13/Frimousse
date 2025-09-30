@@ -82,7 +82,18 @@ router.get('/:year/:month', auth, async (req, res) => {
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
-    res.json(data);
+    // Compute invoiceNumber for each record so frontend can show a human-friendly invoice identifier
+    const augmented = (data || []).map(rec => {
+      try {
+        const invoiceDate = rec && rec.createdAt ? new Date(rec.createdAt) : new Date();
+        const invoiceNumber = `FA-${invoiceDate.getFullYear()}-${String(rec.id).slice(0, 6)}`;
+        return { ...rec, invoiceNumber };
+      } catch (e) {
+        return { ...rec };
+      }
+    });
+
+    res.json(augmented);
   } catch (err) {
     console.error('Failed to fetch payment history for', { year: yearInt, month: monthInt }, err);
     res.status(500).json({ message: 'Erreur serveur' });

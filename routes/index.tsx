@@ -25,6 +25,7 @@ import ParentDashboard from '../pages/ParentDashboard';
 import ParentChildSchedule from '../pages/ParentChildSchedule';
 import ParentChildReports from '../pages/ParentChildReports';
 import Feed from '../pages/Feed';
+
 import AdminReviews from '../pages/AdminReviews';
 
 
@@ -40,6 +41,7 @@ import LegalNoticePage from '../pages/LegalNoticePage';
 
 export default function AppRoutes() {
   const AssistantPage = lazy(() => import('../pages/Assistant'));
+  const AdminEmailLogs = lazy(() => import('../pages/AdminEmailLogs'));
   return (
     <BrowserRouter>
       <Routes>
@@ -75,6 +77,7 @@ export default function AppRoutes() {
           <Route path="/payment-history" element={<PaymentHistory />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/admin/reviews" element={<AdminReviews />} />
+          <Route path="/admin/emaillogs" element={<Suspense fallback={<div>Loading...</div>}><AdminEmailLogs /></Suspense>} />
           <Route path="/assistant" element={<Suspense fallback={<div>Loading...</div>}><AssistantPage /></Suspense>} />
         </Route>
       </Routes>
