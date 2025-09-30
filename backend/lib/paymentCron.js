@@ -154,18 +154,28 @@ async function calculatePayments() {
   await calculatePaymentsForMonth(targetYear, targetMonthIndex);
 }
 
-// Exécution chaque 1er du mois à 00:05
-const task = cron.schedule('5 0 1 * *', async () => {
-  const start = new Date().toISOString();
-  console.log(`[${start}] Payment cron started: Calcul des paiements mensuels...`);
-  try {
-    await calculatePayments();
-    const finish = new Date().toISOString();
-    console.log(`[${finish}] Payment cron finished successfully`);
-  } catch (err) {
-    const when = new Date().toISOString();
-    console.error(`[${when}] Payment cron failed`, err);
-  }
-}, { scheduled: true });
+// Exécution chaque 1er du mois à 00:30 (server local time or CRON_TZ if provided)
+const cronExpression = '30 0 1 * *';
+const cronTimezone = process.env.CRON_TZ || 'Europe/Paris';
+const cronEnabled = process.env.ENABLE_PAYMENT_CRON !== 'false';
+
+let task = null;
+if (cronEnabled) {
+  task = cron.schedule(cronExpression, async () => {
+    const start = new Date().toISOString();
+    console.log(`[${start}] Payment cron started: Calcul des paiements mensuels... (tz=${cronTimezone})`);
+    try {
+      await calculatePayments();
+      const finish = new Date().toISOString();
+      console.log(`[${finish}] Payment cron finished successfully`);
+    } catch (err) {
+      const when = new Date().toISOString();
+      console.error(`[${when}] Payment cron failed`, err);
+    }
+  }, { scheduled: true, timezone: cronTimezone });
+  console.log(`Payment cron scheduled (${cronExpression}) with timezone ${cronTimezone}`);
+} else {
+  console.log('Payment cron disabled via ENABLE_PAYMENT_CRON=false');
+}
 
 module.exports = { calculatePayments, calculatePaymentsForMonth, upsertPaymentsForParentForMonth, task };
