@@ -128,6 +128,10 @@ try {
 
 // paymentHistoryRoutes mounted later after invoice and admin routes
 
+const adminEmailLogsRoutes = require('./routes/adminEmailLogs');
+app.use('/api/admin', adminEmailLogsRoutes);
+
+
 const paymentInvoiceRoutes = require('./routes/paymentInvoice');
 // Mount invoice route before the general payment-history routes so it has priority
 app.use('/api/payment-history', paymentInvoiceRoutes);

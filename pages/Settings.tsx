@@ -378,6 +378,21 @@ export default function Settings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const { t, setLocale } = useI18n();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    // detect if current user is admin to show admin-only settings
+    (async () => {
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/user/me`, { credentials: 'include' });
+        if (!res.ok) return;
+        const u = await res.json();
+        if (u && u.role === 'admin') setIsAdmin(true);
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     // load current user's notifyByEmail preference
@@ -512,6 +527,24 @@ export default function Settings() {
                 <ProfileButton />
               </div>
             </div>
+
+            {isAdmin && (
+              <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full md:col-span-2">
+                <div>
+                  <div className="font-semibold text-gray-800">🧾 Journal des emails</div>
+                  <div className="text-gray-500 text-sm">Consultez les envois d'emails (factures, erreurs). Accessible uniquement aux administrateurs.</div>
+                </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <button
+                    onClick={() => { window.location.href = '/admin/emaillogs'; }}
+                    className="bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]"
+                  >
+                    Ouvrir le journal des emails
+                  </button>
+                 
+                </div>
+              </div>
+            )}
 
             
 

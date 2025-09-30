@@ -355,6 +355,7 @@ model PaymentHistory {
   details    Json
   paid       Boolean  @default(false)
   createdAt  DateTime @default(now())
+  emailLogs  EmailLog[] @relation("PaymentHistoryEmailLogs")
 }
 
 // Public reviews / testimonials left by parents or visitors (shown on Landing page)
@@ -368,4 +369,20 @@ model Review {
   centerId   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+}
+
+model EmailLog {
+  id               String   @id @default(uuid())
+  paymentHistory   PaymentHistory? @relation("PaymentHistoryEmailLogs", fields: [paymentHistoryId], references: [id])
+  paymentHistoryId String?
+  recipients       Json
+  recipientsText   String?
+  subject          String?
+  messageId        String?
+  status           String   // 'sent' | 'failed'
+  errorText        String?
+  bypassOptOut     Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([paymentHistoryId])
 }

@@ -17,7 +17,7 @@ function renderTemplate(templateName, lang, substitutions = {}) {
   return html;
 }
 
-async function sendMail({ to, subject, text, html, attachments } = {}) {
+async function sendMail({ to, subject, text, html, attachments, prisma = null, paymentHistoryId = null, bypassOptOut = false } = {}) {
   if (!process.env.SMTP_HOST) return;
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -33,7 +33,27 @@ async function sendMail({ to, subject, text, html, attachments } = {}) {
     html: html || undefined,
     attachments: attachments || undefined,
   };
-  await transporter.sendMail(mailOptions);
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    // If prisma provided, create EmailLog entry
+    if (prisma) {
+      try {
+  await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: info.messageId || null, status: 'sent', errorText: null, bypassOptOut: !!bypassOptOut } });
+      } catch (e) {
+        console.error('Failed to write EmailLog (sent):', e && e.message ? e.message : e);
+      }
+    }
+    return info;
+  } catch (e) {
+    if (prisma) {
+      try {
+  await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: null, status: 'failed', errorText: e && e.message ? e.message : String(e), bypassOptOut: !!bypassOptOut } });
+      } catch (ee) {
+        console.error('Failed to write EmailLog (failed):', ee && ee.message ? ee.message : ee);
+      }
+    }
+    throw e;
+  }
 }
 
 async function filterOptedOutEmails(prisma, emails) {
@@ -52,30 +72,34 @@ async function filterOptedOutEmails(prisma, emails) {
   }
 }
 
-async function sendTemplatedMail({ templateName, lang, to, subject, text, substitutions = {}, prisma = null }) {
-  // If a local logo exists, attach it and replace logoUrl by a CID so images show in email clients
-  const attachments = [];
-  try {
-    const localLogoPath = path.join(__dirname, '..', '..', 'public', 'imgs', 'LogoFrimousse.webp');
-    if (fs.existsSync(localLogoPath)) {
-      // override substitution to use CID
-      substitutions.logoUrl = `cid:logo-frimousse`;
-      attachments.push({ filename: 'LogoFrimousse.webp', path: localLogoPath, cid: 'logo-frimousse' });
-    }
-  } catch (e) {
-    // ignore if file checks fail
-  }
+async function sendTemplatedMail({ templateName, lang, to, subject, text, substitutions = {}, prisma = null, attachments: extraAttachments = [], respectOptOut = true, paymentHistoryId = null, bypassOptOut = false }) {
 
   const html = renderTemplate(templateName, lang, substitutions);
   // normalize 'to' into array
   let recipients = Array.isArray(to) ? to.slice() : (to ? [to] : []);
   recipients = recipients.map(r => (typeof r === 'string' ? r : '')).filter(Boolean);
-  // If prisma provided, filter out opted-out users
-  if (prisma) {
+  // If prisma provided and respecting opt-out, filter out opted-out users
+  if (prisma && respectOptOut) {
     recipients = await filterOptedOutEmails(prisma, recipients);
   }
   if (!recipients.length) return;
-  await sendMail({ to: recipients, subject, text, html, attachments: attachments.length ? attachments : undefined });
+  // merge attachments: logo + extraAttachments
+  const attachments = [];
+  try {
+    const localLogoPath = path.join(__dirname, '..', '..', 'public', 'imgs', 'LogoFrimousse.webp');
+    if (fs.existsSync(localLogoPath)) {
+      substitutions.logoUrl = `cid:logo-frimousse`;
+      attachments.push({ filename: 'LogoFrimousse.webp', path: localLogoPath, cid: 'logo-frimousse' });
+    }
+  } catch (e) {
+    // ignore
+  }
+  if (Array.isArray(extraAttachments) && extraAttachments.length) {
+    // expected extraAttachments items to follow nodemailer's attachment spec (filename, content, contentType, contentDisposition, content etc.)
+    for (const a of extraAttachments) attachments.push(a);
+  }
+
+  await sendMail({ to: recipients, subject, text, html, attachments: attachments.length ? attachments : undefined, prisma, paymentHistoryId, bypassOptOut });
 }
 
 async function getParentEmailsForDate(prisma, date, centerId, isSuperAdmin) {

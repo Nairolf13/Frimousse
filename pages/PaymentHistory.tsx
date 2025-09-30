@@ -7,7 +7,7 @@ const meta = import.meta as { env?: { VITE_API_URL?: string } };
 const API_URL = meta?.env?.VITE_API_URL ?? '/api';
 
 type Detail = { childName: string; daysPresent: number; ratePerDay: number; subtotal: number };
-type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean };
+type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string };
 
 export default function PaymentHistoryPage() {
   const { t, locale } = useI18n();
@@ -289,7 +289,10 @@ export default function PaymentHistoryPage() {
                  </div>
                  <div className="text-right">
                    <div className="flex items-center justify-end gap-2">
-                     <div className="text-xs text-gray-500">{rec.createdAt ? new Date(rec.createdAt).toLocaleDateString('fr-FR') : ''}</div>
+                     <div className="text-xs text-gray-500">
+                       {rec.invoiceNumber ? <span className="mr-2 font-medium">{rec.invoiceNumber}</span> : null}
+                       {rec.createdAt ? new Date(rec.createdAt).toLocaleDateString('fr-FR') : ''}
+                     </div>
                      { rec.paid ? <div className="text-sm text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full">{t('payments.status.paid')}</div> : <div className="text-sm text-gray-500">{t('payments.status.unpaid')}</div> }
                      {user && (user.role === 'admin' || (user.role && user.role.toLowerCase().includes('super'))) && (
                        <button onClick={() => togglePaid(rec.id, !rec.paid)} className="text-sm px-2 py-1 bg-blue-500 text-white rounded">{rec.paid ? t('payments.actions.mark_unpaid') : t('payments.actions.mark_paid')}</button>
@@ -330,7 +333,7 @@ export default function PaymentHistoryPage() {
                 <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
                   <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
                   <div className="w-full md:w-auto flex justify-center md:justify-end">
-                    <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{t('payments.download_invoice')}</a>
+                    <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
                   </div>
                 </div>
               </div>
