@@ -57,7 +57,9 @@ const allowedOrigins = isProd
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Allow requests with no origin (curl, same-origin) and be permissive in dev
       if (!origin) return callback(null, true);
+      if (!isProd) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
       return callback(new Error('CORS: origine non autorisée'), false);
     },
@@ -67,6 +69,41 @@ app.use(
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Serve frontend static files in production with appropriate Cache-Control headers.
+if (isProd) {
+  const distPath = path.resolve(__dirname, '..', 'dist');
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      try {
+        const ext = path.extname(filePath).toLowerCase();
+        // index.html should be revalidated frequently
+        if (ext === '.html') {
+          res.setHeader('Cache-Control', 'no-cache');
+          return;
+        }
+
+        // Vite outputs hashed files under /assets/ — these are safe to cache long-term
+        if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          return;
+        }
+
+        // Images: if fingerprinted they will sit under assets; otherwise give a reasonable TTL
+        if (filePath.includes(`${path.sep}imgs${path.sep}`) || ['.webp', '.png', '.jpg', '.jpeg', '.svg', '.gif'].includes(ext)) {
+          res.setHeader('Cache-Control', 'public, max-age=2592000, immutable'); // 30 days
+          return;
+        }
+
+        // Default for other static files (small TTL)
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+      } catch (e) {
+        // Don't break serving on header errors
+        console.warn('Failed to set cache headers for', filePath, e && e.message ? e.message : e);
+      }
+    }
+  }));
+}
 
 app.use('/api/me', meRoutes);
 app.use('/api/user/me', meRoutes);

@@ -112,6 +112,11 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const load = useCallback(async () => {
     const cacheKey = '/api/notifications/unread-count';
     try {
+      // If there's no authenticated user, don't attempt notification API calls which will return 401.
+      if (!user) {
+        publish(0);
+        return;
+      }
       const cached = getCached<{ unread: number }>(cacheKey);
       if (cached) {
         publish(Number(cached.unread) || 0);
@@ -137,7 +142,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     } catch {
       publish(0);
     }
-  }, [publish]);
+  }, [publish, user]);
 
   // Admin-only: poll pending reviews count and publish as part of notifications
   const reviewsPollRef = useRef<number | null>(null);
@@ -187,6 +192,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, [user, unread, bc]);
 
   const startPolling = useCallback(() => {
+    // Do not start polling when user is not authenticated to avoid unnecessary 401s and refresh attempts
+    if (!user) return;
     if (pollingRef.current != null) return;
     // simple leader election: if another tab is already leader, don't duplicate polling
     // Check a localStorage flag set by leader
@@ -217,7 +224,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     pollingRef.current = window.setInterval(() => { void load(); }, pollingIntervalRef.current);
     // a separate interval for reviews to avoid coupling — keep ref to clear later
     reviewsPollRef.current = window.setInterval(() => { void loadReviews(); }, pollingIntervalRef.current);
-  }, [load, loadReviews]);
+  }, [load, loadReviews, user]);
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current != null) {

@@ -1,5 +1,6 @@
 import SEO from '../components/SEO';
 import { useEffect, useState } from 'react';
+
 import ConfirmDialog from '../components/ConfirmDialog';
 
         const API_URL = import.meta.env.VITE_API_URL || '';
@@ -40,7 +41,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
           const currentReview = reviews.length > 0 ? reviews[currentReviewIndex % reviews.length] : null;
 
           useEffect(() => {
-            (async () => {
+            const doFetches = async () => {
               try {
                 const res = await fetch(`${API_URL}/children/count`);
                 const data = (await res.json()) as { count?: number };
@@ -72,7 +73,32 @@ import ConfirmDialog from '../components/ConfirmDialog';
               } catch {
                 setReviews([]);
               }
-            })();
+            };
+
+            // Defer non-critical API calls to idle time to shorten initial critical request chain
+            type IdleHandle = number | null;
+            let schedule: IdleHandle = null;
+
+            if (typeof window.requestIdleCallback === 'function') {
+              schedule = window.requestIdleCallback(() => { doFetches(); }) as number;
+            } else {
+              schedule = window.setTimeout(() => { doFetches(); }, 250) as unknown as number;
+            }
+
+            return () => {
+              try {
+                if (typeof schedule === 'number') {
+                  // cancelIdleCallback exists in modern browsers; fall back to clearTimeout
+                  if (typeof window.cancelIdleCallback === 'function') {
+                    window.cancelIdleCallback(schedule);
+                  } else {
+                    window.clearTimeout(schedule);
+                  }
+                }
+              } catch {
+                // swallow — cleanup should not break unmount
+              }
+            };
           }, []);
 
           return (
@@ -541,7 +567,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                 <div className="max-w-5xl mx-auto border-t border-gray-100 py-8">
                   <div className="grid grid-cols-1 sm:grid-cols-3 justify-items-center items-start gap-6">
                     <div className="flex flex-col items-center text-center">
-                      <h4 className="font-semibold text-[#08323a] mb-2">Liens utiles</h4>
+                      <h3 className="font-semibold text-[#08323a] mb-2">Liens utiles</h3>
                       <ul className="text-sm text-[#08323a] space-y-1">
                         <li>
                           <a href="/about" className="hover:text-[#0b5566]">À propos</a>
@@ -559,13 +585,13 @@ import ConfirmDialog from '../components/ConfirmDialog';
                     </div>
 
                     <div className="flex flex-col items-center text-center">
-                      <h4 className="font-bold text-lg text-[#08323a] mb-2">Les Frimousses</h4>
+                      <h3 className="font-bold text-lg text-[#08323a] mb-2">Les Frimousses</h3>
                       <p className="text-[#08323a] text-sm mt-2 max-w-md mx-auto">Gestion professionnelle et moderne pour les associations. Pensé avec bienveillance pour les enfants et les familles.</p>
                       <div className="mt-4 text-xs text-gray-500 hidden sm:block">© Les Frimousses {new Date().getFullYear()}</div>
                     </div>
 
                     <div className="flex flex-col items-center text-center">
-                      <h4 className="font-semibold text-[#08323a] mb-2">Contact</h4>
+                      <h3 className="font-semibold text-[#08323a] mb-2">Contact</h3>
                       <div className="text-[#08323a] text-sm">bricchi.florian@outlook.com</div>
                       <div className="text-[#08323a] text-sm">+33 6 47 48 67 34</div>
                     </div>

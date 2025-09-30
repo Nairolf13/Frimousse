@@ -128,6 +128,8 @@ export default function MobileMenu() {
 
     async function loadUnread() {
       try {
+        // Avoid calling notifications API when unauthenticated to prevent 401s
+        if (!user) return setUnreadCount(0);
         const res = await fetchWithRefresh('/api/notifications/unread-count', { credentials: 'include' });
         if (!mounted) return;
         if (!res.ok) return setUnreadCount(0);
@@ -144,7 +146,7 @@ export default function MobileMenu() {
       window.addEventListener('notifications:changed', onChange as EventListener);
     }
     return () => { mounted = false; clearInterval(iv); if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') { window.removeEventListener('notifications:changed', onChange as EventListener); } };
-  }, []);
+  }, [user]);
 
   // lock page scroll when mobile menu is open so touch scroll targets the menu
   useEffect(() => {
