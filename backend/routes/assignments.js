@@ -108,16 +108,17 @@ router.post('/', auth, async (req, res) => {
     const assignment = await prisma.assignment.create({ data: { date: new Date(date), childId, nannyId, centerId: req.user.centerId } });
     res.status(201).json(assignment);
 
-    // Update payment history for affected parents for the current month (non-blocking)
+    // Update payment history for affected parents for the assignment's month (non-blocking)
     (async () => {
       try {
         const { upsertPaymentsForParentForMonth } = require('../lib/paymentCron');
         const full = await prisma.assignment.findUnique({ where: { id: assignment.id }, include: { child: { include: { parents: { include: { parent: true } } } } } });
         if (!full || !full.child) return;
         const parents = (full.child.parents || []).map(p => p.parent).filter(Boolean);
-        const now = new Date();
-        const year = now.getFullYear();
-        const monthIndex = now.getMonth(); // 0-11 current month
+        // Use the assignment date so we update the paymentHistory for the correct month
+        const assignDate = full.date ? new Date(full.date) : new Date();
+        const year = assignDate.getFullYear();
+        const monthIndex = assignDate.getMonth(); // 0-11 for the assignment's month
         for (const parent of parents) {
           try { await upsertPaymentsForParentForMonth(parent.id, year, monthIndex); } catch (e) { /* ignore */ }
         }
@@ -298,18 +299,27 @@ router.put('/:id', auth, async (req, res) => {
     const assignment = await prisma.assignment.update({ where: { id }, data: { date: new Date(date), childId, nannyId } });
     res.json(assignment);
 
-    // Update payment history for affected parents for the current month (non-blocking)
+    // Update payment history for affected parents for the new and old months if date changed (non-blocking)
     (async () => {
       try {
         const { upsertPaymentsForParentForMonth } = require('../lib/paymentCron');
         const full = await prisma.assignment.findUnique({ where: { id: assignment.id }, include: { child: { include: { parents: { include: { parent: true } } } } } });
         if (!full || !full.child) return;
         const parents = (full.child.parents || []).map(p => p.parent).filter(Boolean);
-        const now = new Date();
-        const year = now.getFullYear();
-        const monthIndex = now.getMonth(); // 0-11 current month
+        // New assign date (from request) and old date (existing)
+        const newAssignDate = (typeof date !== 'undefined' && date) ? new Date(date) : (full.date ? new Date(full.date) : new Date());
+        const oldAssignDate = existing && existing.date ? new Date(existing.date) : null;
+
+        // build a set of (year, monthIndex) to recalc
+        const monthsToRecalc = new Set();
+        monthsToRecalc.add(`${newAssignDate.getFullYear()}-${newAssignDate.getMonth()}`);
+        if (oldAssignDate) monthsToRecalc.add(`${oldAssignDate.getFullYear()}-${oldAssignDate.getMonth()}`);
+
         for (const parent of parents) {
-          try { await upsertPaymentsForParentForMonth(parent.id, year, monthIndex); } catch (e) { /* ignore */ }
+          for (const key of monthsToRecalc) {
+            const [y, m] = key.split('-').map(Number);
+            try { await upsertPaymentsForParentForMonth(parent.id, y, m); } catch (e) { /* ignore */ }
+          }
         }
       } catch (e) {
         // ignore
@@ -470,14 +480,14 @@ router.delete('/:id', auth, async (req, res) => {
     await prisma.assignment.delete({ where: { id } });
     res.json({ message: 'Assignment deleted' });
 
-    // Update payment history for affected parents for the current month (non-blocking)
+    // Update payment history for affected parents for the assignment's month (non-blocking)
     (async () => {
       try {
         const { upsertPaymentsForParentForMonth } = require('../lib/paymentCron');
         const parents = (fullExisting.child && fullExisting.child.parents) ? (fullExisting.child.parents.map(p => p.parent).filter(Boolean)) : [];
-        const now = new Date();
-        const year = now.getFullYear();
-        const monthIndex = now.getMonth();
+        const assignDate = fullExisting && fullExisting.date ? new Date(fullExisting.date) : new Date();
+        const year = assignDate.getFullYear();
+        const monthIndex = assignDate.getMonth();
         for (const parent of parents) {
           try { await upsertPaymentsForParentForMonth(parent.id, year, monthIndex); } catch (e) { /* ignore */ }
         }

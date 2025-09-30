@@ -155,9 +155,17 @@ async function calculatePayments() {
 }
 
 // Exécution chaque 1er du mois à 00:05
-const task = cron.schedule('5 0 1 * *', () => {
-  console.log('Calcul des paiements mensuels...');
-  calculatePayments().catch(console.error);
+const task = cron.schedule('5 0 1 * *', async () => {
+  const start = new Date().toISOString();
+  console.log(`[${start}] Payment cron started: Calcul des paiements mensuels...`);
+  try {
+    await calculatePayments();
+    const finish = new Date().toISOString();
+    console.log(`[${finish}] Payment cron finished successfully`);
+  } catch (err) {
+    const when = new Date().toISOString();
+    console.error(`[${when}] Payment cron failed`, err);
+  }
 }, { scheduled: true });
 
 module.exports = { calculatePayments, calculatePaymentsForMonth, upsertPaymentsForParentForMonth, task };
