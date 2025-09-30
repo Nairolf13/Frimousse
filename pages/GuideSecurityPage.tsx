@@ -1,14 +1,15 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { useNavigate } from 'react-router-dom';
 
 export default function GuideSecurityPage() {
   const navigate = useNavigate();
   return (
   <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
-      <Helmet>
-        <title>Sécurité & RGPD | Guide Frimousse</title>
-        <meta name="description" content="Bonnes pratiques de sécurité et conformité RGPD sur Frimousse : gestion des accès, confidentialité, droits des utilisateurs." />
-      </Helmet>
+      <SEO
+        title={"Sécurité & RGPD | Guide Frimousse"}
+        description={"Bonnes pratiques de sécurité et conformité RGPD sur Frimousse : gestion des accès, confidentialité, droits des utilisateurs."}
+        url={"https://frimousse-asso.fr/guide-securite"}
+      />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
           <div className="flex items-center gap-3">

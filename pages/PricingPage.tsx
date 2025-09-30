@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { useEffect, useState} from 'react';
 import { useNavigate } from 'react-router-dom';
 // Stripe Checkout redirect only: no Elements or inline card collection
@@ -100,16 +100,13 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
-      <Helmet>
-        <title>Tarifs | Frimousse Association</title>
-        <meta name="description" content="Découvrez les tarifs de Frimousse pour crèches associatives, micro-crèches, garderies, centres de loisirs et MAM. Abonnement mensuel, offre gratuite, options modulaires." />
-        <meta property="og:title" content="Tarifs | Frimousse Association" />
-        <meta property="og:description" content="Grille tarifaire transparente pour toutes les structures d’accueil d’enfants. Test gratuit, forfaits adaptés à chaque besoin." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://frimousse-asso.fr/tarifs" />
-        <meta property="og:image" content="/frimousse-cover.png" />
-  <script async src="https://js.stripe.com/v3/buy-button.js"></script>
-      </Helmet>
+      <SEO
+        title={"Tarifs | Frimousse Association"}
+        description={"Découvrez les tarifs de Frimousse pour crèches associatives, micro-crèches, garderies, centres de loisirs et MAM. Abonnement mensuel, offre gratuite, options modulaires."}
+        url={"https://frimousse-asso.fr/tarifs"}
+        image={"/frimousse-cover.png"}
+      />
+      <script async src="https://js.stripe.com/v3/buy-button.js"></script>
       <header className="w-full bg-gradient-to-r from-[#a9ddf2] to-[#f7f4d7] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
           <div className="flex items-center gap-3">

@@ -1,14 +1,15 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { useNavigate } from 'react-router-dom';
 
 export default function PrivacyPolicyPage() {
   const navigate = useNavigate();
   return (
   <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
-      <Helmet>
-        <title>Politique de confidentialité | Frimousse Association</title>
-        <meta name="description" content="Politique de confidentialité de Frimousse : protection des données, RGPD, droits des utilisateurs, sécurité et gestion des informations personnelles." />
-      </Helmet>
+      <SEO
+        title={"Politique de confidentialité | Frimousse Association"}
+        description={"Politique de confidentialité de Frimousse : protection des données, RGPD, droits des utilisateurs, sécurité et gestion des informations personnelles."}
+        url={"https://frimousse-asso.fr/politique-confidentialite"}
+      />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
           <div className="flex items-center gap-3">

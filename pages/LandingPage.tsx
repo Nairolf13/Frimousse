@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { useEffect, useState } from 'react';
 import ConfirmDialog from '../components/ConfirmDialog';
 
@@ -77,100 +77,12 @@ import ConfirmDialog from '../components/ConfirmDialog';
 
           return (
           <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0 relative pb-16 sm:pb-0">
-              <Helmet>
-                <title>Frimousse — Logiciel de gestion pour crèches et MAM</title>
-                <meta
-                  name="description"
-                  content="Frimousse aide les crèches, micro-crèches et MAM à gérer inscriptions, plannings, fiches enfants et communication parent-crèche. Essai gratuit et conformité RGPD."
-                />
-                {/* Google site verification placeholder - replace with your token before submitting */}
-                <meta name="google-site-verification" content="" />
-                <meta name="theme-color" content="#0b5566" />
-                <meta property="og:locale" content="fr_FR" />
-                <meta property="og:site_name" content="Frimousse" />
-                <meta
-                  name="keywords"
-                  content="application de gestion d'enfant, application pour crèche, application MAM, gestion crèche, gestion micro-crèche, logiciel crèche, mise en relation parent crèche, mise en relation parent MAM, gestion association garde d'enfants, planning crèche, inscription en ligne crèche, solution gestion enfants, Frimousse"
-                />
-                <meta property="og:title" content="Frimousse — Logiciel gestion crèches & MAM" />
-                <meta
-                  property="og:description"
-                  content="Gérez inscriptions, plannings et fiches enfants avec Frimousse. Solution pour crèches associatives, micro-crèches et MAM — essai gratuit." 
-                />
-                <meta property="og:type" content="website" />
-                <meta property="og:url" content="https://frimousse-asso.fr/" />
-                <meta property="og:image" content="https://frimousse-asso.fr/frimousse-cover.png" />
-                <meta property="og:image:alt" content="Frimousse — gestion crèches et MAM" />
-                <meta property="og:image:width" content="1200" />
-                <meta property="og:image:height" content="630" />
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:site" content="@frimousse" />
-                <meta name="twitter:creator" content="@frimousse" />
-                <meta name="twitter:title" content="Frimousse | Application de gestion d'enfant pour crèche, MAM et associations" />
-                <meta name="twitter:description" content="Logiciel pour crèche, MAM et associations : gestion enfants, plannings, communication parent-crèche, facturation et RGPD. Test gratuit." />
-                <link rel="alternate" href="https://frimousse-asso.fr/" hrefLang="fr" />
-                <link rel="canonical" href="https://frimousse-asso.fr/" />
-                {/* JSON-LD Organization + WebSite
-                    Note: sameAs contains probable profile URLs auto-inserted by the team — please verify/replace with your official profiles. */}
-                <script type="application/ld+json">
-                  {`{
-                    "@context": "https://schema.org",
-                    "@type": "Organization",
-                    "name": "Frimousse",
-                    "url": "https://frimousse-asso.fr/",
-                    "logo": "https://frimousse-asso.fr/imgs/LogoFrimousse.webp"
-                  }`}
-                </script>
-                <script type="application/ld+json">
-                  {`{
-                    "@context": "https://schema.org",
-                    "@type": "WebSite",
-                    "url": "https://frimousse-asso.fr/",
-                    "name": "Frimousse",
-                    "description": "Application de gestion d'enfant pour crèche, MAM et associations : plannings, inscriptions, communication parent-crèche, facturation et RGPD.",
-                    "publisher": {
-                      "@type": "Organization",
-                      "name": "Frimousse"
-                    }
-                  }`}
-                </script>
-                {/* WebPage JSON-LD to improve search understanding of this page */}
-                <script type="application/ld+json">
-                  {`{
-                    "@context": "https://schema.org",
-                    "@type": "WebPage",
-                    "name": "Frimousse — Logiciel de gestion pour crèches et MAM",
-                    "url": "https://frimousse-asso.fr/",
-                    "description": "Plateforme tout-en-un pour crèches associatives, micro-crèches, MAM et garderies. Essai gratuit, conformité RGPD.",
-                    "inLanguage": "fr-FR",
-                    "isPartOf": {"@type": "WebSite", "name": "Frimousse", "url": "https://frimousse-asso.fr/"}
-                  }`}
-                </script>
-                {/* SoftwareApplication JSON-LD to highlight product offering */}
-                <script type="application/ld+json">
-                  {`{
-                    "@context": "https://schema.org",
-                    "@type": "SoftwareApplication",
-                    "name": "Frimousse",
-                    "operatingSystem": "Web",
-                    "applicationCategory": "BusinessApplication",
-                    "url": "https://frimousse-asso.fr/",
-                    "description": "Frimousse est une application web de gestion pour crèches, MAM et associations : inscriptions, plannings, fiches enfants, communication et facturation.",
-                    "offers": {"@type": "Offer", "price": "0.00", "priceCurrency": "EUR", "availability": "https://schema.org/InStock"}
-                  }`}
-                </script>
-                {/* Breadcrumb schema for SEO */}
-                <script type="application/ld+json">
-                  {`{
-                    "@context": "https://schema.org",
-                    "@type": "BreadcrumbList",
-                    "itemListElement": [
-                      {"@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://frimousse-asso.fr/"}
-                    ]
-                  }`}
-                </script>
-                <meta name="robots" content="index,follow" />
-              </Helmet>
+                  <SEO
+                    title={"Frimousse — Logiciel de gestion pour crèches et MAM"}
+                    description={"Frimousse aide les crèches, micro-crèches et MAM à gérer inscriptions, plannings, fiches enfants et communication parent-crèche. Essai gratuit et conformité RGPD."}
+                    url={"https://frimousse-asso.fr/"}
+                    image={"https://frimousse-asso.fr/frimousse-cover.png"}
+                  />
 
               <section className="w-full bg-gradient-to-br from-[#a9ddf2] to-[#f7f4d7] pt-6 sm:pt-12 pb-20 px-4 flex flex-col items-center justify-center text-center">
                 <header className="w-full sticky top-0 z-10">

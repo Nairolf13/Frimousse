@@ -1,19 +1,16 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { useNavigate } from 'react-router-dom';
 
 export default function SupportPage() {
   const navigate = useNavigate();
   return (
   <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
-      <Helmet>
-        <title>Support | Frimousse Association</title>
-        <meta name="description" content="Besoin d’aide sur Frimousse ? Contact, guides, assistance technique, documentation et ressources pour les associations, crèches, MAM, garderies." />
-        <meta property="og:title" content="Support | Frimousse Association" />
-        <meta property="og:description" content="Trouvez de l’aide, contactez le support, accédez à la documentation et aux ressources pour bien utiliser Frimousse." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://frimousse-asso.fr/support" />
-        <meta property="og:image" content="/frimousse-cover.png" />
-      </Helmet>
+      <SEO
+        title={"Support | Frimousse Association"}
+        description={"Besoin d'aide sur Frimousse? Contact, guides, assistance technique, documentation et ressources pour les associations, crèches, MAM, garderies."}
+        url={"https://frimousse-asso.fr/support"}
+        image={"/frimousse-cover.png"}
+      />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
           <div className="flex items-center gap-3">

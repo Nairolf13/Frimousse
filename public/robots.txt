@@ -1,12 +1,11 @@
-
 User-agent: *
 # Disallow obvious non-public folders and admin/backend routes
-Disallow: /backend/
-Disallow: /prisma/
-Disallow: /node_modules/
-Disallow: /scripts/
+Disallow: /admin
+Disallow: /api
+Disallow: /backend
+Disallow: /private
 
 Allow: /
 
-Sitemap: https://frimousse-asso.fr/sitemap.xml
+Sitemap: https://lesfrimousses.com/sitemap.xml
 

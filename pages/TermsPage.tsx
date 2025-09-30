@@ -1,26 +1,25 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import { useNavigate } from 'react-router-dom';
 
 export default function TermsPage() {
   const navigate = useNavigate();
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
-      <Helmet>
-        <title>Conditions générales d’utilisation | Frimousse Association</title>
-        <meta name="description" content="CGU Frimousse : règles d’utilisation, responsabilités, droits et obligations des utilisateurs et de l’éditeur de l’application." />
-      </Helmet>
-      <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
-          <div className="flex items-center gap-3">
+      <SEO
+        title={"Conditions générales d'utilisation | Frimousse Association"}
+        description={"CGU Frimousse : règles d'utilisation, responsabilités, droits et obligations des utilisateurs et de l'éditeur de l'application."}
+        url={"https://frimousse-asso.fr/cgu"}
+      />
+      <header className="w-full py-6 bg-white border-b border-[#fcdcdf]">
+          <div className="max-w-4xl mx-auto flex items-center gap-4 px-6">
             <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
               <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
             </div>
-            <div className="w-full text-center">
+            <div className="w-full text-left">
               <span className="font-bold text-base text-[#08323a]">Les Frimousses</span>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
       <main className="flex-1 w-full">
         <section className="w-full py-12 px-6 bg-white border-b border-[#fcdcdf]">
           <div className="max-w-3xl mx-auto text-left">

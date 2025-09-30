@@ -1,4 +1,4 @@
-import { Helmet } from 'react-helmet-async';
+import SEO from '../components/SEO';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
@@ -82,9 +82,7 @@ export default function Assistant() {
 
   return (
     <div className="relative z-0 min-h-screen bg-[#f1f5f9] p-4 md:pl-64 w-full">
-      <Helmet>
-        <title>{t('assistant.title', 'Assistant Frimousse')}</title>
-      </Helmet>
+      <SEO title={t('assistant.title', 'Assistant Frimousse')} />
 
       <div className="max-w-7xl mx-auto w-full">
         <div className="space-y-6">
