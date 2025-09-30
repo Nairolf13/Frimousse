@@ -9,20 +9,12 @@ export default defineConfig({
   // This instructs Vite/esbuild to emit modern JS (class fields, spread, etc.)
   build: {
     target: 'es2022',
-    // Split large vendor libraries into separate chunks to reduce the main entry bundle size
+    // Emit sourcemaps in production to debug runtime errors originating from bundles
+    sourcemap: true,
+    // Let Rollup/Vite automatically determine chunking to avoid circular import ordering issues
     rollupOptions: {
       output: {
-        manualChunks(id: string) {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom')) return 'vendor-react';
-            if (id.includes('@fullcalendar')) return 'vendor-fullcalendar';
-            if (id.includes('@supabase') || id.includes('gotrue') || id.includes('postgrest')) return 'vendor-supabase';
-            if (id.includes('stripe') || id.includes('@stripe')) return 'vendor-stripe';
-            if (id.includes('lodash')) return 'vendor-lodash';
-            if (id.includes('date-fns') || id.includes('dayjs')) return 'vendor-date';
-            return 'vendor-others';
-          }
-        }
+        // default chunking (no manualChunks) — keeps natural dependency ordering
       }
     },
     chunkSizeWarningLimit: 800
