@@ -154,8 +154,8 @@ async function calculatePayments() {
   await calculatePaymentsForMonth(targetYear, targetMonthIndex);
 }
 
-// Exécution chaque 1er du mois à 00:30 (server local time or CRON_TZ if provided)
-const cronExpression = '30 0 1 * *';
+// Exécution chaque 1er du mois à 00:47 (server local time or CRON_TZ if provided)
+const cronExpression = '47 0 1 * *';
 const cronTimezone = process.env.CRON_TZ || 'Europe/Paris';
 const cronEnabled = process.env.ENABLE_PAYMENT_CRON !== 'false';
 
