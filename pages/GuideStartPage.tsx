@@ -8,7 +8,7 @@ export default function GuideStartPage() {
       <SEO
         title={"Guide de démarrage rapide | Frimousse"}
         description={"Premiers pas sur Frimousse : connexion, navigation, ajout d'enfants, gestion du planning, accès aux rapports."}
-        url={"https://frimousse-asso.fr/guide-demarrage"}
+        url={"https://lesfrimousses.com/guide-demarrage"}
       />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">

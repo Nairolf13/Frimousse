@@ -8,7 +8,7 @@ export default function GuidePlanningPage() {
       <SEO
         title={"Gérer un planning | Guide Frimousse"}
         description={"Tutoriel pour gérer le planning dans Frimousse : visualisation, modification, gestion des absences et présences."}
-        url={"https://frimousse-asso.fr/guide-planning"}
+        url={"https://lesfrimousses.com/guide-planning"}
       />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">

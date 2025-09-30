@@ -80,8 +80,8 @@ import ConfirmDialog from '../components/ConfirmDialog';
                   <SEO
                     title={"Frimousse — Logiciel de gestion pour crèches et MAM"}
                     description={"Frimousse aide les crèches, micro-crèches et MAM à gérer inscriptions, plannings, fiches enfants et communication parent-crèche. Essai gratuit et conformité RGPD."}
-                    url={"https://frimousse-asso.fr/"}
-                    image={"https://frimousse-asso.fr/frimousse-cover.png"}
+                    url={"https://lesfrimousses.com/"}
+                    image={"https://lesfrimousses.com/frimousse-cover.png"}
                   />
 
               <section className="w-full bg-gradient-to-br from-[#a9ddf2] to-[#f7f4d7] pt-6 sm:pt-12 pb-20 px-4 flex flex-col items-center justify-center text-center">

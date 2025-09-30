@@ -8,7 +8,7 @@ export default function TermsPage() {
       <SEO
         title={"Conditions générales d'utilisation | Frimousse Association"}
         description={"CGU Frimousse : règles d'utilisation, responsabilités, droits et obligations des utilisateurs et de l'éditeur de l'application."}
-        url={"https://frimousse-asso.fr/cgu"}
+        url={"https://lesfrimousses.com/cgu"}
       />
       <header className="w-full py-6 bg-white border-b border-[#fcdcdf]">
           <div className="max-w-4xl mx-auto flex items-center gap-4 px-6">

@@ -8,7 +8,7 @@ export default function GuideAddChildPage() {
       <SEO
         title={"Ajouter un enfant | Guide Frimousse"}
         description={"Tutoriel pour ajouter un enfant dans Frimousse : formulaire, champs obligatoires, gestion des groupes et informations parentales."}
-        url={"https://frimousse-asso.fr/guide-ajouter-enfant"}
+        url={"https://lesfrimousses.com/guide-ajouter-enfant"}
       />
       <header className="w-full bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] border-b border-[#fcdcdf] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
