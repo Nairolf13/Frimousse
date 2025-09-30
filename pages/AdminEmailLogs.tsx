@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import { useI18n } from '../src/lib/useI18n';
 import { HiOutlineCheck, HiOutlineClock, HiOutlineExclamationCircle, HiOutlineEye, HiOutlineDownload, HiOutlineRefresh, HiOutlineDocumentText, HiOutlineSearch } from 'react-icons/hi';
 
 type EmailLog = {
@@ -53,6 +54,7 @@ function getMonthGrid(date: Date) {
 
 
 export default function AdminEmailLogs() {
+  const { t } = useI18n();
   const API_URL = import.meta.env.VITE_API_URL ?? '/api';
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,7 +73,7 @@ export default function AdminEmailLogs() {
   // month/year controls (like PaymentHistory)
   const [month, setMonth] = useState<number>(now.getMonth() + 1);
   const [year, setYear] = useState<number>(now.getFullYear());
-  const monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+  const monthNames = Array.from({ length: 12 }, (_, i) => new Intl.DateTimeFormat(undefined, { month: 'long' }).format(new Date(2020, i, 1)));
   const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
   const [recipientFilter, setRecipientFilter] = useState('');
 
@@ -93,6 +95,17 @@ export default function AdminEmailLogs() {
     const id = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(id);
   }, [query]);
+
+  // localized timeAgo wrapper uses the raw helper and inserts into translated string
+  const localTimeAgo = (iso: string) => {
+    try {
+      // reuse existing timeAgo helper which currently returns a French-ish relative string
+      const raw = timeAgo(iso);
+      return t('admin.emaillogs.last_attempt', { when: raw });
+    } catch {
+      return '';
+    }
+  };
 
   // when debounced query or month changes, reset to first page
   useEffect(() => {
@@ -157,7 +170,7 @@ export default function AdminEmailLogs() {
       setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
     } catch (e) {
       console.error('Failed to open invoice', e);
-      alert('Impossible d\'ouvrir la facture.');
+      alert(t('admin.emaillogs.open_invoice_failed'));
     }
   }
 
@@ -180,7 +193,7 @@ export default function AdminEmailLogs() {
       setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
     } catch (e) {
       console.error('Failed to download invoice', e);
-      alert('Impossible de télécharger la facture.');
+      alert(t('admin.emaillogs.download_invoice_failed'));
     }
   }
 
@@ -225,7 +238,7 @@ export default function AdminEmailLogs() {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      alert('Erreur lors du renvoi : ' + msg);
+      alert(t('admin.emaillogs.resend_failed', { msg }));
     } finally {
       setResending(s => { const c = { ...s }; delete c[logId]; return c; });
       setLoading(false);
@@ -306,7 +319,7 @@ export default function AdminEmailLogs() {
       setTimeout(() => URL.revokeObjectURL(url), 60 * 1000);
     } catch (e) {
       console.error('Export CSV failed', e);
-      alert('Impossible d\'exporter les logs.');
+      alert(t('admin.emaillogs.export_failed'));
     }
   }
 
@@ -322,21 +335,21 @@ export default function AdminEmailLogs() {
     const s = String(status || '').toLowerCase();
     if (s === 'sent' || s === 'ok' || s === 'delivered') {
       return {
-        label: 'Envoyé',
+        label: t('emaillogs.status.sent'),
         badge: 'bg-green-100 text-green-800',
         icon: <HiOutlineCheck className="w-4 h-4 mr-2" />
       };
     }
     if (s === 'pending' || s === 'processing' || s === 'in_progress' || s === 'queued') {
       return {
-        label: 'En cours',
+        label: t('emaillogs.status.pending'),
         badge: 'bg-yellow-100 text-yellow-800',
         icon: <HiOutlineClock className="w-4 h-4 mr-2" />
       };
     }
     // default to error
     return {
-      label: 'Erreur',
+      label: t('emaillogs.status.error'),
       badge: 'bg-red-100 text-red-800',
       icon: <HiOutlineExclamationCircle className="w-4 h-4 mr-2" />
     };
@@ -350,8 +363,10 @@ export default function AdminEmailLogs() {
   <main className="flex-1 flex flex-col items-center pt-16 pb-12 px-3 md:pt-8 md:pb-8 md:px-4 md:ml-64 box-border">
         <div className="w-full max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold">Journal des emails</h1>
-            <div className="text-sm text-gray-500">Total&nbsp;: {total ?? '—'}</div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('admin.emaillogs.title')}</h1>
+              <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('admin.emaillogs.description')}</div>
+            </div>
           </div>
 
           {error && (
@@ -359,7 +374,41 @@ export default function AdminEmailLogs() {
           )}
 
           <>
-            {loading && <div className="mb-4">Chargement...</div>}
+          {loading && <div className="mb-4">{t('admin.emaillogs.loading')}</div>}
+              {/* Mobile filters: show search, month/year and recipient selects in a column */}
+              <div className="md:hidden bg-white rounded-lg p-3 mb-4 shadow">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2 bg-gray-50 rounded-md px-3 py-2">
+                    <HiOutlineSearch className="w-4 h-4 text-gray-400" />
+                    <input aria-label="search-mobile" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-gray-600 placeholder-gray-400 outline-none w-full" placeholder={t('admin.emaillogs.search_placeholder')} />
+                  </div>
+                  <div className="flex gap-2">
+                    <select value={month} onChange={e => setMonth(Number(e.target.value))} className="flex-1 border rounded px-2 py-1 text-sm">
+                      {monthNames.map((mName, idx) => <option key={mName} value={idx + 1}>{mName}</option>)}
+                    </select>
+                    <select value={year} onChange={e => setYear(Number(e.target.value))} className="flex-1 border rounded px-2 py-1 text-sm">
+                      {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <select value={recipientFilter} onChange={e => setRecipientFilter(e.target.value)} className="w-full border rounded px-2 py-1 text-sm">
+                      <option value="">{t('admin.emaillogs.all_recipients')}</option>
+                      {Array.from(new Set(logs.flatMap(l => {
+                        try { const p = JSON.parse(l.recipients || '[]'); return Array.isArray(p) ? p.map(String) : [String(p)]; } catch { return (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
+                      }))).map((r, idx) => <option key={idx} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => exportCsv()} className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white rounded px-3 py-2 text-sm">
+                      <HiOutlineDocumentText className="w-4 h-4" />
+                      {t('admin.emaillogs.export')}
+                    </button>
+                    <button onClick={() => { setPage(1); setQuery(''); setSelectedMonth(''); }} className="p-2 border rounded">
+                      <HiOutlineRefresh className="w-4 h-4 text-gray-600" />
+                    </button>
+                  </div>
+                </div>
+              </div>
               {/* Mobile: stacked cards */}
               <div className="md:hidden space-y-4">
                 {/** compute visible logs applying recipient and query filters */}
@@ -398,7 +447,7 @@ export default function AdminEmailLogs() {
                           <div className="w-10 h-10 rounded-full bg-[#eef9ff] flex items-center justify-center text-[#0b5566] font-semibold"><HiOutlineDocumentText className="w-5 h-5" /></div>
                           <div>
                             <div className="flex items-center gap-3">
-                              <div className="text-lg font-bold text-gray-900">{l.subject || 'Facture'}</div>
+                              <div className="text-lg font-bold text-gray-900">{l.subject || t('payments.download_invoice')}</div>
                               {(() => {
                                 const s = getStatusInfo(l.status);
                                 return (
@@ -412,12 +461,12 @@ export default function AdminEmailLogs() {
                       </div>
 
                       <div className="mt-4">
-                        <div className="text-xs text-gray-400">Date d'envoi</div>
+                        <div className="text-xs text-gray-400">{t('admin.emaillogs.date_sent')}</div>
                         <div className="text-sm text-gray-800 font-medium">{new Date(l.createdAt).toLocaleString()}</div>
                       </div>
 
                       <div className="mt-4">
-                        <div className="text-xs text-gray-400">Destinataires</div>
+                        <div className="text-xs text-gray-400">{t('admin.emaillogs.recipients')}</div>
                         <div className="mt-2 flex flex-col gap-2">
                           {recips.length ? recips.map((r, i) => (
                             <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-md px-3 py-2">
@@ -435,7 +484,7 @@ export default function AdminEmailLogs() {
                           <div className="flex items-start gap-3">
                             <div className="text-xl">⚠️</div>
                             <div>
-                              <div className="font-semibold">Erreur d'envoi</div>
+                              <div className="font-semibold">{t('admin.emaillogs.send_error')}</div>
                               <div className="text-sm mt-1">{l.errorText}</div>
                             </div>
                           </div>
@@ -448,31 +497,31 @@ export default function AdminEmailLogs() {
                             <button
                               onClick={() => l.paymentHistory && openInvoice(l.paymentHistory.id)}
                               disabled={!l.paymentHistory}
-                              aria-label="Voir la facture"
+                              aria-label={t('admin.emaillogs.view_invoice')}
                               className={`w-10 h-10 flex items-center justify-center rounded-full border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}>
                               <HiOutlineEye className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory.id, `facture-${l.paymentHistory ? l.paymentHistory.id : l.id}.pdf`)}
                               disabled={!l.paymentHistory}
-                              title="Télécharger"
+                              title={t('admin.emaillogs.download')}
                               className={`w-10 h-10 flex items-center justify-center rounded-full border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}>
                               <HiOutlineDownload className="w-5 h-5" />
                             </button>
                           </>
                           ) : (
                           <button
-                            title="Renvoyer"
+                            title={t('admin.emaillogs.resend')}
                             onClick={() => resendEmail(l.id)}
                             disabled={!!resending[l.id] || !!(l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id)))}
                             className={`w-10 h-10 flex items-center justify-center rounded-full bg-red-500 text-white ${resending[l.id] || (l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id))) ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <HiOutlineRefresh className="w-5 h-5" />
                           </button>
                         )}
-                        <button title="Plus" className="w-10 h-10 flex items-center justify-center rounded-full border text-gray-600">•••</button>
+                        {/* more/actions button removed per UX request */}
                       </div>
 
-                      <div className="mt-3 text-xs text-gray-400 text-center">Dernière tentative {timeAgo(l.createdAt)}</div>
+                      <div className="mt-3 text-xs text-gray-400 text-center">{localTimeAgo(l.createdAt)}</div>
                     </div>
                   );
                   });
@@ -487,7 +536,7 @@ export default function AdminEmailLogs() {
                       <h2 className="text-xl font-semibold">Gestion des Factures</h2>
                       <div className="flex items-center bg-gray-50 rounded-md px-3 py-2 gap-3">
                         <HiOutlineSearch className="w-4 h-4 text-gray-400" />
-                        <input aria-label="search" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-gray-600 placeholder-gray-400 outline-none" placeholder="Rechercher par sujet, destinataire..." />
+                        <input aria-label="search" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-gray-600 placeholder-gray-400 outline-none" placeholder={t('admin.emaillogs.search_placeholder')} />
                       </div>
                       <div className="ml-2 flex items-center gap-2">
                         <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border rounded px-2 py-1 text-sm">
@@ -498,7 +547,7 @@ export default function AdminEmailLogs() {
                         </select>
                         <div className="ml-2">
                           <select value={recipientFilter} onChange={e => setRecipientFilter(e.target.value)} className="border rounded px-2 py-1 text-sm">
-                            <option value="">Tous les destinataires</option>
+                            <option value="">{t('admin.emaillogs.all_recipients')}</option>
                             {Array.from(new Set(logs.flatMap(l => {
                               try { const p = JSON.parse(l.recipients || '[]'); return Array.isArray(p) ? p.map(String) : [String(p)]; } catch { return (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
                             }))).map((r, idx) => <option key={idx} value={r}>{r}</option>)}
@@ -507,13 +556,15 @@ export default function AdminEmailLogs() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <button onClick={() => exportCsv()} className="flex items-center gap-2 bg-green-500 text-white rounded px-3 py-2 text-sm" aria-label="export">
-                        <HiOutlineDocumentText className="w-4 h-4" />
-                        Exporter
-                      </button>
-                      <button className="p-2 border rounded" aria-label="refresh" onClick={() => { setPage(1); setQuery(''); setSelectedMonth(''); }}>
-                        <HiOutlineRefresh className="w-4 h-4 text-gray-600" />
-                      </button>
+                      <div className="ml-auto flex items-center gap-3">
+                        <button onClick={() => exportCsv()} className="flex items-center gap-2 bg-green-500 text-white rounded px-3 py-2 text-sm" aria-label="export">
+                          <HiOutlineDocumentText className="w-4 h-4" />
+                          {t('admin.emaillogs.export')}
+                        </button>
+                        <button className="p-2 border rounded" aria-label="refresh" onClick={() => { setPage(1); setQuery(''); setSelectedMonth(''); }}>
+                          <HiOutlineRefresh className="w-4 h-4 text-gray-600" />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -521,13 +572,13 @@ export default function AdminEmailLogs() {
                     <table className="min-w-full">
                       <thead className="text-left text-sm text-gray-500 border-b">
                         <tr>
-                          <th className="py-3 px-4">Sujet</th>
-                          <th className="py-3 px-4">Date</th>
-                          <th className="py-3 px-4">Destinataires</th>
-                          <th className="py-3 px-4">N° Facture</th>
-                          <th className="py-3 px-4">Statut</th>
-                          <th className="py-3 px-4">Erreur</th>
-                          <th className="py-3 px-4">Actions</th>
+                          <th className="py-3 px-4">{t('emaillogs.table.subject')}</th>
+                          <th className="py-3 px-4">{t('emaillogs.table.date')}</th>
+                          <th className="py-3 px-4">{t('emaillogs.table.recipients')}</th>
+                          <th className="py-3 px-4">{t('emaillogs.table.invoice_number')}</th>
+                          <th className="py-3 px-4">{t('emaillogs.table.status')}</th>
+                          <th className="py-3 px-4">{t('emaillogs.table.error')}</th>
+                          <th className="py-3 px-4">{t('emaillogs.table.actions')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -563,7 +614,7 @@ export default function AdminEmailLogs() {
                           return (
                             <tr key={l.id} className="hover:bg-gray-50 align-top">
                               <td className="py-4 px-4 w-1/3">
-                                <div className="text-sm font-medium text-gray-900">{l.subject || 'Facture mensuelle'}</div>
+                                <div className="text-sm font-medium text-gray-900">{l.subject || t('payments.download_invoice')}</div>
                               </td>
                               <td className="py-4 px-4 text-sm text-gray-700">
                                 <div>{new Date(l.createdAt).toLocaleDateString()}</div>
@@ -606,19 +657,19 @@ export default function AdminEmailLogs() {
                                 <div className="flex items-center gap-2">
                                   {statusIsSent ? (
                                     <>
-                                      <button title="Voir" disabled={!l.paymentHistory} onClick={() => l.paymentHistory && openInvoice(l.paymentHistory.id)} className={`p-2 rounded border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}><HiOutlineEye className="w-4 h-4" /></button>
-                                      <button title="Télécharger" disabled={!l.paymentHistory} onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory.id, `facture-${l.paymentHistory ? l.paymentHistory.id : l.id}.pdf`)} className={`p-2 rounded border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}><HiOutlineDownload className="w-4 h-4" /></button>
+                                      <button title={t('admin.emaillogs.view_invoice')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && openInvoice(l.paymentHistory.id)} className={`p-2 rounded border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}><HiOutlineEye className="w-4 h-4" /></button>
+                                      <button title={t('admin.emaillogs.download')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory.id, `facture-${l.paymentHistory ? l.paymentHistory.id : l.id}.pdf`)} className={`p-2 rounded border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}><HiOutlineDownload className="w-4 h-4" /></button>
                                     </>
                                   ) : (
                                     <button
-                                      title="Renvoyer"
+                                      title={t('admin.emaillogs.resend')}
                                       onClick={() => resendEmail(l.id)}
                                       disabled={!!resending[l.id] || !!(l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id)))}
                                       className={`p-2 rounded bg-red-500 text-white ${resending[l.id] || (l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id))) ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                       <HiOutlineRefresh className="w-4 h-4" />
                                     </button>
                                   )}
-                                  <button title="Plus" className="p-2 rounded border text-gray-600">•••</button>
+                                  {/* more/actions button removed per UX request */}
                                 </div>
                               </td>
                             </tr>
@@ -630,11 +681,17 @@ export default function AdminEmailLogs() {
                   </div>
 
                     <div className="mt-6 bg-gray-50 rounded p-6 text-center">
-                    <div className="text-sm text-gray-600">Affichage de {total ? `${(page - 1) * limit + 1} à ${Math.min(page * limit, total)}` : (logs.length ? `1 à ${logs.length}` : '—')} sur {total ?? '—'} résultats</div>
+                    <div className="text-sm text-gray-600">
+                      {t('admin.emaillogs.displaying', {
+                        from: total ? `${(page - 1) * limit + 1}` : (logs.length ? '1' : '—'),
+                        to: total ? `${Math.min(page * limit, total)}` : (logs.length ? `${logs.length}` : '—'),
+                        total: String(total ?? '—')
+                      })}
+                    </div>
                     <div className="mt-3 flex items-center justify-center gap-3">
-                      <button className="px-3 py-1 border rounded" onClick={() => setPage(Math.max(1, page - 1))} disabled={!hasPrev}>Précédent</button>
+                      <button className="px-3 py-1 border rounded" onClick={() => setPage(Math.max(1, page - 1))} disabled={!hasPrev}>{t('emaillogs.pagination.prev')}</button>
                       <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-full border">{page}</div>
-                      <button className="px-3 py-1 border rounded" onClick={() => hasNext && setPage(page + 1)} disabled={!hasNext}>Suivant</button>
+                      <button className="px-3 py-1 border rounded" onClick={() => hasNext && setPage(page + 1)} disabled={!hasNext}>{t('emaillogs.pagination.next')}</button>
                     </div>
                   </div>
                 </div>
@@ -646,7 +703,7 @@ export default function AdminEmailLogs() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg">
             <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-semibold">Choisir un mois</div>
+              <div className="text-lg font-semibold">{t('admin.emaillogs.choose_month')}</div>
               <button className="text-gray-500" onClick={() => setShowCalendarModal(false)}>✕</button>
             </div>
             <div>

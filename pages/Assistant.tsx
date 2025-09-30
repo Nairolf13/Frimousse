@@ -90,9 +90,9 @@ export default function Assistant() {
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
             <div className="flex-1 min-w-0">
-              <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">{t('assistant.header.title', 'Assistant Frimousse')}</h1>
-              <div className="text-gray-400 text-base text-left">{t('assistant.header.subtitle', '· Specialized in child care')}</div>
-            </div>
+                <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('assistant.header.title', 'Assistant Frimousse')}</h1>
+                <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('assistant.header.subtitle', '· Specialized in child care')}</div>
+              </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-1 mb-0 w-full">

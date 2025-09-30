@@ -439,7 +439,7 @@ export default function Settings() {
   <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full">
         <div className="max-w-3xl mx-auto p-6">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-6 text-gray-900">{t('settings.title')}</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold mb-6 tracking-tight" style={{ color: '#0b5566' }}>{t('settings.title')}</h1>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-stretch">
             <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">
@@ -531,15 +531,15 @@ export default function Settings() {
             {isAdmin && (
               <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full md:col-span-2">
                 <div>
-                  <div className="font-semibold text-gray-800">🧾 Journal des emails</div>
-                  <div className="text-gray-500 text-sm">Consultez les envois d'emails (factures, erreurs). Accessible uniquement aux administrateurs.</div>
+                  <div className="font-semibold text-gray-800">🧾 {t('admin.emaillogs.title')}</div>
+                  <div className="text-gray-500 text-sm">{t('admin.emaillogs.description')}</div>
                 </div>
                 <div className="mt-4 flex items-center gap-3">
                   <button
                     onClick={() => { window.location.href = '/admin/emaillogs'; }}
                     className="bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]"
                   >
-                    Ouvrir le journal des emails
+                    {t('admin.emaillogs.title')}
                   </button>
                  
                 </div>

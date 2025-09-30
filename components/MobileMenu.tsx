@@ -40,23 +40,24 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null } | n
   }
   // (admin)
   return [
-    { to: '/dashboard', label: 'Accueil', icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
-    { to: '/feed', label: 'Fil d\'actualité', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-    { to: '/notifications', label: 'Notifications', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
-    { to: '/children', label: 'Enfants', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-    { to: '/parent', label: 'Parents', icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
-    { to: '/nannies', label: 'Nounous', icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
-    { to: '/activites', label: 'Planning', icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
-    { to: '/reports', label: 'Rapports', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-    { to: '/assistant', label: 'Assistant IA', icon: <FaRobot className="w-5 h-5 mr-3" /> },
-    { to: '/payment-history', label: 'Historique paiements', icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
-    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/reviews', label: 'Avis', icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }] : []),
-    { to: '/settings', label: 'Paramètres', icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
+    { to: '/dashboard', label: t('nav.dashboard'), icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
+    { to: '/feed', label: t('nav.feed'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+    { to: '/notifications', label: t('nav.notifications'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
+    { to: '/children', label: t('nav.children'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+    { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
+    { to: '/nannies', label: t('nav.nannies'), icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
+    { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
+    { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+    { to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> },
+    { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
+    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/reviews', label: t('nav.reviews'), icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }] : []),
+    { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
   ];
 }
 
 function MobileMenuButton({ showOnMd = false, onOpen }: { showOnMd?: boolean; onOpen: () => void }) {
   const [show, setShow] = useState(false);
+  const { t } = useI18n();
   useEffect(() => {
     try {
       if (typeof window === 'undefined') { setShow(true); return; }
@@ -98,7 +99,7 @@ function MobileMenuButton({ showOnMd = false, onOpen }: { showOnMd?: boolean; on
     <button
       className="fixed top-4 right-4 z-60 bg-white rounded-full p-2 shadow-lg border border-gray-200"
       onClick={onOpen}
-      aria-label="Ouvrir le menu"
+      aria-label={t('menu.open')}
     >
       <HiOutlineMenu className="w-7 h-7 text-gray-700" />
     </button>
@@ -226,7 +227,7 @@ export default function MobileMenu() {
             <button
               className="ml-auto bg-gray-100 rounded-full p-2 border border-gray-200"
               onClick={() => setOpen(false)}
-              aria-label="Fermer le menu"
+              aria-label={t('menu.close')}
             >
               <HiOutlineX className="w-6 h-6 text-gray-700" />
             </button>

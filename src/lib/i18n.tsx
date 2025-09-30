@@ -533,6 +533,88 @@ const translations: Record<Locale, Record<string, string>> = {
   }
 };
 
+// Admin Email Logs translations
+translations.fr['admin.emaillogs.title'] = 'Journal des emails';
+translations.fr['admin.emaillogs.description'] = "Historique des envois d'emails et gestion des relances";
+translations.fr['admin.emaillogs.loading'] = 'Chargement...';
+translations.fr['admin.emaillogs.search_placeholder'] = 'Rechercher par sujet, destinataire...';
+translations.fr['admin.emaillogs.export'] = 'Exporter';
+translations.fr['admin.emaillogs.all_recipients'] = 'Tous les destinataires';
+translations.fr['admin.emaillogs.date_sent'] = "Date d'envoi";
+translations.fr['admin.emaillogs.recipients'] = 'Destinataires';
+translations.fr['admin.emaillogs.send_error'] = "Erreur d'envoi";
+translations.fr['admin.emaillogs.view_invoice'] = 'Voir la facture';
+translations.fr['admin.emaillogs.download'] = 'Télécharger';
+translations.fr['admin.emaillogs.export_failed'] = "Impossible d'exporter les logs.";
+translations.fr['admin.emaillogs.open_invoice_failed'] = "Impossible d'ouvrir la facture.";
+translations.fr['admin.emaillogs.download_invoice_failed'] = "Impossible de télécharger la facture.";
+translations.fr['admin.emaillogs.last_attempt'] = 'Dernière tentative {when}';
+translations.fr['emaillogs.status.sent'] = 'Envoyé';
+translations.fr['emaillogs.status.pending'] = 'En cours';
+translations.fr['emaillogs.status.error'] = 'Erreur';
+
+// Email logs table & pagination
+translations.fr['emaillogs.table.subject'] = 'Sujet';
+translations.fr['emaillogs.table.date'] = 'Date';
+translations.fr['emaillogs.table.recipients'] = 'Destinataires';
+translations.fr['emaillogs.table.invoice_number'] = 'N° Facture';
+translations.fr['emaillogs.table.status'] = 'Statut';
+translations.fr['emaillogs.table.error'] = 'Erreur';
+translations.fr['emaillogs.table.actions'] = 'Actions';
+translations.fr['emaillogs.pagination.prev'] = 'Précédent';
+translations.fr['emaillogs.pagination.next'] = 'Suivant';
+translations.fr['admin.emaillogs.resend'] = 'Renvoyer';
+// mobile menu / misc
+translations.fr['menu.open'] = 'Ouvrir le menu';
+translations.fr['menu.close'] = 'Fermer le menu';
+translations.fr['nav.reviews'] = 'Avis';
+
+// Additional strings for admin emaillogs
+translations.fr['admin.emaillogs.displaying'] = 'Affichage de {from} à {to} sur {total} résultats';
+translations.fr['admin.emaillogs.choose_month'] = 'Choisir un mois';
+translations.fr['admin.emaillogs.resend_failed'] = 'Erreur lors du renvoi : {msg}';
+
+
+translations.en['admin.emaillogs.title'] = 'Email log';
+translations.en['admin.emaillogs.description'] = 'History of sent emails and resend management';
+translations.en['admin.emaillogs.loading'] = 'Loading...';
+translations.en['admin.emaillogs.search_placeholder'] = 'Search by subject, recipient...';
+translations.en['admin.emaillogs.export'] = 'Export';
+translations.en['admin.emaillogs.all_recipients'] = 'All recipients';
+translations.en['admin.emaillogs.date_sent'] = 'Date sent';
+translations.en['admin.emaillogs.recipients'] = 'Recipients';
+translations.en['admin.emaillogs.send_error'] = 'Send error';
+translations.en['admin.emaillogs.view_invoice'] = 'View invoice';
+translations.en['admin.emaillogs.download'] = 'Download';
+translations.en['admin.emaillogs.export_failed'] = "Unable to export logs.";
+translations.en['admin.emaillogs.open_invoice_failed'] = "Unable to open invoice.";
+translations.en['admin.emaillogs.download_invoice_failed'] = "Unable to download invoice.";
+translations.en['admin.emaillogs.last_attempt'] = 'Last attempt {when}';
+translations.en['emaillogs.status.sent'] = 'Sent';
+translations.en['emaillogs.status.pending'] = 'Pending';
+translations.en['emaillogs.status.error'] = 'Error';
+
+// Email logs table & pagination
+translations.en['emaillogs.table.subject'] = 'Subject';
+translations.en['emaillogs.table.date'] = 'Date';
+translations.en['emaillogs.table.recipients'] = 'Recipients';
+translations.en['emaillogs.table.invoice_number'] = 'Invoice #';
+translations.en['emaillogs.table.status'] = 'Status';
+translations.en['emaillogs.table.error'] = 'Error';
+translations.en['emaillogs.table.actions'] = 'Actions';
+translations.en['emaillogs.pagination.prev'] = 'Previous';
+translations.en['emaillogs.pagination.next'] = 'Next';
+translations.en['admin.emaillogs.resend'] = 'Resend';
+// mobile menu / misc
+translations.en['menu.open'] = 'Open menu';
+translations.en['menu.close'] = 'Close menu';
+translations.en['nav.reviews'] = 'Reviews';
+
+// Additional strings for admin emaillogs
+translations.en['admin.emaillogs.displaying'] = 'Showing {from} to {to} of {total} results';
+translations.en['admin.emaillogs.choose_month'] = 'Choose a month';
+translations.en['admin.emaillogs.resend_failed'] = 'Failed to resend: {msg}';
+
 // Small stats labels used in ParentDashboard
 translations.fr['stats.total'] = 'Total';
 translations.fr['stats.active'] = 'Actifs';
