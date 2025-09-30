@@ -205,8 +205,8 @@ export default function PaymentHistoryPage() {
       <div className="max-w-7xl mx-auto w-full">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">{t('page.payments')}</h1>
-            <div className="text-gray-400 text-base">{t('page.payments.description')}</div>
+            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.payments')}</h1>
+            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.payments.description')}</div>
           </div>
         </div>
 

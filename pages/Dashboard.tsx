@@ -311,8 +311,8 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1 text-left">{t('page.dashboard')}</h1>
-          <div className="text-gray-400 text-base text-left">{t('dashboard.welcome')}</div>
+          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.dashboard')}</h1>
+          <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('dashboard.welcome')}</div>
         </div>
           <div className="flex items-center gap-2 self-start md:self-end">
           <input type="date" value={currentDate.toISOString().split('T')[0]} onChange={e => setCurrentDate(new Date(e.target.value))}

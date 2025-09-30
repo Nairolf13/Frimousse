@@ -460,8 +460,8 @@ export default function Children() {
       <div className="max-w-7xl mx-auto w-full children-responsive-row">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full children-responsive-header">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">{t('page.children.title')}</h1>
-            <div className="text-gray-400 text-base">{t('page.children.description')}</div>
+            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.children.title')}</h1>
+            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.children.description')}</div>
           </div>
           <div className="flex gap-2 items-center">
             {isAdminUser && (

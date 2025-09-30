@@ -459,8 +459,8 @@ export default function Nannies() {
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">{t('page.nannies')}</h1>
-            <div className="text-gray-400 text-base">{t('page.nannies.description')}</div>
+            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.nannies')}</h1>
+            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.nannies.description')}</div>
           </div>
           <div className="flex gap-2 items-center self-start md:ml-auto">
             {(user && typeof user.role === 'string' && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'))) && (

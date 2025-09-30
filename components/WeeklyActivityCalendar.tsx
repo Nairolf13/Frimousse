@@ -194,8 +194,8 @@ export default function WeeklyActivityCalendar() {
       <div className="w-full max-w-6xl mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-1 tracking-tight">{t('activities.title')}</h1>
-            <div className="text-lg text-gray-500 font-medium">{weekLabel}</div>
+            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('activities.title')}</h1>
+            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{weekLabel}</div>
           </div>
           <div className="flex items-center gap-2 mt-2 md:mt-0">
             <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#60;</button>
