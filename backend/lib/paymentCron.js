@@ -62,10 +62,16 @@ async function calculatePaymentsForMonth(year, monthIndex) {
       try {
         if (phRecord && Number(phRecord.total) > 0) {
           const shouldSend = !existing || Number(existing.total) !== Number(total);
+          // Diagnostic logging to help understand why cron doesn't trigger sends
+          console.log(`PaymentCron: parent=${parent.id} existingTotal=${existing ? existing.total : 'nil'} newTotal=${Number(total).toFixed(2)} shouldSend=${shouldSend}`);
           if (shouldSend) {
             const parentEmail = parent.email || (parent.user && parent.user.email) || null;
             const parentName = `${parent.firstName || ''} ${parent.lastName || ''}`.trim();
+            if (!parentEmail) {
+              console.log(`PaymentCron: parent=${parent.id} has no email (parent.email/user.email empty) — skipping send`);
+            }
             if (parentEmail) {
+              console.log(`PaymentCron: parent=${parent.id} email=${parentEmail} name="${parentName || ''}" will be emailed for paymentHistory=${phRecord.id}`);
               try {
                 // generate invoice PDF buffer and attach
                 const pdfBuffer = await generateInvoiceBuffer(prisma, phRecord.id).catch(err => {
@@ -154,8 +160,8 @@ async function calculatePayments() {
   await calculatePaymentsForMonth(targetYear, targetMonthIndex);
 }
 
-// Exécution chaque 1er du mois à 00:50 (server local time or CRON_TZ if provided)
-const cronExpression = '50 0 1 * *';
+// Exécution chaque 1er du mois à 01:35 (server local time or CRON_TZ if provided)
+const cronExpression = '35 1 1 * *';
 const cronTimezone = process.env.CRON_TZ || 'Europe/Paris';
 const cronEnabled = process.env.ENABLE_PAYMENT_CRON !== 'false';
 

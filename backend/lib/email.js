@@ -31,7 +31,19 @@ async function sendMail({ to, subject, text, html, attachments, prisma = null, p
     console.log('Emails are disabled by EMAIL_SEND_ENABLED=false — skipping sendMail');
     return;
   }
-  if (!process.env.SMTP_HOST) return;
+  if (!process.env.SMTP_HOST) {
+    // Diagnostic: if SMTP is not configured, record a non-intrusive EmailLog so we can
+    // differentiate "cron ran but no SMTP configured" from other failures.
+    if (prisma) {
+      try {
+        await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: null, status: 'no_smtp', errorText: 'SMTP_HOST not configured', bypassOptOut: !!bypassOptOut } });
+      } catch (e) {
+        console.error('Failed to write EmailLog (no_smtp):', e && e.message ? e.message : e);
+      }
+    }
+    console.log('SMTP_HOST not configured — cannot send email (created no_smtp EmailLog if prisma provided)');
+    return;
+  }
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
@@ -47,6 +59,7 @@ async function sendMail({ to, subject, text, html, attachments, prisma = null, p
     attachments: attachments || undefined,
   };
   try {
+    console.log(`Attempting to send email to ${mailOptions.to} subject="${subject || ''}"`);
     const info = await transporter.sendMail(mailOptions);
     // If prisma provided, create EmailLog entry
     if (prisma) {
