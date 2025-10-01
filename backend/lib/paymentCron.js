@@ -174,7 +174,7 @@ async function calculatePayments() {
 }
 
 // Exécution chaque 1er du mois à 10:02 (server local time or CRON_TZ if provided)
-const cronExpression = '2 10 1 * *';
+const cronExpression = '5 10 1 * *';
 const cronTimezone = process.env.CRON_TZ || 'Europe/Paris';
 const cronEnabled = process.env.ENABLE_PAYMENT_CRON !== 'false';
 
