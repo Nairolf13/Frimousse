@@ -11,6 +11,13 @@ async function calculatePaymentsForMonth(year, monthIndex) {
     include: { children: { include: { child: true } } }
   });
 
+  // Diagnostic: log how many parents we will process
+  try {
+    console.log(`PaymentCron: calculatePaymentsForMonth for ${year}-${monthIndex + 1} found ${Array.isArray(parents) ? parents.length : 0} parents`);
+  } catch (e) {
+    // ignore
+  }
+
   for (const parent of parents) {
     let total = 0;
     const details = [];
@@ -37,6 +44,12 @@ async function calculatePaymentsForMonth(year, monthIndex) {
         ratePerDay: RATE_PER_DAY,
         subtotal
       });
+    }
+    // Diagnostic: log computed totals per parent so we can see why no emails are sent
+    try {
+      console.log(`PaymentCron: computed total for parent=${parent.id} total=${Number(total).toFixed(2)}`);
+    } catch (e) {
+      // ignore
     }
 
     try {
@@ -160,8 +173,8 @@ async function calculatePayments() {
   await calculatePaymentsForMonth(targetYear, targetMonthIndex);
 }
 
-// Exécution chaque 1er du mois à 01:35 (server local time or CRON_TZ if provided)
-const cronExpression = '35 1 1 * *';
+// Exécution chaque 1er du mois à 10:02 (server local time or CRON_TZ if provided)
+const cronExpression = '2 10 1 * *';
 const cronTimezone = process.env.CRON_TZ || 'Europe/Paris';
 const cronEnabled = process.env.ENABLE_PAYMENT_CRON !== 'false';
 
