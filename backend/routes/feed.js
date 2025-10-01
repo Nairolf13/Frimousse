@@ -175,9 +175,10 @@ router.post('/', authMiddleware, checkContentLength, upload.array('images', 6), 
       }
 
       // Otherwise treat as image: process main image (resize to max width 1600) and thumbnail (300)
-      const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
-      const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
-      const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
+  const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
+  // Use rotate() so sharp applies EXIF orientation before resizing
+  const mainBuffer = await sharp(fileBuffer).rotate().resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
+  const thumbBuffer = await sharp(fileBuffer).rotate().resize({ width: 300 }).toFormat('webp').toBuffer();
 
       const ext = 'webp';
       const mainPath = path.posix.join('feed', `${baseName}.${ext}`);

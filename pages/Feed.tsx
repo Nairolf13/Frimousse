@@ -16,6 +16,8 @@ type Media = { id: string; url: string; thumbnailUrl?: string };
 type Comment = { id?: string; authorName: string; authorId?: string; timeAgo: string; text: string };
 type Post = { id: string; text?: string; createdAt: string; author?: { name?: string }; authorId?: string; medias?: Media[]; likes?: number; commentsCount?: number; shares?: number; comments?: Comment[] };
 
+import FeedImage from '../src/components/FeedImage';
+
 function timeAgo(dateStr: string) {
   const d = new Date(dateStr);
   const diff = Math.floor((Date.now() - d.getTime()) / 1000);
@@ -1253,12 +1255,19 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
             const tileClass = (post.medias || []).length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]';
             return (
               <div key={m.id} className={`relative w-full ${tileClass} ${bgClass || 'bg-gray-100'} rounded overflow-hidden`}>
-                <button type="button" onClick={() => openLightbox(idx)} className={`w-full h-full block`}>
-                  <img src={m.url} alt={post.text ? post.text.slice(0, 80) : 'photo'} className={`w-full h-full object-contain`} />
+                <div className="w-full h-full">
+                  <FeedImage src={m.url} thumb={m.thumbnailUrl} alt={post.text ? post.text.slice(0, 80) : 'photo'} onOpen={() => openLightbox(idx)} />
                   {isLastVisible && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-lg font-semibold">+{(post.medias || []).length - 4}</div>
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => openLightbox(idx)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') openLightbox(idx); }}
+                      className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-lg font-semibold cursor-pointer z-20"
+                      aria-label={`Afficher ${ (post.medias || []).length - 4 } images supplémentaires en plein écran`}
+                    >+{(post.medias || []).length - 4}</div>
                   )}
-                </button>
+                </div>
                 {canEdit && editing && (
                   <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-2 right-2 bg-white rounded-full p-1 text-red-600 shadow">✕</button>
                 )}
