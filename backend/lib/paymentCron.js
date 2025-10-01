@@ -71,61 +71,57 @@ async function calculatePaymentsForMonth(year, monthIndex) {
       }
 
       // If invoice total > 0, send an email to the parent.
-      // Send only when newly created or when total changed to avoid duplicate emails.
       try {
         if (phRecord && Number(phRecord.total) > 0) {
-          const shouldSend = !existing || Number(existing.total) !== Number(total);
-          // Diagnostic logging to help understand why cron doesn't trigger sends
-          console.log(`PaymentCron: parent=${parent.id} existingTotal=${existing ? existing.total : 'nil'} newTotal=${Number(total).toFixed(2)} shouldSend=${shouldSend}`);
-          if (shouldSend) {
-            const parentEmail = parent.email || (parent.user && parent.user.email) || null;
-            const parentName = `${parent.firstName || ''} ${parent.lastName || ''}`.trim();
-            if (!parentEmail) {
-              console.log(`PaymentCron: parent=${parent.id} has no email (parent.email/user.email empty) — skipping send`);
-            }
-            if (parentEmail) {
-              console.log(`PaymentCron: parent=${parent.id} email=${parentEmail} name="${parentName || ''}" will be emailed for paymentHistory=${phRecord.id}`);
-              try {
-                // generate invoice PDF buffer and attach
-                const pdfBuffer = await generateInvoiceBuffer(prisma, phRecord.id).catch(err => {
-                  console.error('Failed to generate invoice PDF for', phRecord.id, err);
-                  return null;
-                });
-                const attachments = [];
-                if (pdfBuffer) {
-                  attachments.push({ filename: `facture-${phRecord.id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' });
-                }
-                // Build a clear, consistent invoice subject including the invoice number, recipient name and send date
-                // Compute invoice number the same way the PDF generator does (falls back to now when createdAt missing)
-                const invoiceDate = phRecord.createdAt ? new Date(phRecord.createdAt) : new Date();
-                const invoiceNumber = `FA-${invoiceDate.getFullYear()}-${phRecord.id.slice(0, 6)}`;
-                const formattedDate = invoiceDate.toLocaleDateString('fr-FR');
-                const recipientLabel = parentName || parent.email || '';
-                const invoiceSubject = `Facture n° ${invoiceNumber} de ${recipientLabel} du ${formattedDate}`;
-
-                // Use existing templated mail helper which will filter opted-out users when prisma is provided
-                await sendTemplatedMail({
-                  templateName: 'invoice',
-                  lang: 'fr',
-                  to: parentEmail,
-                  subject: invoiceSubject,
-                  substitutions: {
-                    parentName,
-                    total: Number(total).toFixed(2),
-                    month: phRecord.month,
-                    year: phRecord.year,
-                    invoiceId: phRecord.id,
-                    invoiceNumber
-                  },
-                  prisma,
-                  attachments,
-                  respectOptOut: false,
-                  paymentHistoryId: phRecord.id,
-                  bypassOptOut: true
-                });
-              } catch (e) {
-                console.error('Failed to send invoice email to parent', parent.id, parentEmail, e);
+          // Send invoice whenever total > 0 (even if unchanged). The only case we skip is when total === 0.
+          console.log(`PaymentCron: parent=${parent.id} existingTotal=${existing ? existing.total : 'nil'} newTotal=${Number(total).toFixed(2)} willSendBecauseTotalGtZero=true`);
+          // proceed to send regardless of existing total
+          const parentEmail = parent.email || (parent.user && parent.user.email) || null;
+          const parentName = `${parent.firstName || ''} ${parent.lastName || ''}`.trim();
+          if (!parentEmail) {
+            console.log(`PaymentCron: parent=${parent.id} has no email (parent.email/user.email empty) — skipping send`);
+          } else {
+            console.log(`PaymentCron: parent=${parent.id} email=${parentEmail} name="${parentName || ''}" will be emailed for paymentHistory=${phRecord.id}`);
+            try {
+              // generate invoice PDF buffer and attach
+              const pdfBuffer = await generateInvoiceBuffer(prisma, phRecord.id).catch(err => {
+                console.error('Failed to generate invoice PDF for', phRecord.id, err);
+                return null;
+              });
+              const attachments = [];
+              if (pdfBuffer) {
+                attachments.push({ filename: `facture-${phRecord.id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' });
               }
+              // Build a clear, consistent invoice subject including the invoice number, recipient name and send date
+              // Compute invoice number the same way the PDF generator does (falls back to now when createdAt missing)
+              const invoiceDate = phRecord.createdAt ? new Date(phRecord.createdAt) : new Date();
+              const invoiceNumber = `FA-${invoiceDate.getFullYear()}-${phRecord.id.slice(0, 6)}`;
+              const formattedDate = invoiceDate.toLocaleDateString('fr-FR');
+              const recipientLabel = parentName || parent.email || '';
+              const invoiceSubject = `Facture n° ${invoiceNumber} de ${recipientLabel} du ${formattedDate}`;
+
+              // Use existing templated mail helper which will filter opted-out users when prisma is provided
+              await sendTemplatedMail({
+                templateName: 'invoice',
+                lang: 'fr',
+                to: parentEmail,
+                subject: invoiceSubject,
+                substitutions: {
+                  parentName,
+                  total: Number(total).toFixed(2),
+                  month: phRecord.month,
+                  year: phRecord.year,
+                  invoiceId: phRecord.id,
+                  invoiceNumber
+                },
+                prisma,
+                attachments,
+                respectOptOut: false,
+                paymentHistoryId: phRecord.id,
+                bypassOptOut: true
+              });
+            } catch (e) {
+              console.error('Failed to send invoice email to parent', parent.id, parentEmail, e);
             }
           }
         }
@@ -173,8 +169,8 @@ async function calculatePayments() {
   await calculatePaymentsForMonth(targetYear, targetMonthIndex);
 }
 
-// Exécution chaque 1er du mois à 10:02 (server local time or CRON_TZ if provided)
-const cronExpression = '21 10 1 * *';
+// Exécution chaque 1er du mois à 10:32 (server local time or CRON_TZ if provided)
+const cronExpression = '32 10 1 * *';
 const cronTimezone = process.env.CRON_TZ || 'Europe/Paris';
 const cronEnabled = process.env.ENABLE_PAYMENT_CRON !== 'false';
 
