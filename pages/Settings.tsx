@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe';
 import { useI18n } from '../src/lib/useI18n';
@@ -19,6 +20,9 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   // --- geodata/autocomplete ---
   type GeodataPlace = { id?: string | number; name?: string; lat?: number | null; lon?: number | null; house_number?: string | null; street?: string | null; city?: string | null; state?: string | null; country?: string | null; postcode?: string | null; raw?: unknown };
   const [placeSuggestions, setPlaceSuggestions] = useState<GeodataPlace[]>([]);
@@ -303,15 +307,30 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
         <div className="grid grid-cols-1 sm:grid-cols-1 gap-3">
           <div>
             <label className="text-sm">{t('label.oldPassword')}</label>
-            <input type="password" className="border rounded px-2 py-1 w-full" value={oldPassword} onChange={e => setOldPassword(e.target.value)} />
+            <div className="relative">
+              <input type={showOldPassword ? 'text' : 'password'} className="border rounded px-2 py-1 w-full pr-10" value={oldPassword} onChange={e => setOldPassword(e.target.value)} />
+              <button type="button" onClick={() => setShowOldPassword(s => !s)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 p-1" aria-label={showOldPassword ? 'Masquer l\'ancien mot de passe' : 'Afficher l\'ancien mot de passe'}>
+                {showOldPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="text-sm">{t('label.newPassword')}</label>
-            <input type="password" className="border rounded px-2 py-1 w-full" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+            <div className="relative">
+              <input type={showNewPassword ? 'text' : 'password'} className="border rounded px-2 py-1 w-full pr-10" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+              <button type="button" onClick={() => setShowNewPassword(s => !s)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 p-1" aria-label={showNewPassword ? 'Masquer le nouveau mot de passe' : 'Afficher le nouveau mot de passe'}>
+                {showNewPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="text-sm">{t('label.confirmPassword')}</label>
-            <input type="password" className="border rounded px-2 py-1 w-full" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+            <div className="relative">
+              <input type={showConfirmPassword ? 'text' : 'password'} className="border rounded px-2 py-1 w-full pr-10" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+              <button type="button" onClick={() => setShowConfirmPassword(s => !s)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 p-1" aria-label={showConfirmPassword ? 'Masquer la confirmation' : 'Afficher la confirmation'}>
+                {showConfirmPassword ? <HiOutlineEyeOff className="w-5 h-5" /> : <HiOutlineEye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -387,7 +406,7 @@ export default function Settings() {
         const res = await fetchWithRefresh(`${API_URL}/user/me`, { credentials: 'include' });
         if (!res.ok) return;
         const u = await res.json();
-        if (u && u.role === 'admin') setIsAdmin(true);
+  if (u && (u.role === 'admin' || (typeof u.role === 'string' && u.role.toLowerCase().includes('super')))) setIsAdmin(true);
       } catch {
         // ignore
       }

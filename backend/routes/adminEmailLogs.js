@@ -14,8 +14,8 @@ router.get('/emaillogs', requireAuth, async (req, res) => {
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
     const skip = (page - 1) * limit;
 
-    // build where clause from optional filters
-    const where = {};
+  // build where clause from optional filters
+  const where = {};
     // month filter: expect YYYY-MM
     if (req.query.month && typeof req.query.month === 'string' && /^\d{4}-\d{2}$/.test(req.query.month)) {
       const [yStr, mStr] = req.query.month.split('-');
@@ -36,6 +36,14 @@ router.get('/emaillogs', requireAuth, async (req, res) => {
       const q = req.query.q.trim();
       // search subject and denormalized recipientsText
       where.OR = [ { subject: { contains: q, mode: 'insensitive' } }, { recipientsText: { contains: q, mode: 'insensitive' } } ];
+    }
+
+    // Restrict to email logs for parents in the same center as the admin.
+    // If the admin user has a centerId, only include EmailLogs linked to a PaymentHistory
+    // whose parent.centerId matches the admin's centerId. If the admin has no centerId
+    // (super-admin), keep full access.
+    if (req.user && req.user.centerId) {
+      where.paymentHistory = { is: { parent: { centerId: req.user.centerId } } };
     }
 
     const logs = await prisma.emailLog.findMany({
@@ -64,10 +72,18 @@ router.post('/emaillogs/:id/resend', requireAuth, async (req, res) => {
     if (!log) return res.status(404).json({ error: 'EmailLog not found' });
     if (!log.paymentHistory) return res.status(400).json({ error: 'No paymentHistory linked to this EmailLog' });
 
+    // Ensure admin belongs to the same center as the parent (unless admin has no centerId)
+    if (req.user && req.user.centerId) {
+      const ph = log.paymentHistory;
+      const parent = await prisma.parent.findUnique({ where: { id: ph.parentId } });
+      if (!parent) return res.status(400).json({ error: 'Parent not found' });
+      if (parent.centerId !== req.user.centerId) return res.status(403).json({ error: 'Forbidden' });
+    }
+
     // load parent to get email and name
-    const ph = log.paymentHistory;
-    const parent = await prisma.parent.findUnique({ where: { id: ph.parentId } });
-    if (!parent || !parent.email) return res.status(400).json({ error: 'Parent email not found' });
+  const ph = log.paymentHistory;
+  const parent = await prisma.parent.findUnique({ where: { id: ph.parentId } });
+  if (!parent || !parent.email) return res.status(400).json({ error: 'Parent email not found' });
 
     // generate PDF buffer for the paymentHistory
     const { generateInvoiceBuffer } = require('../lib/invoiceGenerator');
