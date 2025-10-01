@@ -1,6 +1,5 @@
-const path = require('path');
-require('dotenv').config({ path: path.resolve(process.cwd(), process.env.NODE_ENV === 'production' ? '.env.production' : '.env') });
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
 if (process.env.STRIPE_SECRET_KEY) {
   process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY.trim().replace(/^"|"$/g, '');
