@@ -56,6 +56,7 @@ function getMonthGrid(date: Date) {
 export default function AdminEmailLogs() {
   const { t } = useI18n();
   const API_URL = import.meta.env.VITE_API_URL ?? '/api';
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -95,6 +96,17 @@ export default function AdminEmailLogs() {
     const id = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(id);
   }, [query]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
 
   // localized timeAgo wrapper uses the raw helper and inserts into translated string
   const localTimeAgo = (iso: string) => {
@@ -358,9 +370,9 @@ export default function AdminEmailLogs() {
   // expanded state removed — mobile cards now show full info with actions
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      <Sidebar />
-  <main className="flex-1 flex flex-col items-center pt-16 pb-12 px-3 md:pt-8 md:pb-8 md:px-4 md:ml-64 box-border">
+    <div className={`relative z-0 min-h-screen bg-gray-50 p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      {!isShortLandscape && <Sidebar />}
+      <main className="flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-4">
         <div className="w-full max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>

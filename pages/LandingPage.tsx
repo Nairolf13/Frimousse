@@ -126,14 +126,14 @@ import ConfirmDialog from '../components/ConfirmDialog';
                     </div>
 
                     <div className="hidden md:flex gap-2">
+                      <a href="/register" className="bg-[#f7f4d7] border border-[#fcdcdf] text-[#0b5566] rounded px-3 py-1 font-semibold hover:bg-[#fcdcdf] transition text-sm">
+                        Inscription
+                      </a>
                       <a
                         href="/login"
-                        className="bg-[#f7f4d7] border border-[#fcdcdf] text-[#0b5566] rounded px-3 py-1 text-sm hover:bg-[#fcdcdf] transition"
+                        className="bg-[#0b5566] !text-white rounded px-3 py-1 text-sm hover:opacity-95 transition"
                       >
                         Connexion
-                      </a>
-                      <a href="/register" className="bg-[#0b5566] text-white rounded px-3 py-1 font-semibold hover:opacity-95 transition text-sm">
-                        Inscription
                       </a>
                     </div>
                   </div>
@@ -153,7 +153,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                 <div className="flex flex-col sm:flex-row gap-4 mb-8 justify-center items-center w-full">
                   <a
                     href="/register"
-                    className="bg-[#0b5566] text-white rounded-full px-8 py-4 font-bold text-lg shadow hover:opacity-95 transition w-full sm:w-auto"
+                    className="bg-[#0b5566] !text-white rounded-full px-8 py-4 font-bold text-lg shadow hover:opacity-95 transition w-full sm:w-auto"
                   >
                     Essayer gratuitement
                   </a>
@@ -166,7 +166,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                   {/* Mobile-only Connexion button as third CTA to match size/spacing */}
                   <a
                     href="/login"
-                    className="sm:hidden bg-[#0b5566] text-white rounded-full px-8 py-4 font-bold text-lg shadow hover:scale-105 transition w-full text-center"
+                    className="sm:hidden bg-[#0b5566] !text-white rounded-full px-8 py-4 font-bold text-lg shadow hover:scale-105 transition w-full text-center"
                     aria-label="Connexion"
                     title="Connexion"
                   >
@@ -557,7 +557,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                 <div className="max-w-3xl mx-auto text-center">
                   <h2 className="text-2xl md:text-3xl font-bold text-[#0b5566] mb-6">Essayez Frimousse gratuitement dès aujourd’hui</h2>
                   <p className="text-[#08323a] mb-8 text-lg">Rejoignez des dizaines d’associations et de familles déjà convaincues. Inscription rapide, sans engagement, accompagnement personnalisé.</p>
-                  <a href="/register" className="bg-[#0b5566] text-white rounded-full px-10 py-4 font-bold text-lg shadow hover:opacity-95 transition inline-block">Créer mon compte gratuit</a>
+                  <a href="/register" className="bg-[#0b5566] !text-white rounded-full px-10 py-4 font-bold text-lg shadow hover:opacity-95 transition inline-block">Créer mon compte gratuit</a>
                 </div>
               </section>
 
