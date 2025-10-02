@@ -174,11 +174,12 @@ router.post('/', authMiddleware, checkContentLength, upload.array('images', 6), 
         continue;
       }
 
-      // Otherwise treat as image: process main image (resize to max width 1600) and thumbnail (300)
-  const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
-  // Use rotate() so sharp applies EXIF orientation before resizing
-  const mainBuffer = await sharp(fileBuffer).rotate().resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
-  const thumbBuffer = await sharp(fileBuffer).rotate().resize({ width: 300 }).toFormat('webp').toBuffer();
+        // Otherwise treat as image: process main image (resize to max width 1600) and thumbnail (square crop)
+        const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
+        // Use rotate() so sharp applies EXIF orientation before resizing
+        const mainBuffer = await sharp(fileBuffer).rotate().resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
+        // Create a square thumbnail with cover fit so all thumbs share identical dimensions
+        const thumbBuffer = await sharp(fileBuffer).rotate().resize({ width: 400, height: 400, fit: 'cover' }).toFormat('webp').toBuffer();
 
       const ext = 'webp';
       const mainPath = path.posix.join('feed', `${baseName}.${ext}`);
@@ -531,9 +532,11 @@ router.post('/:postId/media', authMiddleware, checkContentLength, upload.array('
         continue;
       }
 
-  const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
-  const mainBuffer = await sharp(fileBuffer).resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
-  const thumbBuffer = await sharp(fileBuffer).resize({ width: 300 }).toFormat('webp').toBuffer();
+    const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
+    // Apply EXIF rotation and resize main while preserving aspect ratio
+    const mainBuffer = await sharp(fileBuffer).rotate().resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
+    // Square thumbnail for uniform feed appearance
+    const thumbBuffer = await sharp(fileBuffer).rotate().resize({ width: 400, height: 400, fit: 'cover' }).toFormat('webp').toBuffer();
 
       const ext = 'webp';
       const baseName = `${postId}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;

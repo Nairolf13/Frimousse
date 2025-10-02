@@ -191,7 +191,7 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
                       );
                     })()}
                   </div>
-                  <div className="mt-1 flex items-center gap-1 justify-end">
+                  <div className="mt-0 flex items-center gap-1 justify-end">
                     {isCurrentParent ? (
                       <>
                         <input id={`presc-${c.child.id}`} type="file" accept="image/*,.pdf" className="hidden" onChange={async (e) => {

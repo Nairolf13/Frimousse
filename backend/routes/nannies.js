@@ -249,6 +249,64 @@ router.get('/:id/cotisation', auth, async (req, res) => {
   }
 });
 
+// Aggregated monthly cotisation total for parents whose children are assigned to a nanny
+router.get('/:id/cotisation-total', auth, async (req, res) => {
+  try {
+    const nannyId = req.params.id;
+    const where = { id: nannyId };
+    if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+    const nanny = await prisma.nanny.findFirst({ where });
+    if (!nanny) return res.status(404).json({ error: 'Nanny not found' });
+
+    const month = String(req.query.month || '').trim();
+    let startDate, endDate;
+    if (!month) {
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    } else {
+      if (!/^[0-9]{4}-[0-9]{2}$/.test(month)) return res.status(400).json({ message: 'Invalid month parameter, expected YYYY-MM' });
+      const [year, mon] = month.split('-').map(Number);
+      startDate = new Date(year, mon - 1, 1);
+      endDate = new Date(year, mon, 1);
+    }
+
+    // children linked to this nanny
+    const childNannies = await prisma.childNanny.findMany({ where: { nannyId }, select: { childId: true } });
+    const childIds = childNannies.map(c => c.childId);
+    if (!childIds || childIds.length === 0) return res.json({ totalMonthly: 0 });
+
+    // map childId -> parentIds
+    const parentChilds = await prisma.parentChild.findMany({ where: { childId: { in: childIds } }, select: { parentId: true, childId: true } });
+    const childToParents = {};
+    for (const pc of parentChilds) {
+      if (!childToParents[pc.childId]) childToParents[pc.childId] = [];
+      childToParents[pc.childId].push(pc.parentId);
+    }
+
+    // assignments for these children in the month
+    const assignments = await prisma.assignment.findMany({ where: { childId: { in: childIds }, date: { gte: startDate, lt: endDate } }, select: { childId: true } });
+    const childCounts = {};
+    for (const a of assignments) { childCounts[a.childId] = (childCounts[a.childId] || 0) + 1; }
+
+    // compute per-parent totals: amount = days * 2 per child, summed across their children
+    const parentTotals = {};
+    for (const childId of Object.keys(childToParents)) {
+      const days = childCounts[childId] || 0;
+      const amount = days * 2;
+      for (const pid of childToParents[childId] || []) {
+        parentTotals[pid] = (parentTotals[pid] || 0) + amount;
+      }
+    }
+
+    const totalMonthly = Object.values(parentTotals).reduce((s, v) => s + (v || 0), 0);
+    res.json({ totalMonthly });
+  } catch (err) {
+    console.error('GET /api/nannies/:id/cotisation-total error', err);
+    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
 router.put('/:id/cotisation', auth, async (req, res) => {
   try {
     const where = { id: req.params.id };

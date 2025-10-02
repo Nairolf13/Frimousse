@@ -84,6 +84,7 @@ export default function Nannies() {
   const [nannies, setNannies] = useState<Nanny[]>([]);
   const [cotisationStatus, setCotisationStatus] = useState<Record<string, { paidUntil: string | null; loading: boolean }>>({});
   const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number>>({});
+  const [cotisationParentsTotals, setCotisationParentsTotals] = useState<Record<string, number>>({});
   interface Assignment {
     id: string;
     date: string;
@@ -193,6 +194,19 @@ export default function Nannies() {
     }
   };
 
+  const fetchParentsTotalForNanny = async (nannyId: string) => {
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/nannies/${nannyId}/cotisation-total`, { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && typeof data.totalMonthly === 'number') {
+        setCotisationParentsTotals(prev => ({ ...prev, [nannyId]: Number(data.totalMonthly) }));
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   const [messages, setMessages] = useState<Record<string, { text: string; type: 'success' | 'error' } | null>>({});
   const [confirmPayment, setConfirmPayment] = useState<{ nannyId: string; amount: number } | null>(null);
   // Admin password-reset modal state
@@ -236,7 +250,7 @@ export default function Nannies() {
     if (cached) {
       setNannies(cached);
       const amounts: Record<string, number> = {};
-      cached.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); });
+      cached.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); fetchParentsTotalForNanny(n.id); });
       setCotisationAmounts(amounts);
       setLoading(false);
       return;
@@ -246,7 +260,7 @@ export default function Nannies() {
       .then((nannies: Nanny[]) => {
   setNannies(nannies);
   const amounts: Record<string, number> = {};
-  nannies.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); });
+  nannies.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); fetchParentsTotalForNanny(n.id); });
   setCotisationAmounts(amounts);
   setCached(cacheKeyNannies, nannies);
       })
@@ -754,6 +768,12 @@ export default function Nannies() {
                             ) : '—'}
                           </span>
 
+                          {/* Total monthly contributions from assigned parents */}
+                          <div className="text-xs text-gray-600 text-center mt-2">
+                            <span className="block font-medium">{t('nanny.cotisation.total_parents') || 'Cotisation totale mensuelle des parents'}&nbsp;</span>
+                            <span className="text-base font-bold text-[#08323a]">{(cotisationParentsTotals[nanny.id] ?? 0)}€</span>
+                          </div>
+
                           {daysRemaining <= 0 && messages[nanny.id] && (
                             <div className={`mt-1 text-xs ${messages[nanny.id]?.type === 'success' ? 'text-[#0b5566]' : 'text-red-600'}`}>
                               {messages[nanny.id]?.text}
@@ -761,7 +781,7 @@ export default function Nannies() {
                           )}
                         </div>
 
-                        <div className="flex items-center gap-2 mt-4">
+                        <div className="flex items-center gap-2 mt-2">
                           <div className="flex gap-1">
                             <button
                               onClick={() => setPlanningNanny(nanny)}

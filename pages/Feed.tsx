@@ -17,6 +17,8 @@ type Comment = { id?: string; authorName: string; authorId?: string; timeAgo: st
 type Post = { id: string; text?: string; createdAt: string; author?: { name?: string }; authorId?: string; medias?: Media[]; likes?: number; commentsCount?: number; shares?: number; comments?: Comment[] };
 
 import FeedImage from '../src/components/FeedImage';
+import FeedLightbox from '../src/components/FeedLightbox';
+import type { Media as LightboxMedia } from '../src/components/FeedLightbox';
 
 function timeAgo(dateStr: string) {
   const d = new Date(dateStr);
@@ -1062,6 +1064,20 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
     setLightboxIndex((lightboxIndex - 1 + post.medias.length) % post.medias.length);
   }
 
+  // keyboard navigation + prevent body scroll when lightbox is open
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!lightboxOpen) return;
+      if (e.key === 'Escape') return closeLightbox();
+      if (!post.medias || post.medias.length === 0) return;
+      if (e.key === 'ArrowLeft') return setLightboxIndex((i) => (i - 1 + post.medias!.length) % post.medias!.length);
+      if (e.key === 'ArrowRight') return setLightboxIndex((i) => (i + 1) % post.medias!.length);
+    }
+
+    if (lightboxOpen) window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxOpen, post.medias]);
+
   async function save() {
     const trimmed = val.trim();
     if (!trimmed) return alert('Le post ne peut pas être vide');
@@ -1279,17 +1295,16 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
         </div>
       )}
 
-      {/* Lightbox / slideshow */}
-      {lightboxOpen && post.medias && post.medias.length > 0 && (
-        <div className="fixed inset-0 z-60 bg-black/80 flex items-center justify-center p-4" onClick={closeLightbox}>
-          <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
-            <button onClick={prevLightbox} aria-label="Précédent" className="absolute left-2 sm:left-6 text-white bg-black/30 hover:bg-black/40 rounded-full p-2">‹</button>
-            <img src={post.medias[lightboxIndex].url} className="max-w-full max-h-[85vh] object-contain rounded" />
-            <button onClick={nextLightbox} aria-label="Suivant" className="absolute right-2 sm:right-6 text-white bg-black/30 hover:bg-black/40 rounded-full p-2">›</button>
-            <button onClick={closeLightbox} aria-label="Fermer" className="absolute top-2 right-2 text-white bg-black/30 rounded-full p-2">✕</button>
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/30 px-3 py-1 rounded">{lightboxIndex + 1} / {post.medias.length}</div>
-          </div>
-        </div>
+      {/* Lightbox / slideshow (portal) */}
+      {post.medias && post.medias.length > 0 && (
+        <FeedLightbox
+          open={lightboxOpen}
+          medias={post.medias as LightboxMedia[]}
+          index={lightboxIndex}
+          onClose={closeLightbox}
+          onPrev={prevLightbox}
+          onNext={nextLightbox}
+        />
       )}
       {canEdit && editing && (
         <div className="mt-3">
