@@ -4,11 +4,12 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const requireAuth = require('../middleware/authMiddleware');
 
-// GET /api/admin/emaillogs?limit=50&page=1
+// GET /api/admin/emaillogs?limit=50&page=1&page=1
 router.get('/emaillogs', requireAuth, async (req, res) => {
   try {
-    // only admins
-    if (!req.user || req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+    // only admins and super-admins
+    function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
+    if (!req.user || (req.user.role !== 'admin' && !isSuperAdmin(req.user))) return res.status(403).json({ error: 'Forbidden' });
 
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
@@ -66,7 +67,8 @@ router.get('/emaillogs', requireAuth, async (req, res) => {
 // POST /api/admin/emaillogs/:id/resend - resend the email for this emaillog (if linked to a paymentHistory)
 router.post('/emaillogs/:id/resend', requireAuth, async (req, res) => {
   try {
-    if (!req.user || req.user.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+    function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
+    if (!req.user || (req.user.role !== 'admin' && !isSuperAdmin(req.user))) return res.status(403).json({ error: 'Forbidden' });
     const id = req.params.id;
     const log = await prisma.emailLog.findUnique({ where: { id }, include: { paymentHistory: true } });
     if (!log) return res.status(404).json({ error: 'EmailLog not found' });
