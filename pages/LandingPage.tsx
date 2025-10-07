@@ -352,7 +352,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 
                   <div className="relative mt-8 px-4 md:px-12">
                     {/* Left nav */}
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20">
+                    <div className="absolute left-0 top-2/5 -translate-y-1/2 z-20 -translate-x-8 md:-translate-x-12 flex items-center h-full">
                       <button
                         aria-label="Précédent"
                         onClick={() => setCurrentReviewIndex(i => (reviews.length === 0 ? 0 : (i - 1 + reviews.length) % reviews.length))}
@@ -363,7 +363,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                     </div>
 
                     {/* Right nav */}
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20">
+                    <div className="absolute right-0 top-2/5 -translate-y-1/2 z-20 translate-x-8 md:translate-x-12 flex items-center h-full">
                       <button
                         aria-label="Suivant"
                         onClick={() => setCurrentReviewIndex(i => (reviews.length === 0 ? 0 : (i + 1) % reviews.length))}
@@ -379,36 +379,41 @@ import ConfirmDialog from '../components/ConfirmDialog';
                       ) : (
                         <div className="relative">
                           <div key={currentReview.id} className="transform transition duration-500 ease-in-out">
-                            <div className="bg-gradient-to-br from-white/70 to-white/60 backdrop-blur-md rounded-3xl shadow-2xl border border-white/30 p-6 md:p-8">
-                              <div className="flex items-start gap-5">
+                            <div className="bg-gradient-to-br from-white/70 to-white/60 backdrop-blur-md rounded-3xl shadow-2xl border border-white/30 p-4 md:p-8 relative">
+                              {/* Prénom et date en haut à droite sur mobile */}
+                              <div className="absolute top-8 right-4 flex flex-col items-end gap-1 md:hidden">
+                                <div className="text-sm font-semibold text-[#08323a]">{currentReview.authorName || 'Anonyme'}</div>
+                                <div className="text-xs text-gray-400">{new Date(currentReview.createdAt).toLocaleDateString()}</div>
+                              </div>
+
+                              {/* Étoiles alignées avec "Avis vérifié" */}
+                              <div className="absolute bottom-6 right-4 flex gap-1 md:top-2 md:right-2">
+                                {[1,2,3,4,5].map(i => (
+                                  <svg key={i} className={`w-5 h-5 ${currentReview.rating && currentReview.rating >= i ? 'text-yellow-400' : 'text-gray-200'}`} viewBox="0 0 20 20" fill={currentReview.rating && currentReview.rating >= i ? 'currentColor' : 'none'} stroke={currentReview.rating && currentReview.rating >= i ? 'none' : 'currentColor'} xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.487 2.678c-.785.57-1.84-.197-1.54-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.525 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.05 2.927z" />
+                                  </svg>
+                                ))}
+                              </div>
+
+                              <div className="flex flex-col md:flex-row items-start gap-4 md:gap-5">
                                 <div className="flex-shrink-0">
-                                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0b5566] to-[#0b83a3] text-white flex items-center justify-center font-bold text-xl shadow-lg">{(currentReview.authorName || 'U').split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
+                                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-[#0b5566] to-[#0b83a3] text-white flex items-center justify-center font-bold text-lg md:text-xl shadow-lg">{(currentReview.authorName || 'U').split(' ').map(s=>s[0]).slice(0,2).join('')}</div>
                                 </div>
 
                                 <div className="flex-1">
-                                  <div className="flex items-start justify-between">
+                                  <div className="hidden md:flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                                     <div>
                                       <div className="text-lg font-semibold text-[#08323a]">{currentReview.authorName || 'Anonyme'}</div>
                                       <div className="text-sm text-gray-400">{new Date(currentReview.createdAt).toLocaleDateString()}</div>
                                     </div>
-
-                                    <div className="flex items-center gap-2">
-                                      <div className="flex items-center">
-                                        {[1,2,3,4,5].map(i => (
-                                          <svg key={i} className={`w-5 h-5 ${currentReview.rating && currentReview.rating >= i ? 'text-yellow-400' : 'text-gray-200'}`} viewBox="0 0 20 20" fill={currentReview.rating && currentReview.rating >= i ? 'currentColor' : 'none'} stroke={currentReview.rating && currentReview.rating >= i ? 'none' : 'currentColor'} xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.487 2.678c-.785.57-1.84-.197-1.54-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.525 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.05 2.927z" />
-                                          </svg>
-                                        ))}
-                                      </div>
-                                    </div>
                                   </div>
 
-                                  <div className="mt-4 text-[#08323a] text-base md:text-lg leading-relaxed"> 
+                                  <div className="mt-3 text-[#08323a] text-base md:text-lg leading-relaxed"> 
                                     <svg className="w-8 h-8 text-[#0b5566] opacity-20 inline-block mr-2 -translate-y-1" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M7.17 6A5 5 0 0 1 12 3v6H6a1 1 0 0 0-1 1v4h2v-4a3 3 0 0 1 0-6H7.17zM17.17 6A5 5 0 0 1 22 3v6h-6a1 1 0 0 0-1 1v4h2v-4a3 3 0 0 1 0-6h.17z"/></svg>
                                     <span className="italic">{currentReview.content}</span>
                                   </div>
 
-                                  <div className="mt-4 flex items-center justify-start">
+                                  <div className="mt-3 flex items-center justify-start">
                                     <span className="inline-flex items-center gap-2 text-sm text-green-600 font-medium bg-green-50 px-2 py-1 rounded">✓ Avis vérifié</span>
                                   </div>
                                 </div>
@@ -437,8 +442,11 @@ import ConfirmDialog from '../components/ConfirmDialog';
                     </div>
 
                     {showReviewForm && (
-                      <form
-                        onSubmit={async (e) => {
+                      <>
+                        {/* Desktop / tablet inline form */}
+                        <div className="hidden md:block">
+                          <form
+                            onSubmit={async (e) => {
                           e.preventDefault();
                           setSubmittingReview(true);
                           setReviewError(null);
@@ -535,7 +543,115 @@ import ConfirmDialog from '../components/ConfirmDialog';
                             </button>
                           </div>
                         </div>
-                      </form>
+                          </form>
+                        </div>
+
+                        {/* Mobile bottom-sheet form */}
+                        <div className="md:hidden">
+                          <div className="fixed inset-0 z-50 flex items-end bg-black/40">
+                            <div className="w-full max-h-[90vh] bg-white rounded-t-2xl p-4 overflow-auto shadow-2xl">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="text-lg font-semibold text-[#0b5566]">Laisser un avis</div>
+                                <button type="button" aria-label="Fermer" className="text-gray-500" onClick={() => setShowReviewForm(false)}>✕</button>
+                              </div>
+                              <form
+                                onSubmit={async (e) => {
+                                  e.preventDefault();
+                                  setSubmittingReview(true);
+                                  setReviewError(null);
+                                  try {
+                                    const payload = { authorName: reviewName || null, content: reviewContent, rating: reviewRating, centerId: null };
+                                    const res = await fetch(`${API_URL}/reviews`, {
+                                      method: 'POST',
+                                      credentials: 'include',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify(payload),
+                                    });
+                                    const data = await res.json();
+                                    if (!res.ok) throw new Error(data?.message || 'Erreur lors de l\'envoi');
+                                    const created: Review | undefined = data?.review;
+                                    if (created) {
+                                      if (created.approved) {
+                                        setReviews(prev => [created, ...prev]);
+                                        setSentModalTitle('Merci ');
+                                        setSentModalBody('Votre avis a bien été publié. Merci pour votre retour !');
+                                      } else {
+                                        setSentModalTitle('Merci ');
+                                        setSentModalBody('Votre avis a bien été envoyé. Il sera publié dans les prochains jours.');
+                                      }
+                                      setSentModalOpen(true);
+                                    } else {
+                                      setReviewError('Réponse inattendue du serveur.');
+                                    }
+                                    setShowReviewForm(false);
+                                    setReviewName('');
+                                    setReviewRating(5);
+                                    setReviewContent('');
+                                  } catch (err: unknown) {
+                                    const maybeObj = err as Record<string, unknown> | undefined;
+                                    const message = maybeObj && typeof maybeObj.message === 'string' ? maybeObj.message : String(err ?? '');
+                                    setReviewError(message || 'Erreur serveur');
+                                  } finally {
+                                    setSubmittingReview(false);
+                                  }
+                                }}
+                                className="mx-auto w-full bg-white rounded-lg p-2"
+                              >
+                                <div className="flex flex-col gap-3">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">Nom</label>
+                                    <input
+                                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#c6f0ff]"
+                                      value={reviewName}
+                                      onChange={e => setReviewName(e.target.value)}
+                                      placeholder="Votre prénom"
+                                      aria-label="Nom"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">Note</label>
+                                    <div className="flex items-center gap-2">
+                                      {[1,2,3,4,5].map(i => (
+                                        <button
+                                          key={i}
+                                          type="button"
+                                          onClick={() => setReviewRating(i)}
+                                          aria-label={`Donner ${i} étoiles`}
+                                          className={`inline-flex items-center justify-center w-9 h-9 rounded-lg transition ${reviewRating && reviewRating >= i ? 'bg-yellow-50 text-yellow-400 shadow-inner' : 'bg-white text-gray-300 hover:text-yellow-300 hover:bg-yellow-50'}`}
+                                        >
+                                          <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957a1 1 0 00.95.69h4.162c.969 0 1.371 1.24.588 1.81l-3.37 2.448a1 1 0 00-.364 1.118l1.286 3.957c.3.921-.755 1.688-1.54 1.118L10 15.347l-3.487 2.678c-.785.57-1.84-.197-1.54-1.118l1.286-3.957a1 1 0 00-.364-1.118L2.525 9.384c-.783-.57-.38-1.81.588-1.81h4.162a1 1 0 00.95-.69L9.05 2.927z"/></svg>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">Commentaire</label>
+                                    <textarea
+                                      className="w-full rounded-lg border border-gray-200 px-3 py-3 text-sm min-h-[110px] focus:outline-none focus:ring-2 focus:ring-[#c6f0ff]"
+                                      value={reviewContent}
+                                      onChange={e => setReviewContent(e.target.value)}
+                                      placeholder="Racontez votre expérience"
+                                      rows={4}
+                                      aria-label="Commentaire"
+                                    />
+                                  </div>
+
+                                  {reviewError && <div className="text-sm text-red-600">{reviewError}</div>}
+
+                                  <div className="flex items-center justify-end gap-3">
+                                    <button type="button" onClick={() => setShowReviewForm(false)} className="px-4 py-2 border rounded-lg text-sm text-gray-700 hover:bg-gray-50">Annuler</button>
+                                    <button disabled={submittingReview} type="submit" className={`px-4 py-2 ${submittingReview ? 'opacity-60 cursor-wait' : ''} bg-gradient-to-r from-[#0b5566] to-[#0b83a3] text-white rounded-lg text-sm shadow`}>
+                                      {submittingReview ? 'Envoi...' : 'Envoyer'}
+                                    </button>
+                                  </div>
+                                </div>
+                              </form>
+                            </div>
+                          </div>
+                        </div>
+                      </>
                     )}
 
                     <ConfirmDialog
