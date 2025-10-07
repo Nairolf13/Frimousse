@@ -314,13 +314,20 @@ router.put('/:id/cotisation', auth, async (req, res) => {
     const nanny = await prisma.nanny.findFirst({ where });
     if (!nanny) return res.status(404).json({ error: 'Nanny not found' });
     const now = new Date();
-    let newDate;
+    let baseDate;
     if (nanny.cotisationPaidUntil && new Date(nanny.cotisationPaidUntil) > now) {
-      newDate = new Date(nanny.cotisationPaidUntil);
+      baseDate = new Date(nanny.cotisationPaidUntil);
     } else {
-      newDate = now;
+      baseDate = now;
     }
-    newDate.setMonth(newDate.getMonth() + 1);
+    // Always set to 1st of next month
+    let year = baseDate.getFullYear();
+    let month = baseDate.getMonth() + 1; // JS months: 0-11
+    if (month > 11) {
+      month = 0;
+      year += 1;
+    }
+    const newDate = new Date(year, month, 1, 0, 0, 0, 0);
 
     const updateData = { cotisationPaidUntil: newDate };
     const { amount } = req.body || {};
