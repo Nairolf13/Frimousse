@@ -100,7 +100,7 @@ export default function Feed() {
       const isMobile = viewportWidth < 768;
       
       // Ajuster la largeur selon l'appareil
-      const modalWidth = isMobile ? 320 : 400; // Mobile: 320px, Desktop: 400px
+      const modalWidth = isMobile ? 280 : 400; // Mobile: 280px, Desktop: 400px
       const modalHeight = 500; // Hauteur approximative de la modal
       
       // Calculer la position pour centrer la modal verticalement dans la viewport visible
