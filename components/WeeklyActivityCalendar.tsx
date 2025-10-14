@@ -83,7 +83,10 @@ export default function WeeklyActivityCalendar() {
   useEffect(() => {
     fetchWithRefresh(`${API_URL}/schedules`, { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setActivities(data));
+      .then(data => {
+        console.log('Activities loaded:', data.length, data);
+        setActivities(data);
+      });
   }, [currentDate]);
 
 
