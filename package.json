@@ -5,14 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "npm run start",
-    "build": "vite build && cp -r dist build && npx react-snap",
+    "build": "npx vite build && node scripts/pre-render.js",
+    "build:prerender": "npx vite build && node scripts/pre-render.js",
     "prod": "npm run start:prod",
     "start": "npm-run-all --parallel start:front start:back",
     "start:front": "vite",
     "start:back": "cd backend && node index.js",
     "generate-sitemap": "node backend/scripts/generate_sitemap.js",
     "start:prod": "npm-run-all --parallel start:front:prod start:back:prod",
-    "start:front:prod": "vite build && cp -r dist build && npx react-snap && vite preview",
+    "start:front:prod": "vite build && node scripts/pre-render.js && vite preview",
     "start:back:prod": "cd backend && NODE_ENV=production node index.js",
     "test": "vitest"
   },
@@ -28,10 +29,10 @@
     "canvas-confetti": "^1.9.3",
     "dotenv": "^17.2.1",
     "multer": "^2.0.2",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "react-helmet": "^6.1.0",
-    "react-helmet-async": "^2.0.5-next",
+    "react-helmet-async": "^2.0.5",
     "react-icons": "^5.5.0",
     "react-router-dom": "^7.7.1",
     "react-select": "^5.10.2",
@@ -58,7 +59,6 @@
     "happy-dom": "^20.0.0",
     "npm-run-all": "^4.1.5",
     "prisma": "^6.15.0",
-    "puppeteer": "^24.24.1",
     "tailwindcss": "^4.1.11",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.35.1",
@@ -79,11 +79,5 @@
     "firefox >= 90",
     "safari >= 14",
     "ios_saf >= 14"
-  ],
-  "reactSnap": {
-    "inlineCss": true,
-    "puppeteerArgs": [
-      "--no-sandbox"
-    ]
-  }
+  ]
 }

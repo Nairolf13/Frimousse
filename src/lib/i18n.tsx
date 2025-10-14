@@ -22,6 +22,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'assistant.loading': 'Chargement...',
     'assistant.send.button': 'Envoyer',
     'common.none': '—',
+    'common.view_more': 'Voir plus',
     'payments.history.title': 'Historique des paiements',
     'payments.history.empty': "Aucun enregistrement pour cette période.",
     'payments.total': 'Total',
