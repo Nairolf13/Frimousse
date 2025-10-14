@@ -26,6 +26,8 @@ export default function CookieConsent() {
     }
   });
 
+  const [lastGtagConsent, setLastGtagConsent] = useState<ConsentState | null>(null);
+
   useEffect(() => {
     if (consent === 'unknown') return;
     try { localStorage.setItem('cookie_consent', consent); } catch (e) { console.warn('cookie consent write failed', e); }
@@ -34,17 +36,18 @@ export default function CookieConsent() {
       // 60 * 60 * 24 * 365 = 31536000 (1 year)
       document.cookie = `cookie_consent=${encodeURIComponent(consent)};path=/;max-age=31536000`;
   } catch { /* ignore cookie write failures */ }
-    // If gtag exists, update consent state: ad_storage and analytics_storage
+    // If gtag exists and consent has changed, update consent state: ad_storage and analytics_storage
     // all -> grant both, essential -> deny optional storage
-    if (typeof window.gtag === 'function') {
+    if (typeof window.gtag === 'function' && lastGtagConsent !== consent) {
       if (consent === 'all') {
         try { window.gtag('consent', 'update', { 'ad_storage': 'granted', 'analytics_storage': 'granted' }); } catch (e) { console.warn('gtag consent update failed', e); }
   try { window.gtag('event', 'consent_granted', { method: 'banner' }); } catch { /* ignore */ }
       } else {
         try { window.gtag('consent', 'update', { 'ad_storage': 'denied', 'analytics_storage': 'denied' }); } catch (e) { console.warn('gtag consent update failed', e); }
       }
+      setLastGtagConsent(consent);
     }
-  }, [consent]);
+  }, [consent, lastGtagConsent]);
 
   if (consent !== 'unknown') return null;
 

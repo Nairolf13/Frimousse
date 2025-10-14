@@ -29,5 +29,10 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:4000',
     },
+    // Improve source map handling for development
+    sourcemapIgnoreList: (sourcePath) => {
+      // Ignore source maps from node_modules and external tools like React DevTools
+      return sourcePath.includes('node_modules') || sourcePath.includes('installHook');
+    },
   },
 })
