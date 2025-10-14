@@ -1,86 +1,115 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fr">
-  <head>
-    <meta charset="UTF-8" />
-  <!-- Google tag (gtag.js) -->
-  <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-7HTQYHMFDQ"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);} 
-      gtag('js', new Date());
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Les Frimousses - Gestion de garde d'enfants</title>
+  <meta name="description" content="Application de gestion de garde d'enfants : planning, rapports, gestion des parents et communications pour crèches et assistantes maternelles." />
+  <meta name="robots" content="index, follow" />
 
-      gtag('config', 'G-7HTQYHMFDQ');
-    </script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <!-- Minimal critical CSS to reduce render-blocking and avoid FOUC while main CSS loads -->
-  <style>
-    /* Critical styles: background, root sizing and basic typography */
-    html,body,#root{height:100%;}
-    body{margin:0;min-height:100vh;background:#f7f4d7;color:#08323a;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,'Noto Sans',"Noto Color Emoji","Apple Color Emoji";}
-    img{max-width:100%;height:auto;display:block}
-    a{color:inherit}
-  </style>
+  <!-- Open Graph -->
+  <meta property="og:title" content="Les Frimousses - Gestion de garde d'enfants" />
+  <meta property="og:description" content="Application de gestion de garde d'enfants : planning, rapports, gestion des parents et communications pour crèches et assistantes maternelles." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://lesfrimousses.com/" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Les Frimousses - Gestion de garde d'enfants" />
+  <meta name="twitter:description" content="Application de gestion de garde d'enfants : planning, rapports, gestion des parents et communications pour crèches et assistantes maternelles." />
+
+  <!-- Preload critical resources -->
+  <link rel="preload" href="/assets/index.css" as="style" />
+  <link rel="preload" href="/assets/index.js" as="script" />
+
+  <!-- Favicon -->
   <link rel="icon" type="image/webp" href="/imgs/LogoFrimousse.webp" />
-  <link rel="preload" href="/imgs/LogoFrimousse.webp" as="image" />
-  <!-- Web App Manifest -->
-  <link rel="manifest" href="/assets/manifest-DD_iWy7p.webmanifest" />
-  <!-- Theme color for Android / Chrome -->
-  <meta name="theme-color" content="#0b5566" />
-  <meta name="description" content="Les frimousses — Application de gestion de garde d'enfants : planning, rapports, gestion des parents et communications pour crèches et assistantes maternelles." />
+
+  <!-- Canonical URL -->
   <link rel="canonical" href="https://lesfrimousses.com/" />
-  <!-- iOS home screen -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <!-- Deprecated apple-only tag replaced by the more general mobile-web-app-capable for broader support -->
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Les Frimousses" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <!-- iOS icon (used when adding to home screen). If you have a PNG version, prefer that path for best compatibility -->
-  <link rel="apple-touch-icon" href="/imgs/LogoFrimousse-192.png" />
-  <!-- Safari pinned tab / mask icon (optional) -->
-  <link rel="mask-icon" href="/imgs/LogoFrimousse.webp" color="#0b5566" />
-    <meta property="og:title" content="Les frimousses" />
-    <meta property="og:description" content="Application de gestion de garde d'enfants" />
-    <meta property="og:image" content="/imgs/LogoFrimousse.webp" />
-    <title>Les frimousses</title>
-    <!-- JSON-LD structured data (Organization + WebSite) -->
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "Organization",
-          "name": "Les frimousses",
-          "url": "https://lesfrimousses.com/",
-          "logo": "https://lesfrimousses.com/imgs/LogoFrimousse.webp",
-          "sameAs": []
-        },
-        {
-          "@type": "WebSite",
-          "url": "https://lesfrimousses.com/",
-          "name": "Les frimousses",
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://lesfrimousses.com/search?q={search_term_string}",
-            "query-input": "required name=search_term_string"
-          }
-        }
-      ]
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/assets/index.css" />
+</head>
+<body>
+  
+    <div id="root">
+      <!-- Landing Page Content for SEO -->
+      <div style="min-height: 100vh; background: linear-gradient(135deg, #a9ddf2 0%, #f7f4d7 100%);">
+        <!-- Hero Section -->
+        <section style="padding: 4rem 1rem; text-align: center; max-width: 1200px; margin: 0 auto;">
+          <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-radius: 2rem; padding: 3rem; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.3);">
+            <img src="/imgs/LogoFrimousse.webp" alt="Les Frimousses" style="width: 120px; height: 120px; margin: 0 auto 2rem; display: block;" />
+            <h1 style="font-size: 2.5rem; font-weight: 800; color: #0b5566; margin-bottom: 1rem; line-height: 1.2;">Les Frimousses</h1>
+            <p style="font-size: 1.25rem; color: #08323a; margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">Application de gestion de garde d'enfants : planning, rapports, gestion des parents et communications pour crèches et assistantes maternelles.</p>
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+              <a href="/register" style="background: linear-gradient(135deg, #0b5566 0%, #0b83a3 100%); color: white; padding: 0.75rem 2rem; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block;">Commencer</a>
+              <a href="/features" style="background: rgba(255,255,255,0.9); color: #0b5566; padding: 0.75rem 2rem; border-radius: 9999px; text-decoration: none; font-weight: 600; display: inline-block; border: 1px solid rgba(11,85,102,0.2);">Découvrir</a>
+            </div>
+          </div>
+        </section>
+
+        <!-- Features Section -->
+        <section style="padding: 4rem 1rem; background: rgba(255,255,255,0.1);">
+          <div style="max-width: 1200px; margin: 0 auto; text-align: center;">
+            <h2 style="font-size: 2rem; font-weight: 700; color: #0b5566; margin-bottom: 3rem;">Pourquoi choisir Les Frimousses ?</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+              <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-radius: 1.5rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.3);">
+                <h3 style="font-weight: 600; color: #0b5566; margin-bottom: 1rem;">Gestion simplifiée</h3>
+                <p style="color: #08323a;">Automatisez vos plannings, inscriptions et rapports pour vous concentrer sur l'essentiel : les enfants.</p>
+              </div>
+              <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-radius: 1.5rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.3);">
+                <h3 style="font-weight: 600; color: #0b5566; margin-bottom: 1rem;">Communication facilitée</h3>
+                <p style="color: #08323a;">Notifications, documents, actualités et échanges avec les familles pour une relation de confiance.</p>
+              </div>
+              <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-radius: 1.5rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.3);">
+                <h3 style="font-weight: 600; color: #0b5566; margin-bottom: 1rem;">Sécurité & RGPD</h3>
+                <p style="color: #08323a;">Données protégées, accès sécurisés, conformité RGPD et confidentialité garantie pour tous les utilisateurs.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section style="padding: 4rem 1rem; background: linear-gradient(135deg, #a9ddf2 0%, #f7f4d7 100%);">
+          <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+            <div style="display: flex; justify-content: center; gap: 3rem; flex-wrap: wrap;">
+              <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-radius: 1.5rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.3); min-width: 140px;">
+                <div style="font-size: 2rem; font-weight: 700; color: #0b5566; margin-bottom: 0.5rem;">100+</div>
+                <div style="color: #0b5566; font-weight: 600;">Familles<br />inscrites</div>
+              </div>
+              <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-radius: 1.5rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.3); min-width: 140px;">
+                <div style="font-size: 2rem; font-weight: 700; color: #0b5566; margin-bottom: 0.5rem;">10+</div>
+                <div style="color: #0b5566; font-weight: 600;">Associations<br />suivies</div>
+              </div>
+              <div style="background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); border-radius: 1.5rem; padding: 2rem; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.3); min-width: 140px;">
+                <div style="font-size: 2rem; font-weight: 700; color: #0b5566; margin-bottom: 0.5rem;">99%</div>
+                <div style="color: #0b5566; font-weight: 600;">Utilisateurs<br />satisfaits</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  
+
+  <!-- Scripts -->
+  <script type="module" src="/assets/index.js"></script>
+
+  <!-- SEO: Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Les Frimousses - Gestion de garde d'enfants",
+    "description": "Application de gestion de garde d'enfants : planning, rapports, gestion des parents et communications pour crèches et assistantes maternelles.",
+    "url": "https://lesfrimousses.com/",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Les Frimousses",
+      "url": "https://lesfrimousses.com"
     }
-    </script>
-    <script type="module" crossorigin src="/assets/index-B6oGosDm.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BO-YXQUk.css">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script>
-      (function(){
-        function setVh(){
-          document.documentElement.style.setProperty('--vh', (window.innerHeight * 0.01) + 'px');
-        }
-        setVh();
-        window.addEventListener('resize', setVh);
-      })();
-    </script>
-  </body>
+  }
+  </script>
+</body>
 </html>
