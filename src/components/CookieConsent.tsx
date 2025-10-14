@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 type ConsentState = 'unknown' | 'all' | 'essential';
 
 declare global {
-  interface Window { gtag?: (...args: unknown[]) => void }
+  interface Window { gtag?: (...args: unknown[]) => void; gaConfigured?: boolean; }
 }
 
 export default function CookieConsent() {
@@ -42,6 +42,11 @@ export default function CookieConsent() {
       if (consent === 'all') {
         try { window.gtag('consent', 'update', { 'ad_storage': 'granted', 'analytics_storage': 'granted' }); } catch (e) { console.warn('gtag consent update failed', e); }
   try { window.gtag('event', 'consent_granted', { method: 'banner' }); } catch { /* ignore */ }
+        // Configure GA only when consent is granted, and only once
+        if (!window.gaConfigured) {
+          window.gaConfigured = true;
+          try { window.gtag('config', 'G-7HTQYHMFDQ'); } catch (e) { console.warn('gtag config failed', e); }
+        }
       } else {
         try { window.gtag('consent', 'update', { 'ad_storage': 'denied', 'analytics_storage': 'denied' }); } catch (e) { console.warn('gtag consent update failed', e); }
       }

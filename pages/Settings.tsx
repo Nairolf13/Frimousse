@@ -586,11 +586,18 @@ export default function Settings() {
                   if (__scons) try { sessionStorage.setItem('cookie_consent', __scons); } catch { /* ignore */ }
                 } catch { /* ignore */ }
                 try {
+                  // Preserve cookie consent cookie
+                  const cookieConsentMatch = document.cookie.match(/(?:^|; )cookie_consent=([^;]+)/);
+                  const cookieConsentValue = cookieConsentMatch ? cookieConsentMatch[1] : null;
                   document.cookie.split(';').forEach(function(c) {
                     const name = c.split('=')[0].trim();
                     document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
                     document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname;
                   });
+                  // Restore cookie_consent cookie
+                  if (cookieConsentValue) {
+                    document.cookie = `cookie_consent=${cookieConsentValue};path=/;max-age=31536000`;
+                  }
                 } catch { /* ignore */ }
                 window.location.href = '/login';
                }}>{t('settings.logout')}</button>
