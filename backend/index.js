@@ -70,8 +70,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Serve frontend static files in production with appropriate Cache-Control headers.
-if (isProd) {
-  const distPath = path.resolve(__dirname, '..', 'dist');
+const distPath = isProd ? path.resolve(__dirname, '..', 'build') : null;
+if (isProd && distPath) {
   app.use(express.static(distPath, {
     setHeaders: (res, filePath) => {
       try {
@@ -181,6 +181,17 @@ app.use('/api/payment-history', paymentHistoryRoutes);
 app.get('/', (req, res) => {
   res.send('API is running');
 });
+
+// Catch-all handler: serve index.html for client-side routing in production
+if (isProd) {
+  app.get('*', (req, res) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
 
 app.post('/create-payment-intent', async (req, res) => {
   try {

@@ -9,6 +9,12 @@ import { HelmetProvider } from 'react-helmet-async';
 function App() {
   const [user, setUser] = useState<User | null>(null);
   useEffect(() => {
+    // Skip authentication check on public pages to avoid 401 errors in console
+    const publicPaths = ['/', '/about', '/fonctionnalites', '/tarifs', '/support', '/confidentialite', '/cgu', '/mentions-legales', '/guide-demarrage', '/guide-ajouter-enfant', '/guide-planning', '/guide-export-rapport', '/guide-securite'];
+    if (typeof window !== 'undefined' && publicPaths.includes(window.location.pathname)) {
+      return;
+    }
+
     fetchWithRefresh('/api/user/me', { headers: { 'x-skip-refresh': '1' } })
       .then(res => res && res.ok ? res.json() : null)
       .then(async data => {
