@@ -91,6 +91,29 @@ export default function Feed() {
     return () => unsub();
   }, [currentUser]);
   const [openCommentsFor, setOpenCommentsFor] = useState<string | null>(null);
+  const [commentsModalPosition, setCommentsModalPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const openCommentsModal = (postId: string) => {
+    const postElement = document.getElementById(`post-${postId}`);
+    if (postElement) {
+      const viewportWidth = window.innerWidth;
+      const isMobile = viewportWidth < 768;
+      
+      // Ajuster la largeur selon l'appareil
+      const modalWidth = isMobile ? 320 : 400; // Mobile: 320px, Desktop: 400px
+      const modalHeight = 500; // Hauteur approximative de la modal
+      
+      // Calculer la position pour centrer la modal verticalement dans la viewport visible
+      const top = (window.innerHeight / 2) - (modalHeight / 2) + window.scrollY;
+      
+      // Sur mobile : petit décalage vers la gauche, sur desktop : décalage vers la gauche
+      const offset = isMobile ? -48 : -300;
+      const left = (viewportWidth / 2) - (modalWidth / 2) + offset;
+      
+      setCommentsModalPosition({ top, left, width: modalWidth });
+      setOpenCommentsFor(postId);
+    }
+  };
   const [commentsLoading, setCommentsLoading] = useState(false);
   const [commentsForPost, setCommentsForPost] = useState<Record<string, Comment[]>>({});
 
@@ -765,7 +788,7 @@ export default function Feed() {
         {/* Posts list */}
         <div className="space-y-6">
           {posts.map((post, idx) => (
-            <article key={post.id} className={`${postBgPalette[idx % postBgPalette.length]} rounded-2xl border border-gray-100 shadow-sm p-3 md:p-6 w-full mx-auto`}>
+            <article id={`post-${post.id}`} key={post.id} className={`${postBgPalette[idx % postBgPalette.length]} rounded-2xl border border-gray-100 shadow-sm p-3 md:p-6 w-full mx-auto`}>
               <div className="flex flex-col sm:flex-row sm:items-start sm:gap-4 items-center text-center sm:text-left">
                 <div className="flex-1">
                   <PostItem post={post} bgClass={postBgPalette[idx % postBgPalette.length]} currentUser={currentUser} onUpdatePost={async (id, newText) => {
@@ -789,7 +812,7 @@ export default function Feed() {
                       >
                         ❤️ <span>{post.likes ?? 0}</span>
                       </button>
-                      <button onClick={async () => { setOpenCommentsFor(post.id); await loadComments(post.id); }} className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">💬 <span>{post.commentsCount ?? 0}</span></button>
+                      <button onClick={async () => { openCommentsModal(post.id); await loadComments(post.id); }} className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">💬 <span>{post.commentsCount ?? 0}</span></button>
                     </div>
                     <div className="w-full sm:w-auto mt-2 sm:mt-0">
                       <CommentBox postId={post.id} onSubmit={addComment} />
@@ -822,7 +845,8 @@ export default function Feed() {
         </div>
   {openCommentsFor && (
           <CommentsModal
-            onClose={() => setOpenCommentsFor(null)}
+            position={commentsModalPosition}
+            onClose={() => { setOpenCommentsFor(null); setCommentsModalPosition(null); }}
             comments={commentsForPost[openCommentsFor] || []}
             loading={commentsLoading}
             currentUser={currentUser}
@@ -859,10 +883,24 @@ export default function Feed() {
   );
 }
 
-function CommentsModal({ onClose, comments, loading, currentUser, onUpdateComment, onDeleteComment }: { onClose: () => void; comments: Comment[]; loading?: boolean; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdateComment: (commentId: string, newText: string) => Promise<void>; onDeleteComment: (commentId: string) => Promise<void>; }) {
+function CommentsModal({ onClose, comments, loading, currentUser, onUpdateComment, onDeleteComment, position }: { onClose: () => void; comments: Comment[]; loading?: boolean; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdateComment: (commentId: string, newText: string) => Promise<void>; onDeleteComment: (commentId: string) => Promise<void>; position?: { top: number; left: number; width: number } | null; }) {
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full sm:w-[720px] max-h-[90vh] overflow-hidden ring-1 ring-indigo-50">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <div 
+        className="bg-white rounded-xl shadow-xl max-h-[90vh] overflow-hidden ring-1 ring-indigo-50"
+        style={position ? { 
+          position: 'absolute', 
+          top: position.top, 
+          left: position.left, 
+          width: position.width,
+          transform: 'none'
+        } : { 
+          position: 'absolute',
+          left: '50%', 
+          top: '50%', 
+          transform: 'translate(-50%, -50%)' 
+        }}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
             <h3 className="text-lg font-semibold text-indigo-700">Commentaires</h3>
@@ -957,8 +995,9 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
           <div className="relative">
             <button onClick={() => setMenuOpen(s => !s)} className="text-gray-400 hover:text-gray-600 px-2">⋯</button>
             {menuOpen && (
-              <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setMenuOpen(false)}>
-                <div className="bg-white w-72 rounded-lg shadow-lg ring-1 ring-gray-100" onClick={e => e.stopPropagation()}>
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)}></div>
+                <div className="absolute right-0 top-full mt-1 z-50 bg-white w-48 rounded-lg shadow-lg ring-1 ring-gray-100" onClick={e => e.stopPropagation()}>
                   <div className="px-2 py-1">
                     {canEdit && (
                       <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded">
@@ -974,7 +1013,7 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
                     )}
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -1080,7 +1119,6 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
 
   async function save() {
     const trimmed = val.trim();
-    if (!trimmed) return alert('Le post ne peut pas être vide');
     try {
       const res = await fetchWithRefresh(`api/feed/${post.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: trimmed }) });
       if (!res.ok) {

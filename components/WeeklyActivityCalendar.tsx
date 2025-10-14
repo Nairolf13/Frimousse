@@ -90,14 +90,14 @@ export default function WeeklyActivityCalendar() {
   const handleAddActivity = async () => {
     if (!form.name || !form.startTime || !form.endTime || form.nannyIds.length === 0 || !form.date) return;
 
-    // Vérifier que la date n'est pas dans le passé
-    const selectedDate = new Date(form.date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selectedDate < today) {
-      alert('Vous ne pouvez pas ajouter ou modifier une activité sur une date passée.');
-      return;
-    }
+    // Suppression de la vérification de date passée - permettre l'ajout sur toutes les dates
+    // const selectedDate = new Date(form.date);
+    // const today = new Date();
+    // today.setHours(0, 0, 0, 0);
+    // if (selectedDate < today) {
+    //   alert('Vous ne pouvez pas ajouter ou modifier une activité sur une date passée.');
+    //   return;
+    // }
 
     let res;
     if (selectedActivity) {
@@ -429,7 +429,6 @@ export default function WeeklyActivityCalendar() {
                   <input
                     type="date"
                     value={form.date}
-                    min={new Date().toISOString().split('T')[0]}
                     onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
                     className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]"
                     style={{ borderColor: '#cfeef9' }}
