@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
@@ -270,7 +270,7 @@ export default function Feed() {
 
   
 
-  async function toggleLike(postId: string) {
+  const toggleLike = useCallback(async (postId: string) => {
     try {
       const res = await fetchWithRefresh(`api/feed/${postId}/like`, { method: 'POST' });
       if (!res.ok) return;
@@ -281,9 +281,9 @@ export default function Feed() {
       if (import.meta.env.DEV) console.error('Like failed', err);
       else console.error('Like failed', err instanceof Error ? err.message : String(err));
     }
-  }
+  }, [setPosts]);
 
-  async function loadLikers(postId: string) {
+  const loadLikers = useCallback(async (postId: string) => {
     try {
       const res = await fetchWithRefresh(`api/feed/${postId}/likes`);
       if (!res.ok) return setLikers([]);
@@ -295,9 +295,9 @@ export default function Feed() {
       else console.error('Failed to load likers', err instanceof Error ? err.message : String(err));
       setLikers([]);
     }
-  }
+  }, [setLikers]);
 
-  function startPress(postId: string) {
+  const startPress = useCallback((postId: string) => {
     // start long-press timer (600ms)
     if (pressTimerRef.current) { clearTimeout(pressTimerRef.current); pressTimerRef.current = null; }
     pressTimerRef.current = window.setTimeout(async () => {
@@ -330,9 +330,9 @@ export default function Feed() {
       setLikesModalOpen(true);
       pressTimerRef.current = null;
     }, 600);
-  }
+  }, [loadLikers, setLikesModalPos, setLikesModalOpen]);
 
-  function endPressShort(postId: string) {
+  const endPressShort = useCallback((postId: string) => {
     // if timer still exists, treat as short press
     if (pressTimerRef.current) {
   clearTimeout(pressTimerRef.current);
@@ -340,14 +340,14 @@ export default function Feed() {
       // short press: toggle like
       toggleLike(postId);
     }
-  }
+  }, [toggleLike]);
 
-  function cancelPress() {
+  const cancelPress = useCallback(() => {
     if (pressTimerRef.current) {
       clearTimeout(pressTimerRef.current);
       pressTimerRef.current = null;
     }
-  }
+  }, []);
 
   // Update modal positions when window resizes
   useEffect(() => {
@@ -406,11 +406,38 @@ export default function Feed() {
 
     window.addEventListener('scroll', handleScroll);
 
+    // Global event listeners for like button interactions (especially for mobile simulator)
+    const handleGlobalPointerDown = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const postId = target.closest('[data-post-id]')?.getAttribute('data-post-id');
+      if (postId) {
+        startPress(postId);
+      }
+    };
+
+    const handleGlobalPointerUp = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const postId = target.closest('[data-post-id]')?.getAttribute('data-post-id');
+      if (postId) {
+        endPressShort(postId);
+      }
+    };
+
+    // Add global listeners with capture phase to ensure they work in mobile simulator
+    document.addEventListener('mousedown', handleGlobalPointerDown, true);
+    document.addEventListener('mouseup', handleGlobalPointerUp, true);
+    document.addEventListener('touchstart', handleGlobalPointerDown, { capture: true, passive: false });
+    document.addEventListener('touchend', handleGlobalPointerUp, { capture: true, passive: false });
+
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('mousedown', handleGlobalPointerDown, true);
+      document.removeEventListener('mouseup', handleGlobalPointerUp, true);
+      document.removeEventListener('touchstart', handleGlobalPointerDown, true);
+      document.removeEventListener('touchend', handleGlobalPointerUp, true);
     };
-  }, [openCommentsFor, likesModalOpen, likesModalPos]);
+  }, [openCommentsFor, likesModalOpen, likesModalPos, startPress, endPressShort]);
 
   async function addComment(postId: string, text: string) {
     try {
@@ -872,11 +899,12 @@ export default function Feed() {
                   <div className="mt-4 flex flex-col sm:flex-row sm:items-center items-center justify-center text-sm text-gray-500 gap-2">
                     <div className="flex items-center gap-4 sm:gap-6">
                       <button
+                        data-post-id={post.id}
                         onPointerDown={() => startPress(post.id)}
                         onPointerUp={() => endPressShort(post.id)}
                         onPointerLeave={() => cancelPress()}
                         onContextMenu={(e) => { e.preventDefault(); }}
-                        className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base"
+                        className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base select-none"
                       >
                         ❤️ <span>{post.likes ?? 0}</span>
                       </button>
@@ -891,7 +919,7 @@ export default function Feed() {
             </article>
           ))}
           {likesModalOpen && (
-            <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm p-4" onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }}>
+            <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm p-4">
               {/* position the modal element absolutely at the computed coords; if no coords, center it */}
               <div 
                 className="bg-white rounded-xl shadow-xl max-h-[90vh] overflow-hidden ring-1 ring-indigo-50"
