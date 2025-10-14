@@ -5,16 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "npm run start",
-    "build": "npx vite build && node scripts/pre-render.js && npm run build:copy",
-    "build:copy": "rm -rf build && cp -r dist build",
-    "build:prerender": "npx vite build && node scripts/pre-render.js",
+
+    "build": "vite build && cp -r dist build",
+
     "prod": "npm run start:prod",
     "start": "npm-run-all --parallel start:front start:back",
     "start:front": "vite",
     "start:back": "cd backend && node index.js",
     "generate-sitemap": "node backend/scripts/generate_sitemap.js",
     "start:prod": "npm-run-all --parallel start:front:prod start:back:prod",
-    "start:front:prod": "vite build && node scripts/pre-render.js && vite preview",
+
+    "start:front:prod": "vite build && cp -r dist build && vite preview",
+
     "start:back:prod": "cd backend && NODE_ENV=production node index.js",
     "test": "vitest"
   },
