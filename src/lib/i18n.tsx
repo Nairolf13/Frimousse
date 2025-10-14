@@ -301,6 +301,7 @@ const translations: Record<Locale, Record<string, string>> = {
     // nav
     'nav.assistant': 'Assistant IA',
     'common.none': '—',
+    'common.view_more': 'View more',
     'payments.history.title': 'Payment history',
     'payments.history.empty': 'No records for this period.',
     'payments.total': 'Total',
