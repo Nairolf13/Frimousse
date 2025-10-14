@@ -83,10 +83,7 @@ export default function WeeklyActivityCalendar() {
   useEffect(() => {
     fetchWithRefresh(`${API_URL}/schedules`, { credentials: 'include' })
       .then(res => res.json())
-      .then(data => {
-        console.log('Activities loaded:', data.length, data);
-        setActivities(data);
-      });
+      .then(data => setActivities(data));
   }, [currentDate]);
 
 
@@ -236,8 +233,8 @@ export default function WeeklyActivityCalendar() {
                           const dateStr = date.toISOString().split('T')[0];
                           const activitiesAtSlot = activities.filter(a => {
                             const activityDate = a.date.split('T')[0];
-                            const [startH, startM] = a.startTime.split(':').map(Number);
-                            return activityDate === dateStr && startH === hour && startM === 0;
+                            const [startH] = a.startTime.split(':').map(Number);
+                            return activityDate === dateStr && startH === hour; // Montrer toutes les activités qui commencent pendant cette heure
                           });
                           if (activitiesAtSlot.length > 0) {
                             const dayActivities = activities.filter(a => a.date.split('T')[0] === dateStr);
