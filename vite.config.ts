@@ -11,13 +11,17 @@ export default defineConfig({
     target: 'es2022',
     // Emit sourcemaps in production to debug runtime errors originating from bundles
     sourcemap: true,
-    // Let Rollup/Vite automatically determine chunking to avoid circular import ordering issues
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 1000,
+    // Optimize chunking for better performance
     rollupOptions: {
       output: {
-        // default chunking (no manualChunks) — keeps natural dependency ordering
+        // Optimize chunk file names for better caching
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
-    },
-    chunkSizeWarningLimit: 800
+    }
   },
   server: {
     host: true,
