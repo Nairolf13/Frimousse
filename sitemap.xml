@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://lesfrimousses.com/</loc>
-    <lastmod>2025-09-30</lastmod>
+    <lastmod>2025-10-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
@@ -17,22 +17,32 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://lesfrimousses.com/pricing</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://lesfrimousses.com/about</loc>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://lesfrimousses.com/guide-start</loc>
+    <loc>https://lesfrimousses.com/cgu</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/confidentialite</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/mentions-legales</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/guide-demarrage</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://lesfrimousses.com/support</loc>
+    <loc>https://lesfrimousses.com/guide-ajouter-enfant</loc>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
@@ -42,14 +52,30 @@
     <priority>0.5</priority>
   </url>
   <url>
-    <loc>https://lesfrimousses.com/privacy</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
+    <loc>https://lesfrimousses.com/guide-export-rapport</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/guide-securite</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/support</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
   </url>
   <url>
     <loc>https://lesfrimousses.com/centers/cd4c0eb8-599e-4a5f-9549-12e4b57ffd1d</loc>
     <lastmod>2025-09-30</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/reviews/44df4117-bb4a-48ab-b48b-f802d4a5f02b</loc>
+    <lastmod>2025-10-07</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.4</priority>
   </url>
 </urlset>
