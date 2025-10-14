@@ -73,8 +73,7 @@ export default function Feed() {
   const [likesModalOpen, setLikesModalOpen] = useState(false);
   const [likers, setLikers] = useState<{ id: string; name: string }[]>([]);
   const pressTimerRef = useRef<number | null>(null);
-  const [likesModalPos, setLikesModalPos] = useState<{ x: number; y: number } | null>(null);
-  const postRefs = useRef<Record<string, HTMLElement | null>>({});
+  const [likesModalPos, setLikesModalPos] = useState<{ top: number; left: number; width: number } | null>(null);
   // filter removed - not used anymore
   const { user } = useAuth();
   // AuthContext's User may include extra runtime fields (id, centerId) returned by the API
@@ -107,7 +106,7 @@ export default function Feed() {
       const top = (window.innerHeight / 2) - (modalHeight / 2) + window.scrollY;
       
       // Sur mobile : petit décalage vers la gauche, sur desktop : décalage vers la gauche
-      const offset = isMobile ? -48 : -300;
+      const offset = isMobile ? -48 : -250;
       const left = (viewportWidth / 2) - (modalWidth / 2) + offset;
       
       setCommentsModalPosition({ top, left, width: modalWidth });
@@ -303,19 +302,25 @@ export default function Feed() {
     if (pressTimerRef.current) { clearTimeout(pressTimerRef.current); pressTimerRef.current = null; }
     pressTimerRef.current = window.setTimeout(async () => {
       await loadLikers(postId);
-      // compute post center position and open modal there
+      // compute modal position like comments modal
       try {
-        const el = postRefs.current[postId];
+        const el = document.getElementById(`post-${postId}`);
         if (el) {
-          const rect = el.getBoundingClientRect();
-          // center point of the post in viewport coords
-          const cx = rect.left + rect.width / 2;
-          const cy = rect.top + rect.height / 2;
-          // clamp within viewport with some padding so modal doesn't touch edges
-          const padding = 80;
-          const top = Math.min(Math.max(cy, padding), window.innerHeight - padding);
-          const left = Math.min(Math.max(cx, 16), window.innerWidth - 16);
-          setLikesModalPos({ x: left, y: top });
+          const viewportWidth = window.innerWidth;
+          const isMobile = viewportWidth < 768;
+          
+          // Ajuster la largeur selon l'appareil (comme pour les commentaires)
+          const modalWidth = isMobile ? 280 : 400;
+          const modalHeight = 500; // Hauteur approximative de la modal
+          
+          // Calculer la position pour centrer la modal verticalement dans la viewport visible
+          const top = (window.innerHeight / 2) - (modalHeight / 2) + window.scrollY;
+          
+          // Sur mobile : petit décalage vers la gauche, sur desktop : décalage vers la gauche
+          const offset = isMobile ? -48 : -300;
+          const left = (viewportWidth / 2) - (modalWidth / 2) + offset;
+          
+          setLikesModalPos({ top, left, width: modalWidth });
         } else {
           setLikesModalPos(null);
         }
@@ -343,6 +348,69 @@ export default function Feed() {
       pressTimerRef.current = null;
     }
   }
+
+  // Update modal positions when window resizes
+  useEffect(() => {
+    const handleResize = () => {
+      // Force immediate recalculation without debounce for better responsiveness
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const currentScrollY = window.scrollY || window.pageYOffset || 0;
+      const isMobile = viewportWidth < 768;
+
+      // Use same dimensions as initial calculation
+      const modalWidth = isMobile ? 280 : 400;
+      const modalHeight = 500;
+
+      // Ensure modal stays within viewport bounds
+      const maxLeft = viewportWidth - modalWidth - 20; // 20px margin
+      const minLeft = 20; // 20px margin
+
+      // Recalculate comments modal position if open
+      if (openCommentsFor) {
+        const centerY = viewportHeight / 2;
+        const centerX = viewportWidth / 2;
+
+        const top = centerY - (modalHeight / 2) + currentScrollY;
+        let left = centerX - (modalWidth / 2) + (isMobile ? -48 : -300);
+
+        // Constrain to viewport
+        left = Math.max(minLeft, Math.min(maxLeft, left));
+
+        setCommentsModalPosition({ top, left, width: modalWidth });
+      }
+
+      // Recalculate likes modal position if open
+      if (likesModalOpen && likesModalPos) {
+        const centerY = viewportHeight / 2;
+        const centerX = viewportWidth / 2;
+
+        const top = centerY - (modalHeight / 2) + currentScrollY;
+        let left = centerX - (modalWidth / 2) + (isMobile ? -48 : -300);
+
+        // Constrain to viewport
+        left = Math.max(minLeft, Math.min(maxLeft, left));
+
+        setLikesModalPos({ top, left, width: modalWidth });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // Also listen for scroll events to keep modals positioned correctly
+    const handleScroll = () => {
+      if (openCommentsFor || (likesModalOpen && likesModalPos)) {
+        handleResize();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [openCommentsFor, likesModalOpen, likesModalPos]);
 
   async function addComment(postId: string, text: string) {
     try {
@@ -823,21 +891,40 @@ export default function Feed() {
             </article>
           ))}
           {likesModalOpen && (
-            <div className="fixed inset-0 z-60 bg-black/40" onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }}>
+            <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm p-4" onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }}>
               {/* position the modal element absolutely at the computed coords; if no coords, center it */}
-              <div style={likesModalPos ? { left: likesModalPos.x - 160, top: likesModalPos.y - 80 } : undefined} className={`absolute ${likesModalPos ? '' : 'inset-0 flex items-center justify-center'}`} onClick={e => e.stopPropagation()}>
-                <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-4" style={likesModalPos ? { position: 'absolute' } : undefined}>
-                  <h3 className="text-lg font-semibold mb-3">Personnes qui ont aimé</h3>
-                  <div className="max-h-60 overflow-auto">
-                    {likers.length === 0 ? <div className="text-sm text-gray-500">Aucun like trouvé</div> : (
-                      <ul className="space-y-2">
-                        {likers.map(u => <li key={u.id} className="text-sm text-gray-800">{u.name}</li>)}
-                      </ul>
-                    )}
+              <div 
+                className="bg-white rounded-xl shadow-xl max-h-[90vh] overflow-hidden ring-1 ring-indigo-50"
+                style={likesModalPos ? { 
+                  position: 'absolute', 
+                  top: likesModalPos.top, 
+                  left: likesModalPos.left, 
+                  width: likesModalPos.width,
+                  transform: 'none'
+                } : { 
+                  position: 'absolute',
+                  left: '50%', 
+                  top: '50%', 
+                  transform: 'translate(-50%, -50%)' 
+                }}
+              >
+                <div className="flex items-center justify-between px-5 py-4 border-b">
+                  <div>
+                    <h3 className="text-lg font-semibold text-indigo-700">Personnes qui ont aimé</h3>
+                    <div className="text-sm text-indigo-600">{likers.length} personne{likers.length > 1 ? 's' : ''}</div>
                   </div>
-                  <div className="mt-4 text-right">
-                    <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} className="px-3 py-1 rounded bg-indigo-600 text-white">Fermer</button>
-                  </div>
+                  <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} aria-label="Fermer" className="text-indigo-600 hover:text-indigo-800 rounded-md p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 8.586L15.95 2.636a1 1 0 111.414 1.414L11.414 10l5.95 5.95a1 1 0 01-1.414 1.414L10 11.414l-5.95 5.95A1 1 0 012.636 15.95L8.586 10 2.636 4.05A1 1 0 014.05 2.636L10 8.586z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="p-4 overflow-auto max-h-[80vh]">
+                  {likers.length === 0 ? <div className="text-center text-gray-500 py-8">Aucun like trouvé</div> : (
+                    <ul className="space-y-2">
+                      {likers.map(u => <li key={u.id} className="text-sm text-gray-800">{u.name}</li>)}
+                    </ul>
+                  )}
                 </div>
               </div>
             </div>
