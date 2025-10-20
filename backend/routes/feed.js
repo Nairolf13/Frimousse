@@ -512,6 +512,26 @@ router.post('/:postId/media', authMiddleware, checkContentLength, upload.array('
     }
 
     const files = req.files || [];
+    // Normalize tagging fields from multipart form fields (multer populates req.body)
+    const { taggedChildIds, childId, noChildSelected } = req.body || {};
+    const tagged = Array.isArray(taggedChildIds) ? taggedChildIds.filter(Boolean) : (childId ? [childId] : []);
+    // When uploading files, require the user to either mark 'noChildSelected' or identify at least one child
+    if (files.length > 0) {
+      if (!noChildSelected && (!tagged || tagged.length === 0)) {
+        return res.status(400).json({ message: 'Veuillez identifier les enfants ou sélectionner "Pas d\'enfant" avant d\'uploader des photos.' });
+      }
+      // If tagged children provided, ensure each has photo consent
+      if (tagged && tagged.length > 0) {
+        const lacking = [];
+        for (const cid of tagged) {
+          const consent = await prisma.photoConsent.findFirst({ where: { childId: cid, consent: true } });
+          if (!consent) lacking.push(cid);
+        }
+        if (lacking.length > 0) {
+          return res.status(403).json({ message: 'Photo consent absent for some children', lacking });
+        }
+      }
+    }
     // require storage when files are provided
     if (files.length === 0) return res.status(400).json({ message: 'No files provided' });
     if (files.length > 0 && (!SUPABASE_URL || !SUPABASE_KEY)) {

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
@@ -17,8 +18,25 @@ type Comment = { id?: string; authorName: string; authorId?: string; timeAgo: st
 type Post = { id: string; text?: string; createdAt: string; author?: { name?: string }; authorId?: string; medias?: Media[]; likes?: number; commentsCount?: number; shares?: number; comments?: Comment[] };
 
 import FeedImage from '../src/components/FeedImage';
+import ChildSelector from '../components/ChildSelector';
 import FeedLightbox from '../src/components/FeedLightbox';
 import type { Media as LightboxMedia } from '../src/components/FeedLightbox';
+
+function Spinner({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      className="animate-spin text-white"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="4"></circle>
+      <path d="M22 12a10 10 0 00-10-10" stroke="currentColor" strokeWidth="4" strokeLinecap="round"></path>
+    </svg>
+  );
+}
 
 function timeAgo(dateStr: string) {
   const d = new Date(dateStr);
@@ -56,6 +74,7 @@ export default function Feed() {
   }, []);
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [availableChildren, setAvailableChildren] = useState<{ id: string; name: string; allowed?: boolean }[]>([]);
   const [selectedChildIds, setSelectedChildIds] = useState<string[]>([]);
   const [consentMap, setConsentMap] = useState<Record<string, boolean>>({});
@@ -462,6 +481,8 @@ export default function Feed() {
     e.preventDefault();
     if (!text && files.length === 0) return;
     setLoading(true);
+    // show upload indicator when files are present
+    if (files.length > 0) setUploading(true);
     try {
       // Require either 'Pas d'enfant' or at least one tagged child when images attached
       if (!noChildSelected && selectedChildIds.length === 0 && files.length > 0) {
@@ -544,7 +565,7 @@ export default function Feed() {
             }
 
             // finalize so backend can create DB rows
-            const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: created.id, size: f.size, originalName: f.name }) });
+            const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: created.id, size: f.size, originalName: f.name, taggedChildIds: selectedChildIds || [], noChildSelected: !!noChildSelected }) });
             if (!finRes.ok) {
               const b = await finRes.json().catch(() => ({}));
               console.error('Finalize failed', b);
@@ -572,6 +593,8 @@ export default function Feed() {
       if (selectedChildIds && selectedChildIds.length) {
         for (const cid of selectedChildIds) fd.append('taggedChildIds[]', cid);
       }
+      // include explicit flag when user selected 'no child' so backend can validate
+      if (noChildSelected) fd.append('noChildSelected', '1');
 
       const res = await fetchWithRefresh('api/feed', { method: 'POST', body: fd });
       if (res.ok) {
@@ -588,6 +611,7 @@ export default function Feed() {
       showError('Erreur réseau', 'Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.');
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   }
 
@@ -649,6 +673,7 @@ export default function Feed() {
                       capture="environment"
                       className="hidden"
                       onChange={e => {
+                        if (uploading) return;
                         const input = e.currentTarget as HTMLInputElement;
                         const newFiles = Array.from(input.files || []);
                         if (newFiles.length === 0) return;
@@ -657,7 +682,7 @@ export default function Feed() {
                         input.value = '';
                       }}
                     />
-                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">📷 {t('feed.photo')}</span>
+                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">📷 {uploading ? <Spinner size={18} /> : t('feed.photo')}</span>
                   </label>
                   {/* Gallery input (choose existing images) */}
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -667,6 +692,7 @@ export default function Feed() {
                       multiple
                       className="hidden"
                       onChange={e => {
+                        if (uploading) return;
                         const input = e.currentTarget as HTMLInputElement;
                         const newFiles = Array.from(input.files || []);
                         if (newFiles.length === 0) return;
@@ -674,7 +700,7 @@ export default function Feed() {
                         input.value = '';
                       }}
                     />
-                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-xs sm:text-sm">🖼 {t('feed.gallery')}</span>
+                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-xs sm:text-sm">🖼 {uploading ? <Spinner size={18} /> : t('feed.gallery')}</span>
                   </label>
                   <span className="text-xs text-gray-400">{files.length === 0 ? t('feed.no_images') : `${files.length} ${t('feed.images')}`}</span>
                 </div>
@@ -698,112 +724,23 @@ export default function Feed() {
                         </button>
                       </div>
 
-                      {/* Desktop dropdown (visible on sm+) */}
-                      <div className="hidden sm:block">
-                        {showTagMenu && (
-                          <div className="absolute z-40 mt-2 w-64 bg-white border rounded shadow-lg p-3 max-h-56 overflow-auto">
-                            <div className="text-sm font-semibold mb-2">{t('feed.select_children')}</div>
-                            {availableChildren.length === 0 ? (
-                              <div className="text-sm text-gray-500">{t('feed.no_children_available')}</div>
-                            ) : (
-                              <div className="grid gap-2">
-                                {/* 'Pas d'enfant' option at top */}
-                                            <label className="flex items-center gap-2 text-sm">
-                                              <input type="checkbox" checked={noChildSelected} onChange={(e) => {
-                                                if (e.target.checked) {
-                                                  setNoChildSelected(true);
-                                                  setSelectedChildIds([]);
-                                                } else {
-                                                  setNoChildSelected(false);
-                                                }
-                                                setShowIdentifyWarning(false);
-                                              }} />
-                                              <span className="font-medium">{t('feed.no_child')}</span>
-                                            </label>
-                                {availableChildren.map(c => {
-                                  const allowed = consentMap[c.id] ?? false;
-                                  const checked = selectedChildIds.includes(c.id);
-                                  return (
-                                    <label key={c.id} className="flex items-center gap-2 text-sm">
-                                      <input type="checkbox" checked={checked} onChange={(e) => {
-                                        // selecting a real child disables 'Pas d'enfant'
-                                        if (e.target.checked) {
-                                          setNoChildSelected(false);
-                                          setSelectedChildIds(prev => [...prev, c.id]);
-                                        } else setSelectedChildIds(prev => prev.filter(id => id !== c.id));
-                                        setShowIdentifyWarning(false);
-                                      }} disabled={noChildSelected} />
-                                      <span className="truncate">{c.name}</span>
-                                      {!allowed && <span className="text-xs text-red-500 ml-2">(pas d'autorisation)</span>}
-                                    </label>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            <div className="mt-3 flex justify-end">
-                              <button onClick={() => setShowTagMenu(false)} className="px-3 py-1 bg-gray-100 rounded text-sm">{t('common.close')}</button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Mobile modal (visible on small screens) */}
-                      {showTagMenu && (
-                        <div className="sm:hidden fixed inset-0 z-50 bg-black/40 flex items-start justify-center p-4 pt-10">
-                          <div className="mx-4 w-full max-w-md bg-white rounded-xl p-4 max-h-[85vh] overflow-auto shadow-lg">
-                              <div className="flex items-center justify-between mb-3">
-                              <div className="text-lg font-semibold">{t('feed.tag_children')}</div>
-                              <button onClick={() => setShowTagMenu(false)} className="text-gray-600">{t('common.close')}</button>
-                            </div>
-                              {availableChildren.length === 0 ? (
-                                <div className="text-sm text-gray-500">{t('feed.no_children_available')}</div>
-                              ) : (
-                                <div className="space-y-2">
-                                  {/* top: Pas d'enfant */}
-                                  <label className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-base p-2 border rounded">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                          <input type="checkbox" checked={noChildSelected} onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setNoChildSelected(true);
-                                          setSelectedChildIds([]);
-                                        } else setNoChildSelected(false);
-                                        setShowIdentifyWarning(false);
-                                      }} />
-                                      <span className="break-words font-medium">{t('feed.no_child')}</span>
-                                    </div>
-                                    <span className="text-xs text-gray-500 sm:ml-2">Cocher si aucune personne identifiable</span>
-                                  </label>
-                                  {availableChildren.map(c => {
-                                    const allowed = consentMap[c.id] ?? false;
-                                    const checked = selectedChildIds.includes(c.id);
-                                    return (
-                                      <label key={c.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-base p-2 border rounded">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                          <input type="checkbox" checked={checked} disabled={noChildSelected} onChange={(e) => {
-                                            if (e.target.checked) {
-                                              setNoChildSelected(false);
-                                              setSelectedChildIds(prev => [...prev, c.id]);
-                                            } else setSelectedChildIds(prev => prev.filter(id => id !== c.id));
-                                            setShowIdentifyWarning(false);
-                                          }} />
-                                          <span className="break-words">{c.name}</span>
-                                        </div>
-                                        {!allowed && <span className="text-xs text-red-500 sm:ml-2">{t('feed.no_authorization')}</span>}
-                                      </label>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                              <div className="mt-4">
-                              <button onClick={() => setShowTagMenu(false)} className="w-full px-4 py-2 bg-indigo-600 text-white rounded">{t('common.confirm')}</button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      {/* Reusable child selector (desktop dropdown + mobile modal) */}
+                      <ChildSelector
+                        open={showTagMenu}
+                        onClose={() => setShowTagMenu(false)}
+                        availableChildren={availableChildren}
+                        selectedChildIds={selectedChildIds}
+                        setSelectedChildIds={setSelectedChildIds}
+                        noChildSelected={noChildSelected}
+                        setNoChildSelected={setNoChildSelected}
+                        consentMap={consentMap}
+                        title={t('feed.tag_children')}
+                        confirmLabel={t('common.confirm')}
+                      />
                     </div>
                   )}
                 </div>
-                <button disabled={loading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="bg-indigo-600 text-white px-4 py-2 rounded-full w-full sm:w-auto max-w-full">{loading ? 'Envoi...' : 'Publier'}</button>
+                <button type="submit" disabled={loading || uploading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="bg-indigo-600 text-white px-4 py-2 rounded-full w-full sm:w-auto max-w-full flex items-center justify-center gap-2">{(loading || uploading) ? <><Spinner size={20} /> <span>Envoi...</span></> : 'Publier'}</button>
               </div>
               {/* If the user tried to publish without tagging children when required, show an inline warning */}
               {showIdentifyWarning && (
@@ -1140,7 +1077,7 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
           <div className="mt-2">
             <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[64px]" />
             <div className="mt-2 flex gap-2 justify-end">
-              <button onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1 rounded bg-gray-100">Annuler</button>
+              <button type="button" onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1 rounded bg-gray-100">Annuler</button>
               <button onClick={save} className="px-3 py-1 rounded bg-indigo-600 text-white">Sauvegarder</button>
             </div>
           </div>
@@ -1169,7 +1106,7 @@ function ConfirmationModal({ title, description, onCancel, onConfirm }: { title:
     }
   }
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md ring-1 ring-indigo-50">
         <div className="px-6 py-4">
@@ -1179,12 +1116,15 @@ function ConfirmationModal({ title, description, onCancel, onConfirm }: { title:
           </p>
         </div>
         <div className="px-6 py-3 flex flex-col sm:flex-row justify-center gap-3 border-t">
-          <button onClick={onCancel} className="px-4 py-2 rounded bg-gray-100">Annuler</button>
+          <button type="button" onClick={onCancel} className="px-4 py-2 rounded bg-gray-100">Annuler</button>
           <button onClick={confirmHandler} disabled={loading} className="px-4 py-2 rounded bg-red-600 text-white">{loading ? 'Suppression...' : 'Supprimer'}</button>
         </div>
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modal, document.body);
 }
 
 function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMediasChange }: { post: Post; bgClass?: string; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdatePost: (postId: string, newText: string) => Promise<void>; onDeletePost: (postId: string) => Promise<void>; onMediasChange?: (postId: string, medias: Media[]) => void; }) {
@@ -1196,9 +1136,54 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
   const role = currentUser?.role || '';
   const canEdit = !!currentUser && (currentUser.id === post.authorId || ['admin', 'super-admin'].includes(role));
 
+  const { t } = useI18n();
+
   const mediaCount = post.medias ? post.medias.length : 0;
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadAbortRef = useRef<AbortController | null>(null);
+  const createdMediaIdsRef = useRef<string[]>([]);
+  const [availableChildrenLocal, setAvailableChildrenLocal] = useState<{ id: string; name: string }[]>([]);
+  const [selectedChildIdsLocal, setSelectedChildIdsLocal] = useState<string[]>([]);
+  const [consentMapLocal, setConsentMapLocal] = useState<Record<string, boolean>>({});
+  const [noChildSelectedLocal, setNoChildSelectedLocal] = useState(false);
+  const [showTagMenuLocal, setShowTagMenuLocal] = useState(false);
+  const [uploadingLocal, setUploadingLocal] = useState(false);
+  const [showIdentifyWarningLocal, setShowIdentifyWarningLocal] = useState(false);
+  const [stagedFilesLocal, setStagedFilesLocal] = useState<File[]>([]);
+  const [stagedPreviewsLocal, setStagedPreviewsLocal] = useState<string[]>([]);
+
+  // load children & consents when entering edit mode so tagging UI is ready
+  useEffect(() => {
+    let mounted = true;
+    async function loadLocalChildren() {
+      try {
+        const res = await fetchWithRefresh('api/children', { credentials: 'include' });
+        if (!res.ok) return;
+        const children = await res.json();
+        const mapped = Array.isArray(children) ? (children as { id: string; name: string }[]).map(c => ({ id: c.id, name: c.name })) : [];
+        if (!mounted) return;
+        setAvailableChildrenLocal(mapped);
+        const consentResults = await Promise.all(mapped.map(async (c) => {
+          try {
+            const r = await fetchWithRefresh(`api/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
+            if (!r.ok) return { id: c.id, allowed: false };
+            const b = await r.json();
+            return { id: c.id, allowed: !!b.allowed };
+          } catch {
+            return { id: c.id, allowed: false };
+          }
+        }));
+        const cm: Record<string, boolean> = {};
+        consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
+        if (mounted) setConsentMapLocal(cm);
+      } catch (e) {
+        console.error('Failed to load children/consents for PostItem', e);
+      }
+    }
+    if (editing && availableChildrenLocal.length === 0) loadLocalChildren();
+    return () => { mounted = false; };
+  }, [editing, availableChildrenLocal.length]);
 
   // lightbox state for slideshow
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -1240,14 +1225,18 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
       const res = await fetchWithRefresh(`api/feed/${post.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: trimmed }) });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
-        return alert(b.message || 'Échec de la modification');
+        alert(b.message || 'Échec de la modification');
+        return false;
       }
       await onUpdatePost(post.id, trimmed);
-      setEditing(false);
+      // only close editor here if caller desires; return success so caller can decide about staged files
       setMenuOpen(false);
+      setEditing(false);
+      return true;
     } catch (e) {
       console.error('Failed to edit post', e);
       alert('Erreur réseau');
+      return false;
     }
   }
 
@@ -1268,6 +1257,25 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
 
   // Media handlers
   async function handleUploadImages(files: FileList | null) {
+    setUploadingLocal(true);
+    // create an AbortController for this upload operation so user can cancel via Annuler
+    const controller = new AbortController();
+    uploadAbortRef.current = controller;
+  const createdMediaIds: string[] = [];
+  createdMediaIdsRef.current = createdMediaIds;
+    // ensure tagging/consent sanity before uploading
+    if (!noChildSelectedLocal && selectedChildIdsLocal.length === 0 && files && files.length > 0) {
+      // require identification when attaching files
+      uploadAbortRef.current = null;
+      setUploadingLocal(false);
+      return alert('Veuillez identifier les enfants ou cocher "Pas d\'enfant" avant d\'ajouter des fichiers.');
+    }
+    // prevent upload when any selected child lacks consent
+    const lacking = selectedChildIdsLocal.filter(id => !consentMapLocal[id]);
+    if (lacking.length > 0) {
+      const names = availableChildrenLocal.filter(c => lacking.includes(c.id)).map(c => c.name).join(', ');
+      return alert(`Impossible d'envoyer : autorisation photo manquante pour ${names}.`);
+    }
     if (!files || files.length === 0) return;
     const currentCount = (post.medias || []).length;
     const maxAllowed = 6;
@@ -1324,46 +1332,101 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
     if (anyDirect) {
       const supabaseClient = createSupabaseClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY);
       for (const f of toUpload) {
-        try {
+          try {
           const signRes = await fetchWithRefresh('api/uploads/supabase/sign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: f.name, contentType: f.type, prefix: 'feed' }) });
           if (!signRes.ok) {
             const b = await signRes.json().catch(() => ({}));
             console.error('Sign failed', b);
             continue;
           }
+          // if abort was requested after sign, stop
+          if (controller.signal.aborted) {
+            uploadAbortRef.current = null;
+            setUploadingLocal(false);
+            return;
+          }
           const signBody = await signRes.json();
           const storagePath = signBody.storagePath;
           const bucket = signBody.bucket || VITE_SUPABASE_BUCKET;
-
+          // perform direct upload
           const { error: upErr } = await supabaseClient.storage.from(bucket).upload(storagePath, f, { contentType: f.type, upsert: false });
-          if (upErr) { console.error('Direct upload error', upErr); continue; }
+          if (upErr) {
+            console.error('Direct upload error', upErr);
+            continue;
+          }
 
-          const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: post.id, size: f.size, originalName: f.name }) });
+          // if abort requested after upload but before finalize, try to cleanup the uploaded object and stop
+          if (controller.signal.aborted) {
+            try {
+              await supabaseClient.storage.from(bucket).remove([storagePath]);
+            } catch (e) {
+              console.warn('Failed to cleanup partially uploaded object', e);
+            }
+            uploadAbortRef.current = null;
+            setUploadingLocal(false);
+            return;
+          }
+
+          const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: post.id, size: f.size, originalName: f.name, taggedChildIds: selectedChildIdsLocal || [], noChildSelected: !!noChildSelectedLocal }) });
           if (!finRes.ok) { const b = await finRes.json().catch(() => ({})); console.error('Finalize failed', b); continue; }
           const finBody = await finRes.json();
           const newMedias: Media[] = finBody.medias || [];
+          // record created media ids so we can cleanup if the user cancels during the session
+          (newMedias || []).forEach(m => { if (m && m.id) createdMediaIds.push(m.id); });
           if (onMediasChange) onMediasChange(post.id, (post.medias || []).concat(newMedias));
-        } catch (e) {
-          console.error('Direct upload loop error', e);
-        }
+          } catch (err) {
+            if (err instanceof Error && (err as Error).name === 'AbortError') {
+              // user cancelled – attempt to cleanup any medias we already created in this session
+              try {
+                for (const mid of createdMediaIds) {
+                  await fetchWithRefresh(`api/feed/${post.id}/media/${mid}`, { method: 'DELETE' });
+                }
+              } catch (e) {
+                console.warn('Failed to cleanup created medias after abort', e);
+              }
+              uploadAbortRef.current = null;
+              setUploadingLocal(false);
+              return;
+            }
+            console.error('Direct upload loop error', err);
+          }
       }
+      setUploadingLocal(false);
+      uploadAbortRef.current = null;
       return;
     }
 
     // fallback to server multipart upload (subject to server per-file limits)
     const fd = new FormData();
     for (const f of toUpload) fd.append('images', f, f.name);
+    if (selectedChildIdsLocal && selectedChildIdsLocal.length) {
+      for (const cid of selectedChildIdsLocal) fd.append('taggedChildIds[]', cid);
+    }
+    if (noChildSelectedLocal) fd.append('noChildSelected', '1');
     try {
-      const res = await fetchWithRefresh(`api/feed/${post.id}/media`, { method: 'POST', body: fd });
+      const res = await fetchWithRefresh(`api/feed/${post.id}/media`, { method: 'POST', signal: controller.signal, body: fd });
       if (!res.ok) {
         const b = await res.json().catch(() => ({}));
+        uploadAbortRef.current = null;
+        setUploadingLocal(false);
         return alert(b.message || 'Échec de l\'upload');
       }
       const body = await res.json();
       const newMedias: Media[] = body.medias || [];
+      (newMedias || []).forEach(m => { if (m && m.id) createdMediaIds.push(m.id); });
       if (onMediasChange) onMediasChange(post.id, (post.medias || []).concat(newMedias));
-    } catch (e) {
-      console.error('Upload failed', e);
+      uploadAbortRef.current = null;
+      setUploadingLocal(false);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        // cancelled by user
+        uploadAbortRef.current = null;
+        setUploadingLocal(false);
+        return;
+      }
+      console.error('Upload failed', err);
+      uploadAbortRef.current = null;
+      setUploadingLocal(false);
       alert('Erreur réseau');
     }
   }
@@ -1464,8 +1527,70 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
       {canEdit && editing && (
         <div className="mt-3">
             <div className="inline-flex items-center gap-2">
-              <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={e => handleUploadImages(e.currentTarget.files)} />
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">Ajouter des fichiers (images/vidéos, max 6)</button>
+              <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={e => {
+                if (uploadingLocal) return;
+                const input = e.currentTarget as HTMLInputElement;
+                const newFiles = Array.from(input.files || []);
+                if (newFiles.length === 0) return;
+                // Stage files locally — will be uploaded on 'Sauvegarder'
+                setStagedFilesLocal(prev => [...prev, ...newFiles]);
+                const newPreviews = newFiles.map(f => URL.createObjectURL(f));
+                setStagedPreviewsLocal(prev => [...prev, ...newPreviews]);
+                input.value = '';
+              }} />
+              <button type="button" onClick={() => { if (!uploadingLocal) fileInputRef.current?.click(); }} disabled={uploadingLocal} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm flex items-center gap-2">{uploadingLocal ? <Spinner size={20} /> : 'Ajouter des fichiers (images/vidéos, max 6)'}</button>
+            </div>
+            {/* Staged previews for files chosen during edit */}
+            {stagedPreviewsLocal.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {stagedPreviewsLocal.map((p, i) => (
+                  <div key={i} className="w-full h-16 sm:h-20 md:h-24 bg-gray-100 rounded overflow-hidden relative flex items-center justify-center">
+                    {stagedFilesLocal[i] && stagedFilesLocal[i].type && stagedFilesLocal[i].type.startsWith('video/') ? (
+                      <video src={p} className="w-full h-full object-contain" controls />
+                    ) : (
+                      <img src={p} className="w-full h-full object-contain" />
+                    )}
+                    <button type="button" aria-label={`Retirer le fichier ${i + 1}`} onClick={() => {
+                      // remove file and preview at index i
+                      setStagedFilesLocal(prev => { const next = prev.slice(); next.splice(i, 1); return next; });
+                      setStagedPreviewsLocal(prev => { const next = prev.slice(); try { URL.revokeObjectURL(next[i]); } catch { /* ignore revoke errors */ } next.splice(i, 1); return next; });
+                    }} className="absolute top-1 right-1 bg-white/90 text-red-600 rounded-full p-1 shadow hover:bg-white">✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Tagging UI for PostItem edit mode */}
+            <div className="mt-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-auto">
+                <div className="flex items-center gap-2 justify-center sm:justify-start">
+                  <button
+                    type="button"
+                    onClick={() => setShowTagMenuLocal(prev => !prev)}
+                    aria-haspopup="true"
+                    aria-expanded={showTagMenuLocal}
+                    aria-label={t('feed.identify')}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 sm:px-3 sm:py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 text-sm w-full sm:w-auto shadow-sm"
+                  >
+                    {t('feed.identify')}
+                    {selectedChildIdsLocal.length > 0 && (
+                      <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700">{selectedChildIdsLocal.length}</span>
+                    )}
+                  </button>
+                </div>
+
+                <ChildSelector
+                  open={showTagMenuLocal}
+                  onClose={() => setShowTagMenuLocal(false)}
+                  availableChildren={availableChildrenLocal}
+                  selectedChildIds={selectedChildIdsLocal}
+                  setSelectedChildIds={setSelectedChildIdsLocal}
+                  noChildSelected={noChildSelectedLocal}
+                  setNoChildSelected={setNoChildSelectedLocal}
+                  consentMap={consentMapLocal}
+                  title={t('feed.tag_children')}
+                  confirmLabel={t('common.confirm')}
+                />
+              </div>
             </div>
         </div>
       )}
@@ -1481,9 +1606,69 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
           <div className={`border border-gray-200 rounded-lg p-2 ${bgClass || 'bg-white'}`}>
             <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[80px]" />
             <div className="mt-2 flex gap-2 justify-end">
-              <button onClick={() => { setEditing(false); setVal(post.text || ''); }} className="px-3 py-1 rounded bg-gray-100">Annuler</button>
-              <button onClick={save} className="px-3 py-1 rounded bg-indigo-600 text-white">Sauvegarder</button>
+              <button type="button" onClick={() => {
+                (async () => {
+                  // if an upload is in progress, abort it
+                  try {
+                    if (uploadAbortRef.current) {
+                      uploadAbortRef.current.abort();
+                      uploadAbortRef.current = null;
+                    }
+                    // cleanup any medias created so far in this editing session
+                    if (createdMediaIdsRef.current && createdMediaIdsRef.current.length > 0) {
+                      try {
+                        for (const mid of createdMediaIdsRef.current) {
+                          await fetchWithRefresh(`api/feed/${post.id}/media/${mid}`, { method: 'DELETE' });
+                        }
+                      } catch (e) {
+                        console.warn('Failed to cleanup created medias on cancel', e);
+                      }
+                      createdMediaIdsRef.current = [];
+                    }
+                  } catch {
+                    // ignore
+                  }
+                  // revoke and clear any staged previews/files
+                  try { stagedPreviewsLocal.forEach(url => URL.revokeObjectURL(url)); } catch { /* ignore cleanup errors */ }
+                  setStagedPreviewsLocal([]);
+                  setStagedFilesLocal([]);
+                  setEditing(false);
+                  setVal(post.text || '');
+                })();
+              }} className="px-3 py-1 rounded bg-gray-100">Annuler</button>
+              <button type="button" onClick={async () => {
+                // If there are staged files, require identification before saving
+                if (stagedFilesLocal.length > 0) {
+                  if (!noChildSelectedLocal && selectedChildIdsLocal.length === 0) {
+                    // keep editor open and show warning to identify children
+                    setShowIdentifyWarningLocal(true);
+                    return;
+                  }
+                  // check consents
+                  const lacking = selectedChildIdsLocal.filter(id => !consentMapLocal[id]);
+                  if (lacking.length > 0) {
+                    const names = availableChildrenLocal.filter(c => lacking.includes(c.id)).map(c => c.name);
+                    alert(`Autorisation photo manquante pour: ${names.join(', ')}`);
+                    return;
+                  }
+                }
+
+                const ok = await save();
+                if (!ok) return;
+
+                if (stagedFilesLocal.length > 0) {
+                  const dt = new DataTransfer();
+                  stagedFilesLocal.forEach(f => dt.items.add(f));
+                  await handleUploadImages(dt.files);
+                  try { stagedPreviewsLocal.forEach(url => URL.revokeObjectURL(url)); } catch { /* ignore cleanup errors */ }
+                  setStagedPreviewsLocal([]);
+                  setStagedFilesLocal([]);
+                }
+              }} className="px-3 py-1 rounded bg-indigo-600 text-white">Sauvegarder</button>
             </div>
+            {showIdentifyWarningLocal && (
+              <div className="mt-2 text-sm text-red-600">Veuillez identifier les enfants ou cocher "Pas d'enfant" avant de sauvegarder les images.</div>
+            )}
           </div>
         </div>
       )}
