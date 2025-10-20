@@ -1,3 +1,5 @@
+import { createPortal } from 'react-dom';
+
 export default function ConfirmDialog({
   open,
   title,
@@ -42,7 +44,7 @@ export default function ConfirmDialog({
     </div>
   );
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white w-full max-w-md mx-4 rounded-lg shadow-2xl p-6 transform transition-all duration-200 ease-out scale-100">
@@ -70,4 +72,7 @@ export default function ConfirmDialog({
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(modal, document.body);
 }
