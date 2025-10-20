@@ -522,17 +522,24 @@ router.post('/:postId/media', authMiddleware, checkContentLength, upload.array('
     for (const file of files) {
       if (!validateMime(file.mimetype)) continue;
 
-      // Calculate MD5 hash of the original file
-      const hash = crypto.createHash('md5').update(file.buffer).digest('hex');
+      // Read the file into a buffer (support memory or disk storage)
+      const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
+      if (!fileBuffer) {
+        console.error('Uploaded file has no buffer or path, skipping', file && file.originalname ? file.originalname : '(unknown)');
+        continue;
+      }
+
+      // Calculate MD5 hash of the original file using the buffer
+      const hash = crypto.createHash('md5').update(fileBuffer).digest('hex');
 
       // Check if a media with this hash already exists for this post
       const existingMedia = await prisma.feedMedia.findFirst({ where: { postId: postId, hash: hash } });
       if (existingMedia) {
         // Skip this file as it's already uploaded for this post
+        try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore cleanup errors */ }
         continue;
       }
 
-    const fileBuffer = file.buffer || (file.path ? require('fs').readFileSync(file.path) : null);
     // Apply EXIF rotation and resize main while preserving aspect ratio
     const mainBuffer = await sharp(fileBuffer).rotate().resize({ width: 1600, withoutEnlargement: true }).toFormat('webp').toBuffer();
     // Square thumbnail for uniform feed appearance

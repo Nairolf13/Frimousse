@@ -58,7 +58,14 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-white/40 backdrop-blur-[2px] flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-50 bg-white/40 backdrop-blur-[2px] flex items-center justify-center"
+      onClick={(e) => {
+        // close when clicking on the backdrop only
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="presentation"
+    >
       <div className="bg-white rounded shadow-lg p-6 w-full max-w-md relative">
         <button onClick={onClose} className="absolute top-2 right-2 text-gray-500 hover:text-[#08323a]">✕</button>
         <h2 className="text-xl font-bold mb-4 text-[#08323a]">{initial ? t('assignment.modal.title.add') : t('assignment.modal.title.edit')}</h2>

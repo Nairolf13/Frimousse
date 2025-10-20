@@ -1,5 +1,12 @@
 const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, ".env") });
+// Load environment variables from backend/.env if present. Log result for easier debugging.
+const dotenvResult = require("dotenv").config({ path: path.resolve(__dirname, ".env") });
+if (dotenvResult.error) {
+  // don't hard-fail: allow process.env to supply variables (useful in CI/prod)
+  console.warn('No backend/.env loaded or failed to parse:', dotenvResult.error.message || dotenvResult.error);
+} else {
+  console.log('Loaded backend/.env');
+}
 
 if (process.env.STRIPE_SECRET_KEY) {
   process.env.STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY.trim().replace(/^"|"$/g, '');
