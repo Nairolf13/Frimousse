@@ -6,6 +6,13 @@ const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
+let fetchFn;
+try {
+  fetchFn = globalThis.fetch || require('node-fetch');
+} catch (e) {
+  fetchFn = globalThis.fetch; // may be undefined in very old Node versions
+}
 
 const { createClient } = require('@supabase/supabase-js');
 // Robust Prisma client import: prefer generated client output, fall back to @prisma/client
@@ -36,6 +43,38 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false } });
+
+// Helper: fallback upload using short-lived JWT signed with SUPABASE_JWT_SECRET
+async function uploadViaJwtFallback(bucket, objectPath, buffer, contentType) {
+  if (!process.env.SUPABASE_JWT_SECRET) {
+    console.warn('SUPABASE_JWT_SECRET not set; cannot perform JWT fallback upload');
+    return { ok: false, status: 0, body: null };
+  }
+  if (!fetchFn) {
+    console.warn('fetch not available in this runtime; cannot perform JWT fallback upload');
+    return { ok: false, status: 0, body: null };
+  }
+  try {
+    const token = jwt.sign(
+      { role: 'service_role', exp: Math.floor(Date.now() / 1000) + 60 * 5 },
+      process.env.SUPABASE_JWT_SECRET,
+      { algorithm: 'HS256' }
+    );
+    const url = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/${encodeURIComponent(bucket)}/${objectPath}`;
+    const headers = { Authorization: `Bearer ${token}` };
+    if (contentType) headers['Content-Type'] = contentType;
+    const res = await fetchFn(url, { method: 'POST', headers, body: buffer });
+    const text = await (res.text ? res.text() : Promise.resolve(null));
+    if (!res.ok) {
+      console.error('JWT fallback upload failed', { status: res.status, body: text ? text.slice(0, 200) : null });
+      return { ok: false, status: res.status, body: text };
+    }
+    return { ok: true, status: res.status, body: text };
+  } catch (e) {
+    console.error('JWT fallback upload exception', e && e.message ? e.message : e);
+    return { ok: false, status: 0, body: String(e) };
+  }
+}
 
 // Middleware to reject overly large Content-Length before multer tries to process
 function checkContentLength(req, res, next) {
@@ -149,7 +188,20 @@ router.post('/', authMiddleware, checkContentLength, upload.array('images', 6), 
         const fileBuffer = file.buffer || (file.path ? fs.readFileSync(file.path) : null);
         try {
           const upMain = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, fileBuffer, { contentType: file.mimetype, upsert: false }));
-          if (upMain.error) { console.error('Supabase video upload error', upMain.error); continue; }
+          if (upMain.error) {
+            const msg = String(upMain.error.message || upMain.error || '');
+            console.error('Supabase video upload error', upMain.error);
+            if (msg.includes('Invalid Compact JWS')) {
+              // try jwt fallback if available
+              const fb = await uploadViaJwtFallback(SUPABASE_BUCKET, mainPath, fileBuffer, file.mimetype);
+              if (!fb.ok) {
+                console.error('JWT fallback for video failed', fb);
+                continue;
+              }
+            } else {
+              continue;
+            }
+          }
         } catch (err) {
           console.error('Supabase video upload failed after retries', err);
           continue;
@@ -188,7 +240,20 @@ router.post('/', authMiddleware, checkContentLength, upload.array('images', 6), 
       // Upload main (with retries)
       try {
         const upMain = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, mainBuffer, { contentType: 'image/webp', upsert: false }));
-        if (upMain.error) { console.error('Supabase upload error', upMain.error); continue; }
+        if (upMain.error) {
+          const msg = String(upMain.error.message || upMain.error || '');
+          console.error('Supabase upload error', upMain.error);
+          if (msg.includes('Invalid Compact JWS')) {
+            // attempt fallback via signed JWT
+            const fb = await uploadViaJwtFallback(SUPABASE_BUCKET, mainPath, mainBuffer, 'image/webp');
+            if (!fb.ok) {
+              console.error('JWT fallback for main image failed', { status: fb.status, body: fb.body ? fb.body.slice ? fb.body.slice(0,200) : fb.body : null });
+              continue;
+            }
+          } else {
+            continue;
+          }
+        }
       } catch (err) {
         console.error('Supabase upload failed after retries', err);
         continue;
@@ -196,7 +261,14 @@ router.post('/', authMiddleware, checkContentLength, upload.array('images', 6), 
       // Upload thumbnail (with retries)
       try {
         const upThumb = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false }));
-        if (upThumb.error) console.error('Supabase thumb upload error', upThumb.error);
+        if (upThumb.error) {
+          const msg = String(upThumb.error.message || upThumb.error || '');
+          console.error('Supabase thumb upload error', upThumb.error);
+          if (msg.includes('Invalid Compact JWS')) {
+            const fb = await uploadViaJwtFallback(SUPABASE_BUCKET, thumbPath, thumbBuffer, 'image/webp');
+            if (!fb.ok) console.error('JWT fallback for thumb failed', { status: fb.status, body: fb.body ? fb.body.slice ? fb.body.slice(0,200) : fb.body : null });
+          }
+        }
       } catch (err) {
         console.error('Supabase thumb upload failed after retries', err);
       }
@@ -572,11 +644,24 @@ router.post('/:postId/media', authMiddleware, checkContentLength, upload.array('
 
       const { data: uploadData, error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(mainPath, mainBuffer, { contentType: 'image/webp', upsert: false });
       if (uploadError) {
+        const msg = String(uploadError.message || uploadError || '');
         console.error('Supabase upload error', uploadError);
-        continue;
+        if (msg.includes('Invalid Compact JWS')) {
+          const fb = await uploadViaJwtFallback(SUPABASE_BUCKET, mainPath, mainBuffer, 'image/webp');
+          if (!fb.ok) { console.error('JWT fallback for media add failed', fb); continue; }
+        } else {
+          continue;
+        }
       }
       const { data: thumbData, error: thumbError } = await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false });
-      if (thumbError) console.error('Supabase thumb upload error', thumbError);
+      if (thumbError) {
+        const msg = String(thumbError.message || thumbError || '');
+        console.error('Supabase thumb upload error', thumbError);
+        if (msg.includes('Invalid Compact JWS')) {
+          const fb = await uploadViaJwtFallback(SUPABASE_BUCKET, thumbPath, thumbBuffer, 'image/webp');
+          if (!fb.ok) console.error('JWT fallback for thumb failed', fb);
+        }
+      }
 
   // For public bucket: use public URLs and store storage paths
   const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);

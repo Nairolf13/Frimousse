@@ -281,10 +281,7 @@ export default function Feed() {
               return { id: c.id, allowed: false };
             }
         }));
-        // debug: log consent fetch results to help diagnose why all values might be false
-        try {
-          console.debug('[consent] fetched consentResults top-level:', consentResults);
-  } catch { /* ignore in environments without console */ }
+        
         const cm: Record<string, boolean> = {};
         consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
         setConsentMap(cm);
@@ -579,7 +576,9 @@ export default function Feed() {
             const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: created.id, size: f.size, originalName: f.name, taggedChildIds: selectedChildIds || [], noChildSelected: !!noChildSelected }) });
             if (!finRes.ok) {
               const b = await finRes.json().catch(() => ({}));
-              console.error('Finalize failed', b);
+              const serverMsg = (b && b.message) ? String(b.message) : '';
+              // Surface error to the user and continue with other files
+              showError('Échec de la finalisation', mapServerMessage(serverMsg, finRes.status));
               continue;
             }
             const finBody = await finRes.json();
@@ -1193,7 +1192,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
           return { id: c.id, allowed: false };
         }
       }));
-  console.debug('[consent] fetched consentResults local for PostItem:', consentResults);
+      
       const cm: Record<string, boolean> = {};
       consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
       if (mounted) {
@@ -1395,7 +1394,13 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
           }
 
           const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: post.id, size: f.size, originalName: f.name, taggedChildIds: selectedChildIdsLocal || [], noChildSelected: !!noChildSelectedLocal }) });
-          if (!finRes.ok) { const b = await finRes.json().catch(() => ({})); console.error('Finalize failed', b); continue; }
+          if (!finRes.ok) {
+            const b = await finRes.json().catch(() => ({}));
+            const serverMsg = (b && b.message) ? String(b.message) : '';
+            // PostItem runs outside the Feed showError scope — notify user during edit
+            alert('Échec de la finalisation: ' + serverMsg);
+            continue;
+          }
           const finBody = await finRes.json();
           const newMedias: Media[] = finBody.medias || [];
           // record created media ids so we can cleanup if the user cancels during the session

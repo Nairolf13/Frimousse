@@ -32,12 +32,7 @@ export default function ChildSelector({
 
   const isAllowedValue = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1';
 
-  // debug: print consentMap and availableChildren to help diagnose mismatches
-  try {
-    console.debug('[ChildSelector] consentMap:', consentMap, 'availableChildren:', availableChildren.map(c => c.id));
-  } catch {
-    /* ignore */
-  }
+  // no debug logs
 
   // Desktop dropdown (rendered inline) and mobile modal (portal) share the same content markup
   const content = (
