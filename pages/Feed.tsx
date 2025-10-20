@@ -261,19 +261,30 @@ export default function Feed() {
         const children = await res.json();
   type ChildShort = { id: string; name: string };
   const mapped: ChildShort[] = Array.isArray(children) ? (children as ChildShort[]).map((c) => ({ id: c.id, name: c.name })) : [];
-        if (!mounted) return;
-        setAvailableChildren(mapped);
-        // fetch consent summary for each child in parallel
+  if (!mounted) return;
+  setAvailableChildren(mapped);
+  // initialize consentMap with defaults (false) so UI can render immediately without a separate loading message
+  const initMap: Record<string, boolean> = {};
+  mapped.forEach(c => { initMap[c.id] = false; });
+  setConsentMap(initMap);
+
+  // fetch consent summary for each child in parallel
         const consentResults = await Promise.all(mapped.map(async (c) => {
           try {
             const r = await fetchWithRefresh(`api/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
             if (!r.ok) return { id: c.id, allowed: false };
             const b = await r.json();
-            return { id: c.id, allowed: !!b.allowed };
+            const allowedRaw = b && b.allowed;
+            const allowed = allowedRaw === true || allowedRaw === 'true' || allowedRaw === 1 || allowedRaw === '1';
+            return { id: c.id, allowed };
           } catch {
               return { id: c.id, allowed: false };
             }
         }));
+        // debug: log consent fetch results to help diagnose why all values might be false
+        try {
+          console.debug('[consent] fetched consentResults top-level:', consentResults);
+  } catch { /* ignore in environments without console */ }
         const cm: Record<string, boolean> = {};
         consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
         setConsentMap(cm);
@@ -1146,6 +1157,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
   const [availableChildrenLocal, setAvailableChildrenLocal] = useState<{ id: string; name: string }[]>([]);
   const [selectedChildIdsLocal, setSelectedChildIdsLocal] = useState<string[]>([]);
   const [consentMapLocal, setConsentMapLocal] = useState<Record<string, boolean>>({});
+  const [consentLoadedLocal, setConsentLoadedLocal] = useState(false);
   const [noChildSelectedLocal, setNoChildSelectedLocal] = useState(false);
   const [showTagMenuLocal, setShowTagMenuLocal] = useState(false);
   const [uploadingLocal, setUploadingLocal] = useState(false);
@@ -1153,36 +1165,51 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
   const [stagedFilesLocal, setStagedFilesLocal] = useState<File[]>([]);
   const [stagedPreviewsLocal, setStagedPreviewsLocal] = useState<string[]>([]);
 
-  // load children & consents when entering edit mode so tagging UI is ready
-  useEffect(() => {
+  // Fetch children & consents when entering edit mode or on demand
+  async function fetchLocalChildren() {
     let mounted = true;
-    async function loadLocalChildren() {
-      try {
-        const res = await fetchWithRefresh('api/children', { credentials: 'include' });
-        if (!res.ok) return;
-        const children = await res.json();
-        const mapped = Array.isArray(children) ? (children as { id: string; name: string }[]).map(c => ({ id: c.id, name: c.name })) : [];
-        if (!mounted) return;
-        setAvailableChildrenLocal(mapped);
-        const consentResults = await Promise.all(mapped.map(async (c) => {
-          try {
-            const r = await fetchWithRefresh(`api/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
-            if (!r.ok) return { id: c.id, allowed: false };
-            const b = await r.json();
-            return { id: c.id, allowed: !!b.allowed };
-          } catch {
-            return { id: c.id, allowed: false };
-          }
-        }));
-        const cm: Record<string, boolean> = {};
-        consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
-        if (mounted) setConsentMapLocal(cm);
-      } catch (e) {
-        console.error('Failed to load children/consents for PostItem', e);
+    try {
+      const res = await fetchWithRefresh('api/children', { credentials: 'include' });
+      if (!res.ok) return;
+      const children = await res.json();
+      const mapped = Array.isArray(children) ? (children as { id: string; name: string }[]).map(c => ({ id: c.id, name: c.name })) : [];
+      if (!mounted) return;
+      setAvailableChildrenLocal(mapped);
+      // set initial local consent map to false for all children so UI doesn't show a loading line
+      const initLocal: Record<string, boolean> = {};
+      mapped.forEach(c => { initLocal[c.id] = false; });
+      setConsentMapLocal(initLocal);
+      setConsentLoadedLocal(false);
+
+      const consentResults = await Promise.all(mapped.map(async (c) => {
+        try {
+          const r = await fetchWithRefresh(`api/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
+          if (!r.ok) return { id: c.id, allowed: false };
+          const b = await r.json();
+          const allowedRaw = b && b.allowed;
+          const allowed = allowedRaw === true || allowedRaw === 'true' || allowedRaw === 1 || allowedRaw === '1';
+          return { id: c.id, allowed };
+        } catch {
+          return { id: c.id, allowed: false };
+        }
+      }));
+  console.debug('[consent] fetched consentResults local for PostItem:', consentResults);
+      const cm: Record<string, boolean> = {};
+      consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
+      if (mounted) {
+        setConsentMapLocal(cm);
+        setConsentLoadedLocal(true);
       }
+    } catch (e) {
+      console.error('Failed to load children/consents for PostItem', e);
     }
-    if (editing && availableChildrenLocal.length === 0) loadLocalChildren();
     return () => { mounted = false; };
+  }
+
+  useEffect(() => {
+    if (editing && availableChildrenLocal.length === 0) {
+      fetchLocalChildren();
+    }
   }, [editing, availableChildrenLocal.length]);
 
   // lightbox state for slideshow
@@ -1565,7 +1592,16 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                 <div className="flex items-center gap-2 justify-center sm:justify-start">
                   <button
                     type="button"
-                    onClick={() => setShowTagMenuLocal(prev => !prev)}
+                    onClick={async () => {
+                      // ensure consents are loaded before opening selector to avoid stale init values
+                      if (!consentLoadedLocal && availableChildrenLocal.length === 0) {
+                        await fetchLocalChildren();
+                      } else if (!consentLoadedLocal) {
+                        // if children present but consents still loading, wait for them
+                        await fetchLocalChildren();
+                      }
+                      setShowTagMenuLocal(prev => !prev);
+                    }}
                     aria-haspopup="true"
                     aria-expanded={showTagMenuLocal}
                     aria-label={t('feed.identify')}

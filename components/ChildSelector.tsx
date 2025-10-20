@@ -28,14 +28,26 @@ export default function ChildSelector({
 }) {
   if (!open) return null;
 
+  const hasConsentInfo = consentMap && Object.keys(consentMap).length > 0;
+
+  const isAllowedValue = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1';
+
+  // debug: print consentMap and availableChildren to help diagnose mismatches
+  try {
+    console.debug('[ChildSelector] consentMap:', consentMap, 'availableChildren:', availableChildren.map(c => c.id));
+  } catch {
+    /* ignore */
+  }
+
   // Desktop dropdown (rendered inline) and mobile modal (portal) share the same content markup
   const content = (
     <div className="bg-white border rounded shadow-lg p-3 max-h-56 overflow-auto">
       <div className="text-sm font-semibold mb-2">{title}</div>
+      {/* When consentMap isn't ready we show empty badge placeholders rather than a loading line to avoid layout shifts */}
       {availableChildren.length === 0 ? (
         <div className="text-sm text-gray-500">Aucun enfant disponible</div>
       ) : (
-        <div className="grid gap-2">
+        <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={noChildSelected} onChange={(e) => {
               if (e.target.checked) {
@@ -46,18 +58,27 @@ export default function ChildSelector({
             <span className="font-medium">Pas d'enfant</span>
           </label>
           {availableChildren.map(c => {
-            const allowed = consentMap[c.id] ?? false;
+            const allowedRaw = consentMap ? consentMap[c.id] : undefined;
+            const allowed = isAllowedValue(allowedRaw);
             const checked = selectedChildIds.includes(c.id);
             return (
-              <label key={c.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={checked} onChange={(e) => {
-                  if (e.target.checked) {
-                    setNoChildSelected(false);
-                    setSelectedChildIds(prev => [...prev, c.id]);
-                  } else setSelectedChildIds(prev => prev.filter(id => id !== c.id));
-                }} disabled={noChildSelected} />
-                <span className="truncate">{c.name}</span>
-                {!allowed && <span className="text-xs text-red-500 ml-2">(pas d'autorisation)</span>}
+              <label key={c.id} className="flex items-center justify-between text-sm p-1 rounded border">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <input type="checkbox" checked={checked} onChange={(e) => {
+                    if (e.target.checked) {
+                      setNoChildSelected(false);
+                      setSelectedChildIds(prev => [...prev, c.id]);
+                    } else setSelectedChildIds(prev => prev.filter(id => id !== c.id));
+                  }} disabled={noChildSelected} />
+                  <span className="truncate">{c.name}</span>
+                </div>
+                <div className="w-40 text-right">
+                  {hasConsentInfo ? (
+                    !allowed ? <span className="text-xs text-red-500">(pas d'autorisation)</span> : <span className="text-xs text-green-600">(autorisation)</span>
+                  ) : (
+                    <span className="text-xs text-gray-400">&nbsp;</span>
+                  )}
+                </div>
               </label>
             );
           })}
@@ -73,7 +94,7 @@ export default function ChildSelector({
   return (
     <>
       {/* Desktop dropdown: parent container should place this where desired */}
-      <div className="hidden sm:block absolute z-40 mt-2 w-64" aria-hidden>
+      <div className="hidden sm:block absolute z-40 mt-2 w-96" aria-hidden>
         {content}
       </div>
 
