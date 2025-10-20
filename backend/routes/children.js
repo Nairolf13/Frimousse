@@ -195,9 +195,20 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
   }
     const { name, age, sexe, parentId, parentName, parentContact, allergies, group, birthDate } = req.body;
     const parentMail = req.body.parentMail !== undefined ? String(req.body.parentMail || '').trim().toLowerCase() : undefined;
-  const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
-  if (isNaN(parsedAge)) {
-    return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
+  // Try to parse age if provided; otherwise compute from birthDate when possible
+  let parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
+  if (parsedAge === undefined || parsedAge === null || Number.isNaN(parsedAge)) {
+    // attempt to compute from birthDate
+    if (birthDate) {
+      const bd = new Date(birthDate);
+      if (!Number.isNaN(bd.getTime())) {
+        const diff = Date.now() - bd.getTime();
+        parsedAge = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+      }
+    }
+  }
+  if (parsedAge === undefined || parsedAge === null || Number.isNaN(parsedAge)) {
+    return res.status(400).json({ error: 'Le champ "age" est requis ou la "birthDate" doit être fournie et valide.' });
   }
   if (sexe !== 'masculin' && sexe !== 'feminin') {
     return res.status(400).json({ error: 'Le champ "sexe" doit être "masculin" ou "feminin".' });
@@ -330,9 +341,19 @@ router.put('/:id', auth, async (req, res) => {
   }
     const { name, age, sexe, parentId, parentName, parentContact, allergies, group, cotisationPaidUntil, payCotisation, birthDate } = req.body;
     const parentMail = req.body.parentMail !== undefined ? String(req.body.parentMail || '').trim().toLowerCase() : undefined;
-  const parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
-  if (isNaN(parsedAge)) {
-    return res.status(400).json({ error: 'Le champ "age" doit être un nombre.' });
+  // parse or compute age: prefer provided age, fallback to birthDate
+  let parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
+  if (parsedAge === undefined || parsedAge === null || Number.isNaN(parsedAge)) {
+    if (Object.prototype.hasOwnProperty.call(req.body, 'birthDate') && birthDate) {
+      const bd = new Date(birthDate);
+      if (!Number.isNaN(bd.getTime())) {
+        const diff = Date.now() - bd.getTime();
+        parsedAge = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+      }
+    }
+  }
+  if (parsedAge === undefined || parsedAge === null || Number.isNaN(parsedAge)) {
+    return res.status(400).json({ error: 'Le champ "age" est requis ou la "birthDate" doit être fournie et valide.' });
   }
   if (sexe !== 'masculin' && sexe !== 'feminin') {
     return res.status(400).json({ error: 'Le champ "sexe" doit être "masculin" ou "feminin".' });

@@ -123,6 +123,16 @@ const translations: Record<Locale, Record<string, string>> = {
   'children.form.name': 'Nom',
   'children.form.age': 'Âge',
   'children.form.birthDate': 'Date de naissance',
+  'children.form.name_label': 'Nom',
+  'children.form.birthDate_label': 'Date de naissance',
+  'children.form.sexe_label': 'Sexe',
+  'children.form.group_label': 'Groupe',
+  'children.form.parentName_label': 'Nom du parent',
+  'children.form.parentPhone_label': 'Téléphone du parent',
+  'children.form.parentEmail_label': 'Email du parent',
+  'children.form.allergies_label': 'Allergies',
+  'children.form.required_note': 'Champs obligatoires',
+  'parent.form.required_note': 'Champ obligatoire',
   'children.form.sexe.m': 'Garçon',
   'children.form.sexe.f': 'Fille',
   'children.form.group_placeholder': 'Groupe',
@@ -134,6 +144,7 @@ const translations: Record<Locale, Record<string, string>> = {
   'children.form.allergies_placeholder': 'Allergies (optionnel)',
   'children.form.edit': 'Modifier',
   'children.form.added_success': "L'enfant a bien été ajouté !",
+  'children.form.deleted_success': "L'enfant a bien été supprimé !",
   'children.loading': 'Chargement...',
   'children.presence.present_today': "Présent aujourd'hui",
   'children.presence.absent_today': "Absent aujourd'hui",
@@ -175,7 +186,7 @@ const translations: Record<Locale, Record<string, string>> = {
   'parent.form.city': 'Ville',
   'parent.form.region': 'Région',
   'parent.form.country': 'Pays',
-  'parent.form.password.placeholder': 'Mot de passe (laisser vide pour envoyer une invitation)',
+  'parent.form.password.placeholder': 'Mot de passe (laisser vide pour inviter)',
   'parent.form.confirmPassword.placeholder': 'Confirmer le mot de passe',
   'parent.form.submit.add': 'Ajouter',
   'parent.form.submit.save': 'Enregistrer',
@@ -185,6 +196,7 @@ const translations: Record<Locale, Record<string, string>> = {
   'parent.form.success.created_with_password': 'Parent créé avec mot de passe.',
   'parent.form.success.created_invited': 'Parent créé — une invitation a été envoyée.',
   'parent.form.success.updated': 'Parent modifié.',
+  'parent.form.deleted_success': 'Parent supprimé.',
   'parent.reset.confirm_title': 'Confirmer la réinitialisation du mot de passe',
   'parent.reset.confirm_body': 'Vous allez réinitialiser le mot de passe de ce parent. Voulez-vous continuer ?',
   'parent.reset.cancel': 'Annuler',
@@ -281,6 +293,8 @@ const translations: Record<Locale, Record<string, string>> = {
   'availability.sick': 'Maladie',
   'settings.password.all_required': 'Tous les champs de mot de passe sont requis',
   'settings.password.mismatch': 'Les mots de passe ne correspondent pas',
+  'common.show_password': 'Afficher le mot de passe',
+  'common.hide_password': 'Masquer le mot de passe',
     // Profile editor labels (minimal)
     'label.firstName': 'Prénom',
     'label.lastName': 'Nom',
@@ -419,6 +433,16 @@ const translations: Record<Locale, Record<string, string>> = {
   'children.form.name': 'Name',
   'children.form.age': 'Age',
   'children.form.birthDate': 'Birth date',
+  'children.form.name_label': 'Name',
+  'children.form.birthDate_label': 'Birth date',
+  'children.form.sexe_label': 'Sex',
+  'children.form.group_label': 'Group',
+  'children.form.parentName_label': 'Parent name',
+  'children.form.parentPhone_label': 'Parent phone',
+  'children.form.parentEmail_label': 'Parent email',
+  'children.form.allergies_label': 'Allergies',
+  'children.form.required_note': 'Required fields',
+  'parent.form.required_note': 'Required field',
   'children.form.sexe.m': 'Boy',
   'children.form.sexe.f': 'Girl',
   'children.form.group_placeholder': 'Group',
@@ -430,6 +454,7 @@ const translations: Record<Locale, Record<string, string>> = {
   'children.form.allergies_placeholder': 'Allergies (optional)',
   'children.form.edit': 'Edit',
   'children.form.added_success': "Child was added successfully!",
+  'children.form.deleted_success': 'Child was deleted successfully!',
   'children.loading': 'Loading...',
   'children.presence.present_today': 'Present today',
   'children.presence.absent_today': 'Absent today',
@@ -517,6 +542,8 @@ const translations: Record<Locale, Record<string, string>> = {
   'availability.sick': 'Sick',
   'settings.password.all_required': 'All password fields are required',
   'settings.password.mismatch': 'Passwords do not match',
+  'common.show_password': 'Show password',
+  'common.hide_password': 'Hide password',
     // Profile editor labels
     'label.firstName': 'First name',
     'label.lastName': 'Last name',
@@ -647,6 +674,7 @@ translations.fr['nanny.form.contact'] = 'Téléphone';
 translations.fr['nanny.form.email'] = 'Email';
 translations.fr['nanny.form.password'] = 'Mot de passe';
 translations.fr['nanny.form.confirmPassword'] = 'Confirmer le mot de passe';
+translations.fr['nanny.form.availability'] = 'Disponibilité';
 translations.fr['nanny.availability.available'] = 'Disponible';
 translations.fr['nanny.availability.on_leave'] = 'En congé';
 translations.fr['nanny.availability.sick'] = 'Maladie';
@@ -672,6 +700,7 @@ translations.en['nanny.form.contact'] = 'Phone';
 translations.en['nanny.form.email'] = 'Email';
 translations.en['nanny.form.password'] = 'Password';
 translations.en['nanny.form.confirmPassword'] = 'Confirm password';
+translations.en['nanny.form.availability'] = 'Availability';
 translations.en['nanny.availability.available'] = 'Available';
 translations.en['nanny.availability.on_leave'] = 'On leave';
 translations.en['nanny.availability.sick'] = 'Sick';
@@ -712,6 +741,11 @@ translations.fr['nanny.payment.confirm_body'] = 'Voulez-vous enregistrer le paie
 translations.fr['nanny.birth.label'] = 'Né(e) le';
 translations.fr['nanny.delete.confirm_body'] = "Voulez-vous vraiment supprimer cette nounou ? Cette action est irréversible.";
 
+// nanny action success messages
+translations.fr['nanny.added_success'] = 'Nounou ajoutée.';
+translations.fr['nanny.update_success'] = 'Mise à jour effectuée';
+translations.fr['nanny.delete_success'] = 'Nounou supprimée.';
+
 translations.en['nanny.planning.of'] = '{name} schedule';
 translations.en['nanny.planning.button'] = 'Schedule';
 translations.en['nanny.assignments_today'] = "Assignments today";
@@ -728,6 +762,11 @@ translations.en['nanny.payment.confirm_title'] = 'Confirm payment';
 translations.en['nanny.payment.confirm_body'] = 'Do you want to record a payment of {amount}€ for this nanny?';
 translations.en['nanny.birth.label'] = 'Born on';
 translations.en['nanny.delete.confirm_body'] = 'Are you sure you want to delete this nanny? This action is irreversible.';
+
+// nanny action success messages
+translations.en['nanny.added_success'] = 'Nanny created.';
+translations.en['nanny.update_success'] = 'Nanny updated.';
+translations.en['nanny.delete_success'] = 'Nanny deleted.';
 
 // nanny card and payment messages
 translations.fr['nanny.planning.of'] = 'Planning de {name}';
@@ -878,6 +917,7 @@ translations.en['parent.form.error.password_mismatch'] = 'Passwords do not match
 translations.en['parent.form.success.created_with_password'] = 'Parent created with password.';
 translations.en['parent.form.success.created_invited'] = 'Parent created — an invitation was sent.';
 translations.en['parent.form.success.updated'] = 'Parent updated.';
+  translations.en['parent.form.deleted_success'] = 'Parent deleted.';
 translations.en['parent.reset.confirm_title'] = 'Confirm password reset';
 translations.en['parent.reset.confirm_body'] = 'You will reset the parent password. Continue?';
 translations.en['parent.reset.cancel'] = 'Cancel';

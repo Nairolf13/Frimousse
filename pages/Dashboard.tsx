@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../src/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../src/lib/useI18n';
@@ -238,11 +238,14 @@ export default function Dashboard() {
     if (user && user.role === 'parent') return;
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
       .toISOString().split('T')[0];
+    console.debug('handleQuickAdd called', { localDate, userRole: user?.role, userNannyId: user?.nannyId });
     setModalInitial({ date: localDate, childId: '', nannyId: user && user.nannyId ? user.nannyId : '' });
     setModalOpen(true);
   };
 
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const successTimer = useRef<number | null>(null);
   const handleSave = async (data: AssignmentForm) => {
     setSaveError(null);
     const utcDate = new Date(data.date + 'T00:00:00Z').toISOString().split('T')[0];
@@ -257,41 +260,100 @@ export default function Dashboard() {
       return;
     }
     if (selectedId) {
-      await fetchWithRefresh(`${API_URL}/assignments/${selectedId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(dataToSend),
-      });
-      setModalOpen(false);
-      setSelectedId(null);
-      setModalInitial(null);
-      const year = currentDate.getFullYear();
-      const monthIdx = currentDate.getMonth();
-      const first = new Date(year, monthIdx, 1);
-      const last = new Date(year, monthIdx + 1, 0);
-      fetchAssignments(first, last);
-    } else {
-      const res = await fetchWithRefresh(`${API_URL}/assignments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(dataToSend),
-      });
-      if (res.ok) {
+      try {
+        const putRes = await fetchWithRefresh(`${API_URL}/assignments/${selectedId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(dataToSend),
+        });
+        if (!putRes.ok) {
+          setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
+          return;
+        }
+
+        // close modal and refresh assignments
         setModalOpen(false);
         setSelectedId(null);
         setModalInitial(null);
-        const year = currentDate.getFullYear();
-        const monthIdx = currentDate.getMonth();
-        const first = new Date(year, monthIdx, 1);
-        const last = new Date(year, monthIdx + 1, 0);
+
+        const yearF = currentDate.getFullYear();
+        const monthIdxF = currentDate.getMonth();
+        const first = new Date(yearF, monthIdxF, 1);
+        const last = new Date(yearF, monthIdxF + 1, 0);
         fetchAssignments(first, last);
-      } else {
+
+        // fetch child name to show feedback
+        try {
+          let childName = "l'enfant";
+          const childrenRes = await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' });
+          if (childrenRes.ok) {
+            const childrenArr = await childrenRes.json();
+            const found = Array.isArray(childrenArr) ? childrenArr.find((c: { id?: string; name?: string }) => c.id === data.childId) : undefined;
+            if (found && found.name) childName = String(found.name);
+          }
+          setSuccessMessage(`${childName} a bien été ajouté au planning.`);
+          if (successTimer.current) window.clearTimeout(successTimer.current);
+          successTimer.current = window.setTimeout(() => setSuccessMessage(null), 4000);
+        } catch (err) {
+          console.error('feedback child name fetch error', err);
+        }
+      } catch (err) {
+        console.error('assignment update error', err);
+        setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
+      }
+    }
+    else {
+      // create new assignment
+      try {
+        const postRes = await fetchWithRefresh(`${API_URL}/assignments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(dataToSend),
+        });
+        if (!postRes.ok) {
+          setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
+          return;
+        }
+
+        // close modal and refresh assignments
+        setModalOpen(false);
+        setSelectedId(null);
+        setModalInitial(null);
+        const yearF = currentDate.getFullYear();
+        const monthIdxF = currentDate.getMonth();
+        const first = new Date(yearF, monthIdxF, 1);
+        const last = new Date(yearF, monthIdxF + 1, 0);
+        fetchAssignments(first, last);
+
+        // fetch child name to show feedback
+        try {
+          let childName = "l'enfant";
+          const childrenRes = await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' });
+          if (childrenRes.ok) {
+            const childrenArr = await childrenRes.json();
+            const found = Array.isArray(childrenArr) ? childrenArr.find((c: { id?: string; name?: string }) => c.id === data.childId) : undefined;
+            if (found && found.name) childName = String(found.name);
+          }
+          setSuccessMessage(`${childName} a bien été ajouté au planning.`);
+          if (successTimer.current) window.clearTimeout(successTimer.current);
+          successTimer.current = window.setTimeout(() => setSuccessMessage(null), 4000);
+        } catch (err) {
+          console.error('feedback child name fetch error', err);
+        }
+      } catch (err) {
+        console.error('assignment create error', err);
         setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
       }
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (successTimer.current) window.clearTimeout(successTimer.current);
+    };
+  }, []);
 
   const monthLabel = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(currentDate);
   // weekday short labels (Mon..Sun) based on currentDate week starting Monday
@@ -308,6 +370,12 @@ export default function Dashboard() {
 
   return (
   <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      {successMessage && (
+        <div className="fixed top-6 right-6 z-50 bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded-lg shadow-md">
+          {successMessage}
+        </div>
+      )}
+      
       <div className="max-w-7xl mx-auto w-full">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
         <div className="flex-1 min-w-0">
@@ -318,7 +386,7 @@ export default function Dashboard() {
           <input type="date" value={currentDate.toISOString().split('T')[0]} onChange={e => setCurrentDate(new Date(e.target.value))}
             className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-[120px] sm:w-auto" />
           {!(user && user.role === 'parent') && (
-            <button onClick={() => handleQuickAdd(new Date())} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 text-base shadow hover:opacity-95 transition whitespace-nowrap">+ {t('global.add')}</button>
+            <button type="button" onClick={() => handleQuickAdd(new Date())} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 text-base shadow hover:opacity-95 transition whitespace-nowrap">+ {t('global.add')}</button>
           )}
         </div>
       </div>
@@ -400,7 +468,7 @@ export default function Dashboard() {
                       {day.getDate()}
                     </span>
                           {!(user && user.role === 'parent') && (
-                            <button onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
+                            <button type="button" onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
                           )}
                   </div>
                   {assigns.length === 0 ? (
@@ -478,7 +546,7 @@ export default function Dashboard() {
                             {day.getDate()}
                           </span>
                           {!(user && user.role === 'parent') && (
-                            <button onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
+                            <button type="button" onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
                           )}
                         </div>
                         {assigns.length === 0 ? (
@@ -522,7 +590,7 @@ export default function Dashboard() {
         <div className="text-red-600 font-semibold mb-2">{saveError}</div>
       )}
       {modalOpen && (
-        <div className="fixed inset-0 z-40 bg-white/40 backdrop-blur-sm transition-all"></div>
+        <div role="button" tabIndex={0} onClick={() => { setModalOpen(false); setSelectedId(null); setModalInitial(null); setSaveError(null); }} className="fixed inset-0 z-40 bg-white/40 backdrop-blur-sm transition-all" aria-label="Fermer la fenêtre"></div>
       )}
       <AssignmentModal
         open={modalOpen}
@@ -531,7 +599,7 @@ export default function Dashboard() {
         initial={modalInitial || undefined}
       />
       {selectedId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div role="presentation" onClick={(e) => { if (e.target === e.currentTarget) { setSelectedId(null); } }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm relative flex flex-col items-center">
             <button onClick={() => setSelectedId(null)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl" aria-label="Fermer">×</button>
             <div className="flex flex-col items-center gap-4">
@@ -562,17 +630,32 @@ export default function Dashboard() {
                 >{t('modal.cancel')}</button>
                 <button
                   onClick={async () => {
-                    await fetchWithRefresh(`api/assignments/${selectedId}`, {
-                      method: 'DELETE',
-                      credentials: 'include',
-                    });
-                    setSelectedId(null);
-                    setModalInitial(null);
-                    const year = currentDate.getFullYear();
-                    const monthIdx = currentDate.getMonth();
-                    const first = new Date(year, monthIdx, 1);
-                    const last = new Date(year, monthIdx + 1, 0);
-                    fetchAssignments(first, last);
+                    if (!selectedId) return;
+                    const childName = selectedAssignment?.child?.name || "l'enfant";
+                    try {
+                      const delRes = await fetchWithRefresh(`api/assignments/${selectedId}`, {
+                        method: 'DELETE',
+                        credentials: 'include',
+                      });
+                      if (!delRes.ok) {
+                        setSaveError("Erreur lors de la suppression. Veuillez réessayer.");
+                        return;
+                      }
+                      setSelectedId(null);
+                      setModalInitial(null);
+                      const year = currentDate.getFullYear();
+                      const monthIdx = currentDate.getMonth();
+                      const first = new Date(year, monthIdx, 1);
+                      const last = new Date(year, monthIdx + 1, 0);
+                      fetchAssignments(first, last);
+
+                      setSuccessMessage(`${childName} a bien été supprimé du planning.`);
+                      if (successTimer.current) window.clearTimeout(successTimer.current);
+                      successTimer.current = window.setTimeout(() => setSuccessMessage(null), 4000);
+                    } catch (err) {
+                      console.error('assignment delete error', err);
+                      setSaveError("Erreur lors de la suppression. Veuillez réessayer.");
+                    }
                   }}
                   className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-red-500 via-red-600 to-red-700 text-white font-bold shadow-lg hover:from-red-600 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 transition-all duration-150"
                   aria-label="Supprimer l’affectation"
@@ -585,7 +668,7 @@ export default function Dashboard() {
         </div>
       )}
       {dayModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+        <div role="presentation" onClick={(e) => { if (e.target === e.currentTarget) { setDayModalOpen(false); } }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
             <button onClick={() => setDayModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
             <h2 className="text-xl font-bold mb-1 text-center">{t('page.children')}</h2>

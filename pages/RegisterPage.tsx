@@ -124,6 +124,16 @@ export default function RegisterPage() {
     if (name === "region") { setOpenRegion(true); console.debug('[geodata] openRegion'); }
     if (name === "city") { setOpenCity(true); console.debug('[geodata] openCity'); }
     if (name === "address") { setOpenAddress(true); console.debug('[geodata] openAddress'); }
+    // If the user changes another input while no country is known, clear the postalCode field
+    try {
+      const countryEmpty = !selectedCountryCode && !(form.country && String(form.country).trim());
+      if (name !== 'postalCode' && name !== 'country' && countryEmpty && form.postalCode) {
+        // clear postal code because we can't validate it without a country
+        updateForm({ postalCode: '' });
+      }
+    } catch (err) {
+      console.error('handleChange postalCode clear error', err);
+    }
   };
 
   useEffect(() => {
@@ -362,6 +372,17 @@ export default function RegisterPage() {
     }
   };
 
+  // Password validation rules (live)
+  const uppercaseRe = /[A-ZÀ-ÖØ-Ý]/; // include accented uppercase letters
+  const digitRe = /\d/;
+  const specialRe = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/;
+  const minLength = 8;
+  const hasUpper = uppercaseRe.test(form.password || '');
+  const hasDigit = digitRe.test(form.password || '');
+  const hasSpecial = specialRe.test(form.password || '');
+  const hasLength = (form.password || '').length >= minLength;
+  const passwordValid = hasUpper && hasDigit && hasSpecial && hasLength;
+
   const selectCountry = (name: string) => {
     updateForm({ country: name });
     const found = countries.find((c) => c.name === name || (c.name && c.name.toLowerCase() === name.toLowerCase()));
@@ -370,6 +391,39 @@ export default function RegisterPage() {
     setOpenCountry(false);
     applyAndFocus("region", "");
   };
+
+  // Postal code validation per country (common cases)
+  // Resolve country code once: either selectedCountryCode or exact match from loaded countries
+  const resolvedFromList = countries.find(
+    (c) => c.name === form.country || (c.name && c.name.toLowerCase() === (form.country || '').toLowerCase())
+  );
+  const resolvedCountryCode = selectedCountryCode || (resolvedFromList && resolvedFromList.cca2 ? String(resolvedFromList.cca2).toUpperCase() : null);
+
+  const postalCodeIsValid = (() => {
+    const pc = (form.postalCode || '').trim();
+    if (!pc) return false;
+
+    if (!resolvedCountryCode) {
+      // if we can't determine a country code yet, do not validate (require user to pick a country first)
+      return false;
+    }
+
+    const c = String(resolvedCountryCode).toUpperCase();
+    // common country regexes
+    const rules: Record<string, RegExp> = {
+      'FR': /^\d{5}$/, // France
+      'US': /^\d{5}(-\d{4})?$/, // USA
+      'GB': /^[A-Z]{1,2}\d[A-Z\d]? \d[ABD-HJLNP-UW-Z]{2}$/i, // UK (loose)
+      'DE': /^\d{5}$/, // Germany
+      'ES': /^\d{5}$/, // Spain
+      'IT': /^\d{5}$/, // Italy
+      'BE': /^\d{4}$/, // Belgium
+      'NL': /^\d{4}\s?[A-Z]{2}$/i, // Netherlands
+    };
+  if (c && rules[c]) return rules[c].test(pc);
+    // fallback: allow 3-10 alphanumeric and spaces/hyphens
+    return /^[A-Z0-9 -]{3,10}$/i.test(pc);
+  })();
 
   const selectRegion = (r: string) => {
     updateForm({ region: r });
@@ -449,6 +503,15 @@ export default function RegisterPage() {
     }, 0);
   };
 
+  // ensure all required fields are filled before allowing submit
+  const requiredFields: Array<keyof FormType> = [
+    'name', 'email', 'centerName', 'address', 'city', 'postalCode', 'region', 'country', 'password'
+  ];
+  const allFieldsFilled = requiredFields.every((k) => {
+    const v = (form as unknown as Record<string, unknown>)[k as string];
+    return v !== undefined && v !== null && String(v).trim().length > 0;
+  }) && confirmPassword.trim().length > 0;
+
   return (
     <div ref={containerRef} className="h-screen flex items-center justify-center bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] overflow-hidden">
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-xl md:max-w-2xl flex flex-col items-center max-h-[95vh] overflow-auto">
@@ -457,24 +520,25 @@ export default function RegisterPage() {
         </div>
         <h2 className="text-2xl font-bold mb-2 text-[#0b5566] text-center">Inscription</h2>
         <p className="mb-6 text-[#08323a] text-center">Créez votre compte Frimousse</p>
+  <div className="text-sm text-gray-500 mb-4">Champs obligatoires <span className="text-red-600">*</span></div>
         {error && <div className="mb-4 text-red-600 w-full text-center">{error}</div>}
         {success && <div className="mb-4 text-[#0b5566] w-full text-center">Inscription réussie. Redirection…</div>}
 
-        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Nom
+        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Nom <span className="text-red-600">*</span>
           <input name="name" value={form.name} onChange={handleChange} placeholder="Nom et prénom" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>
 
-        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Email
+        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Email <span className="text-red-600">*</span>
           <input name="email" type="email" value={form.email} onChange={handleChange}placeholder="Email" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>
 
-        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Société / Crèche
+        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Société / Crèche <span className="text-red-600">*</span>
           <input name="centerName" value={form.centerName} onChange={handleChange} placeholder="Nom de la crèche ou société" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
         </label>
         
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full mb-3">
-           <label className="block text-left font-medium text-[#08323a]">Adresse
+           <label className="block text-left font-medium text-[#08323a]">Adresse <span className="text-red-600">*</span>
             <div className="relative">
               <input name="address" value={form.address} onChange={handleChange} placeholder="Adresse " className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
               {openAddress && placeSuggestions.length > 0 && (
@@ -493,7 +557,7 @@ export default function RegisterPage() {
               )}
             </div>
           </label>
-          <label className="block text-left font-medium text-[#08323a]">Pays
+          <label className="block text-left font-medium text-[#08323a]">Pays <span className="text-red-600">*</span>
             <div className="relative">
               <input name="country" value={form.country} onChange={handleChange} placeholder="Pays" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
               {openCountry && countrySuggestions.length > 0 && (
@@ -506,7 +570,7 @@ export default function RegisterPage() {
             </div>
           </label>
 
-          <label className="block text-left font-medium text-[#08323a]">Région
+          <label className="block text-left font-medium text-[#08323a]">Région <span className="text-red-600">*</span>
             <div className="relative">
               <input name="region" value={form.region} onChange={handleChange} placeholder="Région / Département" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
               {openRegion && regionSuggestions.length > 0 && (
@@ -520,7 +584,7 @@ export default function RegisterPage() {
           </label>
 
          
-          <label className="block text-left font-medium text-[#08323a]">Ville 
+          <label className="block text-left font-medium text-[#08323a]">Ville <span className="text-red-600">*</span>
             <div className="relative">
               <input name="city" value={form.city} onChange={handleChange} placeholder="Ville" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
               {openCity && citySuggestions.length > 0 && (
@@ -550,21 +614,71 @@ export default function RegisterPage() {
           </label>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full mb-3">
-          <label className="block text-left font-medium text-[#08323a]">Code postal
-            <input name="postalCode" value={form.postalCode} onChange={handleChange} placeholder="Code postal" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-          </label>
-         
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full mb-3">
+    <div className="sm:col-span-2 block text-left font-medium text-[#08323a]">Code postal <span className="text-red-600">*</span></div>
+
+          <div>
+            <input name="postalCode" value={form.postalCode} onChange={handleChange} placeholder="Code postal" onBlur={() => {
+              try {
+                if (!resolvedCountryCode) {
+                  // clear postal code when leaving the field if country is not known
+                  updateForm({ postalCode: '' });
+                }
+              } catch (err) {
+                console.error('postalCode onBlur error', err);
+              }
+            }} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+          </div>
+
+          <div className="text-xs flex items-center">
+            {form.postalCode ? (
+              resolvedCountryCode ? (
+                postalCodeIsValid ? (
+                  <span className="text-green-600">✓ Code postal valide</span>
+                ) : (
+                  <span className="text-red-600">✕ Code postal invalide pour le pays sélectionné</span>
+                )
+              ) : (
+                <span className="text-gray-600">Sélectionnez d'abord le pays pour valider le code postal</span>
+              )
+            ) : (
+              <span className="text-gray-500">Entrez un code postal</span>
+            )}
+          </div>
+
         </div>
 
-        <label className="block mb-3 w-full text-left font-medium text-gray-700">Mot de passe
+  <label className="block mb-3 w-full text-left font-medium text-gray-700">Mot de passe <span className="text-red-600">*</span>
           <div className="relative">
             <input name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="Mot de passe" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] pr-10" />
             <button type="button" tabIndex={-1} aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#0b5566] text-lg focus:outline-none" onClick={() => setShowPassword(v => !v)}>{showPassword ? '🙈' : '👁️'}</button>
           </div>
         </label>
 
-        <label className="block mb-3 w-full text-left font-medium text-gray-700">Confirmer le mot de passe
+        {/* Password rules live feedback */}
+        <div className="w-full mb-3">
+          <div className="text-sm font-medium text-[#08323a] mb-2">Votre mot de passe doit contenir :</div>
+          <ul className="text-sm space-y-1">
+            <li className={`flex items-center gap-2 ${hasUpper ? 'text-green-600' : 'text-red-600'}`}>
+              <svg className={`w-4 h-4 ${hasUpper ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span>Une lettre majuscule (A-Z)</span>
+            </li>
+            <li className={`flex items-center gap-2 ${hasDigit ? 'text-green-600' : 'text-red-600'}`}>
+              <svg className={`w-4 h-4 ${hasDigit ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span>Un chiffre (0-9)</span>
+            </li>
+            <li className={`flex items-center gap-2 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`}>
+              <svg className={`w-4 h-4 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span>Un caractère spécial (ex. !@#$%)</span>
+            </li>
+            <li className={`flex items-center gap-2 ${hasLength ? 'text-green-600' : 'text-red-600'}`}>
+              <svg className={`w-4 h-4 ${hasLength ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <span>Au moins {minLength} caractères</span>
+            </li>
+          </ul>
+        </div>
+
+  <label className="block mb-3 w-full text-left font-medium text-gray-700">Confirmer le mot de passe <span className="text-red-600">*</span>
           <div className="relative">
             <input name="confirmPassword" type={showConfirm ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmer le mot de passe" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] pr-10" />
             <button type="button" tabIndex={-1} aria-label={showConfirm ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#0b5566] text-lg focus:outline-none" onClick={() => setShowConfirm(v => !v)}>{showConfirm ? '🙈' : '👁️'}</button>
@@ -602,9 +716,12 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <button type="submit" disabled={initLoading || completeLoading || initialPlan !== 'decouverte'} title={initialPlan !== 'decouverte' ? 'Les abonnements payants ne sont pas encore disponibles. Contactez-nous pour plus d’informations.' : undefined} aria-disabled={initialPlan !== 'decouverte' ? 'true' : 'false'} className={`w-full py-2 rounded-full font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] ${initLoading || completeLoading || initialPlan !== 'decouverte' ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-[#0b5566] text-white hover:opacity-95'}`}>
-          {initLoading || completeLoading ? 'Patientez…' : (initialPlan === 'decouverte' ? 'S’inscrire' : 'S’inscrire et payer')}
-        </button>
+        <div className="w-full">
+          <button type="submit" disabled={initLoading || completeLoading || initialPlan !== 'decouverte' || !passwordValid || !postalCodeIsValid || !allFieldsFilled} title={initialPlan !== 'decouverte' ? 'Les abonnements payants ne sont pas encore disponibles. Contactez-nous pour plus d’informations.' : (!allFieldsFilled ? 'Remplissez tous les champs obligatoires.' : (!passwordValid ? 'Le mot de passe ne respecte pas les règles requises.' : (!postalCodeIsValid ? 'Le code postal est invalide.' : undefined)))} aria-disabled={initialPlan !== 'decouverte' ? 'true' : (!passwordValid || !postalCodeIsValid || !allFieldsFilled ? 'true' : 'false')} className={`w-full py-2 rounded-full font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] ${initLoading || completeLoading || initialPlan !== 'decouverte' || !passwordValid || !postalCodeIsValid || !allFieldsFilled ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-[#0b5566] text-white hover:opacity-95'}`}>
+            {initLoading || completeLoading ? 'Patientez…' : (initialPlan === 'decouverte' ? 'S’inscrire' : 'S’inscrire et payer')}
+          </button>
+          {!passwordValid && <div className="text-xs text-red-600 mt-2">Le mot de passe doit respecter toutes les règles ci-dessus.</div>}
+        </div>
 
         <div className="mt-4 text-sm text-[#08323a]">Déjà un compte ? <a href="/login" className="text-[#0b5566] hover:underline">Se connecter</a></div>
 

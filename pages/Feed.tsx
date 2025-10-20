@@ -1198,6 +1198,8 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
 
   const mediaCount = post.medias ? post.medias.length : 0;
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   // lightbox state for slideshow
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -1461,10 +1463,10 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
       )}
       {canEdit && editing && (
         <div className="mt-3">
-            <label className="inline-flex items-center gap-2 cursor-pointer">
-            <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={e => handleUploadImages(e.target.files)} />
-            <span className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">Ajouter des fichiers (images/vidéos, max 6)</span>
-          </label>
+            <div className="inline-flex items-center gap-2">
+              <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="hidden" onChange={e => handleUploadImages(e.currentTarget.files)} />
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">Ajouter des fichiers (images/vidéos, max 6)</button>
+            </div>
         </div>
       )}
       {/* post text (separate box so length doesn't affect images) */}

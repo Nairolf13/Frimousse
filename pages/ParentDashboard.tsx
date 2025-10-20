@@ -122,6 +122,16 @@ const ParentDashboard: React.FC = () => {
     return () => document.removeEventListener('click', onDocClick);
   }, []);
 
+  // cleanup success timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (successTimer.current) {
+        window.clearTimeout(successTimer.current);
+        successTimer.current = null;
+      }
+    };
+  }, []);
+
   const selectPlace = (p: GeodataPlace) => {
     const house = p.house_number ? String(p.house_number).trim() : '';
     const road = p.street ? String(p.street).trim() : '';
@@ -142,10 +152,22 @@ const ParentDashboard: React.FC = () => {
   };
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const successTimer = React.useRef<number | null>(null);
   const [adminResetModal, setAdminResetModal] = useState<{ open: boolean; parentId?: string; password?: string } | null>(null);
   const [pendingSave, setPendingSave] = useState<{ payload: { name: string; email: string; phone?: string; password?: string; newPassword?: string }; parentId?: string | null } | null>(null);
   const [showPw, setShowPw] = useState(false);
   const navigate = useNavigate();
+
+  // Password validation rules (same as RegisterPage)
+  const uppercaseRe = /[A-ZÀ-ÖØ-Ý]/; // include accented uppercase letters
+  const digitRe = /\d/;
+  const specialRe = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/;
+  const minLength = 8;
+  const hasUpper = uppercaseRe.test(form.password || '');
+  const hasDigit = digitRe.test(form.password || '');
+  const hasSpecial = specialRe.test(form.password || '');
+  const hasLength = (form.password || '').length >= minLength;
+  const passwordValid = hasUpper && hasDigit && hasSpecial && hasLength;
 
   useEffect(() => {
     const load = async () => {
@@ -248,7 +270,9 @@ const ParentDashboard: React.FC = () => {
   const parents: Parent[] = adminData?.parents ?? [];
     return (
       <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+        {/* inline successMessage banner will show inside forms when needed */}
         <div className="max-w-7xl mx-auto w-full">
+          {/* successMessage banner removed from top to render in the same place as Children (below form) */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
             <div>
               <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.parent')}</h1>
@@ -300,6 +324,11 @@ const ParentDashboard: React.FC = () => {
               }
               if ((form.password || form.confirmPassword) && form.password !== form.confirmPassword) {
                 setFormError("Les mots de passe ne correspondent pas");
+                return;
+              }
+              // If a password is provided, ensure it satisfies the policy
+              if (form.password && !passwordValid) {
+                setFormError('Le mot de passe ne respecte pas les règles requises');
                 return;
               }
                 try {
@@ -358,7 +387,10 @@ const ParentDashboard: React.FC = () => {
                   const bodyText = typeof resBody === 'object' && resBody !== null && 'message' in (resBody as Record<string, unknown>) ? String((resBody as Record<string, unknown>).message) : (await res.text());
                   throw new Error(bodyText || 'Erreur création parent');
                 }
-                setSuccessMessage(form.password ? (editingParent ? 'Parent modifié.' : 'Parent créé avec mot de passe.') : (editingParent ? 'Parent modifié.' : 'Parent créé — une invitation a été envoyée.'));
+                const smsg = form.password ? (editingParent ? 'Parent modifié.' : 'Parent créé avec mot de passe.') : (editingParent ? 'Parent modifié.' : 'Parent créé — une invitation a été envoyée.');
+                setSuccessMessage(smsg);
+                if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
+                successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
                 const reload = await fetchWithRefresh(`api/parent/admin`, { credentials: 'include' });
                 const reloadText = await reload.text();
                 let json: unknown = null;
@@ -370,16 +402,29 @@ const ParentDashboard: React.FC = () => {
                 setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' });
               } catch (err: unknown) {
                 console.error('Add parent failed', err);
-                if (err instanceof Error) setFormError(err.message);
-                else setFormError('Erreur');
+                const msg = err instanceof Error ? err.message : 'Erreur';
+                setFormError(msg);
               }
             }} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-              <input name="firstName" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} placeholder={t('parent.form.firstName')} required className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="lastName" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder={t('parent.form.lastName')} required className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={t('parent.form.email')} required className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="phone" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder={t('parent.form.phone')} className="border rounded px-3 py-2 text-xs md:text-base" />
-              <div id="parent-form-address" className="relative">
-                <input name="address" value={form.address} onChange={e => { setForm({ ...form, address: e.target.value }); setOpenAddress(true); }} onFocus={() => setOpenAddress(true)} placeholder={t('parent.form.address') || 'Adresse'} className="border rounded px-3 py-2 text-xs md:text-base w-full" autoComplete="off" />
+              <div className="flex flex-col">
+                <label htmlFor="parent-firstName" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.firstName')} <span className="text-red-500">*</span></label>
+                <input id="parent-firstName" name="firstName" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} placeholder={t('parent.form.firstName')} required className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="parent-lastName" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.lastName')} <span className="text-red-500">*</span></label>
+                <input id="parent-lastName" name="lastName" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder={t('parent.form.lastName')} required className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="parent-email" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.email')} <span className="text-red-500">*</span></label>
+                <input id="parent-email" name="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={t('parent.form.email')} required className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="parent-phone" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.phone')} <span className="text-red-500">*</span></label>
+                <input id="parent-phone" name="phone" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder={t('parent.form.phone')} className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full" />
+              </div>
+              <div id="parent-form-address" className="relative flex flex-col">
+                <label htmlFor="parent-address" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.address')} <span className="text-red-500">*</span></label>
+                <input id="parent-address" name="address" value={form.address} onChange={e => { setForm({ ...form, address: e.target.value }); setOpenAddress(true); }} onFocus={() => setOpenAddress(true)} placeholder={t('parent.form.address') || 'Adresse'} className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full" autoComplete="off" />
                 {geodataError && <div className="text-sm text-red-500 mt-1">{geodataError}</div>}
                 {openAddress && placeSuggestions && placeSuggestions.length > 0 && (
                   <div className="absolute z-50 bg-white shadow rounded mt-1 w-full max-h-40 overflow-auto border">
@@ -392,25 +437,76 @@ const ParentDashboard: React.FC = () => {
                   </div>
                 )}
               </div>
-              <input name="postalCode" value={form.postalCode} onChange={e => setForm({ ...form, postalCode: e.target.value })} placeholder={t('parent.form.postalCode') || 'Code postal'} className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="city" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder={t('parent.form.city') || 'Ville'} className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="region" value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} placeholder={t('parent.form.region') || 'Région'} className="border rounded px-3 py-2 text-xs md:text-base" />
-              <input name="country" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} placeholder={t('parent.form.country') || 'Pays'} className="border rounded px-3 py-2 text-xs md:text-base" />
-              <div className="relative">
-                <input name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={t('parent.form.password.placeholder')} className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
-                <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button>
+              <div className="flex flex-col">
+                <label htmlFor="parent-postalCode" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.postalCode') || 'Code postal'} <span className="text-red-500">*</span></label>
+                <input id="parent-postalCode" name="postalCode" value={form.postalCode} onChange={e => setForm({ ...form, postalCode: e.target.value })} placeholder={t('parent.form.postalCode') || 'Code postal'} className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full" />
               </div>
-              <div className="relative">
-                <input name="confirmPassword" type={showPw ? 'text' : 'password'} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder={t('parent.form.confirmPassword.placeholder')} className="border rounded px-3 py-2 text-xs md:text-base w-full pr-10" />
-                <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button>
+              <div className="flex flex-col">
+                <label htmlFor="parent-city" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.city') || 'Ville'} <span className="text-red-500">*</span></label>
+                <input id="parent-city" name="city" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder={t('parent.form.city') || 'Ville'} className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full" />
               </div>
-              <div className="md:col-span-2 flex gap-2">
-                <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingParent ? t('parent.form.submit.save') : t('parent.form.submit.add')}</button>
-                <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' }); setFormError(null); }} className="bg-gray-300 px-4 py-2 rounded">{t('parent.form.cancel')}</button>
+              <div className="flex flex-col">
+                <label htmlFor="parent-region" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.region') || 'Région'} <span className="text-red-500">*</span></label>
+                <input id="parent-region" name="region" value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} placeholder={t('parent.form.region') || 'Région'} className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="parent-country" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.country') || 'Pays'} <span className="text-red-500">*</span></label>
+                <input id="parent-country" name="country" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} placeholder={t('parent.form.country') || 'Pays'} className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full" />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="parent-password" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.password.placeholder')}</label>
+                <div className="relative w-full">
+                  <input id="parent-password" name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={t('parent.form.password.placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full pr-10" />
+                  <button type="button" className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 flex items-center justify-center text-sm text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)} aria-label={showPw ? t('common.hide_password') : t('common.show_password')}>{showPw ? '🙈' : '👁️'}</button>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="parent-confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.confirmPassword.placeholder')}</label>
+                <div className="relative w-full">
+                  <input id="parent-confirmPassword" name="confirmPassword" type={showPw ? 'text' : 'password'} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder={t('parent.form.confirmPassword.placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base w-full pr-10" />
+                  <button type="button" className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 flex items-center justify-center text-sm text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)} aria-label={showPw ? t('common.hide_password') : t('common.show_password')}>{showPw ? '🙈' : '👁️'}</button>
+                </div>
+              </div>
+                {/* Password rules live feedback for admins creating/editing parents */}
+                {(adding || editingParent) && (
+                  <div className="md:col-span-2 lg:col-span-3 w-full mb-2">
+                    <div className="text-sm font-medium text-[#08323a] mb-2">Le mot de passe doit contenir :</div>
+                    <ul className="text-sm space-y-1">
+                      <li className={`flex items-center gap-2 ${hasUpper ? 'text-green-600' : 'text-red-600'}`}>
+                        <svg className={`w-4 h-4 ${hasUpper ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <span>Une lettre majuscule (A-Z)</span>
+                      </li>
+                      <li className={`flex items-center gap-2 ${hasDigit ? 'text-green-600' : 'text-red-600'}`}>
+                        <svg className={`w-4 h-4 ${hasDigit ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <span>Un chiffre (0-9)</span>
+                      </li>
+                      <li className={`flex items-center gap-2 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`}>
+                        <svg className={`w-4 h-4 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <span>Un caractère spécial (ex. !@#$%)</span>
+                      </li>
+                      <li className={`flex items-center gap-2 ${hasLength ? 'text-green-600' : 'text-red-600'}`}>
+                        <svg className={`w-4 h-4 ${hasLength ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        <span>Au moins {minLength} caractères</span>
+                      </li>
+                    </ul>
+                    {!passwordValid && <div className="text-xs text-red-600 mt-2">Le mot de passe doit respecter toutes les règles ci-dessus.</div>}
+                  </div>
+                )}
+
+                <div className="md:col-span-2 lg:col-span-3 flex items-center justify-between gap-3 w-full">
+                <div className="flex gap-2">
+                  <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingParent ? t('parent.form.submit.save') : t('parent.form.submit.add')}</button>
+                  <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' }); setFormError(null); }} className="bg-gray-300 px-4 py-2 rounded">{t('parent.form.cancel')}</button>
+                </div>
+                <div className="text-sm text-gray-500 text-right">{t('parent.form.required_note')} <span className="text-red-500">*</span></div>
               </div>
               {formError && <div className="text-red-600 md:col-span-2">{formError}</div>}
-              {successMessage && <div className="md:col-span-2 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMessage}</div>}
             </form>
+          )}
+
+          {/* Inline success banner for parent actions (placed like in Children.tsx) */}
+          {successMessage && (
+            <div className="mb-4 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMessage}</div>
           )}
 
           <div>
@@ -496,14 +592,14 @@ const ParentDashboard: React.FC = () => {
                       try { json = text ? JSON.parse(text) : null; } catch { json = text; }
                       setAdminData(json as AdminData);
                       setDeletingParentId(null);
+                      const sm = 'Parent supprimé.';
+                      setSuccessMessage(sm);
+                      if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
+                      successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
                     } catch (err) {
                       console.error('Delete parent failed', err);
-                      // show a helpful message to the user
-                      if (err instanceof Error) {
-                        alert('Suppression échouée: ' + err.message);
-                      } else {
-                        alert('Suppression échouée');
-                      }
+                      const msg = err instanceof Error ? ('Suppression échouée: ' + err.message) : 'Suppression échouée';
+                      setFormError(msg);
                       setDeletingParentId(null);
                     }
                   }} className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2">{t('children.action.delete')}</button>
@@ -552,8 +648,9 @@ const ParentDashboard: React.FC = () => {
   }
 
   // Parent view (their children)
-  return (
+    return (
     <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      {/* parent view uses inline successMessage banner, not top-right toasts */}
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <h1 className="text-2xl font-semibold mb-4">Espace Parent</h1>
       {parentForCard ? (

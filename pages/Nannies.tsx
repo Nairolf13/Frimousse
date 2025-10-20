@@ -169,11 +169,22 @@ export default function Nannies() {
     setOpenAddress(false);
   };
   const [showPw, setShowPw] = useState(false);
+  // Password validation rules (same as ParentDashboard)
+  const uppercaseRe = /[A-ZÀ-ÖØ-Ý]/; // include accented uppercase letters
+  const digitRe = /\d/;
+  const specialRe = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/;
+  const minLength = 8;
+  const hasUpper = uppercaseRe.test(String(form.password || ''));
+  const hasDigit = digitRe.test(String(form.password || ''));
+  const hasSpecial = specialRe.test(String(form.password || ''));
+  const hasLength = String(form.password || '').length >= minLength;
+  const passwordValid = hasUpper && hasDigit && hasSpecial && hasLength;
   const [birthInputType, setBirthInputType] = useState<'text' | 'date'>('text');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const optimisticIdRef = useRef<string | null>(null);
   const [error, setError] = useState('');
   const [planningNanny, setPlanningNanny] = useState<Nanny|null>(null);
   const [search, setSearch] = useState('');
@@ -209,6 +220,8 @@ export default function Nannies() {
 
   const [messages, setMessages] = useState<Record<string, { text: string; type: 'success' | 'error' } | null>>({});
   const [confirmPayment, setConfirmPayment] = useState<{ nannyId: string; amount: number } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const successTimer = useRef<number | null>(null);
   // Admin password-reset modal state
   const [adminResetModal, setAdminResetModal] = useState<{ open: boolean; nannyId?: string; password?: string } | null>(null);
   const [pendingSave, setPendingSave] = useState<{ payload: Partial<typeof emptyForm> & { experience?: number; newPassword?: string }; editingId?: string | null } | null>(null);
@@ -272,6 +285,9 @@ export default function Nannies() {
     fetchWithRefresh(`${API_URL}/assignments`, { credentials: 'include' })
       .then(res => res.json())
       .then(setAssignments);
+    return () => {
+      if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
+    };
   }, [fetchNannies]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -283,6 +299,11 @@ export default function Nannies() {
     setError('');
     if (form.password && form.password !== confirmPassword) {
       setError('Les mots de passe ne correspondent pas');
+      return;
+    }
+    // If a password is provided, ensure it satisfies the policy
+    if (form.password && !passwordValid) {
+      setError('Le mot de passe ne respecte pas les règles requises');
       return;
     }
     try {
@@ -307,6 +328,46 @@ export default function Nannies() {
         }
       } else {
         if (!isAdmin && !isEditingOwnNanny) delete (payload as Partial<typeof emptyForm> & { newPassword?: string }).newPassword;
+      }
+
+      // optimistic UI: insert a temporary nanny when creating a new one
+      let optimisticId: string | null = null;
+      if (!editingId) {
+        // If creating, ensure the email is not already used by another nanny (case-insensitive)
+        if (payload.email) {
+          const emailLower = String(payload.email).trim().toLowerCase();
+          const exists = (nannies || []).some(n => n.email && String(n.email).trim().toLowerCase() === emailLower);
+          if (exists) {
+            setError('Une utilisateur avec cet email existe déjà.');
+            return;
+          }
+        }
+        optimisticId = `optimistic-${Date.now()}`;
+        optimisticIdRef.current = optimisticId;
+        const optimisticNanny: Nanny = {
+          id: optimisticId,
+          name: form.name || '',
+          availability: form.availability || 'Disponible',
+          experience: Number(form.experience) || 0,
+          assignedChildren: [],
+          specializations: form.specializations || [],
+          status: form.status || 'Disponible',
+          contact: form.contact || '',
+          email: form.email || '',
+          cotisationPaidUntil: null,
+          birthDate: form.birthDate || undefined,
+          address: form.address || '',
+          postalCode: form.postalCode || '',
+          city: form.city || '',
+          region: form.region || '',
+          country: form.country || '',
+        };
+        setNannies(prev => [optimisticNanny, ...prev]);
+        try {
+          const cacheKey = `${API_URL}/nannies`;
+          const existing = getCached<Nanny[]>(cacheKey) || [];
+          setCached(cacheKey, [optimisticNanny, ...existing]);
+        } catch (err) { void err; }
       }
 
       await performSave(payload, editingId);
@@ -356,13 +417,98 @@ export default function Nannies() {
         }
         return;
       }
+      // Attempt to parse saved nanny from response
+      let savedNanny: Nanny | null = null;
+      try {
+        savedNanny = await res.json();
+      } catch {
+        savedNanny = null;
+      }
+
+      // Reset form state and close add form
       setForm(emptyForm);
       setConfirmPassword('');
       setEditingId(null);
-      fetchNannies();
+      setAdding(false);
+
       if (editingId) {
+        // Update local list with edited nanny if available
+        if (savedNanny) {
+          setNannies(prev => prev.map(n => (String(n.id) === String(editingId) ? savedNanny as Nanny : n)));
+          try { setCached(`${API_URL}/nannies`, getCached<Nanny[]>(`${API_URL}/nannies`)?.map(n => (String(n.id) === String(editingId) ? savedNanny as Nanny : n)) ); } catch (err) { void err; }
+        }
         setMessages(m => ({ ...m, [editingId]: { text: 'Mise à jour effectuée', type: 'success' } }));
         setTimeout(() => setMessages(m => ({ ...m, [editingId]: null })), 3000);
+        // show general inline success banner
+        setSuccessMessage(t('nanny.update_success') || 'Mise à jour effectuée');
+        if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
+        successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
+      }
+      else {
+        // creation path: insert new nanny into local state so UI updates immediately
+        // If the response includes an id, try to insert the created nanny (and fetch full record if partial).
+        if (savedNanny && (savedNanny as Nanny).id) {
+          let fullNanny: Nanny | null = savedNanny as Nanny;
+          // If the created object seems partial (missing key display fields), try to fetch the full object
+          const looksPartial = !fullNanny.name || !fullNanny.email || fullNanny.experience === undefined || fullNanny.experience === null;
+          if (looksPartial && (savedNanny as Nanny).id) {
+            try {
+              const id = (savedNanny as Nanny).id;
+              const getRes = await fetchWithRefresh(`${API_URL}/nannies/${id}`, { credentials: 'include' });
+              if (getRes.ok) {
+                const fetched = await getRes.json().catch(() => null);
+                if (fetched) fullNanny = fetched as Nanny;
+              }
+            } catch (err) { void err; }
+          }
+
+          // Insert or replace the (possibly fetched) full nanny.
+          // If we previously inserted an optimistic nanny, replace that entry so the UI shows the real saved data.
+          setNannies(prev => {
+            try {
+              const optId = optimisticIdRef.current;
+              if (optId) {
+                const replaced = prev.map(n => (String(n.id) === String(optId) ? (fullNanny as Nanny) : n));
+                return replaced;
+              }
+            } catch (err) { void err; }
+            return [fullNanny as Nanny, ...prev];
+          });
+          try {
+            const cacheKey = `${API_URL}/nannies`;
+            const existing = getCached<Nanny[]>(cacheKey) || [];
+            const optId = optimisticIdRef.current;
+            if (optId) {
+              const replaced = existing.map(n => (String(n.id) === String(optId) ? (fullNanny as Nanny) : n));
+              setCached(cacheKey, replaced);
+            } else {
+              setCached(cacheKey, [fullNanny as Nanny, ...existing]);
+            }
+          } catch (err) { void err; }
+
+          // fetch additional data for the new nanny (cotisation & parents totals)
+          try { if (fullNanny && fullNanny.id) { fetchCotisation(fullNanny.id); fetchParentsTotalForNanny(fullNanny.id); } } catch (err) { void err; }
+
+          // clear optimistic id so future saves don't try to replace it
+          optimisticIdRef.current = null;
+
+          // show inline success banner for creation (we inserted/replaced the full nanny)
+          setSuccessMessage(t('nanny.added_success') || 'Nounou ajoutée.');
+          if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
+          successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
+
+        } else {
+          // fallback: refresh full list if response did not include created object or id
+          fetchNannies();
+          // show inline success banner
+          setSuccessMessage(t('nanny.added_success') || 'Nounou ajoutée.');
+          if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
+          successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
+        }
+        // creation path: show inline success banner
+        setSuccessMessage(t('nanny.added_success') || 'Nounou ajoutée.');
+        if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
+        successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -429,7 +575,16 @@ export default function Nannies() {
       });
       if (!res.ok) throw new Error('Erreur lors de la suppression');
       setDeleteId(null);
+      // Remove the deleted nanny from local state so UI updates immediately
+      setNannies(prev => prev.filter(n => String(n.id) !== String(deleteId)));
+      // Also clear cached nannies so subsequent fetches reflect deletion
+  try { setCached(`${API_URL}/nannies`, undefined); } catch { /* ignore cache errors */ }
+      // refetch to ensure related data (cotisations, totals) are up to date
       fetchNannies();
+      // show inline success banner
+      setSuccessMessage(t('nanny.delete_success') || 'Nounou supprimée.');
+      if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
+      successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -524,88 +679,176 @@ export default function Nannies() {
         </div>
 
         {(adding || editingId) && (
-          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-4 md:grid-cols-3 lg:grid-cols-3">
-            {/* Shared input class ensures consistent widths and appearance */}
-            <input name="name" value={form.name} onChange={handleChange} placeholder={t('nanny.form.name')} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-            <select name="availability" value={form.availability} onChange={handleChange} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]">
-              <option value="Disponible">{t('nanny.availability.available')}</option>
-              <option value="En_congé">{t('nanny.availability.on_leave')}</option>
-              <option value="Maladie">{t('nanny.availability.sick')}</option>
-            </select>
-              <div id="nanny-form-address" className="md:col-span-2">
-                <label className="block text-left font-medium text-[#08323a]">
-                  <div className="relative">
-                    <input name="address" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t('parent.form.address')} className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" onFocus={() => setOpenAddress(true)} />
-                    {openAddress && placeSuggestions.length > 0 && (
-                      <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-56 overflow-auto rounded shadow">
-                        {placeSuggestions.map((p, idx) => {
-                          const summary = [p.house_number && `${p.house_number} ${p.street}`, p.street || p.name, p.postcode, p.state, p.country].filter(Boolean).join(', ');
-                          const label = p.name || (p.house_number ? `${p.house_number} ${p.street}` : p.street || '');
-                          return (
-                            <li key={idx} role="button" tabIndex={0} onClick={() => { selectPlace(p); }} className="px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                              <div className="text-sm font-medium">{label}</div>
-                              <div className="text-xs text-gray-500">{summary}</div>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    )}
-                  </div>
-                </label>
+          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-4 md:grid-cols-2">
+            {/* Name */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.name')} <span className="text-red-500">*</span></label>
+              <input name="name" value={form.name} onChange={handleChange} placeholder={t('nanny.form.name')} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            </div>
+
+            {/* Availability */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.availability') || t('nanny.availability.available')} <span className="text-red-500">*</span></label>
+              <select name="availability" value={form.availability} onChange={handleChange} required className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]">
+                <option value="Disponible">{t('nanny.availability.available')}</option>
+                <option value="En_congé">{t('nanny.availability.on_leave')}</option>
+                <option value="Maladie">{t('nanny.availability.sick')}</option>
+              </select>
+            </div>
+
+            {/* Address (with suggestions) */}
+            <div id="nanny-form-address" className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.address')} <span className="text-red-500">*</span></label>
+              <div className="relative">
+                <input name="address" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t('parent.form.address')} className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" onFocus={() => setOpenAddress(true)} />
+                {openAddress && placeSuggestions.length > 0 && (
+                  <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-56 overflow-auto rounded shadow">
+                    {placeSuggestions.map((p, idx) => {
+                      const summary = [p.house_number && `${p.house_number} ${p.street}`, p.street || p.name, p.postcode, p.state, p.country].filter(Boolean).join(', ');
+                      const label = p.name || (p.house_number ? `${p.house_number} ${p.street}` : p.street || '');
+                      return (
+                        <li key={idx} role="button" tabIndex={0} onClick={() => { selectPlace(p); }} className="px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                          <div className="text-sm font-medium">{label}</div>
+                          <div className="text-xs text-gray-500">{summary}</div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
-              <label className="block text-left font-medium">
-                <span className="sr-only">{t('parent.form.postalCode')}</span>
-                <input name="postalCode" value={form.postalCode || ''} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} placeholder={t('parent.form.postalCode')} className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-              </label>
-              <input name="city" value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder={t('parent.form.city')} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-              <input name="region" value={form.region || ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder={t('parent.form.region') || 'Région'} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-              <input name="country" value={form.country || ''} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder={t('parent.form.country') || 'Pays'} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-            <input name="experience" type="number" value={form.experience || ''} onChange={handleChange} placeholder={t('nanny.form.experience') || 'Expérience'} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-            {/* Display formatted dd/mm/yyyy when not editing; keep ISO value for type=date */}
-            <input
-              name="birthDate"
-              type={birthInputType}
-              value={birthInputType === 'date' ? (form.birthDate || '') : (form.birthDate ? ((): string => {
-                // robustly format any parsable date as DD/MM/YYYY
-                try {
-                  const d = new Date(String(form.birthDate));
-                  if (!isNaN(d.getTime())) {
-                    const dd = String(d.getDate()).padStart(2, '0');
-                    const mm = String(d.getMonth() + 1).padStart(2, '0');
-                    const yyyy = String(d.getFullYear());
-                    return `${dd}/${mm}/${yyyy}`;
-                  }
-                } catch (e) {
-                  void e;
-                }
-                return String(form.birthDate);
-              })() : '')}
-              onChange={handleChange}
-              placeholder={t('nanny.form.birthDate') || 'Date de naissance'}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]"
-              onFocus={() => setBirthInputType('date')}
-              onBlur={() => setBirthInputType('text')}
-              readOnly={birthInputType === 'text'}
-            />
-            <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder={t('nanny.form.specializations')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base md:col-span-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-            <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder={t('nanny.form.contact')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-            <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-            <div className="relative md:col-span-1">
-              <input name="password" autoComplete="new-password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base pr-10 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-              <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
             </div>
-            <div className="relative md:col-span-1">
-              <input name="confirmPassword" autoComplete="new-password" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('nanny.form.confirmPassword')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-base pr-10 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-              <button type="button" tabIndex={-1} className="absolute right-2 top-2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
+
+            {/* Postal code */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.postalCode')} <span className="text-red-500">*</span></label>
+              <input name="postalCode" value={form.postalCode || ''} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} placeholder={t('parent.form.postalCode')} className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
             </div>
-            <div className="md:col-span-2 flex gap-2">
+
+            {/* City */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.city')} <span className="text-red-500">*</span></label>
+              <input name="city" value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder={t('parent.form.city')} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            </div>
+
+            {/* Region */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.region') || 'Région'} <span className="text-red-500">*</span></label>
+              <input name="region" value={form.region || ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder={t('parent.form.region') || 'Région'} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            </div>
+
+            {/* Country */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.country') || 'Pays'} <span className="text-red-500">*</span></label>
+              <input name="country" value={form.country || ''} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder={t('parent.form.country') || 'Pays'} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            </div>
+
+            {/* Experience */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.experience')} <span className="text-red-500">*</span></label>
+              <input name="experience" type="number" value={form.experience || ''} onChange={handleChange} placeholder={t('nanny.form.experience') || 'Expérience'} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            </div>
+
+            {/* Birth date */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.birthDate') || 'Date de naissance'} <span className="text-red-500">*</span></label>
+              <input
+                name="birthDate"
+                type={birthInputType}
+                value={birthInputType === 'date' ? (form.birthDate || '') : (form.birthDate ? ((): string => {
+                  try {
+                    const d = new Date(String(form.birthDate));
+                    if (!isNaN(d.getTime())) {
+                      const dd = String(d.getDate()).padStart(2, '0');
+                      const mm = String(d.getMonth() + 1).padStart(2, '0');
+                      const yyyy = String(d.getFullYear());
+                      return `${dd}/${mm}/${yyyy}`;
+                    }
+                  } catch (e) { void e; }
+                  return String(form.birthDate);
+                })() : '')}
+                onChange={handleChange}
+                placeholder={t('nanny.form.birthDate') || 'Date de naissance'}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]"
+                onFocus={() => setBirthInputType('date')}
+                onBlur={() => setBirthInputType('text')}
+                readOnly={birthInputType === 'text'}
+              />
+            </div>
+
+            {/* Specializations */}
+            <div className="md:col-span-2 flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.specializations')}</label>
+              <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder={t('nanny.form.specializations')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            </div>
+
+            {/* Contact */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.contact')} <span className="text-red-500">*</span></label>
+              <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder={t('nanny.form.contact')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            </div>
+
+            {/* Email */}
+            <div className="flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.email')} <span className="text-red-500">*</span></label>
+              <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+            </div>
+
+            {/* Password (no asterisk) */}
+            <div className="relative md:col-span-1 flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.password')}</label>
+              <input name="password" autoComplete="new-password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base pr-10 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <button type="button" tabIndex={-1} className="absolute right-2 top-8 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
+            </div>
+
+            {/* Confirm password (no asterisk) */}
+            <div className="relative md:col-span-1 flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.confirmPassword')}</label>
+              <input name="confirmPassword" autoComplete="new-password" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('nanny.form.confirmPassword')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base pr-10 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <button type="button" tabIndex={-1} className="absolute right-2 top-8 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
+            </div>
+
+            {/* Password rules live feedback for admins creating/editing nannies */}
+            {(adding || editingId) && (
+              <div className="md:col-span-2 w-full mb-2">
+                <div className="text-sm font-medium text-[#08323a] mb-2">Le mot de passe doit contenir :</div>
+                <ul className="text-sm space-y-1">
+                  <li className={`flex items-center gap-2 ${hasUpper ? 'text-green-600' : 'text-red-600'}`}>
+                    <svg className={`w-4 h-4 ${hasUpper ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span>Une lettre majuscule (A-Z)</span>
+                  </li>
+                  <li className={`flex items-center gap-2 ${hasDigit ? 'text-green-600' : 'text-red-600'}`}>
+                    <svg className={`w-4 h-4 ${hasDigit ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span>Un chiffre (0-9)</span>
+                  </li>
+                  <li className={`flex items-center gap-2 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`}>
+                    <svg className={`w-4 h-4 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span>Un caractère spécial (ex. !@#$%)</span>
+                  </li>
+                  <li className={`flex items-center gap-2 ${hasLength ? 'text-green-600' : 'text-red-600'}`}>
+                    <svg className={`w-4 h-4 ${hasLength ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span>Au moins {minLength} caractères</span>
+                  </li>
+                </ul>
+                {!passwordValid && <div className="text-xs text-red-600 mt-2">Le mot de passe doit respecter toutes les règles ci-dessus.</div>}
+              </div>
+            )}
+
+            <div className="md:col-span-1 flex gap-2">
               <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">
                 {editingId ? t('global.save') : t('global.add')}
               </button>
               <button type="button" onClick={() => { setForm(emptyForm); setConfirmPassword(''); setEditingId(null); setAdding(false); }} className="bg-gray-300 px-4 py-2 rounded">{t('global.cancel')}</button>
             </div>
+            <div className="md:col-span-1 flex items-end justify-end">
+              <div className="text-sm text-gray-500">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
+            </div>
             {error && <div className="text-red-600 md:col-span-2">{error}</div>}
           </form>
+        )}
+
+        {/* Inline success banner for nanny actions (add/delete/update) */}
+        {successMessage && (
+          <div className="mb-4 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMessage}</div>
         )}
 
         {loading ? (

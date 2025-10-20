@@ -12,12 +12,50 @@ function getPrescriptionUrl(child: unknown): string | undefined {
   return typeof v === 'string' ? v : undefined;
 }
 
+// normalize raw API child object into local Child shape
+function normalizeChild(raw: unknown): Child {
+  const base = { ...(raw as Record<string, unknown>) } as Record<string, unknown>;
+  const parentsArr = Array.isArray(base['parents']) ? (base['parents'] as unknown as Array<Record<string, unknown>>) : undefined;
+  if (parentsArr && parentsArr.length > 0 && parentsArr[0] && (parentsArr[0] as Record<string, unknown>)['parent']) {
+    const p = (parentsArr[0] as Record<string, unknown>)['parent'] as Record<string, unknown>;
+    const parentName = `${String(p['firstName'] ?? '')} ${String(p['lastName'] ?? '')}`.trim();
+    base['parentName'] = parentName || String(base['parentName'] ?? '');
+    base['parentContact'] = (p['phone'] as string) ?? String(base['parentContact'] ?? '');
+    base['parentMail'] = (p['email'] as string) ?? String(base['parentMail'] ?? '');
+    base['parentId'] = String(p['id'] ?? base['parentId'] ?? '');
+  }
+  const typedChild: Child = {
+    id: String(base['id'] ?? ''),
+    name: String(base['name'] ?? ''),
+    age: Number(base['age'] ?? 0),
+    sexe: (base['sexe'] === 'feminin' ? 'feminin' : 'masculin'),
+    parentName: String(base['parentName'] ?? ''),
+    parentContact: String(base['parentContact'] ?? ''),
+    parentMail: String(base['parentMail'] ?? ''),
+    parentId: base['parentId'] ? String(base['parentId']) : undefined,
+    allergies: base['allergies'] ? String(base['allergies']) : undefined,
+    group: base['group'] ? String(base['group']) : undefined,
+    present: Boolean(base['present'] ?? false),
+    newThisMonth: Boolean(base['newThisMonth'] ?? false),
+    cotisationPaidUntil: base['cotisationPaidUntil'] ? String(base['cotisationPaidUntil']) : undefined,
+    birthDate: base['birthDate'] ? String(base['birthDate']) : undefined,
+    nannyIds: Array.isArray(base['childNannies']) ? (base['childNannies'] as Array<Record<string, unknown>>).map((cn) => {
+      if (!cn || typeof cn !== 'object') return '';
+      const nannyObj = cn['nanny'] as Record<string, unknown> | undefined;
+      if (nannyObj && nannyObj['id']) return String(nannyObj['id']);
+      if (cn['nannyId']) return String(cn['nannyId']);
+      return '';
+    }).filter(Boolean) : [],
+  };
+  return typedChild;
+}
+
 interface Billing {
   days: number;
   amount: number;
 }
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getCached, setCached } from '../src/utils/apiCache';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
@@ -156,6 +194,7 @@ export default function Children() {
   const [groupFilter, setGroupFilter] = useState('');
   const [sort, setSort] = useState('name');
   const [showForm, setShowForm] = useState(false);
+  const successTimer = useRef<number | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
   const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number | undefined>>({});
@@ -201,47 +240,22 @@ export default function Children() {
       const assignmentsRes = await assignmentsPromise;
       
       const assignmentsData: Assignment[] = await assignmentsRes.json();
-      const presentIds = new Set(assignmentsData.map((a) => a.child.id));
+      const presentIdsSet = new Set(assignmentsData.map((a) => a.child.id));
 
-      // Normalize children: if backend returns parents relation, derive parentName/contact/mail for UI
+      // Normalize children and apply present flags from today's assignments
       const childrenData: Child[] = Array.isArray(childrenDataRaw) ? (childrenDataRaw as unknown[]).map((c: unknown) => {
-        const base = { ...(c as Record<string, unknown>) } as Record<string, unknown>;
-        // If parents relation present, use the first linked parent for display
-        const parentsArr = Array.isArray(base['parents']) ? (base['parents'] as unknown as Array<Record<string, unknown>>) : undefined;
-        if (parentsArr && parentsArr.length > 0 && parentsArr[0] && (parentsArr[0] as Record<string, unknown>)['parent']) {
-          const p = (parentsArr[0] as Record<string, unknown>)['parent'] as Record<string, unknown>;
-          const parentName = `${String(p['firstName'] ?? '')} ${String(p['lastName'] ?? '')}`.trim();
-          base['parentName'] = parentName || String(base['parentName'] ?? '');
-          base['parentContact'] = (p['phone'] as string) ?? String(base['parentContact'] ?? '');
-          base['parentMail'] = (p['email'] as string) ?? String(base['parentMail'] ?? '');
-          base['parentId'] = String(p['id'] ?? base['parentId'] ?? '');
-        }
-        const typedChild: Child = {
-          id: String(base['id'] ?? ''),
-          name: String(base['name'] ?? ''),
-          age: Number(base['age'] ?? 0),
-          sexe: (base['sexe'] === 'feminin' ? 'feminin' : 'masculin'),
-          parentName: String(base['parentName'] ?? ''),
-          parentContact: String(base['parentContact'] ?? ''),
-          parentMail: String(base['parentMail'] ?? ''),
-          parentId: base['parentId'] ? String(base['parentId']) : undefined,
-          allergies: base['allergies'] ? String(base['allergies']) : undefined,
-          group: base['group'] ? String(base['group']) : undefined,
-          present: presentIds.has(String(base['id'] ?? '')),
-          newThisMonth: Boolean(base['newThisMonth'] ?? false),
-          cotisationPaidUntil: base['cotisationPaidUntil'] ? String(base['cotisationPaidUntil']) : undefined,
-          birthDate: base['birthDate'] ? String(base['birthDate']) : undefined,
-          nannyIds: Array.isArray(base['childNannies']) ? (base['childNannies'] as Array<Record<string, unknown>>).map((cn) => {
-            if (!cn || typeof cn !== 'object') return '';
-            const nannyObj = cn['nanny'] as Record<string, unknown> | undefined;
-            if (nannyObj && nannyObj['id']) return String(nannyObj['id']);
-            if (cn['nannyId']) return String(cn['nannyId']);
-            return '';
-          }).filter(Boolean) : [],
-        };
-        return typedChild;
+        const nc = normalizeChild(c);
+        if (presentIdsSet.has(nc.id)) nc.present = true;
+        return nc;
       }) : [];
   setChildren(childrenData);
+  // keep the shared cache in sync after a fresh load
+  try {
+    const cacheKeyChildren = `${API_URL}/children`;
+    setCached(cacheKeyChildren, childrenData);
+  } catch {
+    // noop
+  }
   // initialize default cotisation amount to 15 for each child
   const amounts: Record<string, number | undefined> = {};
   childrenData.forEach(c => { amounts[c.id] = 15; });
@@ -348,6 +362,16 @@ export default function Children() {
     fetchBillings();
   }, [user]);
 
+  // cleanup any pending timers when component unmounts
+  useEffect(() => {
+    return () => {
+      if (successTimer.current) {
+        clearTimeout(successTimer.current);
+        successTimer.current = null;
+      }
+    };
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -355,22 +379,79 @@ export default function Children() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    const wasEditing = Boolean(editingId);
     try {
       // Build payload and omit parentId if not set to allow creating a child without a parent
-      const payload: Record<string, unknown> = {
-        name: form.name,
-        age: form.age,
-        sexe: form.sexe,
-        parentName: form.parentName || undefined,
-        parentContact: form.parentContact || undefined,
-        parentMail: form.parentMail || undefined,
-        allergies: form.allergies || undefined,
-        group: form.group || undefined,
-        present: form.present,
-        birthDate: form.birthDate || undefined,
-        nannyIds: Array.isArray(form.nannyIds) ? form.nannyIds : undefined,
-      };
+        // compute age from birthDate if provided, otherwise fall back to form.age
+        let computedAge = form.age;
+        try {
+          if (form.birthDate) {
+            const bd = new Date(form.birthDate);
+            if (!Number.isNaN(bd.getTime())) {
+              const diff = Date.now() - bd.getTime();
+              computedAge = Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
+            }
+          }
+        } catch {
+          // leave computedAge as-is
+        }
+
+        // Client-side validation for required fields
+        if (!form.name || !form.name.trim()) {
+          setError("Le nom est requis");
+          return;
+        }
+        if (!form.birthDate) {
+          setError("La date de naissance est requise");
+          return;
+        }
+        if (!form.sexe) {
+          setError("Le sexe est requis");
+          return;
+        }
+        // when creating a new child (not editing), ensure at least one nanny is assigned
+        if (!editingId && (!Array.isArray(form.nannyIds) || form.nannyIds.length === 0)) {
+          setError("Veuillez assigner au moins une nounou");
+          return;
+        }
+
+        const payload: Record<string, unknown> = {
+          name: form.name,
+          // age intentionally omitted: backend will compute from birthDate
+          sexe: form.sexe,
+          parentName: form.parentName || undefined,
+          parentContact: form.parentContact || undefined,
+          parentMail: form.parentMail || undefined,
+          allergies: form.allergies || undefined,
+          group: form.group || undefined,
+          present: form.present,
+          birthDate: form.birthDate || undefined,
+          nannyIds: Array.isArray(form.nannyIds) ? form.nannyIds : undefined,
+        };
       if (form.parentId) payload.parentId = form.parentId;
+
+      // optimistic UI: insert a temporary child when creating a new one
+      let optimisticId: string | null = null;
+      if (!editingId) {
+        optimisticId = `optimistic-${Date.now()}`;
+        const optimisticChild: Child = {
+          id: optimisticId,
+          name: form.name,
+          age: computedAge,
+          sexe: form.sexe,
+          parentName: form.parentName || '',
+          parentContact: form.parentContact || '',
+          parentMail: form.parentMail || '',
+          parentId: form.parentId || undefined,
+          allergies: form.allergies || undefined,
+          group: form.group || undefined,
+          present: form.present,
+          newThisMonth: true,
+          birthDate: form.birthDate || undefined,
+          nannyIds: Array.isArray(form.nannyIds) ? form.nannyIds : [],
+        };
+        setChildren(prev => [optimisticChild, ...prev]);
+      }
 
       const res = await fetchWithRefresh(editingId ? `${API_URL}/children/${editingId}` : `${API_URL}/children`, {
         method: editingId ? 'PUT' : 'POST',
@@ -379,12 +460,48 @@ export default function Children() {
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error('Erreur lors de la sauvegarde');
+      const saved = await res.json().catch(() => null);
+      // optimistic update: if server returns the saved child, integrate it directly
+      if (saved) {
+        try {
+          const newChild = normalizeChild(saved);
+          setChildren(prev => {
+            if (wasEditing) return prev.map(c => c.id === newChild.id ? newChild : c);
+            // replace optimistic child if present
+            if (optimisticId) {
+              return prev.map(c => c.id === optimisticId ? newChild : c);
+            }
+            return [newChild, ...prev];
+          });
+          // update shared cache after optimistic add/edit
+          try {
+            const cacheKeyChildren = `${API_URL}/children`;
+            const existing = getCached<Child[]>(cacheKeyChildren) ?? [];
+            const updated = wasEditing ? existing.map(c => c.id === newChild.id ? newChild : c) : [newChild, ...existing];
+            setCached(cacheKeyChildren, updated);
+          } catch {
+            // ignore cache errors
+          }
+        } catch {
+          // fallback: refetch
+          fetchChildren();
+        }
+      } else {
+        // fallback: refetch
+        fetchChildren();
+      }
       setForm(emptyForm);
       setEditingId(null);
       setShowForm(false);
-      setSuccessMsg("L'enfant a bien été ajouté !");
-      fetchChildren();
-      setTimeout(() => setSuccessMsg(''), 2500);
+      // show success message and ensure previous timers are cleared so messages don't overlap
+      if (successTimer.current) {
+        clearTimeout(successTimer.current);
+        successTimer.current = null;
+      }
+      const sm = wasEditing ? t('children.form.added_success') : t('children.form.added_success');
+      setSuccessMsg(sm);
+      if (successTimer.current) { clearTimeout(successTimer.current); successTimer.current = null; }
+      successTimer.current = window.setTimeout(() => { setSuccessMsg(''); successTimer.current = null; }, 2500) as unknown as number;
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -416,8 +533,27 @@ export default function Children() {
         if (import.meta.env.DEV) console.error('Delete child failed', res.status, serverMsg);
         throw new Error(serverMsg);
       }
-      setDeleteId(null);
-      fetchChildren();
+  // remove from UI immediately
+  const deletedChild = children.find(c => c.id === deleteId);
+  const deletedName = deletedChild ? deletedChild.name : "l'enfant";
+  setChildren(prev => prev.filter(c => c.id !== deleteId));
+  // update shared cache to remove deleted child
+  try {
+    const cacheKeyChildren = `${API_URL}/children`;
+    const existing = getCached<Child[]>(cacheKeyChildren) ?? [];
+    setCached(cacheKeyChildren, existing.filter(c => c.id !== deleteId));
+  } catch {
+    // ignore cache issues
+  }
+  setDeleteId(null);
+  // show success message banner and clear any previous timer
+  if (successTimer.current) {
+    clearTimeout(successTimer.current);
+    successTimer.current = null;
+  }
+  const sm = t('children.form.deleted_success');
+  setSuccessMsg(sm.replace('{name}', deletedName));
+  successTimer.current = window.setTimeout(() => { setSuccessMsg(''); successTimer.current = null; }, 2500) as unknown as number;
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);
@@ -458,6 +594,7 @@ export default function Children() {
   return (
     <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full children-responsive-row">
+        {/* inline success banner is used instead of top-right toast */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full children-responsive-header">
           <div>
             <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.children.title')}</h1>
@@ -512,20 +649,33 @@ export default function Children() {
         </div>
 
       {(showForm || editingId) && (
-        <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-6 grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-          <input name="name" value={form.name} onChange={handleChange} placeholder={t('children.form.name')} required className="border rounded px-3 py-2" />
-          <input name="age" type="number" value={form.age} onChange={handleChange} placeholder={t('children.form.age')} required className="border rounded px-3 py-2" />
-          <input name="birthDate" type="date" value={form.birthDate || ''} onChange={handleChange} placeholder={t('children.form.birthDate')} className="border rounded px-3 py-2" />
-          <select name="sexe" value={form.sexe} onChange={handleChange} required className="border rounded px-3 py-2">
-            <option value="masculin">{t('children.form.sexe.m')}</option>
-            <option value="feminin">{t('children.form.sexe.f')}</option>
-          </select>
-          <select name="group" value={form.group} onChange={handleChange} required className="border rounded px-3 py-2">
-            <option value="">{t('children.form.group_placeholder')}</option>
-            {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
-          </select>
-          <div className="relative w-full">
+        <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col">
+            <label htmlFor="child-name" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.name_label')} <span className="text-red-500">*</span></label>
+            <input id="child-name" name="name" value={form.name} onChange={handleChange} placeholder={t('children.form.name')} required className="border border-gray-200 rounded-lg px-3 py-2" />
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="child-birthDate" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.birthDate_label')} <span className="text-red-500">*</span></label>
+            <input id="child-birthDate" name="birthDate" type="date" value={form.birthDate || ''} onChange={handleChange} placeholder={t('children.form.birthDate')} required className="border border-gray-200 rounded-lg px-3 py-2" />
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="child-sexe" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.sexe_label')} <span className="text-red-500">*</span></label>
+            <select id="child-sexe" name="sexe" value={form.sexe} onChange={handleChange} required className="border border-gray-200 rounded-lg px-3 py-2">
+              <option value="masculin">{t('children.form.sexe.m')}</option>
+              <option value="feminin">{t('children.form.sexe.f')}</option>
+            </select>
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="child-group" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.group_label')}</label>
+            <select id="child-group" name="group" value={form.group} onChange={handleChange} required className="border border-gray-200 rounded-lg px-3 py-2">
+              <option value="">{t('children.form.group_placeholder')}</option>
+              {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+            </select>
+          </div>
+          <div className="relative w-full flex flex-col">
+            <label htmlFor="parent-name" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.parentName_label')}</label>
             <input
+              id="parent-name"
               name="parentName"
               value={form.parentName}
               onChange={(e) => {
@@ -547,7 +697,7 @@ export default function Children() {
                 setTimeout(() => setShowParentsDropdown(false), 150);
               }}
               placeholder={t('children.form.parent_placeholder')}
-              className="border rounded px-3 py-2 w-full"
+              className="border border-gray-200 rounded-lg px-3 py-2 w-full"
             />
 
             {showParentsDropdown && (() => {
@@ -568,19 +718,28 @@ export default function Children() {
               );
             })()}
           </div>
-          <input name="parentContact" value={form.parentContact} onChange={handleChange} placeholder={t('children.form.parentPhone_placeholder')} className="border rounded px-3 py-2" />
-          <input name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder={t('children.form.parentEmail_placeholder')} className="border rounded px-3 py-2" />
-          {/* Nannies multi-select */}
+          <div className="flex flex-col">
+            <label htmlFor="parent-contact" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.parentPhone_label')}</label>
+            <input id="parent-contact" name="parentContact" value={form.parentContact} onChange={handleChange} placeholder={t('children.form.parentPhone_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 w-full" />
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="parent-mail" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.parentEmail_label')}</label>
+            <input id="parent-mail" name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder={t('children.form.parentEmail_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 w-full" />
+          </div>
+          <div className="flex flex-col">
+            <label htmlFor="child-allergies" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.allergies_label')}</label>
+            <input id="child-allergies" name="allergies" value={form.allergies} onChange={handleChange} placeholder={t('children.form.allergies_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 w-full" />
+          </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('children.nannies.label')}</label>
-            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2 bg-gray-50">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('children.nannies.label')} <span className="text-red-500">*</span></label>
+            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2 bg-gray-50 mb-3">
               {nanniesList.length === 0 ? (
                 <div className="text-sm text-gray-500">{t('children.nannies.none')}</div>
-              ) : nanniesList.map(n => {
+                ) : nanniesList.map(n => {
                 const checked = Array.isArray(form.nannyIds) && form.nannyIds.includes(n.id);
                 return (
                   <label key={n.id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" value={n.id} checked={checked} onChange={(e) => {
+                    <input id={`nanny-${n.id}`} type="checkbox" value={n.id} checked={checked} onChange={(e) => {
                       const val = e.target.value;
                       setForm(prev => {
                         const prevIds = Array.isArray(prev.nannyIds) ? [...prev.nannyIds] : [];
@@ -599,18 +758,21 @@ export default function Children() {
               })}
             </div>
           </div>
-          <input name="allergies" value={form.allergies} onChange={handleChange} placeholder={t('children.form.allergies_placeholder')} className="border rounded px-3 py-2 md:col-span-2" />
-          <div className="md:col-span-2 flex gap-2">
-            <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">
-              {editingId ? t('children.form.edit') : t('children.add')}
-            </button>
-            <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(false); setError(''); }} className="bg-gray-300 px-4 py-2 rounded">{t('global.cancel')}</button>
-          </div>
+            <div className="md:col-span-2 flex gap-2">
+              <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">
+                {editingId ? t('children.form.edit') : t('children.add')}
+              </button>
+              <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(false); setError(''); }} className="bg-gray-300 px-4 py-2 rounded">{t('global.cancel')}</button>
+            </div>
+            {/* Required fields note on the same row as buttons (right side) */}
+            <div className="md:col-span-1 flex items-end justify-end">
+              <div className="text-sm text-gray-500 self-end">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
+            </div>
           {error && <div className="text-red-600 md:col-span-2">{error}</div>}
         </form>
       )}
       {successMsg && (
-        <div className="mb-4 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{t('children.form.added_success')}</div>
+        <div className="mb-4 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMsg}</div>
       )}
 
       {loading ? (
