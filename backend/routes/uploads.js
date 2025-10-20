@@ -4,6 +4,13 @@ const { createClient } = require('@supabase/supabase-js');
 const authMiddleware = require('../middleware/authMiddleware');
 const crypto = require('crypto');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+let fetchFn;
+try {
+  fetchFn = globalThis.fetch || require('node-fetch');
+} catch (e) {
+  fetchFn = globalThis.fetch;
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -14,6 +21,37 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false } });
+
+async function uploadViaJwtFallback(bucket, objectPath, buffer, contentType) {
+  if (!process.env.SUPABASE_JWT_SECRET) {
+    console.warn('SUPABASE_JWT_SECRET not set; cannot perform JWT fallback upload');
+    return { ok: false, status: 0, body: null };
+  }
+  if (!fetchFn) {
+    console.warn('fetch not available in this runtime; cannot perform JWT fallback upload');
+    return { ok: false, status: 0, body: null };
+  }
+  try {
+    const token = jwt.sign(
+      { role: 'service_role', exp: Math.floor(Date.now() / 1000) + 60 * 5 },
+      process.env.SUPABASE_JWT_SECRET,
+      { algorithm: 'HS256' }
+    );
+    const url = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/${encodeURIComponent(bucket)}/${objectPath}`;
+    const headers = { Authorization: `Bearer ${token}` };
+    if (contentType) headers['Content-Type'] = contentType;
+    const res = await fetchFn(url, { method: 'POST', headers, body: buffer });
+    const text = await (res.text ? res.text() : Promise.resolve(null));
+    if (!res.ok) {
+      console.error('JWT fallback upload failed', { status: res.status, body: text ? text.slice(0, 200) : null });
+      return { ok: false, status: res.status, body: text };
+    }
+    return { ok: true, status: res.status, body: text };
+  } catch (e) {
+    console.error('JWT fallback upload exception', e && e.message ? e.message : e);
+    return { ok: false, status: 0, body: String(e) };
+  }
+}
 
 function generateStoragePath(prefix, originalName) {
   const hash = crypto.createHash('md5').update(`${Date.now()}_${Math.random()}_${originalName}`).digest('hex');
@@ -50,6 +88,13 @@ router.post('/supabase/finalize', authMiddleware, async (req, res) => {
 
   const { storagePath, postId, thumbnailPath = null, size = null, originalName = null } = req.body || {};
   if (!storagePath || !postId) return res.status(400).json({ message: 'storagePath and postId required' });
+
+  // Ensure storage backend is configured on the server. In production a missing service role key
+  // will cause downloads/finalize to fail silently; return a clear 503 so the frontend can surface it.
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.error('Finalize called but Supabase server credentials are not configured');
+    return res.status(503).json({ message: 'Storage backend not configured on server' });
+  }
 
   try {
     // Verify post exists and user is the author (or admin)
@@ -105,7 +150,14 @@ router.post('/supabase/finalize', authMiddleware, async (req, res) => {
     const thumbPath = path.posix.join(path.posix.dirname(storagePath), `thumb_${path.posix.basename(storagePath)}.webp`);
     try {
       const upRes = await retry(async () => await supabase.storage.from(SUPABASE_BUCKET).upload(thumbPath, thumbBuffer, { contentType: 'image/webp', upsert: false }));
-      if (upRes.error) console.error('Thumbnail upload error', upRes.error);
+      if (upRes.error) {
+        const msg = String(upRes.error.message || upRes.error || '');
+        console.error('Thumbnail upload error', upRes.error);
+        if (msg.includes('Invalid Compact JWS')) {
+          const fb = await uploadViaJwtFallback(SUPABASE_BUCKET, thumbPath, thumbBuffer, 'image/webp');
+          if (!fb.ok) console.error('JWT fallback for finalize thumbnail failed', fb);
+        }
+      }
     } catch (err) {
       console.error('Thumbnail upload failed after retries', err);
     }
