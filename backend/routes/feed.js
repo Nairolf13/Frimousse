@@ -42,7 +42,13 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.warn('Supabase vars not set. Feed uploads will fail until SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are configured.');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false } });
+// If runtime didn't provide fetch, pass our fetchFn to the client so @supabase/supabase-js can use it
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false }, global: { fetch: fetchFn } });
+
+// Basic sanity check for URL format to help detect truncated env vars
+if (SUPABASE_URL && !/^https?:\/\//.test(SUPABASE_URL)) {
+  console.warn('Supabase URL does not look like a valid URL:', SUPABASE_URL.slice(0, 60));
+}
 
 // Helper: fallback upload using short-lived JWT signed with SUPABASE_JWT_SECRET
 async function uploadViaJwtFallback(bucket, objectPath, buffer, contentType) {

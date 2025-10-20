@@ -20,7 +20,12 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.warn('Supabase vars not set. Upload signing will fail until SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are configured.');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false } });
+// Ensure the Supabase client has a fetch implementation available in older Node runtimes
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false }, global: { fetch: fetchFn } });
+
+if (SUPABASE_URL && !/^https?:\/\//.test(SUPABASE_URL)) {
+  console.warn('Supabase URL does not look like a valid URL:', SUPABASE_URL.slice(0, 60));
+}
 
 async function uploadViaJwtFallback(bucket, objectPath, buffer, contentType) {
   if (!process.env.SUPABASE_JWT_SECRET) {

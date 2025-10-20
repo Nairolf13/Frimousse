@@ -34,10 +34,9 @@ export default function ChildSelector({
 
   // no debug logs
 
-  // Desktop dropdown (rendered inline) and mobile modal (portal) share the same content markup
-  const content = (
-    <div className="bg-white border rounded shadow-lg p-3 max-h-56 overflow-auto">
-      <div className="text-sm font-semibold mb-2">{title}</div>
+  // Split the modal into header / scrollable body / footer so the confirm button stays visible
+  const body = (
+    <div>
       {/* When consentMap isn't ready we show empty badge placeholders rather than a loading line to avoid layout shifts */}
       {availableChildren.length === 0 ? (
         <div className="text-sm text-gray-500">Aucun enfant disponible</div>
@@ -79,9 +78,12 @@ export default function ChildSelector({
           })}
         </div>
       )}
-      <div className="mt-3 flex justify-end">
-        <button onClick={onClose} className="px-3 py-1 bg-gray-100 rounded text-sm">{confirmLabel}</button>
-      </div>
+    </div>
+  );
+
+  const footer = (
+    <div className="p-2 bg-white border-t flex justify-end">
+      <button onClick={onClose} className="inline-flex items-center justify-center gap-2 px-4 py-2 sm:px-3 sm:py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 text-sm w-full sm:w-auto shadow-sm">{confirmLabel}</button>
     </div>
   );
 
@@ -90,18 +92,25 @@ export default function ChildSelector({
     <>
       {/* Desktop dropdown: parent container should place this where desired */}
       <div className="hidden sm:block absolute z-40 mt-2 w-96" aria-hidden>
-        {content}
+        <div className="bg-white border rounded shadow-lg p-0 max-h-56 w-96 flex flex-col">
+          <div className="p-3 border-b">
+            <div className="text-sm font-semibold">{title}</div>
+          </div>
+          <div className="p-3 overflow-auto flex-1">{body}</div>
+          {footer}
+        </div>
       </div>
 
       {/* Mobile modal via portal to body to avoid positioning issues */}
       {typeof document !== 'undefined' ? createPortal(
         <div className="sm:hidden fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="mx-4 w-full max-w-md bg-white rounded-xl p-4 max-h-[90vh] overflow-auto shadow-lg">
-            <div className="flex items-center justify-between mb-3">
+          <div className="mx-4 w-full max-w-md bg-white rounded-xl p-0 max-h-[90vh] overflow-hidden shadow-lg">
+            <div className="p-4 border-b flex items-center justify-between">
               <div className="text-lg font-semibold">{title}</div>
-              <button onClick={onClose} className="text-gray-600">✕</button>
+              <button onClick={onClose} className="text-gray-600" aria-label="Fermer">×</button>
             </div>
-            {content}
+            <div className="p-4 overflow-auto max-h-[70vh]">{body}</div>
+            {footer}
           </div>
         </div>,
         document.body
