@@ -110,8 +110,21 @@ module.exports = async function (req, res, next) {
         // If collision on unique token, retry (very unlikely). For other errors, rethrow.
         const msg = (e && e.code) ? e.code : (e && e.message ? e.message : String(e));
         if (msg && (msg === 'P2002' || String(msg).toLowerCase().includes('unique'))) {
-          console.warn('Refresh token collision detected, retrying', { attempt, err: e && e.message ? e.message : e });
-          // small backoff
+          console.warn('Refresh token collision detected on create, trying fallback to existing token', { attempt, err: e && e.message ? e.message : e });
+          // Try to find an existing token for this user (maybe another concurrent request created it)
+          try {
+            const existing = await prisma.refreshToken.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+            if (existing && existing.token) {
+              // reuse the existing token so we can set cookie and continue
+              newRefreshToken = existing.token;
+              created = true;
+              console.info('Reusing existing refresh token created by concurrent request');
+              break;
+            }
+          } catch (innerErr) {
+            console.error('Failed to read existing refresh token during collision fallback', innerErr && innerErr.message ? innerErr.message : innerErr);
+          }
+          // small backoff before retrying generation
           await new Promise(r => setTimeout(r, 50 + Math.floor(Math.random()*100)));
           continue;
         }
