@@ -30,7 +30,6 @@ export default function PaymentHistoryPage() {
   const [error, setError] = useState<string>('');
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
-  const [sendingMap, setSendingMap] = useState<Record<string, boolean>>({});
   const { user } = useAuth();
 
   function showModal(message: string) {
@@ -174,44 +173,6 @@ export default function PaymentHistoryPage() {
     }
   }
 
-  async function sendInvoice(paymentId: string) {
-    if (!paymentId) return;
-    const rec = data.find(r => r.id === paymentId);
-    if (!rec) { showModal(t('payments.errors.invoice_not_found', 'Enregistrement introuvable')); return; }
-    if (!rec.parent?.email) {
-      showModal(t('payments.errors.email_missing', 'Email non disponible'));
-      return;
-    }
-    try {
-      setSendingMap(m => ({ ...m, [paymentId]: true }));
-      const res = await fetchWithRefresh(`${API_URL}/payment-history/invoice/${paymentId}/send`, { method: 'POST', credentials: 'include' });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        let friendly = t('payments.errors.send_failed', 'Erreur lors de l\'envoi du mail');
-        if (text && text.trim()) {
-          const tt = text.trim();
-          try {
-            const parsed = JSON.parse(tt);
-            if (parsed && typeof parsed === 'object') {
-              if (typeof parsed.message === 'string' && parsed.message.trim()) friendly = parsed.message.trim();
-              else if (typeof parsed.error === 'string' && parsed.error.trim()) friendly = parsed.error.trim();
-            } else if (tt.length < 500) friendly = tt;
-          } catch {
-            if (tt.length < 500) friendly = tt;
-          }
-        }
-        showModal(friendly);
-        return;
-      }
-      showModal(t('payments.messages.email_sent', 'Email envoyé.'));
-    } catch (err) {
-      console.error('Send invoice failed', err);
-      showModal(t('payments.errors.network', 'Erreur réseau lors de l\'envoi.'));
-    } finally {
-      setSendingMap(m => ({ ...m, [paymentId]: false }));
-    }
-  }
-
   async function togglePaid(id: string, paid: boolean) {
     // optimistic update
   setData(d => d.map(r => r.id === id ? { ...r, paid } : r));
@@ -323,22 +284,7 @@ export default function PaymentHistoryPage() {
                    <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">{(rec.parent ? `${rec.parent.firstName || ''}`.slice(0,1) + (rec.parent?.lastName || '').slice(0,1) : '--').toUpperCase()}</div>
                    <div>
                      <div className="text-lg font-bold text-gray-900">{rec.parent ? `${rec.parent.firstName || ''} ${rec.parent.lastName || ''}`.trim() : t('common.none')}</div>
-                     <div className="text-sm text-gray-500">
-                       {rec.parent?.email ? (
-                        <button
-                          type="button"
-                          onClick={() => sendInvoice(rec.id)}
-                          disabled={Boolean(sendingMap[rec.id])}
-                          aria-busy={Boolean(sendingMap[rec.id])}
-                          title={sendingMap[rec.id] ? t('payments.messages.sending', 'Envoi en cours...') : t('payments.actions.send_invoice', 'Envoyer la facture')}
-                          aria-label={sendingMap[rec.id] ? t('payments.messages.sending', 'Envoi en cours...') : t('payments.actions.send_invoice', 'Envoyer la facture')}
-                          className={`text-blue-600 underline ${sendingMap[rec.id] ? 'opacity-60 cursor-wait' : 'cursor-pointer hover:opacity-80'}`}
-                        >
-                          {sendingMap[rec.id] ? 'Envoi...' : rec.parent.email}
-                        </button>
-                       ) : ''}
-                       {rec.parent?.phone ? ` • ${rec.parent?.phone}` : ''}
-                     </div>
+                     <div className="text-sm text-gray-500">{rec.parent?.email ?? ''}{rec.parent?.phone ? ` • ${rec.parent?.phone}` : ''}</div>
                    </div>
                  </div>
                  <div className="text-right">
