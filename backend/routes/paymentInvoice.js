@@ -469,4 +469,57 @@ router.get('/invoice/:id', auth, async (req, res) => {
   }
 });
 
+// POST /invoice/:id/send - generate PDF and send to parent email
+router.post('/invoice/:id/send', auth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!id) return res.status(400).json({ error: 'Missing id' });
+
+    const ph = await prisma.paymentHistory.findUnique({ where: { id }, include: { parent: true } });
+    if (!ph) return res.status(404).json({ error: 'Not found' });
+
+    const user = req.user;
+    if (!user) return res.status(403).json({ error: 'Forbidden' });
+    const role = (user.role || '').toLowerCase();
+    const isAdmin = role === 'admin' || role.includes('super');
+
+    if (!isAdmin) {
+      // allow parent owner
+      if (!(user.parentId && user.parentId === ph.parentId)) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+    }
+
+    const parent = ph.parent;
+    if (!parent || !parent.email) return res.status(400).json({ error: 'Parent email not found' });
+
+    const { generateInvoiceBuffer } = require('../lib/invoiceGenerator');
+    const pdfBuffer = await generateInvoiceBuffer(prisma, ph.id).catch(err => { console.error('PDF generation failed', err); return null; });
+    if (!pdfBuffer) return res.status(500).json({ error: 'Failed to generate invoice PDF' });
+
+    const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : new Date();
+    const invoiceNumber = `FA-${invoiceDate.getFullYear()}-${ph.id.slice(0, 6)}`;
+    const recipientLabel = `${parent.firstName || ''} ${parent.lastName || ''}`.trim() || parent.email || '';
+    const invoiceSubject = `Facture n° ${invoiceNumber} de ${recipientLabel}`;
+
+    const { sendTemplatedMail } = require('../lib/email');
+    await sendTemplatedMail({
+      templateName: 'invoice',
+      lang: 'fr',
+      to: parent.email,
+      subject: invoiceSubject,
+      substitutions: { parentName: `${parent.firstName || ''} ${parent.lastName || ''}`.trim(), total: Number(ph.total).toFixed(2), month: ph.month, year: ph.year, invoiceId: ph.id, invoiceNumber },
+      prisma,
+      attachments: [{ filename: `facture-${ph.id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+      paymentHistoryId: ph.id,
+      bypassOptOut: true
+    });
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('paymentInvoice send error', e && e.message ? e.message : e);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;
