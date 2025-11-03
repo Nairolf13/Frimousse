@@ -148,15 +148,10 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           // If we found a user and they were not logged in, create session cookies (login)
           if (user) {
             try {
-              const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
-              const refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-              await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-              await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-              const cookieOpts = { httpOnly: true, maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax' };
-              const refreshOpts = { httpOnly: true, maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax' };
-              // Note: webhook handlers cannot directly set cookies for the browser that initiated the Checkout
-              // but we store refresh token in DB so after redirect the frontend can call refresh endpoint to get tokens.
-              // Alternatively, if desired, you can create a one-time link for the user to complete login.
+              // create a refresh token in DB so frontend can call /api/auth/refresh after redirect
+              const authController = require('../controllers/authController');
+              const refreshToken = await authController.createAndStoreRefreshToken(user);
+              // We don't set cookies here (webhook), but DB now has a valid refresh token for the user.
             } catch (e) {
               console.error('Error creating session tokens in webhook', e);
             }
@@ -393,10 +388,8 @@ router.post('/complete-checkout-session', async (req, res) => {
     // If user exists, create refresh token row so frontend can call refresh to login
     if (user) {
       try {
-        const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
-        const refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-        await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-        await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+        const authController = require('../controllers/authController');
+        await authController.createAndStoreRefreshToken(user);
         // Note: we cannot set cookies here for the client's browser if this endpoint is called from the frontend after redirect
       } catch (e) {
         console.error('Error creating session tokens in complete-checkout-session', e);
@@ -451,14 +444,17 @@ router.post('/create-with-token', async (req, res) => {
       } catch (e) {
         // ignore
       }
-      // also create session cookies if needed (user may not be logged in)
-  const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
-  const refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-  await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-  await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-  const baseCookie = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'lax' };
-  res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, baseCookie));
-  res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, baseCookie));
+        // also create session cookies if needed (user may not be logged in)
+        try {
+          const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
+          const authController = require('../controllers/authController');
+          const refreshToken = await authController.createAndStoreRefreshToken(user);
+          const baseCookie = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'lax' };
+          res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, baseCookie));
+          res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, baseCookie));
+        } catch (e) {
+          console.error('Error creating session tokens in create-with-token existing path', e);
+        }
       return res.json({ subscription: stripeSub || existing });
     }
 

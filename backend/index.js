@@ -77,7 +77,21 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Serve frontend static files in production with appropriate Cache-Control headers.
-const distPath = isProd ? path.resolve(__dirname, '..', 'build') : null;
+const fs = require('fs');
+let distPath = null;
+if (isProd) {
+  const buildPath = path.resolve(__dirname, '..', 'build');
+  const distDir = path.resolve(__dirname, '..', 'dist');
+  if (fs.existsSync(buildPath)) {
+    distPath = buildPath;
+    console.log('Serving static frontend from', distPath);
+  } else if (fs.existsSync(distDir)) {
+    distPath = distDir;
+    console.log('Serving static frontend from', distPath, '(dist detected, build missing)');
+  } else {
+    console.warn('No frontend build found. Neither "build" nor "dist" directory exists. Static assets will 404.');
+  }
+}
 if (isProd && distPath) {
   app.use(express.static(distPath, {
     setHeaders: (res, filePath) => {
@@ -195,6 +209,14 @@ if (isProd) {
     // Skip API routes
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    // Diagnostic: if client requests a JS/CSS asset under /assets but file doesn't exist, log a clear warning
+    const lower = req.path.toLowerCase();
+    if ((lower.startsWith('/assets/') || lower.endsWith('.js') || lower.endsWith('.css')) && distPath) {
+      const fileOnDisk = path.join(distPath, req.path.replace(/(^\/+)/, ''));
+      if (!fs.existsSync(fileOnDisk)) {
+        console.warn('Asset requested but not found on disk, returning index.html (this will send text/html for JS):', req.path, 'resolved to', fileOnDisk);
+      }
     }
     res.sendFile(path.join(distPath, 'index.html'));
   });

@@ -52,6 +52,9 @@ async function createAndStoreRefreshToken(user) {
   throw new Error('Failed to create refresh token after multiple attempts');
 }
 
+// make helper available to other modules
+exports.createAndStoreRefreshToken = createAndStoreRefreshToken;
+
 function cookieOptions() {
   // For cross-site auth (frontend on a different origin) we must use SameSite=None and Secure in production.
   const base = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production' };
@@ -287,10 +290,10 @@ exports.registerSubscribeComplete = async (req, res) => {
       } catch (e) {
         // ignore
       }
-      const accessToken = generateAccessToken(user);
-      const refreshToken = generateRefreshToken(user);
-      await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-      await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+    const accessToken = generateAccessToken(user);
+    // use helper to create refresh token robustly and then delete others
+    const refreshToken = await createAndStoreRefreshToken(user);
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id, token: { not: refreshToken } } });
   const cookieOpts = Object.assign({ maxAge: 15*60*1000 }, cookieOptions());
   const refreshOpts = Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions());
   res.cookie('accessToken', accessToken, cookieOpts);
@@ -432,8 +435,9 @@ exports.refresh = async (req, res) => {
     if (!ok) {
       return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
     }
-    const newRefreshToken = generateRefreshToken(user);
-    await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+    // use helper to create refresh token robustly and then delete others
+    const newRefreshToken = await createAndStoreRefreshToken(user);
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id, token: { not: newRefreshToken } } });
     const accessToken = generateAccessToken(user);
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
   res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
