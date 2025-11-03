@@ -78,8 +78,26 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Serve frontend static files in production with appropriate Cache-Control headers.
-const distPath = isProd ? path.resolve(__dirname, '..', 'build') : null;
+// Resolve the most likely dist/build directory. In some deployments the
+// built files live under ../build, ../dist or an external path like
+// /var/www/frimousse/dist. Allow overriding via STATIC_DIR env var.
+let distPath = null;
+if (isProd) {
+  const candidates = [];
+  if (process.env.STATIC_DIR) candidates.push(process.env.STATIC_DIR);
+  candidates.push(path.resolve(__dirname, '..', 'build'));
+  candidates.push(path.resolve(__dirname, '..', 'dist'));
+  candidates.push('/var/www/frimousse/dist');
+  for (const c of candidates) {
+    try {
+      if (c && fs.existsSync(c) && fs.statSync(c).isDirectory()) { distPath = c; break; }
+    } catch (e) {
+      // ignore
+    }
+  }
+}
 if (isProd && distPath) {
+  console.log('Serving static files from', distPath);
   app.use(express.static(distPath, {
     setHeaders: (res, filePath) => {
       try {
