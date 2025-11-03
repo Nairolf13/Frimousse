@@ -77,5 +77,65 @@ router.patch('/:id/paid', auth, async (req, res) => {
   }
 });
 
+// POST /api/payment-history/:id/send - send the invoice PDF to the parent (admin only)
+router.post('/:id/send', auth, async (req, res) => {
+  try {
+    const user = req.user || {};
+    const role = (user.role || '').toLowerCase();
+    const isAdmin = user && (user.role === 'admin' || role.includes('super'));
+    if (!isAdmin) return res.status(403).json({ message: 'Forbidden' });
+
+    const id = req.params.id;
+    if (!id) return res.status(400).json({ message: 'Missing id' });
+
+    const force = req.query.force === '1' || req.body && req.body.force === true;
+
+    const ph = await prisma.paymentHistory.findUnique({ where: { id }, include: { parent: true } });
+    if (!ph) return res.status(404).json({ message: 'PaymentHistory not found' });
+    const parent = ph.parent;
+    if (!parent || !parent.email) return res.status(400).json({ message: 'Parent or parent email not found' });
+
+    // Prevent accidental duplicate sends: if an EmailLog with status 'sent' exists for this ph in last 24h, block unless force
+    try {
+      const since = new Date(Date.now() - 24 * 3600 * 1000);
+      const existing = await prisma.emailLog.findFirst({ where: { paymentHistoryId: id, status: 'sent', createdAt: { gte: since } } });
+      if (existing && !force) {
+        return res.status(400).json({ message: 'Invoice already sent recently. Use ?force=1 to override.' });
+      }
+    } catch (e) {
+      // ignore errors in duplicate-check and proceed
+      console.error('Failed to check existing EmailLog', e && e.message ? e.message : e);
+    }
+
+    // generate PDF buffer
+    const { generateInvoiceBuffer } = require('../lib/invoiceGenerator');
+    const pdfBuffer = await generateInvoiceBuffer(prisma, ph.id).catch(err => { console.error('PDF generation failed', err); return null; });
+    if (!pdfBuffer) return res.status(500).json({ message: 'Failed to generate invoice PDF' });
+
+    const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : new Date();
+    const invoiceNumber = `FA-${invoiceDate.getFullYear()}-${ph.id.slice(0, 6)}`;
+    const recipientLabel = `${parent.firstName || ''} ${parent.lastName || ''}`.trim() || parent.email || '';
+    const invoiceSubject = `Facture n° ${invoiceNumber} de ${recipientLabel}`;
+
+    const { sendTemplatedMail } = require('../lib/email');
+    await sendTemplatedMail({
+      templateName: 'invoice',
+      lang: 'fr',
+      to: parent.email,
+      subject: invoiceSubject,
+      substitutions: { parentName: `${parent.firstName || ''} ${parent.lastName || ''}`.trim(), total: Number(ph.total).toFixed(2), month: ph.month, year: ph.year, invoiceId: ph.id, invoiceNumber },
+      prisma,
+      attachments: [{ filename: `facture-${ph.id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+      paymentHistoryId: ph.id,
+      bypassOptOut: true
+    });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('Failed to send invoice', err && err.message ? err.message : err);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;
 

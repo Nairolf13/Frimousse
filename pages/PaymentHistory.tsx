@@ -31,6 +31,7 @@ export default function PaymentHistoryPage() {
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
   const { user } = useAuth();
+  const [sendingId, setSendingId] = useState<string | null>(null);
 
   function showModal(message: string) {
     setModalMessage(message);
@@ -333,7 +334,30 @@ export default function PaymentHistoryPage() {
                 <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
                   <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
                   <div className="w-full md:w-auto flex justify-center md:justify-end">
-                    <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
+                      {user && (user.role === 'admin' || (user.role && user.role.toLowerCase().includes('super'))) && (
+                        <button disabled={sendingId === rec.id} onClick={async () => {
+                          try {
+                            setSendingId(rec.id);
+                            const res = await fetchWithRefresh(`${API_URL}/payment-history/${rec.id}/send`, { credentials: 'include', method: 'POST' });
+                            if (!res.ok) {
+                              const text = await res.text().catch(() => '');
+                              let msg = 'Erreur lors de l\'envoi de la facture.';
+                              try { const j = JSON.parse(text || ''); if (j && j.message) msg = j.message; } catch (e) { console.error('Failed to parse error body', e); }
+                              showModal(msg);
+                            } else {
+                              showModal('Facture envoyée au parent.');
+                            }
+                          } catch (err) {
+                            console.error('Send invoice failed', err);
+                            showModal('Erreur lors de l\'envoi de la facture.');
+                          } finally {
+                            setSendingId(null);
+                          }
+                        }} className="px-4 py-2 bg-indigo-600 text-white rounded text-sm w-full md:w-auto text-center" title="Envoyer la facture au parent">{sendingId === rec.id ? t('loading') : 'Envoyer'}</button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

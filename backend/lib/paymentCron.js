@@ -159,9 +159,38 @@ async function upsertPaymentsForParentForMonth(parentId, year, monthIndex) {
 }
 
 async function calculatePayments() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const monthIndex = now.getMonth(); // 0-11
+  // Determine "now" in the cron timezone so that when the cron is scheduled
+  // with a timezone (cronTimezone) we compute the target month relative to
+  // that timezone. If the server runs in UTC while cron fires in Europe/Paris,
+  // using new Date() (server local) would be incorrect and cause an off-by-one
+  // month (e.g. sending September invoices when the cron ran for November 1st
+  // Paris time).
+  function nowPartsInTimezone(tz) {
+    try {
+      const df = new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+      const parts = df.formatToParts(new Date());
+      const map = {};
+      for (const p of parts) map[p.type] = p.value;
+      const year = Number(map.year);
+      const month = Number(map.month); // 1-12
+      const day = Number(map.day);
+      const hour = Number(map.hour);
+      const minute = Number(map.minute);
+      const second = Number(map.second);
+      return { year, monthIndex: month - 1, day, hour, minute, second };
+    } catch (e) {
+      // Fallback to server local time
+      const now = new Date();
+      return { year: now.getFullYear(), monthIndex: now.getMonth(), day: now.getDate(), hour: now.getHours(), minute: now.getMinutes(), second: now.getSeconds() };
+    }
+  }
+
+  const tzNow = nowPartsInTimezone(cronTimezone);
+  const serverNow = new Date();
+  console.log(`PaymentCron: serverNow=${serverNow.toISOString()} cronTimezone=${cronTimezone} tzNow=${tzNow.year}-${tzNow.monthIndex+1}-${tzNow.day} ${tzNow.hour}:${tzNow.minute}:${tzNow.second}`);
+
+  const year = tzNow.year;
+  const monthIndex = tzNow.monthIndex; // 0-11 in cron timezone
   const targetMonth = monthIndex - 1;
   const targetYear = targetMonth === -1 ? year - 1 : year;
   const targetMonthIndex = targetMonth === -1 ? 11 : targetMonth;
