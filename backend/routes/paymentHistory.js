@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const invoiceGenerator = require('../lib/invoiceGenerator');
+const emailLib = require('../lib/email');
 const auth = require('../middleware/authMiddleware');
 
 // Récupérer l’historique par mois/année
@@ -101,3 +103,58 @@ router.get('/:year/:month', auth, async (req, res) => {
 });
 
 module.exports = router;
+
+// Send invoice PDF by email to the parent linked to the paymentHistory record
+router.post('/:id/send', auth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!id) return res.status(400).json({ message: 'Missing id' });
+
+    const ph = await prisma.paymentHistory.findUnique({ where: { id }, include: { parent: true } });
+    if (!ph) return res.status(404).json({ message: 'Payment not found' });
+
+    const user = req.user;
+    if (!user) return res.status(401).json({ message: 'Non authentifié' });
+    const role = (user.role || '').toLowerCase();
+    const isAdmin = role === 'admin' || role.includes('super');
+
+    // Authorization: admin can send any; parents can request send for their own invoices
+    if (!isAdmin) {
+      if (!user.parentId || user.parentId !== ph.parentId) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+    }
+
+    const parentEmail = ph.parent && ph.parent.email ? ph.parent.email.trim() : null;
+    if (!parentEmail) {
+      return res.status(400).json({ message: 'Parent has no email' });
+    }
+
+    // generate PDF buffer
+    let pdfBuf;
+    try {
+      pdfBuf = await invoiceGenerator.generateInvoiceBuffer(prisma, id);
+    } catch (e) {
+      console.error('Failed to generate invoice PDF', e);
+      return res.status(500).json({ message: 'Failed to generate invoice' });
+    }
+
+    // prepare attachment
+    const filename = `facture-${id}.pdf`;
+    const attachment = { filename, content: pdfBuf, contentType: 'application/pdf' };
+
+    // send a simple email with the PDF attached and log via prisma
+    try {
+      const subject = `Votre facture - Les Frimousses`;
+      const text = `Bonjour,\n\nVous trouverez ci-joint votre facture.\n\nCordialement,\nLes Frimousses`;
+      await emailLib.sendMail({ to: parentEmail, subject, text, attachments: [attachment], prisma, paymentHistoryId: id });
+      return res.json({ success: true, message: 'Email envoyé' });
+    } catch (e) {
+      console.error('Failed to send invoice email', e);
+      return res.status(500).json({ message: 'Failed to send email', error: (e && e.message) ? e.message : String(e) });
+    }
+  } catch (err) {
+    console.error('Error in /payment-history/:id/send', err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});

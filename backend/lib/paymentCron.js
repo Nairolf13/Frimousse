@@ -159,9 +159,19 @@ async function upsertPaymentsForParentForMonth(parentId, year, monthIndex) {
 }
 
 async function calculatePayments() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const monthIndex = now.getMonth(); // 0-11
+  // Compute "now" in the cron timezone (cron schedules with cronTimezone, but
+  // the runtime's local timezone can differ — using the cronTimezone here
+  // ensures we pick the intended target month even if the server runs in UTC).
+  const tz = process.env.CRON_TZ || 'Europe/Paris';
+  // Use Intl.DateTimeFormat.formatToParts to extract year/month in the target tz
+  const dtf = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: 'numeric' });
+  const parts = dtf.formatToParts(new Date());
+  const yearPart = parts.find(p => p.type === 'year');
+  const monthPart = parts.find(p => p.type === 'month');
+  const year = yearPart ? Number(yearPart.value) : new Date().getFullYear();
+  const monthIndex = monthPart ? (Number(monthPart.value) - 1) : new Date().getMonth();
+
+  // target month is previous month
   const targetMonth = monthIndex - 1;
   const targetYear = targetMonth === -1 ? year - 1 : year;
   const targetMonthIndex = targetMonth === -1 ? 11 : targetMonth;

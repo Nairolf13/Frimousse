@@ -173,6 +173,31 @@ export default function PaymentHistoryPage() {
     }
   }
 
+  async function sendInvoice(paymentId: string) {
+    try {
+      setLoading(true);
+      const res = await fetchWithRefresh(`${API_URL}/payment-history/${paymentId}/send`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) {
+        let text = await res.text().catch(() => '');
+        try { const j = JSON.parse(text || '{}'); if (j && j.message) text = j.message; } catch { /* ignore */ }
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      const json = await res.json().catch(() => ({}));
+      showModal(json && json.message ? String(json.message) : t('payments.invoice_sent', 'Facture envoyée'));
+    } catch (err: unknown) {
+      console.error('Failed to send invoice', err);
+      let msg = 'Erreur';
+      if (err instanceof Error) msg = err.message;
+      else if (typeof err === 'string') msg = err;
+      else {
+        try { msg = JSON.stringify(err); } catch { msg = String(err || 'Erreur'); }
+      }
+      showModal(msg || t('payments.errors.invoice_download'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function togglePaid(id: string, paid: boolean) {
     // optimistic update
   setData(d => d.map(r => r.id === id ? { ...r, paid } : r));
@@ -333,7 +358,10 @@ export default function PaymentHistoryPage() {
                 <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
                   <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
                   <div className="w-full md:w-auto flex justify-center md:justify-end">
-                    <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
+                    <div className="flex gap-2 w-full md:w-auto">
+                      <button onClick={() => sendInvoice(rec.id)} className="px-4 py-2 bg-blue-500 text-white rounded text-sm w-full md:w-auto text-center">{t('assistant.send.button', 'Envoyer')}</button>
+                      <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
+                    </div>
                   </div>
                 </div>
               </div>
