@@ -369,16 +369,16 @@ export default function PaymentHistoryPage() {
                   <div className="w-full md:w-auto flex justify-center md:justify-end">
                     <div className="flex gap-2 w-full md:w-auto">
                       <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
-                      {rec.parent?.email ? (
-                        <button
-                          type="button"
-                          onClick={() => sendInvoice(rec.id)}
-                          disabled={Boolean(sendingMap[rec.id])}
-                          className={`px-4 py-2 text-sm rounded ${sendingMap[rec.id] ? 'bg-gray-300 text-gray-700' : 'bg-blue-500 text-white'}`}
-                        >
-                          {sendingMap[rec.id] ? 'Envoi...' : t('assistant.send.button', 'Envoyer')}
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => sendInvoice(rec.id)}
+                        disabled={Boolean(sendingMap[rec.id]) || !rec.parent?.email}
+                        title={!rec.parent?.email ? t('payments.errors.email_missing', 'Email non disponible') : undefined}
+                        aria-disabled={Boolean(sendingMap[rec.id]) || !rec.parent?.email}
+                        className={`px-4 py-2 text-sm rounded ${sendingMap[rec.id] ? 'bg-gray-300 text-gray-700 cursor-wait' : (!rec.parent?.email ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white')}`}
+                      >
+                        {sendingMap[rec.id] ? 'Envoi...' : t('assistant.send.button', 'Envoyer')}
+                      </button>
                     </div>
                   </div>
                 </div>
