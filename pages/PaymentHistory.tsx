@@ -176,6 +176,14 @@ export default function PaymentHistoryPage() {
 
   async function sendInvoice(paymentId: string) {
     if (!paymentId) return;
+    // Inform user early if parent email is not available
+    const rec = data.find(r => r.id === paymentId);
+    if (!rec) { showModal(t('payments.errors.invoice_not_found', 'Enregistrement introuvable')); return; }
+    if (!rec.parent?.email) {
+      // Let user know there's no email configured for this parent
+      showModal(t('payments.errors.email_missing', 'Email non disponible'));
+      return;
+    }
     try {
       setSendingMap(m => ({ ...m, [paymentId]: true }));
       const res = await fetchWithRefresh(`${API_URL}/payment-history/invoice/${paymentId}/send`, { method: 'POST', credentials: 'include' });
@@ -372,10 +380,9 @@ export default function PaymentHistoryPage() {
                       <button
                         type="button"
                         onClick={() => sendInvoice(rec.id)}
-                        disabled={Boolean(sendingMap[rec.id]) || !rec.parent?.email}
-                        title={!rec.parent?.email ? t('payments.errors.email_missing', 'Email non disponible') : undefined}
-                        aria-disabled={Boolean(sendingMap[rec.id]) || !rec.parent?.email}
-                        className={`px-4 py-2 text-sm rounded ${sendingMap[rec.id] ? 'bg-gray-300 text-gray-700 cursor-wait' : (!rec.parent?.email ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white')}`}
+                        disabled={Boolean(sendingMap[rec.id])}
+                        aria-disabled={Boolean(sendingMap[rec.id])}
+                        className={`px-4 py-2 text-sm rounded ${sendingMap[rec.id] ? 'bg-gray-300 text-gray-700 cursor-wait' : 'bg-blue-500 text-white'}`}
                       >
                         {sendingMap[rec.id] ? 'Envoi...' : t('assistant.send.button', 'Envoyer')}
                       </button>
