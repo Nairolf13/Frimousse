@@ -30,7 +30,6 @@ export default function PaymentHistoryPage() {
   const [error, setError] = useState<string>('');
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
-  const [sendingMap, setSendingMap] = useState<Record<string, boolean>>({});
   const { user } = useAuth();
 
   function showModal(message: string) {
@@ -171,47 +170,6 @@ export default function PaymentHistoryPage() {
   showModal(msg || t('payments.errors.invoice_download'));
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function sendInvoice(paymentId: string) {
-    if (!paymentId) return;
-    // Inform user early if parent email is not available
-    const rec = data.find(r => r.id === paymentId);
-    if (!rec) { showModal(t('payments.errors.invoice_not_found', 'Enregistrement introuvable')); return; }
-    if (!rec.parent?.email) {
-      // Let user know there's no email configured for this parent
-      showModal(t('payments.errors.email_missing', 'Email non disponible'));
-      return;
-    }
-    try {
-      setSendingMap(m => ({ ...m, [paymentId]: true }));
-      const res = await fetchWithRefresh(`${API_URL}/payment-history/invoice/${paymentId}/send`, { method: 'POST', credentials: 'include' });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        // extract friendly message when possible
-        let friendly = 'Erreur lors de l\'envoi du mail';
-        if (text && text.trim().length > 0) {
-          const t = text.trim();
-          try {
-            const parsed = JSON.parse(t);
-            if (parsed && typeof parsed === 'object') {
-              if (typeof parsed.message === 'string' && parsed.message.trim()) friendly = parsed.message.trim();
-              else if (typeof parsed.error === 'string' && parsed.error.trim()) friendly = parsed.error.trim();
-            } else if (t.length < 500) friendly = t;
-          } catch {
-            if (t.length < 500) friendly = t;
-          }
-        }
-        showModal(friendly);
-        return;
-      }
-      showModal('Email envoyé.');
-    } catch (err) {
-      console.error('Send invoice failed', err);
-      showModal('Erreur réseau lors de l\'envoi.');
-    } finally {
-      setSendingMap(m => ({ ...m, [paymentId]: false }));
     }
   }
 
@@ -375,18 +333,7 @@ export default function PaymentHistoryPage() {
                 <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
                   <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
                   <div className="w-full md:w-auto flex justify-center md:justify-end">
-                    <div className="flex gap-2 w-full md:w-auto">
-                      <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
-                      <button
-                        type="button"
-                        onClick={() => sendInvoice(rec.id)}
-                        disabled={Boolean(sendingMap[rec.id])}
-                        aria-disabled={Boolean(sendingMap[rec.id])}
-                        className={`px-4 py-2 text-sm rounded ${sendingMap[rec.id] ? 'bg-gray-300 text-gray-700 cursor-wait' : 'bg-blue-500 text-white'}`}
-                      >
-                        {sendingMap[rec.id] ? 'Envoi...' : t('assistant.send.button', 'Envoyer')}
-                      </button>
-                    </div>
+                    <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
                   </div>
                 </div>
               </div>
