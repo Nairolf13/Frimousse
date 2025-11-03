@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const { PrismaClient } = require('@prisma/client');
@@ -9,7 +10,10 @@ function generateAccessTokenForMiddleware(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
 }
 function generateRefreshTokenForMiddleware(user) {
-  return jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+  // include a small random nonce (jti) so tokens generated concurrently are unique
+  const payload = { id: user.id, centerId: user.centerId || null };
+  const jwtId = crypto.randomBytes(8).toString('hex');
+  return jwt.sign(payload, REFRESH_TOKEN_SECRET, { expiresIn: '7d', jwtid: jwtId });
 }
 
 function cookieOptions() {
@@ -92,8 +96,31 @@ module.exports = async function (req, res, next) {
 
     // rotate refresh tokens: delete old, create new
     await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-    const newRefreshToken = generateRefreshTokenForMiddleware(user);
-    await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+    // attempt to create a new refresh token, retrying on token collision
+    const maxRetries = 5;
+    let created = false;
+    let newRefreshToken = null;
+    for (let attempt = 0; attempt < maxRetries && !created; attempt++) {
+      newRefreshToken = generateRefreshTokenForMiddleware(user);
+      try {
+        await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+        created = true;
+        break;
+      } catch (e) {
+        // If collision on unique token, retry (very unlikely). For other errors, rethrow.
+        const msg = (e && e.code) ? e.code : (e && e.message ? e.message : String(e));
+        if (msg && (msg === 'P2002' || String(msg).toLowerCase().includes('unique'))) {
+          console.warn('Refresh token collision detected, retrying', { attempt, err: e && e.message ? e.message : e });
+          // small backoff
+          await new Promise(r => setTimeout(r, 50 + Math.floor(Math.random()*100)));
+          continue;
+        }
+        throw e;
+      }
+    }
+    if (!created) {
+      throw new Error('Failed to create unique refresh token after multiple attempts');
+    }
     const accessTokenNew = generateAccessTokenForMiddleware(user);
     // set cookies using same options as authController
     res.cookie('accessToken', accessTokenNew, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
