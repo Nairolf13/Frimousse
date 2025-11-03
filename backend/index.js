@@ -205,6 +205,16 @@ if (isProd) {
       return res.status(404).send('Not found');
     }
 
+    // Ensure index.html is not cached by browsers or intermediaries so clients
+    // always fetch the latest asset manifest (prevents stale index -> old hashed
+    // asset URLs which cause MIME/type errors when assets are missing).
+    try {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    } catch (e) {
+      // ignore header setting errors
+    }
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
