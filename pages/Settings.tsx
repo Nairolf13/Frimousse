@@ -119,8 +119,9 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
                 setForm({ role: 'parent', id: p2.id, firstName: p2.firstName || '', lastName: p2.lastName || '', email: p2.email || '', phone: (u && u.phone) ? u.phone : (p2.phone || ''), address: (u && u.address) ? u.address : (p2.address || ''), postalCode: (u && u.postalCode) ? u.postalCode : (p2.postalCode || ''), city: (u && u.city) ? u.city : (p2.city || ''), region: (u && u.region) ? u.region : (p2.region || ''), country: (u && u.country) ? u.country : (p2.country || ''), birthDate: p2.birthDate ? new Date(p2.birthDate).toISOString().slice(0,10) : (u && u.birthDate ? new Date(u.birthDate).toISOString().slice(0,10) : ''), lat: (u && typeof u.lat !== 'undefined' ? u.lat : (p2.lat ?? null)), lon: (u && typeof u.lon !== 'undefined' ? u.lon : (p2.lon ?? null)), geodataRaw: (u && typeof u.geodataRaw !== 'undefined') ? u.geodataRaw : (p2.geodataRaw ?? null) });
               return;
             }
-          } catch {
+          } catch (e) {
             // ignore and continue to fallback
+            void e;
           }
         }
 
@@ -373,7 +374,7 @@ export default function Settings() {
     if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
     window.addEventListener('resize', onChange);
     window.addEventListener('orientationchange', onChange);
-    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch (e) { /* ignore */ void e; } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
   }, []);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
@@ -382,7 +383,7 @@ export default function Settings() {
     try {
       const saved = localStorage.getItem('site_language');
       return saved === 'en' ? 'en' : 'fr';
-    } catch { return 'fr'; }
+  } catch (e) { void e; return 'fr'; }
   });
 
   useEffect(() => {
@@ -390,9 +391,7 @@ export default function Settings() {
       document.documentElement.lang = language === 'en' ? 'en' : 'fr';
       localStorage.setItem('site_language', language);
       document.cookie = `site_language=${language};path=/;max-age=${60 * 60 * 24 * 365}`;
-    } catch {
-      // ignore
-    }
+    } catch (e) { /* ignore */ void e; }
   }, [language]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -407,9 +406,7 @@ export default function Settings() {
         if (!res.ok) return;
         const u = await res.json();
   if (u && (u.role === 'admin' || (typeof u.role === 'string' && u.role.toLowerCase().includes('super')))) setIsAdmin(true);
-      } catch {
-        // ignore
-      }
+      } catch (e) { /* ignore */ void e; }
     })();
   }, []);
 
@@ -422,9 +419,7 @@ export default function Settings() {
           const u = await res.json();
           if (u && typeof u.notifyByEmail === 'boolean') setEmailNotifications(!!u.notifyByEmail);
         }
-      } catch {
-        // ignore
-      }
+      } catch (e) { /* ignore */ void e; }
     })();
 
     (async () => {
@@ -447,10 +442,8 @@ export default function Settings() {
               if (found && found.id) setPushSubId(found.id);
             }
           }
-  } catch { /* ignore */ }
-      } catch {
-        setPushEnabled(false);
-      }
+          } catch (e) { /* ignore */ void e; }
+      } catch (e) { void e; setPushEnabled(false); }
     })();
   }, []);
 
@@ -473,7 +466,7 @@ export default function Settings() {
                     setEmailNotifications(val);
                     try {
                       await fetchWithRefresh(`${API_URL}/user/me`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notifyByEmail: val }) });
-                    } catch { /* ignore */ }
+                    } catch (e) { /* ignore */ void e; }
                   }} className="sr-only peer" />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
                 </label>
@@ -491,7 +484,7 @@ export default function Settings() {
                     const enable = e.target.checked;
                     try {
                       if (!enable) {
-                        try { await unsubscribeFromPush(); } catch { /* ignore client-side unsubscribe errors */ }
+                        try { await unsubscribeFromPush(); } catch (e) { /* ignore client-side unsubscribe errors */ void e; }
                         try {
                           if (pushSubId) {
                             await fetchWithRefresh(`/api/push-subscriptions/${encodeURIComponent(pushSubId)}`, { method: 'DELETE', credentials: 'include' });
@@ -515,7 +508,7 @@ export default function Settings() {
                           const json = await res.json();
                           if (json && json.id) setPushSubId(json.id);
                         }
-                      } catch { /* ignore backend save errors */ }
+                      } catch (e) { /* ignore backend save errors */ void e; }
                       setPushEnabled(true);
                     } catch (err) {
                       const msg = err instanceof Error ? err.message : String(err);
@@ -569,59 +562,44 @@ export default function Settings() {
 
                 <div className="md:col-span-2">
               <button className="w-full bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" style={{marginTop: '8px'}} onClick={async () => {
-                try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
-                // Clear caches and unregister service workers to avoid serving stale index.html / assets
+                try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch (e) { /* continue */ void e; }
+                // Preserve cookie consent then clear storage + SW and navigate
+                let cookieConsentValue: string | null = null;
                 try {
-                  (async () => {
-                    try {
-                      if ('caches' in window) {
-                        const keys = await caches.keys();
-                        await Promise.all(keys.map(k => caches.delete(k)));
-                      }
-                    } catch (e) {
-                      console.warn('Failed to clear caches on logout', e);
-                    }
-                    try {
-                      if ('serviceWorker' in navigator) {
-                        const regs = await navigator.serviceWorker.getRegistrations();
-                        await Promise.all(regs.map(r => r.unregister()));
-                      }
-                    } catch (e) {
-                      console.warn('Failed to unregister service workers on logout', e);
-                    }
-                  })();
-                } catch { /* ignore */ }
+                  cookieConsentValue = (() => { try { return localStorage.getItem('cookie_consent'); } catch (e) { void e; return null; } })();
+                } catch (e) { void e; }
+                try { localStorage.clear(); } catch (e) { void e; }
+                try { if (cookieConsentValue) localStorage.setItem('cookie_consent', cookieConsentValue); } catch (e) { void e; }
                 try {
-                  // Preserve cookie consent so the banner doesn't reappear after logout/login
-                  const __cons = (() => {
-                    try { return localStorage.getItem('cookie_consent'); } catch { return null; }
-                  })();
-                  try { localStorage.clear(); } catch { /* ignore */ }
-                  if (__cons) try { localStorage.setItem('cookie_consent', __cons); } catch { /* ignore */ }
-                } catch { /* ignore */ }
+                  const __scons = (() => { try { return sessionStorage.getItem('cookie_consent'); } catch (e) { void e; return null; } })();
+                  try { sessionStorage.clear(); } catch (e) { void e; }
+                  try { if (__scons) sessionStorage.setItem('cookie_consent', __scons); } catch (e) { void e; }
+                } catch (e) { void e; }
                 try {
-                  const __scons = (() => {
-                    try { return sessionStorage.getItem('cookie_consent'); } catch { return null; }
-                  })();
-                  try { sessionStorage.clear(); } catch { /* ignore */ }
-                  if (__scons) try { sessionStorage.setItem('cookie_consent', __scons); } catch { /* ignore */ }
-                } catch { /* ignore */ }
-                try {
-                  // Preserve cookie consent cookie
                   const cookieConsentMatch = document.cookie.match(/(?:^|; )cookie_consent=([^;]+)/);
-                  const cookieConsentValue = cookieConsentMatch ? cookieConsentMatch[1] : null;
+                  const cookieConsent = cookieConsentMatch ? cookieConsentMatch[1] : null;
                   document.cookie.split(';').forEach(function(c) {
                     const name = c.split('=')[0].trim();
-                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname;
+                    try { document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/'; } catch (e) { void e; }
+                    try { document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname; } catch (e) { void e; }
                   });
-                  // Restore cookie_consent cookie
-                  if (cookieConsentValue) {
-                    document.cookie = `cookie_consent=${cookieConsentValue};path=/;max-age=31536000`;
+                  if (cookieConsent) {
+                    try { document.cookie = `cookie_consent=${cookieConsent};path=/;max-age=31536000`; } catch (e) { void e; }
                   }
-                } catch { /* ignore */ }
-                window.location.href = '/login';
-               }}>{t('settings.logout')}</button>
+                } catch (e) { void e; }
+                // cleanup caches and SW using shared util (await to make sure cleaning occurs before navigation)
+                try {
+                  const mod = await import('../src/utils/clearClientCache');
+                  const clearClientCache = mod && mod.default ? mod.default : null;
+                  if (typeof clearClientCache === 'function') {
+                    try { await clearClientCache(); } catch (e) { console.warn('clearClientCache failed', e); }
+                  }
+                } catch (e) {
+                  console.warn('Failed to import clearClientCache', e);
+                }
+                // Force network fetch of login page
+                window.location.href = '/login?_=' + Date.now();
+              }}>{t('settings.logout')}</button>
             </div>
           </div>
         </div>

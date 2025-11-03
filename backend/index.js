@@ -1,4 +1,5 @@
 const path = require("path");
+const fs = require('fs');
 // Load environment variables from backend/.env if present. Log result for easier debugging.
 const dotenvResult = require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 if (dotenvResult.error) {
@@ -109,6 +110,29 @@ if (isProd && distPath) {
       }
     }
   }));
+}
+
+// Explicitly handle asset requests so missing asset paths return a plain 404
+// instead of falling through to the HTML catch-all which can result in
+// serving index.html for a JS/CSS request (causing MIME type errors).
+if (isProd && distPath) {
+  app.get('/assets/*', (req, res) => {
+    try {
+      const relPath = req.path.replace(/^\//, '');
+      const abs = path.join(distPath, relPath);
+      if (fs.existsSync(abs) && fs.statSync(abs).isFile()) {
+        return res.sendFile(abs);
+      }
+      // Log missing asset for easier debugging of stale clients/CDN issues
+      console.warn('Missing asset request:', req.path, 'from', req.ip || req.headers['x-forwarded-for'] || 'unknown');
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.status(404).send('Not found');
+    } catch (e) {
+      console.warn('Error while handling asset request', req.path, e && e.message ? e.message : e);
+      try { res.setHeader('Content-Type', 'text/plain; charset=utf-8'); } catch (err) {}
+      return res.status(500).send('Server error');
+    }
+  });
 }
 
 app.use('/api/me', meRoutes);
