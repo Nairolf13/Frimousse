@@ -8,12 +8,48 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const crypto = require('crypto');
 
 function generateAccessToken(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
 }
 function generateRefreshToken(user) {
-  return jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+  const jwtId = crypto.randomBytes(8).toString('hex');
+  return jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d', jwtid: jwtId });
+}
+
+// Create and store a refresh token robustly: try createMany with skipDuplicates, fallback to reading existing token
+async function createAndStoreRefreshToken(user) {
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const maxAttempts = 5;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const token = generateRefreshToken(user);
+    try {
+      // Try createMany with skipDuplicates to avoid throwing on UNIQUE conflict
+      const res = await prisma.refreshToken.createMany({ data: [{ token, userId: user.id, expiresAt }], skipDuplicates: true });
+      if (res && typeof res.count === 'number' && res.count > 0) {
+        return token;
+      }
+      // If nothing inserted, maybe a concurrent request inserted a token; read the latest
+      const existing = await prisma.refreshToken.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+      if (existing && existing.token) return existing.token;
+    } catch (e) {
+      const code = e && e.code ? e.code : (e && e.message ? e.message : String(e));
+      if (code === 'P2002' || String(code).toLowerCase().includes('unique')) {
+        // collision, read existing token if any
+        try {
+          const existing = await prisma.refreshToken.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+          if (existing && existing.token) return existing.token;
+        } catch (inner) {
+          // ignore and retry
+        }
+        await new Promise(r => setTimeout(r, 50 + Math.floor(Math.random() * 100)));
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw new Error('Failed to create refresh token after multiple attempts');
 }
 
 function cookieOptions() {
@@ -288,9 +324,9 @@ exports.registerSubscribeComplete = async (req, res) => {
 
     // create tokens and set cookies (log the user in)
     const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-    await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+    // create-and-store refresh token robustly, then delete any old tokens (delete after create to avoid race)
+    const refreshToken = await createAndStoreRefreshToken(user);
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id, token: { not: refreshToken } } });
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
   res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
 
@@ -344,10 +380,9 @@ exports.login = async (req, res) => {
     const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
     return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.', subscribeToken });
   }
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
-  await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-  await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+    const accessToken = generateAccessToken(user);
+    const refreshToken = await createAndStoreRefreshToken(user);
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id, token: { not: refreshToken } } });
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
   res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });

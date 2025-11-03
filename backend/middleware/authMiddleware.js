@@ -94,46 +94,44 @@ module.exports = async function (req, res, next) {
     const ok = await hasValidSubscriptionForRefresh(user);
     if (!ok) return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
 
-    // rotate refresh tokens: delete old, create new
-    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-    // attempt to create a new refresh token, retrying on token collision
-    const maxRetries = 5;
-    let created = false;
+    // create a new refresh token robustly BEFORE deleting old tokens to avoid races
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     let newRefreshToken = null;
-    for (let attempt = 0; attempt < maxRetries && !created; attempt++) {
-      newRefreshToken = generateRefreshTokenForMiddleware(user);
-      try {
-        await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-        created = true;
-        break;
-      } catch (e) {
-        // If collision on unique token, retry (very unlikely). For other errors, rethrow.
-        const msg = (e && e.code) ? e.code : (e && e.message ? e.message : String(e));
-        if (msg && (msg === 'P2002' || String(msg).toLowerCase().includes('unique'))) {
-          console.warn('Refresh token collision detected on create, trying fallback to existing token', { attempt, err: e && e.message ? e.message : e });
-          // Try to find an existing token for this user (maybe another concurrent request created it)
-          try {
-            const existing = await prisma.refreshToken.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
-            if (existing && existing.token) {
-              // reuse the existing token so we can set cookie and continue
-              newRefreshToken = existing.token;
-              created = true;
-              console.info('Reusing existing refresh token created by concurrent request');
-              break;
-            }
-          } catch (innerErr) {
-            console.error('Failed to read existing refresh token during collision fallback', innerErr && innerErr.message ? innerErr.message : innerErr);
+    try {
+      // Try to insert with skipDuplicates using createMany
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const candidate = generateRefreshTokenForMiddleware(user);
+        try {
+          const res = await prisma.refreshToken.createMany({ data: [{ token: candidate, userId: user.id, expiresAt }], skipDuplicates: true });
+          if (res && typeof res.count === 'number' && res.count > 0) {
+            newRefreshToken = candidate;
+            break;
           }
-          // small backoff before retrying generation
-          await new Promise(r => setTimeout(r, 50 + Math.floor(Math.random()*100)));
-          continue;
+          // if not inserted, maybe concurrent created one: read and reuse
+          const existing = await prisma.refreshToken.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+          if (existing && existing.token) {
+            newRefreshToken = existing.token;
+            break;
+          }
+        } catch (e) {
+          const msg = (e && e.code) ? e.code : (e && e.message ? e.message : String(e));
+          if (msg && (msg === 'P2002' || String(msg).toLowerCase().includes('unique'))) {
+            // collision: read existing token
+            const existing = await prisma.refreshToken.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+            if (existing && existing.token) { newRefreshToken = existing.token; break; }
+            await new Promise(r => setTimeout(r, 50 + Math.floor(Math.random() * 100)));
+            continue;
+          }
+          throw e;
         }
-        throw e;
       }
+      if (!newRefreshToken) throw new Error('Failed to create or locate refresh token');
+    } catch (e) {
+      console.error('Failed to create refresh token in middleware', e && e.message ? e.message : e);
+      throw e;
     }
-    if (!created) {
-      throw new Error('Failed to create unique refresh token after multiple attempts');
-    }
+    // delete other old tokens (keep the one we just created or reused)
+    await prisma.refreshToken.deleteMany({ where: { userId: user.id, token: { not: newRefreshToken } } });
     const accessTokenNew = generateAccessTokenForMiddleware(user);
     // set cookies using same options as authController
     res.cookie('accessToken', accessTokenNew, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
