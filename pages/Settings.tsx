@@ -570,6 +570,27 @@ export default function Settings() {
                 <div className="md:col-span-2">
               <button className="w-full bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" style={{marginTop: '8px'}} onClick={async () => {
                 try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
+                // Clear caches and unregister service workers to avoid serving stale index.html / assets
+                try {
+                  (async () => {
+                    try {
+                      if ('caches' in window) {
+                        const keys = await caches.keys();
+                        await Promise.all(keys.map(k => caches.delete(k)));
+                      }
+                    } catch (e) {
+                      console.warn('Failed to clear caches on logout', e);
+                    }
+                    try {
+                      if ('serviceWorker' in navigator) {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(regs.map(r => r.unregister()));
+                      }
+                    } catch (e) {
+                      console.warn('Failed to unregister service workers on logout', e);
+                    }
+                  })();
+                } catch { /* ignore */ }
                 try {
                   // Preserve cookie consent so the banner doesn't reappear after logout/login
                   const __cons = (() => {
