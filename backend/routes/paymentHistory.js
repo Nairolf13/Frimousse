@@ -4,7 +4,6 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const auth = require('../middleware/authMiddleware');
 
-// Récupérer l’historique par mois/année
 router.get('/:year/:month', auth, async (req, res) => {
   const { year, month } = req.params;
   const yearInt = parseInt(year, 10);
