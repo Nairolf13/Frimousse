@@ -196,6 +196,15 @@ if (isProd) {
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'API endpoint not found' });
     }
+    // If the request looks like a static asset (has an extension or is inside /assets/),
+    // return 404 instead of serving index.html. This prevents JS/CSS asset requests
+    // from receiving HTML (index.html) which leads to MIME/type errors in the browser
+    // when assets are missing or mis-deployed.
+    const ext = path.extname(req.path || '').toLowerCase();
+    if (req.path.startsWith('/assets/') || ext) {
+      return res.status(404).send('Not found');
+    }
+
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
