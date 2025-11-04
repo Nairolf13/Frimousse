@@ -7,6 +7,8 @@ import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 
 const API_URL = import.meta.env.VITE_API_URL;
+// Number of concurrent per-item detail requests when fetching cotisations/totals
+const DETAIL_CONCURRENCY = 8;
 
 
 function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }) {
@@ -23,7 +25,7 @@ function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }
 }
 
 import { useEffect, useState, useRef } from 'react';
-import { getCached, setCached } from '../src/utils/apiCache';
+import { getCached, setCached, getPersistedCached, DEFAULT_TTL } from '../src/utils/apiCache';
 import { runWithConcurrency } from '../src/utils/requestQueue';
 
 interface Child {
@@ -95,6 +97,7 @@ export default function Nannies() {
   
     const [assignments, setAssignments] = useState<Assignment[]>([]); 
   const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   // --- geodata/autocomplete (copied from ParentDashboard/RegisterPage)
   type GeodataPlace = { house_number?: string | null; street?: string | null; city?: string | null; state?: string | null; country?: string | null; postcode?: string | null; name?: string };
@@ -257,41 +260,81 @@ export default function Nannies() {
     await payCotisation(nannyId, amount);
   };
 
-  const fetchNannies = React.useCallback(() => {
+  const fetchNannies = React.useCallback(async () => {
     setLoading(true);
+    setPageError(null);
     const cacheKeyNannies = `${API_URL}/nannies`;
-    const cached = getCached<Nanny[]>(cacheKeyNannies);
-    if (cached) {
-      setNannies(cached);
-      const amounts: Record<string, number> = {};
-      cached.forEach(n => { amounts[n.id] = 10; });
-      setCotisationAmounts(amounts);
-      // schedule detail fetches with limited concurrency to avoid spikes
-      void runWithConcurrency(cached.map(n => n.id), async (nId) => {
-        await fetchCotisation(nId);
-        await fetchParentsTotalForNanny(nId);
-        return null;
-      }, 4);
-      setLoading(false);
-      return;
-    }
-
-    fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
-      .then(res => res.json())
-      .then((nannies: Nanny[]) => {
-        setNannies(nannies);
+    try {
+      const cached = getCached<Nanny[]>(cacheKeyNannies);
+      if (cached) {
+        setNannies(cached);
         const amounts: Record<string, number> = {};
-        nannies.forEach(n => { amounts[n.id] = 10; });
+        cached.forEach(n => { amounts[n.id] = 10; });
         setCotisationAmounts(amounts);
-        setCached(cacheKeyNannies, nannies);
-        // schedule per-nanny detail fetches with limited concurrency
-        void runWithConcurrency(nannies.map(n => n.id), async (nId) => {
+        // schedule detail fetches with limited concurrency to avoid spikes
+        void runWithConcurrency(cached.map(n => n.id), async (nId) => {
           await fetchCotisation(nId);
           await fetchParentsTotalForNanny(nId);
           return null;
-        }, 4);
-      })
-      .finally(() => setLoading(false));
+        }, DETAIL_CONCURRENCY);
+        setLoading(false);
+        return;
+      }
+
+      // try hydrated persisted cache from localStorage so the page can render instantly
+      const persisted = getPersistedCached<Nanny[]>(cacheKeyNannies);
+      if (persisted && persisted.length > 0) {
+        setNannies(persisted);
+        const amounts: Record<string, number> = {};
+        persisted.forEach(n => { amounts[n.id] = 10; });
+        setCotisationAmounts(amounts);
+        // schedule detail fetches with limited concurrency to avoid spikes
+        void runWithConcurrency(persisted.map(n => n.id), async (nId) => {
+          await fetchCotisation(nId);
+          await fetchParentsTotalForNanny(nId);
+          return null;
+        }, DETAIL_CONCURRENCY);
+        // show UI immediately while we continue to refresh from network below
+        setLoading(false);
+      }
+
+      const res = await fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' });
+      if (!res.ok) {
+        let bodyText = '';
+        try { bodyText = await res.text(); } catch { /* ignore */ }
+        console.error('Failed to fetch nannies', res.status, res.statusText, bodyText);
+        setPageError(`Erreur lors du chargement des nounous (${res.status})`);
+        setLoading(false);
+        return;
+      }
+
+      const nanniesList = await res.json().catch((err) => {
+        console.error('Invalid JSON for nannies response', err);
+        return null;
+      });
+      if (!nanniesList || !Array.isArray(nanniesList)) {
+        setPageError('Réponse invalide du serveur lors du chargement des nounous.');
+        setLoading(false);
+        return;
+      }
+
+  setNannies(nanniesList);
+      const amounts: Record<string, number> = {};
+      nanniesList.forEach(n => { amounts[n.id] = 10; });
+      setCotisationAmounts(amounts);
+  try { setCached(cacheKeyNannies, nanniesList, DEFAULT_TTL, true); } catch { /* ignore cache errors */ }
+      // schedule per-nanny detail fetches with limited concurrency
+      void runWithConcurrency(nanniesList.map(n => n.id), async (nId) => {
+        await fetchCotisation(nId);
+        await fetchParentsTotalForNanny(nId);
+        return null;
+      }, DETAIL_CONCURRENCY);
+    } catch (err) {
+      console.error('fetchNannies error', err);
+      setPageError('Erreur réseau lors du chargement des nounous.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -863,6 +906,10 @@ export default function Nannies() {
         {/* Inline success banner for nanny actions (add/delete/update) */}
         {successMessage && (
           <div className="mb-4 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMessage}</div>
+        )}
+
+        {pageError && (
+          <div className="mb-4 text-red-700 bg-red-50 border border-red-100 rounded p-3 text-center">{pageError}</div>
         )}
 
         {loading ? (

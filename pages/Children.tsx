@@ -58,6 +58,8 @@ interface Billing {
 import { useEffect, useState, useRef } from 'react';
 import { getCached, setCached } from '../src/utils/apiCache';
 import { runWithConcurrency } from '../src/utils/requestQueue';
+// concurrency used for per-item detail fetches (photo consent, billing)
+const DETAIL_CONCURRENCY = 8;
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import '../styles/filter-responsive.css';
@@ -273,7 +275,7 @@ export default function Children() {
           } catch {
             return { id: c.id, allowed: false };
           }
-        }, 4);
+        }, DETAIL_CONCURRENCY);
         const pcm: Record<string, boolean> = {};
         consentResults.forEach(r => { if (r && r.id) pcm[r.id] = !!r.allowed; });
         setPhotoConsentMap(pcm);
@@ -360,7 +362,7 @@ export default function Children() {
           } catch {
             // ignore individual failures
           }
-        }, 4);
+        }, DETAIL_CONCURRENCY);
         setBillings(billingData);
       } catch {
         setBillings({});
