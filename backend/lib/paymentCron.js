@@ -6,6 +6,22 @@ const { generateInvoiceBuffer } = require('./invoiceGenerator');
 
 const RATE_PER_DAY = 2;
 
+function getNowPartsForZone(timeZone) {
+  // Use Intl.DateTimeFormat to get the current date/time parts in the requested timezone
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false });
+  const parts = fmt.formatToParts(new Date());
+  const map = {};
+  for (const p of parts) map[p.type] = p.value;
+  return {
+    year: Number(map.year),
+    month: Number(map.month), // 1-12
+    day: Number(map.day),
+    hour: Number(map.hour || 0),
+    minute: Number(map.minute || 0),
+    second: Number(map.second || 0)
+  };
+}
+
 async function calculatePaymentsForMonth(year, monthIndex) {
   const parents = await prisma.parent.findMany({
     include: { children: { include: { child: true } } }
@@ -159,9 +175,11 @@ async function upsertPaymentsForParentForMonth(parentId, year, monthIndex) {
 }
 
 async function calculatePayments() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const monthIndex = now.getMonth(); // 0-11
+  // Determine "now" in the cron timezone so the calculated target month matches the scheduled timezone
+  const tz = process.env.CRON_TZ || 'Europe/Paris';
+  const nowParts = getNowPartsForZone(tz);
+  const year = nowParts.year;
+  const monthIndex = nowParts.month - 1; // 0-11
   const targetMonth = monthIndex - 1;
   const targetYear = targetMonth === -1 ? year - 1 : year;
   const targetMonthIndex = targetMonth === -1 ? 11 : targetMonth;

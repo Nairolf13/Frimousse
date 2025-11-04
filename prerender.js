@@ -6,8 +6,9 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_URL = 'https://lesfrimousses.com';
-const BUILD_DIR = path.join(__dirname, 'build');
+// Allow overriding base URL and output directory via environment for local testing/CI
+const BASE_URL = process.env.PRERENDER_BASE_URL || 'https://lesfrimousses.com';
+const BUILD_DIR = path.join(__dirname, process.env.PRERENDER_OUT_DIR || 'build');
 
 // Routes to prerender
 const routes = [
