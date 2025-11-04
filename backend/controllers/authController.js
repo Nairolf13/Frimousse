@@ -7,13 +7,16 @@ const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
+const crypto = require('crypto');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 function generateAccessToken(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
 }
 function generateRefreshToken(user) {
-  return jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+  // include a random nonce to avoid identical refresh JWTs when created concurrently
+  const nonce = crypto.randomBytes(8).toString('hex');
+  return jwt.sign({ id: user.id, centerId: user.centerId || null, n: nonce }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 }
 
 function cookieOptions() {
@@ -252,9 +255,25 @@ exports.registerSubscribeComplete = async (req, res) => {
         // ignore
       }
       const accessToken = generateAccessToken(user);
-      const refreshToken = generateRefreshToken(user);
+      let refreshToken = generateRefreshToken(user);
       await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-      await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+      // create refresh token with retry on unique collision
+      {
+        const maxAttempts = 5;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+            break;
+          } catch (err) {
+            if (err && err.code === 'P2002' && attempt < maxAttempts) {
+              console.warn(`Refresh token collision on create (attempt ${attempt}), retrying`);
+              refreshToken = generateRefreshToken(user);
+              continue;
+            }
+            throw err;
+          }
+        }
+      }
   const cookieOpts = Object.assign({ maxAge: 15*60*1000 }, cookieOptions());
   const refreshOpts = Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions());
   res.cookie('accessToken', accessToken, cookieOpts);
@@ -288,9 +307,25 @@ exports.registerSubscribeComplete = async (req, res) => {
 
     // create tokens and set cookies (log the user in)
     const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    let refreshToken = generateRefreshToken(user);
     await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-    await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+    // Retry-create to avoid rare P2002 collisions
+    {
+      const maxAttempts = 5;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+          break;
+        } catch (err) {
+          if (err && err.code === 'P2002' && attempt < maxAttempts) {
+            console.warn(`Refresh token collision on create (attempt ${attempt}), retrying`);
+            refreshToken = generateRefreshToken(user);
+            continue;
+          }
+          throw err;
+        }
+      }
+    }
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
   res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
 
@@ -397,8 +432,24 @@ exports.refresh = async (req, res) => {
     if (!ok) {
       return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
     }
-    const newRefreshToken = generateRefreshToken(user);
-    await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+    // create new refresh token and retry on collision
+    let newRefreshToken = generateRefreshToken(user);
+    {
+      const maxAttempts = 5;
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        try {
+          await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+          break;
+        } catch (err) {
+          if (err && err.code === 'P2002' && attempt < maxAttempts) {
+            console.warn(`Refresh token collision on create (attempt ${attempt}), retrying`);
+            newRefreshToken = generateRefreshToken(user);
+            continue;
+          }
+          throw err;
+        }
+      }
+    }
     const accessToken = generateAccessToken(user);
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
   res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
