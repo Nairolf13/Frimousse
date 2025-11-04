@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe';
+import clearBrowserCacheAndLogout from '../src/utils/clearBrowserCache';
 import { useI18n } from '../src/lib/useI18n';
 import LanguageDropdown from '../components/LanguageDropdown';
 
@@ -568,40 +569,11 @@ export default function Settings() {
             
 
                 <div className="md:col-span-2">
-              <button className="w-full bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" style={{marginTop: '8px'}} onClick={async () => {
-                try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
-                try {
-                  // Preserve cookie consent so the banner doesn't reappear after logout/login
-                  const __cons = (() => {
-                    try { return localStorage.getItem('cookie_consent'); } catch { return null; }
-                  })();
-                  try { localStorage.clear(); } catch { /* ignore */ }
-                  if (__cons) try { localStorage.setItem('cookie_consent', __cons); } catch { /* ignore */ }
-                } catch { /* ignore */ }
-                try {
-                  const __scons = (() => {
-                    try { return sessionStorage.getItem('cookie_consent'); } catch { return null; }
-                  })();
-                  try { sessionStorage.clear(); } catch { /* ignore */ }
-                  if (__scons) try { sessionStorage.setItem('cookie_consent', __scons); } catch { /* ignore */ }
-                } catch { /* ignore */ }
-                try {
-                  // Preserve cookie consent cookie
-                  const cookieConsentMatch = document.cookie.match(/(?:^|; )cookie_consent=([^;]+)/);
-                  const cookieConsentValue = cookieConsentMatch ? cookieConsentMatch[1] : null;
-                  document.cookie.split(';').forEach(function(c) {
-                    const name = c.split('=')[0].trim();
-                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
-                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=' + window.location.hostname;
-                  });
-                  // Restore cookie_consent cookie
-                  if (cookieConsentValue) {
-                    document.cookie = `cookie_consent=${cookieConsentValue};path=/;max-age=31536000`;
-                  }
-                } catch { /* ignore */ }
-                window.location.href = '/login';
-               }}>{t('settings.logout')}</button>
-            </div>
+                  <button className="w-full bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" style={{marginTop: '8px'}} onClick={async () => {
+                    try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
+                    try { await clearBrowserCacheAndLogout({ preserveCookieConsent: true, redirectTo: '/login' }); } catch { void 0; }
+                  }}>{t('settings.logout')}</button>
+                </div>
           </div>
         </div>
         

@@ -18,6 +18,14 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const app = express();
 
+// When running behind a reverse proxy (nginx) we should trust the proxy so
+// that `req.ip` and `req.protocol` reflect the original client. Controlled
+// via TRUST_PROXY env var so it can be enabled selectively in prod.
+if (process.env.TRUST_PROXY === 'true') {
+  app.set('trust proxy', true);
+  console.log('Express configured to trust proxy (TRUST_PROXY=true)');
+}
+
 const requiredEnvs = ['JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'STRIPE_SECRET_KEY'];
 for (const e of requiredEnvs) {
   if (!process.env[e]) {
@@ -44,7 +52,58 @@ const parentRoutes = require('./routes/parent');
 
 app.use(helmet());
 
-app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
+// Basic global rate limit: protects from obvious bursts (per IP)
+// Global rate limiter (per-IP or per-user when keying is overridden)
+app.use(rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res /*, next */) => {
+    try {
+      console.warn('[rate-limit] global limit exceeded', { ip: req.ip, path: req.originalUrl, method: req.method });
+    } catch (e) {
+      console.warn('[rate-limit] global limit exceeded (failed to log extra data)');
+    }
+    // Advise clients to wait 60s (best-effort). express-rate-limit will set headers
+    // if standardHeaders=true, but include Retry-After to be explicit for clients.
+    res.setHeader('Retry-After', String(60));
+    return res.status(429).json({ error: 'Too many requests' });
+  }
+}));
+
+// Stricter limits for authentication endpoints (to slow brute-force)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: 'Trop de tentatives de connexion. Réessayez dans quelques minutes.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+// Apply to the login path specifically (will run before router handlers)
+app.use('/api/auth/login', loginLimiter);
+
+// Stricter limits for sending invoices/emails (per user or per IP)
+const sendInvoiceLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  message: 'Vous avez atteint la limite d\'envoi de factures. Réessayez plus tard.',
+  keyGenerator: (req) => {
+    // Prefer per-user rate limiting when authenticated; fall back to IP
+    try {
+      // If auth middleware sets req.userId, use it
+      if (req && req.userId) return String(req.userId);
+      // Try cookie containing user id (best-effort)
+      if (req && req.cookies && req.cookies.userId) return String(req.cookies.userId);
+    } catch (e) {
+      // ignore
+    }
+    return req.ip;
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/payment-history/invoice', sendInvoiceLimiter);
 
 const isProd = process.env.NODE_ENV === 'production';
 const allowedOrigins = isProd
