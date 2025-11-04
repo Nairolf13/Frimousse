@@ -17,8 +17,8 @@
     "start:front:prod": "vite build && cp -r dist build && vite preview",
     "start:back:prod": "cd backend && NODE_ENV=production node index.js",
     "test": "vitest",
-    "deploy:vps": "sh ./scripts/deploy_vps.sh main",
-    "deploy:vps:raw": "sh ./scripts/deploy_vps.sh"
+    "deploy:vps": "bash ./scripts/deploy_vps.sh main",
+    "deploy:vps:raw": "bash ./scripts/deploy_vps.sh"
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.18",
