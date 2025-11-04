@@ -24,6 +24,7 @@ function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }
 
 import { useEffect, useState, useRef } from 'react';
 import { getCached, setCached } from '../src/utils/apiCache';
+import { runWithConcurrency } from '../src/utils/requestQueue';
 
 interface Child {
   id: string;
@@ -263,19 +264,32 @@ export default function Nannies() {
     if (cached) {
       setNannies(cached);
       const amounts: Record<string, number> = {};
-      cached.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); fetchParentsTotalForNanny(n.id); });
+      cached.forEach(n => { amounts[n.id] = 10; });
       setCotisationAmounts(amounts);
+      // schedule detail fetches with limited concurrency to avoid spikes
+      void runWithConcurrency(cached.map(n => n.id), async (nId) => {
+        await fetchCotisation(nId);
+        await fetchParentsTotalForNanny(nId);
+        return null;
+      }, 4);
       setLoading(false);
       return;
     }
+
     fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
       .then(res => res.json())
       .then((nannies: Nanny[]) => {
-  setNannies(nannies);
-  const amounts: Record<string, number> = {};
-  nannies.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); fetchParentsTotalForNanny(n.id); });
-  setCotisationAmounts(amounts);
-  setCached(cacheKeyNannies, nannies);
+        setNannies(nannies);
+        const amounts: Record<string, number> = {};
+        nannies.forEach(n => { amounts[n.id] = 10; });
+        setCotisationAmounts(amounts);
+        setCached(cacheKeyNannies, nannies);
+        // schedule per-nanny detail fetches with limited concurrency
+        void runWithConcurrency(nannies.map(n => n.id), async (nId) => {
+          await fetchCotisation(nId);
+          await fetchParentsTotalForNanny(nId);
+          return null;
+        }, 4);
       })
       .finally(() => setLoading(false));
   }, []);

@@ -1,5 +1,8 @@
 import { createRoot } from 'react-dom/client'
 import './index.css'
+// Global responsive helpers used across several pages (Children, Nannies, Feed...)
+import '../styles/children-responsive.css'
+import '../styles/filter-responsive.css'
 import App from './App.tsx'
 import CheckoutSuccessHandler from '../components/CheckoutSuccessHandler'
 import UpgradeModalProvider from '../components/UpgradeModalProvider'

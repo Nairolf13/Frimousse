@@ -57,6 +57,7 @@ interface Billing {
 
 import { useEffect, useState, useRef } from 'react';
 import { getCached, setCached } from '../src/utils/apiCache';
+import { runWithConcurrency } from '../src/utils/requestQueue';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import '../styles/filter-responsive.css';
@@ -260,9 +261,10 @@ export default function Children() {
   const amounts: Record<string, number | undefined> = {};
   childrenData.forEach(c => { amounts[c.id] = 15; });
   setCotisationAmounts(amounts);
-  // fetch photo consent summary for each child (parallel)
+  // fetch photo consent summary for each child (limited concurrency)
       try {
-        const consentResults = await Promise.all(childrenData.map(async (c) => {
+        // limit parallel photo-consent requests to avoid bursts
+        const consentResults = await runWithConcurrency(childrenData, async (c) => {
           try {
             const r = await fetchWithRefresh(`${API_URL}/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
             if (!r.ok) return { id: c.id, allowed: false };
@@ -271,9 +273,9 @@ export default function Children() {
           } catch {
             return { id: c.id, allowed: false };
           }
-        }));
+        }, 4);
         const pcm: Record<string, boolean> = {};
-        consentResults.forEach(r => { pcm[r.id] = !!r.allowed; });
+        consentResults.forEach(r => { if (r && r.id) pcm[r.id] = !!r.allowed; });
         setPhotoConsentMap(pcm);
       } catch {
         setPhotoConsentMap({});
@@ -347,13 +349,18 @@ export default function Children() {
   const cachedChildren = getCached<unknown[]>(cacheKeyChildren);
   const childrenData: Child[] = cachedChildren ? (cachedChildren as unknown as Child[]) : (await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' }).then(r => r.json()));
         const billingData: Record<string, Billing> = {};
-        await Promise.all(childrenData.map(async (child) => {
-          const res = await fetchWithRefresh(`${API_URL}/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
-          if (res.ok) {
-            const data = await res.json();
-            billingData[child.id] = { days: data.days, amount: data.amount };
+        // limit billing requests concurrency
+        await runWithConcurrency(childrenData, async (child) => {
+          try {
+            const res = await fetchWithRefresh(`${API_URL}/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
+            if (res.ok) {
+              const data = await res.json();
+              billingData[child.id] = { days: data.days, amount: data.amount };
+            }
+          } catch {
+            // ignore individual failures
           }
-        }));
+        }, 4);
         setBillings(billingData);
       } catch {
         setBillings({});
