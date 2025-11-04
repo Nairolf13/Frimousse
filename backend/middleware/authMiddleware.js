@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const { PrismaClient } = require('@prisma/client');
@@ -10,9 +9,7 @@ function generateAccessTokenForMiddleware(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
 }
 function generateRefreshTokenForMiddleware(user) {
-  // include a small random nonce to ensure token uniqueness even when generated in quick succession
-  const nonce = crypto.randomBytes(8).toString('hex');
-  return jwt.sign({ id: user.id, centerId: user.centerId || null, n: nonce }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
 }
 
 function cookieOptions() {
@@ -93,24 +90,10 @@ module.exports = async function (req, res, next) {
     const ok = await hasValidSubscriptionForRefresh(user);
     if (!ok) return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
 
-    // rotate refresh tokens: delete old, create new. Retry on unique constraint collision.
+    // rotate refresh tokens: delete old, create new
     await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-    let newRefreshToken = null;
-    const maxAttempts = 5;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        newRefreshToken = generateRefreshTokenForMiddleware(user);
-        await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-        break; // success
-      } catch (err) {
-        // If unique constraint on token (rare), retry with a fresh token
-        if (err && err.code === 'P2002' && attempt < maxAttempts) {
-          console.warn(`Refresh token collision detected, retrying (${attempt}/${maxAttempts})`);
-          continue;
-        }
-        throw err;
-      }
-    }
+    const newRefreshToken = generateRefreshTokenForMiddleware(user);
+    await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
     const accessTokenNew = generateAccessTokenForMiddleware(user);
     // set cookies using same options as authController
     res.cookie('accessToken', accessTokenNew, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));

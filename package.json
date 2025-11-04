@@ -16,9 +16,7 @@
     "start:prod": "npm-run-all --parallel start:front:prod start:back:prod",
     "start:front:prod": "vite build && cp -r dist build && vite preview",
     "start:back:prod": "cd backend && NODE_ENV=production node index.js",
-    "test": "vitest",
-    "deploy:vps": "bash ./scripts/deploy_vps.sh main",
-    "deploy:vps:raw": "bash ./scripts/deploy_vps.sh"
+    "test": "vitest"
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.18",

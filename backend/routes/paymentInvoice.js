@@ -469,43 +469,4 @@ router.get('/invoice/:id', auth, async (req, res) => {
   }
 });
 
-// Send invoice by email to the parent linked to the paymentHistory record
-router.post('/invoice/:id/send', auth, async (req, res) => {
-  try {
-    const id = req.params.id;
-    if (!id) return res.status(400).json({ message: 'Missing id' });
-    const ph = await prisma.paymentHistory.findUnique({ where: { id }, include: { parent: true } });
-    if (!ph) return res.status(404).json({ message: 'Not found' });
-
-    const user = req.user;
-    if (!user) return res.status(403).json({ message: 'Forbidden' });
-    const role = (user.role || '').toLowerCase();
-    const isAdmin = role === 'admin' || role.includes('super');
-
-    // allow admin
-    if (!isAdmin) {
-      // Parent can request send only for their own invoices
-      if (!(user.parentId && user.parentId === ph.parentId)) {
-        return res.status(403).json({ message: 'Forbidden' });
-      }
-    }
-
-    const parentEmail = ph.parent && ph.parent.email ? ph.parent.email.trim() : '';
-    if (!parentEmail) return res.status(400).json({ message: 'Parent has no email configured' });
-
-    // Generate PDF buffer using shared generator
-    const { generateInvoiceBuffer } = require('../lib/invoiceGenerator');
-    const buffer = await generateInvoiceBuffer(prisma, id);
-
-    // send templated mail with invoice attached
-    const { sendTemplatedMail } = require('../lib/email');
-    await sendTemplatedMail({ templateName: 'invoice', lang: 'fr', to: parentEmail, prisma, attachments: [ { filename: `facture-${id}.pdf`, content: buffer } ], paymentHistoryId: id });
-
-    return res.json({ ok: true });
-  } catch (err) {
-    console.error('Failed to send invoice by email', err && err.message ? err.message : err);
-    return res.status(500).json({ message: 'Failed to send invoice' });
-  }
-});
-
 module.exports = router;

@@ -7,7 +7,6 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const jwt = require('jsonwebtoken');
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const JWT_SECRET = process.env.JWT_SECRET;
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const GENERATED_DIR = path.join(__dirname, '..', 'generated');
@@ -150,27 +149,9 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
           if (user) {
             try {
               const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
-                    // include a small random nonce to avoid identical refresh JWTs when created concurrently
-                    const nonce = crypto.randomBytes(8).toString('hex');
-                    let refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null, n: nonce }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-                    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-                    // create refresh token with retry on unique collision
-                    {
-                      const maxAttempts = 5;
-                      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-                        try {
-                          await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-                          break;
-                        } catch (err) {
-                          if (err && err.code === 'P2002' && attempt < maxAttempts) {
-                            console.warn(`Refresh token collision on create (attempt ${attempt}), retrying`);
-                            refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null, n: crypto.randomBytes(8).toString('hex') }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-                            continue;
-                          }
-                          throw err;
-                        }
-                      }
-                    }
+              const refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+              await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
+              await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
               const cookieOpts = { httpOnly: true, maxAge: 15*60*1000, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax' };
               const refreshOpts = { httpOnly: true, maxAge: 7*24*60*60*1000, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax' };
               // Note: webhook handlers cannot directly set cookies for the browser that initiated the Checkout
@@ -413,24 +394,9 @@ router.post('/complete-checkout-session', async (req, res) => {
     if (user) {
       try {
         const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
-        let refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null, n: crypto.randomBytes(8).toString('hex') }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+        const refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
         await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-        {
-          const maxAttempts = 5;
-          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-              await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-              break;
-            } catch (err) {
-              if (err && err.code === 'P2002' && attempt < maxAttempts) {
-                console.warn(`Refresh token collision on create (attempt ${attempt}), retrying`);
-                refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null, n: crypto.randomBytes(8).toString('hex') }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-                continue;
-              }
-              throw err;
-            }
-          }
-        }
+        await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
         // Note: we cannot set cookies here for the client's browser if this endpoint is called from the frontend after redirect
       } catch (e) {
         console.error('Error creating session tokens in complete-checkout-session', e);
@@ -487,24 +453,9 @@ router.post('/create-with-token', async (req, res) => {
       }
       // also create session cookies if needed (user may not be logged in)
   const accessToken = jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
-  let refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null, n: crypto.randomBytes(8).toString('hex') }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+  const refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
   await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-  {
-    const maxAttempts = 5;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-        break;
-      } catch (err) {
-        if (err && err.code === 'P2002' && attempt < maxAttempts) {
-          console.warn(`Refresh token collision on create (attempt ${attempt}), retrying`);
-          refreshToken = jwt.sign({ id: user.id, centerId: user.centerId || null, n: crypto.randomBytes(8).toString('hex') }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
-          continue;
-        }
-        throw err;
-      }
-    }
-  }
+  await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
   const baseCookie = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'lax' };
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, baseCookie));
   res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, baseCookie));

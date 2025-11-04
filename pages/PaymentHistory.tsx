@@ -30,10 +30,6 @@ export default function PaymentHistoryPage() {
   const [error, setError] = useState<string>('');
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
-  const [sendingMap, setSendingMap] = useState<Record<string, boolean>>({});
-  const [confirmVisible, setConfirmVisible] = useState<boolean>(false);
-  const [confirmPaymentId, setConfirmPaymentId] = useState<string | null>(null);
-  const [confirmMessage, setConfirmMessage] = useState<string>('');
   const { user } = useAuth();
 
   function showModal(message: string) {
@@ -177,47 +173,6 @@ export default function PaymentHistoryPage() {
     }
   }
 
-  // Send invoice by asking the backend to email the invoice to the parent linked to the paymentHistory.
-  // We intentionally DO NOT rely on client-side rec.parent?.email presence because prerender / SPA
-  // hydration can leave that field temporarily unset. The backend will look up the parent email from DB
-  // and return a clear error if none is configured.
-  async function sendInvoice(paymentId: string) {
-    if (!paymentId) return;
-    const rec = data.find(r => r.id === paymentId);
-    if (!rec) { showModal(t('payments.errors.invoice_not_found', 'Enregistrement introuvable')); return; }
-    try {
-      setSendingMap(m => ({ ...m, [paymentId]: true }));
-      const res = await fetchWithRefresh(`${API_URL}/payment-history/invoice/${paymentId}/send`, { method: 'POST', credentials: 'include' });
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        let friendly = t('payments.errors.send_failed', "Erreur lors de l'envoi du mail");
-        if (text && text.trim()) {
-          const tt = text.trim();
-          try {
-            const parsed = JSON.parse(tt);
-            if (parsed && typeof parsed === 'object') {
-              if (typeof parsed.message === 'string' && parsed.message.trim()) friendly = parsed.message.trim();
-              else if (typeof parsed.error === 'string' && parsed.error.trim()) friendly = parsed.error.trim();
-            } else if (tt.length < 1000) friendly = tt;
-          } catch {
-            if (tt.length < 1000) friendly = tt;
-          }
-        }
-        if (res.status === 400 && /email/i.test(String(friendly))) {
-          friendly = t('payments.errors.email_missing_action', "Aucun email configuré pour ce parent. Veuillez ajouter un email dans le profil parent avant de renvoyer la facture.");
-        }
-        showModal(friendly);
-        return;
-      }
-      showModal(t('payments.messages.email_sent', 'Email envoyé.'));
-    } catch (err) {
-      console.error('Send invoice failed', err);
-      showModal(t('payments.errors.network', "Erreur réseau lors de l'envoi."));
-    } finally {
-      setSendingMap(m => ({ ...m, [paymentId]: false }));
-    }
-  }
-
   async function togglePaid(id: string, paid: boolean) {
     // optimistic update
   setData(d => d.map(r => r.id === id ? { ...r, paid } : r));
@@ -306,19 +261,6 @@ export default function PaymentHistoryPage() {
         </div>
 
         <div className="grid gap-4">
-            {confirmVisible && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmVisible(false)} />
-                <div role="dialog" aria-modal="true" className="relative max-w-md w-full bg-white rounded-lg shadow-lg p-6 mx-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{t('payments.confirm.title', 'Confirmer')}</h3>
-                  <p className="mt-3 text-sm text-gray-700">{confirmMessage}</p>
-                  <div className="mt-6 flex justify-end gap-2">
-                    <button onClick={() => { setConfirmVisible(false); setConfirmPaymentId(null); }} className="px-4 py-2 bg-gray-200 text-gray-800 rounded">{t('common.cancel', 'Annuler')}</button>
-                    <button onClick={async () => { setConfirmVisible(false); const id = confirmPaymentId; setConfirmPaymentId(null); if (id) await sendInvoice(id); }} className="px-4 py-2 bg-blue-600 text-white rounded">{t('common.confirm', 'Confirmer')}</button>
-                  </div>
-                </div>
-              </div>
-            )}
             {modalVisible && (
               <div className="fixed inset-0 z-50 flex items-center justify-center">
                 <div className="absolute inset-0 bg-black/40" onClick={() => setModalVisible(false)} />
@@ -391,19 +333,7 @@ export default function PaymentHistoryPage() {
                 <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
                   <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
                   <div className="w-full md:w-auto flex justify-center md:justify-end">
-                    <div className="flex gap-2 w-full md:w-auto justify-center md:justify-end">
-                      <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
-                      <button onClick={() => {
-                          // open confirmation modal before sending
-                          setConfirmPaymentId(rec.id);
-                          setConfirmMessage(t('payments.confirm.send_invoice', "Voulez-vous envoyer cette facture par email au parent ?"));
-                          setConfirmVisible(true);
-                        }}
-                        disabled={Boolean(sendingMap && sendingMap[rec.id])}
-                        className={`px-4 py-2 bg-blue-600 text-white rounded text-sm w-full md:w-auto text-center ${sendingMap && sendingMap[rec.id] ? 'opacity-60 cursor-not-allowed' : ''}`}>
-                        {sendingMap && sendingMap[rec.id] ? t('payments.actions.sending', 'Envoi...') : t('payments.actions.send', 'Envoyer')}
-                      </button>
-                    </div>
+                    <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
                   </div>
                 </div>
               </div>
