@@ -32,8 +32,10 @@ git fetch origin "$BRANCH"
 git checkout "$BRANCH"
 git pull origin "$BRANCH"
 
-echo "Installing dependencies..."
-npm ci
+echo "Installing dependencies... (using --legacy-peer-deps to avoid peer conflicts on older packages)"
+# Use --legacy-peer-deps on the VPS to avoid strict peerDependency resolution failures
+# This mirrors a common CI/production workaround when upstream packages haven't updated peer ranges.
+npm ci --legacy-peer-deps
 
 echo "Building frontend (npm run build)..."
 npm run build
