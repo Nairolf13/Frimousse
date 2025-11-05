@@ -32,6 +32,91 @@ router.get('/', auth, async (req, res) => {
   res.json(mapped);
 });
 
+// Batch details: return nannies (all or filtered by ids) with aggregated monthly totals
+router.post('/batch/details', auth, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body && req.body.ids) ? req.body.ids : undefined;
+    const month = (req.body && req.body.month) || String(req.query.month || '').trim();
+    const where = {};
+    if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+    if (ids && ids.length > 0) where.id = { in: ids };
+
+    // include linked user so we can return address fields stored on User
+    const nannies = await prisma.nanny.findMany({ where, include: { assignedChildren: true, user: true } });
+    const mapped = nannies.map(n => {
+      const u = n.user || {};
+      return Object.assign({}, n, {
+        address: u.address || null,
+        postalCode: u.postalCode || null,
+        city: u.city || null,
+        region: u.region || null,
+        country: u.country || null,
+      });
+    });
+
+    // Determine month range
+    let startDate, endDate;
+    if (!month) {
+      const now = new Date();
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    } else {
+      if (!/^[0-9]{4}-[0-9]{2}$/.test(month)) return res.status(400).json({ message: 'Invalid month parameter, expected YYYY-MM' });
+      const [year, mon] = month.split('-').map(Number);
+      startDate = new Date(year, mon - 1, 1);
+      endDate = new Date(year, mon, 1);
+    }
+
+    const nannyIds = mapped.map(n => n.id);
+    if (nannyIds.length === 0) return res.json([]);
+
+    // children linked to these nannies
+    const childNannies = await prisma.childNanny.findMany({ where: { nannyId: { in: nannyIds } }, select: { nannyId: true, childId: true } });
+    const nannyToChildren = {};
+    const allChildIds = new Set();
+    for (const cn of childNannies) {
+      if (!nannyToChildren[cn.nannyId]) nannyToChildren[cn.nannyId] = [];
+      nannyToChildren[cn.nannyId].push(cn.childId);
+      allChildIds.add(cn.childId);
+    }
+
+    const childIdsArr = Array.from(allChildIds);
+    // map childId -> parentIds
+    const parentChilds = childIdsArr.length > 0 ? await prisma.parentChild.findMany({ where: { childId: { in: childIdsArr } }, select: { parentId: true, childId: true } }) : [];
+    const childToParents = {};
+    for (const pc of parentChilds) {
+      if (!childToParents[pc.childId]) childToParents[pc.childId] = [];
+      childToParents[pc.childId].push(pc.parentId);
+    }
+
+    // assignments for these children in the month
+    const assignments = childIdsArr.length > 0 ? await prisma.assignment.findMany({ where: { childId: { in: childIdsArr }, date: { gte: startDate, lt: endDate } }, select: { childId: true } }) : [];
+    const childCounts = {};
+    for (const a of assignments) { childCounts[a.childId] = (childCounts[a.childId] || 0) + 1; }
+
+    // compute per-nanny totals (sum of per-parent amounts)
+    const nannyTotals = {};
+    for (const nid of nannyIds) {
+      const kids = nannyToChildren[nid] || [];
+      let total = 0;
+      for (const cid of kids) {
+        const days = childCounts[cid] || 0;
+        const amount = days * 2;
+        const parents = childToParents[cid] || [];
+        total += amount * (parents.length || 0);
+      }
+      nannyTotals[nid] = total;
+    }
+
+    // attach totals to the mapped objects
+    const result = mapped.map(n => ({ ...n, totalMonthly: nannyTotals[n.id] || 0 }));
+    res.json(result);
+  } catch (err) {
+    console.error('POST /api/nannies/batch/details error', err);
+    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
 router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
   try {
     const userReq = req.user || {};
