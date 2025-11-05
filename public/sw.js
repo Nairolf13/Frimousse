@@ -1,3 +1,5 @@
+const SW_VERSION = '__SW_VERSION__'; // replace at build time if possible (or changes when file updated)
+
 self.addEventListener('push', function(event) {
   let data = {};
   try { data = event.data.json(); } catch (e) { data = { title: 'Notification', body: event.data ? event.data.text() : '' }; }
@@ -53,4 +55,30 @@ self.addEventListener('notificationclick', function(event) {
       if (clients.openWindow) return clients.openWindow(url);
     })
   );
+});
+
+// Support immediate activation via message from page
+self.addEventListener('message', (evt) => {
+  if (!evt.data) return;
+  if (evt.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Optional: notify clients that a new service worker is active and they should reload
+async function notifyClientsOfUpdate() {
+  try {
+    const all = await clients.matchAll({ includeUncontrolled: true, type: 'window' });
+    for (const c of all) {
+      try { c.postMessage({ type: 'RELOAD_FOR_UPDATE', version: SW_VERSION }); } catch (e) {}
+    }
+  } catch (e) {}
+}
+
+self.addEventListener('activate', (evt) => {
+  evt.waitUntil((async () => {
+    try { await clients.claim(); } catch (e) {}
+    // notify pages that a new SW is active
+    notifyClientsOfUpdate();
+  })());
 });
