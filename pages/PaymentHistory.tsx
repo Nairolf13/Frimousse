@@ -478,8 +478,8 @@ export default function PaymentHistoryPage() {
         <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
           <div className="mb-3 flex justify-center md:justify-start">
             <div className="inline-flex space-x-2 rounded-md shadow-sm" role="tablist" aria-label="Payment view">
-              <button type="button" onClick={() => setViewMode('by-family')} className={`w-36 md:w-auto px-3 py-2 rounded-md text-center ${viewMode === 'by-family' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_family') || 'Par famille'}</button>
-              <button type="button" onClick={() => setViewMode('by-nanny')} className={`w-36 md:w-auto px-3 py-2 rounded-md text-center ${viewMode === 'by-nanny' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_nanny') || 'Par nounou'}</button>
+              <button type="button" onClick={() => setViewMode('by-family')} className={`w-[136px] md:w-auto px-3 py-2 rounded-md text-center ${viewMode === 'by-family' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_family') || 'Par famille'}</button>
+              <button type="button" onClick={() => setViewMode('by-nanny')} className={`w-[136px] md:w-auto px-3 py-2 rounded-md text-center ${viewMode === 'by-nanny' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_nanny') || 'Par nounou'}</button>
             </div>
           </div>
           <div className="flex flex-col gap-3">
