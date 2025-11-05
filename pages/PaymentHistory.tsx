@@ -231,8 +231,8 @@ export default function PaymentHistoryPage() {
                  <div className="text-sm text-gray-500">{rec.parent?.email ?? ''}{rec.parent?.phone ? ` • ${rec.parent?.phone}` : ''}</div>
                </div>
              </div>
-             <div className="text-right">
-               <div className="flex items-center justify-end gap-2">
+             <div className="text-center md:text-right">
+               <div className="flex flex-col md:flex-row items-center justify-center md:justify-end gap-2 w-full md:w-auto">
                  <div className="text-xs text-gray-500">
                    {rec.invoiceNumber ? <span className="mr-2 font-medium">{rec.invoiceNumber}</span> : null}
                    {rec.createdAt ? new Date(rec.createdAt).toLocaleDateString('fr-FR') : ''}
@@ -306,12 +306,12 @@ export default function PaymentHistoryPage() {
             ) : (
               <div className="space-y-2">
                 {(g.payments || []).map((p) => (
-                  <div key={p.id} className="flex items-center justify-between border rounded p-3">
-                    <div>
+                  <div key={p.id} className="flex flex-col md:flex-row items-start md:items-center justify-between border rounded p-3">
+                    <div className="w-full md:w-auto">
                       <div className="font-medium">{p.parent ? `${p.parent.firstName || ''} ${p.parent.lastName || ''}`.trim() : t('common.none')}</div>
                       <div className="text-xs text-gray-400">{p.createdAt ? new Date(p.createdAt).toLocaleDateString('fr-FR') : ''} {p.invoiceNumber ? ` • ${p.invoiceNumber}` : ''}</div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-end w-full md:w-auto mt-3 md:mt-0">
                       <div className="text-green-700 font-semibold">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(p.amount || 0))}</div>
                       <button onClick={() => downloadInvoice(p.id)} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">{t('payments.download_invoice') || 'Télécharger'}</button>
                     </div>
@@ -476,19 +476,19 @@ export default function PaymentHistoryPage() {
         </div>
 
         <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
-          <div className="mb-3">
-            <div className="inline-flex rounded-md shadow-sm" role="tablist" aria-label="Payment view">
-              <button type="button" onClick={() => setViewMode('by-family')} className={`px-3 py-2 rounded-l-md ${viewMode === 'by-family' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_family') || 'Par famille'}</button>
-              <button type="button" onClick={() => setViewMode('by-nanny')} className={`px-3 py-2 rounded-r-md ${viewMode === 'by-nanny' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_nanny') || 'Par nounou'}</button>
+          <div className="mb-3 flex justify-center md:justify-start">
+            <div className="inline-flex space-x-2 rounded-md shadow-sm" role="tablist" aria-label="Payment view">
+              <button type="button" onClick={() => setViewMode('by-family')} className={`w-36 md:w-auto px-3 py-2 rounded-md text-center ${viewMode === 'by-family' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_family') || 'Par famille'}</button>
+              <button type="button" onClick={() => setViewMode('by-nanny')} className={`w-36 md:w-auto px-3 py-2 rounded-md text-center ${viewMode === 'by-nanny' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_nanny') || 'Par nounou'}</button>
             </div>
           </div>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
-              <div className="flex gap-2 items-center flex-wrap justify-center md:justify-start w-full md:w-auto">
-                <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border p-2 rounded w-36">
+              <div className="flex flex-row items-center justify-center md:justify-start w-full md:w-auto min-w-0 space-x-2">
+                <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border p-2 rounded w-1/2 md:w-36 min-w-0">
                   {monthNames.map((name, idx) => <option key={idx} value={idx + 1}>{name}</option>)}
                 </select>
-                <select value={year} onChange={e => setYear(Number(e.target.value))} className="border p-2 rounded w-36">
+                <select value={year} onChange={e => setYear(Number(e.target.value))} className="border p-2 rounded w-1/2 md:w-36 min-w-0">
                   {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
