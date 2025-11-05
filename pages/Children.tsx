@@ -57,7 +57,6 @@ interface Billing {
 
 import { useEffect, useState, useRef } from 'react';
 import { getCached, setCached } from '../src/utils/apiCache';
-import { runWithConcurrency } from '../src/utils/promisePool';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import '../styles/filter-responsive.css';
@@ -261,24 +260,29 @@ export default function Children() {
   const amounts: Record<string, number | undefined> = {};
   childrenData.forEach(c => { amounts[c.id] = 15; });
   setCotisationAmounts(amounts);
-  // fetch photo consent summary for each child (parallel)
+      // fetch photo consent summary for all children in a single batch request
       try {
-        // limit concurrent photo-consent requests to avoid bursts
-        const consentResults = await runWithConcurrency(childrenData, async (c) => {
-          try {
-            const r = await fetchWithRefresh(`${API_URL}/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
-            if (!r.ok) return { id: c.id, allowed: false };
-            const b = await r.json();
-            return { id: c.id, allowed: !!b.allowed };
-          } catch {
-            return { id: c.id, allowed: false };
+        const ids = childrenData.map(c => c.id);
+        if (ids.length > 0) {
+          const r = await fetchWithRefresh(`${API_URL}/children/batch/photo-consent-summary`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+          });
+          if (r.ok) {
+            const body = await r.json();
+            const pcm: Record<string, boolean> = {};
+            ids.forEach(id => { pcm[id] = !!(body && body[id] && body[id].allowed); });
+            setPhotoConsentMap(pcm);
+          } else {
+            setPhotoConsentMap({});
           }
-        }, 6);
-        const pcm: Record<string, boolean> = {};
-        consentResults.forEach(r => { if (r && r.id) pcm[r.id] = !!r.allowed; });
-        setPhotoConsentMap(pcm);
+        } else {
+          setPhotoConsentMap({});
+        }
       } catch (e) {
-        console.error('Error fetching photo consent summaries', e);
+        console.error('Error fetching batch photo consent summaries', e);
         setPhotoConsentMap({});
       }
     } catch {
@@ -346,22 +350,30 @@ export default function Children() {
       try {
         const todayMonth = getCurrentMonth();
         // try to reuse cached children list
-  const cacheKeyChildren = `${API_URL}/children`;
-  const cachedChildren = getCached<unknown[]>(cacheKeyChildren);
-  const childrenData: Child[] = cachedChildren ? (cachedChildren as unknown as Child[]) : (await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' }).then(r => r.json()));
+        const cacheKeyChildren = `${API_URL}/children`;
+        const cachedChildren = getCached<unknown[]>(cacheKeyChildren);
+        const childrenData: Child[] = cachedChildren ? (cachedChildren as unknown as Child[]) : (await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' }).then(r => r.json()));
         const billingData: Record<string, Billing> = {};
-        // limit concurrent billing requests
-        await runWithConcurrency(childrenData, async (child) => {
+        const ids = childrenData.map(c => c.id);
+        if (ids.length > 0) {
           try {
-            const res = await fetchWithRefresh(`${API_URL}/children/${child.id}/billing?month=${todayMonth}`, { credentials: 'include' });
+            const res = await fetchWithRefresh(`${API_URL}/children/batch/billing?month=${todayMonth}`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ids })
+            });
             if (res.ok) {
-              const data = await res.json();
-              billingData[child.id] = { days: data.days, amount: data.amount };
+              const body = await res.json();
+              ids.forEach(id => {
+                const b = body && body[id];
+                if (b && typeof b.amount === 'number') billingData[id] = { days: Number(b.days || 0), amount: Number(b.amount || 0) };
+              });
             }
-          } catch {
-            // ignore per-child errors
+          } catch (e) {
+            console.error('Batch billing fetch failed', e);
           }
-        }, 6);
+        }
         setBillings(billingData);
       } catch {
         setBillings({});

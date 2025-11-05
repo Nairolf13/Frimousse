@@ -867,4 +867,114 @@ router.post('/batch/photo-consent-summary', auth, async (req, res) => {
   }
 });
 
+// Batch billing endpoint: accept multiple child IDs and return billing summary per child for a month
+// Query param: month=YYYY-MM
+// Body: { ids: string[] }
+router.post('/batch/billing', auth, async (req, res) => {
+  try {
+    const month = typeof req.query.month === 'string' ? req.query.month : (req.body && req.body.month);
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ error: 'month query parameter required as YYYY-MM' });
+    const ids = Array.isArray(req.body && req.body.ids) ? Array.from(new Set(req.body.ids.filter(Boolean))) : [];
+    if (!ids || ids.length === 0) return res.status(400).json({ error: 'ids array is required' });
+
+    const [year, mon] = month.split('-').map(Number);
+    const startDate = new Date(year, mon - 1, 1);
+    const endDate = new Date(year, mon, 1);
+
+    // Permissions filtering: similar to photo batch
+    let allowedChildIds = ids.slice();
+    if (req.user && req.user.role === 'parent') {
+      let parentId = req.user.parentId;
+      if (!parentId && req.user.email) {
+        const parentRec = await prisma.parent.findFirst({ where: { email: { equals: String(req.user.email).trim(), mode: 'insensitive' } } });
+        if (parentRec) parentId = parentRec.id;
+      }
+      if (!parentId) return res.status(403).json({ error: 'Parent identity not found' });
+      const links = await prisma.parentChild.findMany({ where: { parentId, childId: { in: ids } }, select: { childId: true } });
+      const linked = new Set(links.map(l => l.childId));
+      allowedChildIds = ids.filter(id => linked.has(id));
+    } else if (req.user && req.user.role === 'nanny') {
+      const nannyId = req.user.nannyId;
+      if (!nannyId) return res.status(403).json({ error: 'Nanny identity not found' });
+      const links = await prisma.childNanny.findMany({ where: { nannyId, childId: { in: ids } }, select: { childId: true } });
+      const linked = new Set(links.map(l => l.childId));
+      allowedChildIds = ids.filter(id => linked.has(id));
+    } else if (!isSuperAdmin(req.user)) {
+      if (!req.user || !req.user.centerId) return res.status(403).json({ error: 'Forbidden: user not linked to any center' });
+      const children = await prisma.child.findMany({ where: { id: { in: ids }, centerId: req.user.centerId }, select: { id: true } });
+      const setChildren = new Set(children.map(c => c.id));
+      allowedChildIds = ids.filter(id => setChildren.has(id));
+    }
+
+    // Query assignments grouped by childId
+    let billingRows = [];
+    if (allowedChildIds.length > 0) {
+      billingRows = await prisma.assignment.findMany({ where: { childId: { in: allowedChildIds }, date: { gte: startDate, lt: endDate } }, select: { childId: true } });
+    }
+    const counts = {};
+    billingRows.forEach(r => { counts[r.childId] = (counts[r.childId] || 0) + 1; });
+
+    const result = {};
+    for (const id of ids) {
+      const days = counts[id] || 0;
+      const amount = days * 2; // same calc as single endpoint
+      result[id] = { days, amount };
+    }
+    return res.json(result);
+  } catch (e) {
+    console.error('Failed to get batch billing', e);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Batch details endpoint: return children (all or filtered by ids) with their related parents and assigned nannies
+// Body: { ids?: string[] }
+router.post('/batch/details', auth, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body && req.body.ids) ? Array.from(new Set(req.body.ids.filter(Boolean))) : undefined;
+
+    // Permission-aware where clause
+    // Parent: only children linked to this parent
+    if (req.user && req.user.role === 'parent') {
+      let parentId = req.user.parentId;
+      if (!parentId && req.user.email) {
+        const parentRec = await prisma.parent.findFirst({ where: { email: { equals: String(req.user.email).trim(), mode: 'insensitive' } } });
+        if (parentRec) parentId = parentRec.id;
+      }
+      if (!parentId) return res.status(403).json({ error: 'Parent identity not found' });
+      const links = await prisma.parentChild.findMany({ where: { parentId, ...(ids ? { childId: { in: ids } } : {}) }, select: { childId: true } });
+      const childIds = links.map(l => l.childId);
+      if (childIds.length === 0) return res.json([]);
+      const children = await prisma.child.findMany({ where: { id: { in: childIds } }, include: { parents: { include: { parent: true } }, childNannies: { include: { nanny: true } } } });
+      return res.json(children);
+    }
+
+    // Nanny: only children assigned to this nanny
+    if (req.user && req.user.role === 'nanny') {
+      const nannyId = req.user.nannyId;
+      if (!nannyId) return res.status(403).json({ error: 'Nanny identity not found' });
+      const links = await prisma.childNanny.findMany({ where: { nannyId, ...(ids ? { childId: { in: ids } } : {}) }, select: { childId: true } });
+      const childIds = links.map(l => l.childId);
+      if (childIds.length === 0) return res.json([]);
+      const children = await prisma.child.findMany({ where: { id: { in: childIds } }, include: { parents: { include: { parent: true } }, childNannies: { include: { nanny: true } } } });
+      return res.json(children);
+    }
+
+    // Admin/staff: restrict to user's center unless super-admin
+    const where = {};
+    if (!isSuperAdmin(req.user)) {
+      if (!req.user || !req.user.centerId) return res.status(403).json({ error: 'Forbidden: user not linked to any center' });
+      (where).centerId = req.user.centerId;
+    }
+    if (ids && ids.length > 0) (where).id = { in: ids };
+
+    const children = await prisma.child.findMany({ where, include: { parents: { include: { parent: true } }, childNannies: { include: { nanny: true } } } });
+    return res.json(children);
+  } catch (err) {
+    console.error('POST /api/children/batch/details error', err);
+    return res.status(500).json({ error: err && err.message ? err.message : String(err) });
+  }
+});
+
 module.exports = router;
+

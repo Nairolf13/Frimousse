@@ -24,7 +24,6 @@ function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }
 
 import { useEffect, useState, useRef } from 'react';
 import { getCached, setCached } from '../src/utils/apiCache';
-import { runWithConcurrency } from '../src/utils/promisePool';
 
 interface Child {
   id: string;
@@ -263,36 +262,80 @@ export default function Nannies() {
     const cached = getCached<Nanny[]>(cacheKeyNannies);
     if (cached) {
         setNannies(cached);
-        const amounts: Record<string, number> = {};
-        // fetch per-nanny details with concurrency limit
-        // start limited parallel fetches for per-nanny details (non-blocking)
-        runWithConcurrency(cached, async (n) => {
-          amounts[n.id] = 10;
-          await Promise.all([fetchCotisation(n.id), fetchParentsTotalForNanny(n.id)]);
-        }, 4).catch(() => {
-          // if details failed, ensure defaults exist
-          cached.forEach(n => { if (!amounts[n.id]) amounts[n.id] = 10; });
-        }).finally(() => {
+        // Attempt to fetch enriched details in a single batch call; fall back to per-nanny logic if that fails
+        (async () => {
+          try {
+            const res = await fetchWithRefresh(`${API_URL}/nannies/batch/details`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: cached.map(c => c.id) }) });
+            if (res.ok) {
+              const enriched = await res.json();
+              // enriched is array of nanny objects with totalMonthly
+              setNannies(enriched);
+              const amounts: Record<string, number> = {};
+              const cotStatus: Record<string, { paidUntil: string | null; loading: boolean }> = {};
+              const parentsTotals: Record<string, number> = {};
+              (enriched || []).forEach((n: Nanny & { totalMonthly?: number; lastCotisationAmount?: number }) => {
+                amounts[n.id] = Number(n.lastCotisationAmount) || 10;
+                cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false };
+                parentsTotals[n.id] = Number(n.totalMonthly || 0);
+              });
+              setCotisationAmounts(amounts);
+              setCotisationStatus(cotStatus);
+              setCotisationParentsTotals(parentsTotals);
+              try { setCached(cacheKeyNannies, enriched); } catch { /* ignore cache errors */ }
+              setLoading(false);
+              return;
+            }
+          } catch {
+            // ignore and fall back to existing cached list
+          }
+          // fallback defaults when batch details fail
+          const amounts: Record<string, number> = {};
+          const cotStatus: Record<string, { paidUntil: string | null; loading: boolean }> = {};
+          (cached || []).forEach(n => { amounts[n.id] = 10; cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false }; });
           setCotisationAmounts(amounts);
+          setCotisationStatus(cotStatus);
           setLoading(false);
-        });
+        })();
         return;
       }
-    fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
-      .then(res => res.json())
-      .then((nannies: Nanny[]) => {
-      setNannies(nannies);
-      const amounts: Record<string, number> = {};
-      // fetch per-nanny details with limited concurrency, but don't block the main flow
-      runWithConcurrency(nannies, async (n) => {
-        amounts[n.id] = 10;
-        await Promise.all([fetchCotisation(n.id), fetchParentsTotalForNanny(n.id)]);
-      }, 4).catch(() => {/* ignore errors */}).finally(() => {
+    (async () => {
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/nannies/batch/details`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        if (!res.ok) throw new Error('Failed to load nannies');
+        const enriched = await res.json();
+        setNannies(enriched);
+        const amounts: Record<string, number> = {};
+        const cotStatus: Record<string, { paidUntil: string | null; loading: boolean }> = {};
+        const parentsTotals: Record<string, number> = {};
+        (enriched || []).forEach((n: Nanny & { totalMonthly?: number; lastCotisationAmount?: number }) => {
+          amounts[n.id] = Number(n.lastCotisationAmount) || 10;
+          cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false };
+          parentsTotals[n.id] = Number(n.totalMonthly || 0);
+        });
         setCotisationAmounts(amounts);
-        setCached(cacheKeyNannies, nannies);
-      });
-          })
-      .finally(() => setLoading(false));
+        setCotisationStatus(cotStatus);
+        setCotisationParentsTotals(parentsTotals);
+        try { setCached(cacheKeyNannies, enriched); } catch { /* ignore cache errors */ }
+      } catch (err) {
+        console.error('Failed to fetch nannies batch details', err);
+        // fallback: simple list fetch
+        try {
+          const res = await fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' });
+          const nannies = await res.json();
+          setNannies(nannies);
+          const amounts: Record<string, number> = {};
+          const cotStatus: Record<string, { paidUntil: string | null; loading: boolean }> = {};
+          (nannies || []).forEach((n: Nanny) => { amounts[n.id] = 10; cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false }; });
+          setCotisationAmounts(amounts);
+          setCotisationStatus(cotStatus);
+          try { setCached(cacheKeyNannies, nannies); } catch { /* ignore */ }
+        } catch (e) {
+          console.error('Failed to fetch nannies list fallback', e);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   useEffect(() => {

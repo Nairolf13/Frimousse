@@ -268,23 +268,26 @@ export default function Feed() {
   mapped.forEach(c => { initMap[c.id] = false; });
   setConsentMap(initMap);
 
-  // fetch consent summary for each child in parallel
-        const consentResults = await Promise.all(mapped.map(async (c) => {
-          try {
-            const r = await fetchWithRefresh(`api/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
-            if (!r.ok) return { id: c.id, allowed: false };
-            const b = await r.json();
-            const allowedRaw = b && b.allowed;
-            const allowed = allowedRaw === true || allowedRaw === 'true' || allowedRaw === 1 || allowedRaw === '1';
-            return { id: c.id, allowed };
-          } catch {
-              return { id: c.id, allowed: false };
+  // fetch consent summary for all children in a single batch request
+        try {
+          const ids = mapped.map(c => c.id);
+          if (ids.length > 0) {
+            const r = await fetchWithRefresh('api/children/batch/photo-consent-summary', {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ids })
+            });
+            if (r.ok) {
+              const body = await r.json();
+              const cm: Record<string, boolean> = {};
+              ids.forEach(id => { cm[id] = !!(body && body[id] && body[id].allowed); });
+              setConsentMap(cm);
             }
-        }));
-        
-        const cm: Record<string, boolean> = {};
-        consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
-        setConsentMap(cm);
+          }
+        } catch (e) {
+          console.error('Failed to fetch batch photo consents', e);
+        }
       } catch (e) {
         const err = e as unknown;
         if (import.meta.env.DEV) console.error('Failed to load children/consents', err);
@@ -1180,24 +1183,46 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
       setConsentMapLocal(initLocal);
       setConsentLoadedLocal(false);
 
-      const consentResults = await Promise.all(mapped.map(async (c) => {
-        try {
-          const r = await fetchWithRefresh(`api/children/${c.id}/photo-consent-summary`, { credentials: 'include' });
-          if (!r.ok) return { id: c.id, allowed: false };
-          const b = await r.json();
-          const allowedRaw = b && b.allowed;
-          const allowed = allowedRaw === true || allowedRaw === 'true' || allowedRaw === 1 || allowedRaw === '1';
-          return { id: c.id, allowed };
-        } catch {
-          return { id: c.id, allowed: false };
+      try {
+        const ids = mapped.map(c => c.id);
+        const res = await fetchWithRefresh('api/children/batch/photo-consent-summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ ids }),
+        });
+
+        if (!res.ok) {
+          // fallback: mark all as false
+          const cm: Record<string, boolean> = {};
+          mapped.forEach(c => { cm[c.id] = false; });
+          if (mounted) {
+            setConsentMapLocal(cm);
+            setConsentLoadedLocal(true);
+          }
+        } else {
+          const body = await res.json();
+          const cm: Record<string, boolean> = {};
+          mapped.forEach(c => {
+            const item = body && body[c.id];
+            const allowedRaw = item && item.allowed;
+            const allowed = allowedRaw === true || allowedRaw === 'true' || allowedRaw === 1 || allowedRaw === '1';
+            cm[c.id] = !!allowed;
+          });
+          if (mounted) {
+            setConsentMapLocal(cm);
+            setConsentLoadedLocal(true);
+          }
         }
-      }));
-      
-      const cm: Record<string, boolean> = {};
-      consentResults.forEach(r => { cm[r.id] = !!r.allowed; });
-      if (mounted) {
-        setConsentMapLocal(cm);
-        setConsentLoadedLocal(true);
+      } catch (err) {
+        console.error('Failed to fetch batch photo consents', err);
+        // on error, mark all as false to be safe
+        const cm: Record<string, boolean> = {};
+        mapped.forEach(c => { cm[c.id] = false; });
+        if (mounted) {
+          setConsentMapLocal(cm);
+          setConsentLoadedLocal(true);
+        }
       }
     } catch (e) {
       console.error('Failed to load children/consents for PostItem', e);
