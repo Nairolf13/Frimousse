@@ -9,6 +9,8 @@ interface Child {
   name: string;
   // optional list of assigned nanny ids coming from the API
   nannyIds?: string[];
+  // backend may return childNannies: [{ nanny: { id, name } }]
+  childNannies?: Array<{ nanny?: { id: string; name?: string } }>;
 }
 interface Nanny {
   id: string;
@@ -40,16 +42,30 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
 
   // When a child is selected, prefer showing only the nannies assigned to that child.
   const selectedChild = children.find(c => c.id === form.childId);
-  const visibleNannyIds = selectedChild && Array.isArray(selectedChild.nannyIds) && selectedChild.nannyIds.length > 0
-    ? new Set(selectedChild.nannyIds)
-    : null;
-  const visibleNannies = visibleNannyIds ? nannies.filter(n => visibleNannyIds.has(n.id)) : nannies;
+  // Support both shapes: nannyIds (simple array) or childNannies (array of { nanny })
+  let visibleNannyIds: Set<string> | null = null;
+  if (selectedChild) {
+    if (Array.isArray(selectedChild.nannyIds) && selectedChild.nannyIds.length > 0) {
+      visibleNannyIds = new Set(selectedChild.nannyIds);
+    } else if (Array.isArray(selectedChild.childNannies) && selectedChild.childNannies.length > 0) {
+      const ids = selectedChild.childNannies.map(cn => cn && cn.nanny && cn.nanny.id).filter(Boolean) as string[];
+      if (ids.length > 0) visibleNannyIds = new Set(ids);
+    }
+  }
+  const visibleNannies = visibleNannyIds ? nannies.filter(n => visibleNannyIds!.has(n.id)) : nannies;
 
   // If the currently selected nanny is not in the visible list, clear it.
   useEffect(() => {
     if (!form.nannyId) return;
     const selChild = children.find(c => c.id === form.childId);
-    const isVisible = selChild && Array.isArray(selChild.nannyIds) ? selChild.nannyIds.includes(form.nannyId) : true;
+    let isVisible = true;
+    if (selChild) {
+      if (Array.isArray(selChild.nannyIds)) isVisible = selChild.nannyIds.includes(form.nannyId);
+      else if (Array.isArray(selChild.childNannies)) {
+        const ids = selChild.childNannies.map(cn => cn && cn.nanny && cn.nanny.id).filter(Boolean) as string[];
+        isVisible = ids.includes(form.nannyId);
+      }
+    }
     if (!isVisible) setForm(f => ({ ...f, nannyId: '' }));
   }, [form.childId, form.nannyId, children]);
 
