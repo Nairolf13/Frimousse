@@ -24,6 +24,7 @@ function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }
 
 import { useEffect, useState, useRef } from 'react';
 import { getCached, setCached } from '../src/utils/apiCache';
+import { runWithConcurrency } from '../src/utils/promisePool';
 
 interface Child {
   id: string;
@@ -261,22 +262,36 @@ export default function Nannies() {
     const cacheKeyNannies = `${API_URL}/nannies`;
     const cached = getCached<Nanny[]>(cacheKeyNannies);
     if (cached) {
-      setNannies(cached);
-      const amounts: Record<string, number> = {};
-      cached.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); fetchParentsTotalForNanny(n.id); });
-      setCotisationAmounts(amounts);
-      setLoading(false);
-      return;
-    }
+        setNannies(cached);
+        const amounts: Record<string, number> = {};
+        // fetch per-nanny details with concurrency limit
+        // start limited parallel fetches for per-nanny details (non-blocking)
+        runWithConcurrency(cached, async (n) => {
+          amounts[n.id] = 10;
+          await Promise.all([fetchCotisation(n.id), fetchParentsTotalForNanny(n.id)]);
+        }, 4).catch(() => {
+          // if details failed, ensure defaults exist
+          cached.forEach(n => { if (!amounts[n.id]) amounts[n.id] = 10; });
+        }).finally(() => {
+          setCotisationAmounts(amounts);
+          setLoading(false);
+        });
+        return;
+      }
     fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
       .then(res => res.json())
       .then((nannies: Nanny[]) => {
-  setNannies(nannies);
-  const amounts: Record<string, number> = {};
-  nannies.forEach(n => { amounts[n.id] = 10; fetchCotisation(n.id); fetchParentsTotalForNanny(n.id); });
-  setCotisationAmounts(amounts);
-  setCached(cacheKeyNannies, nannies);
-      })
+      setNannies(nannies);
+      const amounts: Record<string, number> = {};
+      // fetch per-nanny details with limited concurrency, but don't block the main flow
+      runWithConcurrency(nannies, async (n) => {
+        amounts[n.id] = 10;
+        await Promise.all([fetchCotisation(n.id), fetchParentsTotalForNanny(n.id)]);
+      }, 4).catch(() => {/* ignore errors */}).finally(() => {
+        setCotisationAmounts(amounts);
+        setCached(cacheKeyNannies, nannies);
+      });
+          })
       .finally(() => setLoading(false));
   }, []);
 
