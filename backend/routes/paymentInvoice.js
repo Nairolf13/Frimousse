@@ -3,6 +3,8 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const PDFDocument = require('pdfkit');
+const { generateInvoiceBuffer } = require('../lib/invoiceGenerator');
+const { sendTemplatedMail } = require('../lib/email');
 const prisma = new PrismaClient();
 
 function fmt(v) {
@@ -470,3 +472,90 @@ router.get('/invoice/:id', auth, async (req, res) => {
 });
 
 module.exports = router;
+
+// Send invoice by email on demand
+router.post('/invoice/:id/send', auth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!id) return res.status(400).json({ message: 'Missing id' });
+
+    const ph = await prisma.paymentHistory.findUnique({ where: { id }, include: { parent: true } });
+    if (!ph) return res.status(404).json({ message: 'Not found' });
+
+    const user = req.user;
+    if (!user) return res.status(403).json({ message: 'Forbidden' });
+    const role = (user.role || '').toLowerCase();
+    const isAdmin = role === 'admin' || role.includes('super');
+
+    // Allow admin or the parent who owns the invoice
+    if (!isAdmin) {
+      if (user.parentId && user.parentId === ph.parentId) {
+        // ok
+      } else if (user.nannyId) {
+        // allow nanny only if assigned to the parent (same logic as download permission)
+        const assigned = await prisma.parent.findFirst({
+          where: {
+            id: ph.parentId,
+            children: {
+              some: {
+                child: {
+                  OR: [
+                    { assignments: { some: { nannyId: user.nannyId } } },
+                    { childNannies: { some: { nannyId: user.nannyId } } }
+                  ]
+                }
+              }
+            }
+          },
+          select: { id: true }
+        });
+        if (!assigned) return res.status(403).json({ message: 'Forbidden' });
+      } else {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+    }
+
+    const parentEmail = ph.parent?.email || null;
+    if (!parentEmail) return res.status(400).json({ message: 'Parent has no email' });
+
+    // generate PDF buffer
+    const pdfBuffer = await generateInvoiceBuffer(prisma, ph.id).catch(err => {
+      console.error('Failed to generate invoice PDF for send:', ph.id, err);
+      return null;
+    });
+    if (!pdfBuffer) return res.status(500).json({ message: 'Failed to generate invoice PDF' });
+
+    const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : new Date();
+    const invoiceNumber = `FA-${invoiceDate.getFullYear()}-${ph.id.slice(0, 6)}`;
+    const parentName = ph.parent ? `${ph.parent.firstName || ''} ${ph.parent.lastName || ''}`.trim() : '';
+    const formattedDate = invoiceDate.toLocaleDateString('fr-FR');
+    const invoiceSubject = `Facture n° ${invoiceNumber} de ${parentName || parentEmail} du ${formattedDate}`;
+
+    // send templated mail (bypass opt-out for admin-triggered sends)
+    await sendTemplatedMail({
+      templateName: 'invoice',
+      lang: 'fr',
+      to: parentEmail,
+      subject: invoiceSubject,
+      substitutions: {
+        parentName,
+        total: Number(ph.total || 0).toFixed(2),
+        month: ph.month,
+        year: ph.year,
+        invoiceId: ph.id,
+        invoiceNumber
+      },
+      prisma,
+      attachments: [{ filename: `facture-${ph.id}.pdf`, content: pdfBuffer, contentType: 'application/pdf' }],
+      bypassOptOut: true,
+      recipientsText: `${parentName || ''} <${parentEmail}>`,
+      paymentHistoryId: ph.id
+    });
+
+    return res.json({ ok: true, message: 'Email queued' });
+  } catch (err) {
+    console.error('Failed to send invoice email on demand', err);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+

@@ -46,6 +46,19 @@ export default function PaymentHistoryPage() {
     setModalVisible(true);
   }
 
+  // Prevent page layout shift when modal is visible by locking body scroll
+  useEffect(() => {
+    try {
+      const prev = document.body.style.overflow;
+      if (modalVisible) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = prev || '';
+      }
+      return () => { document.body.style.overflow = prev || ''; };
+    } catch { /* ignore */ }
+  }, [modalVisible]);
+
   const monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
@@ -276,8 +289,9 @@ export default function PaymentHistoryPage() {
             </div>
             <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
               <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
-              <div className="w-full md:w-auto flex justify-center md:justify-end">
+              <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-2 justify-center md:justify-end">
                 <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
+                <button type="button" onClick={() => { if (!rec.parent?.email) { showModal(t('payments.errors.no_email') || 'Aucune adresse e-mail trouvée'); return; } sendInvoice(rec.id, rec.parent?.firstName || rec.parent?.email || ''); }} className="px-4 py-2 bg-blue-600 text-white border rounded text-sm w-full md:w-auto text-center">{t('payments.send_invoice') || 'Envoyer'}</button>
               </div>
             </div>
           </div>
@@ -313,7 +327,8 @@ export default function PaymentHistoryPage() {
                     </div>
                     <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-end w-full md:w-auto mt-3 md:mt-0">
                       <div className="text-green-700 font-semibold">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(p.amount || 0))}</div>
-                      <button onClick={() => downloadInvoice(p.id)} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">{t('payments.download_invoice') || 'Télécharger'}</button>
+                      <button type="button" onClick={() => downloadInvoice(p.id)} className="px-3 py-1 bg-blue-600 text-white rounded text-sm w-full md:w-auto">{t('payments.download_invoice') || 'Télécharger'}</button>
+                      <button type="button" onClick={() => sendInvoice(p.id, p.parent?.firstName || p.parent?.email || '')} className="px-3 py-1 bg-blue-600 text-white border rounded text-sm w-full md:w-auto">{t('payments.send_invoice') || 'Envoyer'}</button>
                     </div>
                   </div>
                 ))}
@@ -393,6 +408,34 @@ export default function PaymentHistoryPage() {
       })();
   // Use the app modal instead of a native alert for nicer UX
   showModal(msg || t('payments.errors.invoice_download'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sendInvoice(paymentId: string, recipientName?: string) {
+    try {
+      setLoading(true);
+      const res = await fetchWithRefresh(`${API_URL}/payment-history/invoice/${paymentId}/send`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      const j = await res.json().catch(() => null);
+      // Prefer a friendly success message including recipient name when available
+      let msg = '';
+      if (recipientName) {
+        msg = t('payments.send_success_to', { name: recipientName }) || `Email envoyé à ${recipientName}`;
+      } else if (j && j.message) {
+        msg = j.message;
+      } else {
+        msg = t('payments.send_success') || 'Email envoyé';
+      }
+      showModal(msg);
+    } catch (err) {
+      console.error('Send invoice failed', err);
+      setModalMessage(safeMessage(err) || t('payments.send_failed') || 'Échec de l\'envoi');
+      setModalVisible(true);
     } finally {
       setLoading(false);
     }

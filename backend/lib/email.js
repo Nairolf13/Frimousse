@@ -17,13 +17,13 @@ function renderTemplate(templateName, lang, substitutions = {}) {
   return html;
 }
 
-async function sendMail({ to, subject, text, html, attachments, prisma = null, paymentHistoryId = null, bypassOptOut = false } = {}) {
+async function sendMail({ to, subject, text, html, attachments, prisma = null, paymentHistoryId = null, bypassOptOut = false, recipientsText = null } = {}) {
   // Allow an env toggle to completely disable outgoing emails (useful for staging/testing)
   const emailEnabled = process.env.EMAIL_SEND_ENABLED !== 'false';
   if (!emailEnabled) {
     if (prisma) {
       try {
-        await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: null, status: 'skipped', errorText: 'EMAIL_SEND_ENABLED=false', bypassOptOut: !!bypassOptOut } });
+        await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: recipientsText || (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: null, status: 'skipped', errorText: 'EMAIL_SEND_ENABLED=false', bypassOptOut: !!bypassOptOut } });
       } catch (e) {
         console.error('Failed to write EmailLog (skipped):', e && e.message ? e.message : e);
       }
@@ -36,7 +36,7 @@ async function sendMail({ to, subject, text, html, attachments, prisma = null, p
     // differentiate "cron ran but no SMTP configured" from other failures.
     if (prisma) {
       try {
-        await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: null, status: 'no_smtp', errorText: 'SMTP_HOST not configured', bypassOptOut: !!bypassOptOut } });
+        await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: recipientsText || (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: null, status: 'no_smtp', errorText: 'SMTP_HOST not configured', bypassOptOut: !!bypassOptOut } });
       } catch (e) {
         console.error('Failed to write EmailLog (no_smtp):', e && e.message ? e.message : e);
       }
@@ -64,7 +64,7 @@ async function sendMail({ to, subject, text, html, attachments, prisma = null, p
     // If prisma provided, create EmailLog entry
     if (prisma) {
       try {
-  await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: info.messageId || null, status: 'sent', errorText: null, bypassOptOut: !!bypassOptOut } });
+  await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: recipientsText || (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: info.messageId || null, status: 'sent', errorText: null, bypassOptOut: !!bypassOptOut } });
       } catch (e) {
         console.error('Failed to write EmailLog (sent):', e && e.message ? e.message : e);
       }
@@ -73,7 +73,7 @@ async function sendMail({ to, subject, text, html, attachments, prisma = null, p
   } catch (e) {
     if (prisma) {
       try {
-  await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: null, status: 'failed', errorText: e && e.message ? e.message : String(e), bypassOptOut: !!bypassOptOut } });
+  await prisma.emailLog.create({ data: { paymentHistoryId: paymentHistoryId || null, recipients: JSON.stringify(Array.isArray(to) ? to : [to]), recipientsText: recipientsText || (Array.isArray(to) ? to.join(', ') : String(to)), subject: subject || null, messageId: null, status: 'failed', errorText: e && e.message ? e.message : String(e), bypassOptOut: !!bypassOptOut } });
       } catch (ee) {
         console.error('Failed to write EmailLog (failed):', ee && ee.message ? ee.message : ee);
       }
@@ -98,7 +98,7 @@ async function filterOptedOutEmails(prisma, emails) {
   }
 }
 
-async function sendTemplatedMail({ templateName, lang, to, subject, text, substitutions = {}, prisma = null, attachments: extraAttachments = [], respectOptOut = true, paymentHistoryId = null, bypassOptOut = false }) {
+async function sendTemplatedMail({ templateName, lang, to, subject, text, substitutions = {}, prisma = null, attachments: extraAttachments = [], respectOptOut = true, paymentHistoryId = null, bypassOptOut = false, recipientsText = null }) {
 
   const html = renderTemplate(templateName, lang, substitutions);
   // normalize 'to' into array
@@ -125,7 +125,7 @@ async function sendTemplatedMail({ templateName, lang, to, subject, text, substi
     for (const a of extraAttachments) attachments.push(a);
   }
 
-  await sendMail({ to: recipients, subject, text, html, attachments: attachments.length ? attachments : undefined, prisma, paymentHistoryId, bypassOptOut });
+  await sendMail({ to: recipients, subject, text, html, attachments: attachments.length ? attachments : undefined, prisma, paymentHistoryId, bypassOptOut, recipientsText });
 }
 
 async function getParentEmailsForDate(prisma, date, centerId, isSuperAdmin) {
