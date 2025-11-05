@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -8,9 +8,18 @@ const API_URL = meta?.env?.VITE_API_URL ?? '/api';
 
 type Detail = { childName: string; daysPresent: number; ratePerDay: number; subtotal: number };
 type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string };
+type NannyGroup = {
+  nanny: { id: string; name?: string | null };
+  payments: Array<{ id: string; amount: number; createdAt?: string | null; parent?: { firstName?: string | null; lastName?: string | null }; invoiceNumber?: string | null }>;
+  total: number;
+};
 
 export default function PaymentHistoryPage() {
   const { t, locale } = useI18n();
+  const [viewMode, setViewMode] = useState<'by-family' | 'by-nanny'>('by-family');
+  const [nannyGroups, setNannyGroups] = useState<NannyGroup[] | null>(null);
+  const [loadingNannyGroups, setLoadingNannyGroups] = useState(false);
+  const [nannyGroupsError, setNannyGroupsError] = useState<string>('');
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -40,31 +49,137 @@ export default function PaymentHistoryPage() {
   const monthNames = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
   const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
-  useEffect(() => {
+  // Extracted fetch so we can call it from polling / events
+  const safeMessage = useCallback((e: unknown) => {
+    if (!e) return '';
+    if (typeof e === 'string') return e;
+    if (typeof e === 'object' && e !== null && 'message' in e && typeof (e as Record<string, unknown>).message === 'string') return (e as Record<string, unknown>).message as string;
+    try { return JSON.stringify(e); } catch { return String(e); }
+  }, []);
+
+  const loadData = useCallback(async () => {
     let mounted = true;
     setLoading(true);
     setError('');
-    fetchWithRefresh(`${API_URL}/payment-history/${year}/${month}`, { credentials: 'include' })
-      .then(async res => {
-        const ct = res.headers.get('content-type') || '';
-        if (!res.ok) {
-          let text;
-          try { text = await res.clone().text(); } catch (e) { text = String(e); }
-          throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
-        }
-        if (!ct.includes('application/json')) {
-          const text = await res.text();
-          throw new Error('Unexpected non-JSON response from API: ' + text.slice(0, 200));
-        }
-        return res.json();
-      })
-      .then(d => { if (mounted) setData(Array.isArray(d) ? d : []); })
-      .catch(err => { console.error('Failed to fetch payment history', err); if (mounted) setData([]); if (mounted) setError(String(err.message || err)); })
-      .finally(() => { if (mounted) setLoading(false); });
+    // safeMessage is defined below and used across loaders
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/payment-history/${year}/${month}`, { credentials: 'include' });
+      const ct = res.headers.get('content-type') || '';
+      if (!res.ok) {
+        let text = '';
+        try { text = await res.clone().text(); } catch { text = ''; }
+        throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
+      }
+      if (!ct.includes('application/json')) {
+        const text = await res.text().catch(() => '');
+        throw new Error('Unexpected non-JSON response from API: ' + String(text).slice(0, 200));
+      }
+      const d = await res.json();
+      if (mounted) setData(Array.isArray(d) ? d : []);
+    } catch (err) {
+      console.error('Failed to fetch payment history', err);
+      setData([]);
+      setError(safeMessage(err));
+    } finally {
+      setLoading(false);
+    }
     return () => { mounted = false; };
-  }, [year, month]);
+  }, [year, month, safeMessage]);
 
+  const loadNannyGroups = useCallback(async () => {
+    if (viewMode !== 'by-nanny') return;
+    let mounted = true;
+    setLoadingNannyGroups(true);
+    setNannyGroupsError('');
+    setNannyGroups(null);
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/payment-history/${year}/${month}/group-by-nanny`, { credentials: 'include' });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
+      }
+      const ct = res.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        const text = await res.text().catch(() => '');
+        throw new Error('Unexpected non-JSON response: ' + text.slice(0, 200));
+      }
+      const d = await res.json();
+      if (mounted) setNannyGroups(Array.isArray(d) ? d : []);
+    } catch (err) {
+      console.error('Failed to fetch nanny groups', err);
+      if (mounted) setNannyGroupsError(safeMessage(err));
+    } finally {
+      if (mounted) setLoadingNannyGroups(false);
+    }
+    return () => { mounted = false; };
+  }, [viewMode, year, month, safeMessage]);
 
+  useEffect(() => {
+    // Initial load + keep page in sync for current month using polling and cross-tab notifications
+    // Initial load
+    loadData();
+    // If the user is viewing by-nanny, also load the grouped-by-nanny data
+    if (viewMode === 'by-nanny') {
+      loadNannyGroups();
+    }
+
+    // Handler to refresh data when we receive a notification
+    const onNotify = (ev?: MessageEvent | Event) => {
+      try {
+        const payload = (ev as MessageEvent)?.data ?? (ev as CustomEvent)?.detail ?? null;
+        const detailYear = payload && typeof payload.year !== 'undefined' ? Number(payload.year) : null;
+        const detailMonth = payload && typeof payload.month !== 'undefined' ? Number(payload.month) : null;
+        if (detailYear && detailMonth) {
+          if (detailYear === year && detailMonth === month) {
+            loadData();
+            if (viewMode === 'by-nanny') loadNannyGroups();
+          }
+        } else {
+          // generic notification: reload if viewing the month in question (especially useful for current month)
+          loadData();
+          if (viewMode === 'by-nanny') loadNannyGroups();
+        }
+      } catch { /* ignore */ }
+    };
+
+    // BroadcastChannel for cross-tab messaging (preferred)
+    let bc: BroadcastChannel | null = null;
+    try {
+      const Win = window as unknown as { BroadcastChannel?: typeof BroadcastChannel };
+      if (typeof window !== 'undefined' && Win.BroadcastChannel) {
+        bc = new Win.BroadcastChannel('__frimousse_payment_history__');
+        bc.onmessage = onNotify as (ev: MessageEvent) => void;
+      }
+  } catch { bc = null; }
+
+    // Listen for custom events in same tab
+    window.addEventListener('paymentHistory:changed', onNotify as EventListener);
+
+    // Fallback: listen to storage events so other tabs can signal via localStorage
+    const onStorage = (e: StorageEvent) => { if (e.key === '__frimousse_payment_history__') onNotify(); };
+    window.addEventListener('storage', onStorage);
+
+    // Poll current month periodically (only if viewing current month)
+    const now = new Date();
+    let pollInterval: number | null = null;
+    if (year === now.getFullYear() && month === now.getMonth() + 1) {
+      // poll every 30s; refresh both family data and nanny groups when viewing by-nanny
+      pollInterval = window.setInterval(() => {
+        if (document.visibilityState !== 'visible') return;
+        loadData();
+        if (viewMode === 'by-nanny') loadNannyGroups();
+      }, 30_000);
+    }
+
+    return () => {
+      try { if (bc) bc.close(); } catch (closeErr) { console.warn('Failed to close paymentHistory BroadcastChannel', closeErr); }
+      window.removeEventListener('paymentHistory:changed', onNotify as EventListener);
+      window.removeEventListener('storage', onStorage);
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [year, month, viewMode, loadData, loadNannyGroups]);
+
+  
   const parents = Array.from(new Map(
     data.filter(r => r.parent && r.parent.id).map(r => [r.parent!.id!, r.parent!])
   ).values());
@@ -99,6 +214,116 @@ export default function PaymentHistoryPage() {
     a.click();
     URL.revokeObjectURL(url);
   }
+  
+  // Helper renderers to keep JSX flatter and avoid deep nesting
+  const FamilyList = () => {
+    if (loading) return <div>{t('loading')}</div>;
+    if (!loading && filtered.length === 0) return <div className="text-gray-500">{t('payments.history.empty')}</div>;
+    return <>
+      {filtered.map(rec => (
+        <div key={rec.id} className="rounded-lg overflow-hidden shadow">
+          {/* Family header gradient */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 md:p-6 bg-gradient-to-r from-green-50 to-green-100 gap-4">
+             <div className="flex items-center gap-4">
+               <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">{(rec.parent ? `${rec.parent.firstName || ''}`.slice(0,1) + (rec.parent?.lastName || '').slice(0,1) : '--').toUpperCase()}</div>
+               <div>
+                 <div className="text-lg font-bold text-gray-900">{rec.parent ? `${rec.parent.firstName || ''} ${rec.parent.lastName || ''}`.trim() : t('common.none')}</div>
+                 <div className="text-sm text-gray-500">{rec.parent?.email ?? ''}{rec.parent?.phone ? ` • ${rec.parent?.phone}` : ''}</div>
+               </div>
+             </div>
+             <div className="text-right">
+               <div className="flex items-center justify-end gap-2">
+                 <div className="text-xs text-gray-500">
+                   {rec.invoiceNumber ? <span className="mr-2 font-medium">{rec.invoiceNumber}</span> : null}
+                   {rec.createdAt ? new Date(rec.createdAt).toLocaleDateString('fr-FR') : ''}
+                 </div>
+                 { rec.paid ? <div className="text-sm text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full">{t('payments.status.paid')}</div> : <div className="text-sm text-gray-500">{t('payments.status.unpaid')}</div> }
+                 {user && (user.role === 'admin' || (user.role && user.role.toLowerCase().includes('super'))) && (
+                   <button onClick={() => togglePaid(rec.id, !rec.paid)} className="text-sm px-2 py-1 bg-blue-500 text-white rounded">{rec.paid ? t('payments.actions.mark_unpaid') : t('payments.actions.mark_paid')}</button>
+                 )}
+               </div>
+             </div>
+           </div>
+
+           {/* Detail by child header */}
+           <div className="px-6 py-4 bg-white border-t">
+             <div className="text-sm text-gray-600 font-medium mb-3">{t('payments.detail.header', { month: new Date(year, month-1).toLocaleString(locale || 'fr-FR', { month: 'long', year: 'numeric' }) })}</div>
+             <div className="space-y-3">
+               {Array.isArray(rec.details) && rec.details.length > 0 ? rec.details.map((d, idx) => (
+                <div key={idx} className="bg-gray-50 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-orange-200 text-orange-700 flex items-center justify-center font-bold">{(d.childName || '').slice(0,1).toUpperCase()}</div>
+                    <div>
+                      <div className="font-semibold text-gray-800">{d.childName}</div>
+                      <div className="text-xs text-gray-400">{/* age/group not available */}</div>
+                    </div>
+                  </div>
+                  <div className="text-right text-sm">
+                <div className="text-gray-500"><span className="inline-block mr-2">📅</span>{d.daysPresent} {t('payments.days')}</div>
+                <div className="text-green-600 font-semibold mt-1">{d.daysPresent} × {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.ratePerDay)} = {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.subtotal)}</div>
+                  </div>
+                </div>
+               )) : (
+                 <div className="text-gray-500">{t('payments.no_child_this_month')}</div>
+               )}
+             </div>
+           </div>
+
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 md:p-6 bg-gradient-to-r from-green-50 to-green-100 gap-3">
+            <div>
+              <div className="text-sm font-semibold text-gray-800">{t('payments.family.total_label')}</div>
+              <div className="text-xs text-gray-500">{Array.isArray(rec.details) ? t('payments.family.summary', { n: String(rec.details.length), days: String(rec.details.reduce((s,d)=>s+(d.daysPresent||0),0)) }) : ''}</div>
+            </div>
+            <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
+              <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
+              <div className="w-full md:w-auto flex justify-center md:justify-end">
+                <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </>;
+  };
+
+  const NannyList = () => {
+    if (loadingNannyGroups) return <div>{t('loading')}</div>;
+    if (nannyGroupsError) return <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded">{nannyGroupsError}</div>;
+    if (!Array.isArray(nannyGroups) || nannyGroups.length === 0) return <div className="text-gray-500">{t('payments.history.empty')}</div>;
+    return <>
+      {nannyGroups.map((g: NannyGroup) => (
+        <div key={String(g.nanny?.id || Math.random())} className="rounded-lg overflow-hidden shadow mb-4">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100">
+            <div>
+              <div className="text-lg font-bold">{g.nanny?.name || '—'}</div>
+              <div className="text-sm text-gray-500">{(g.payments || []).length} {t('payments.by_nanny.payments') || 'paiements'}</div>
+            </div>
+            <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(g.total || 0))}</div>
+          </div>
+          <div className="p-4 bg-white">
+            {(g.payments || []).length === 0 ? (
+              <div className="text-gray-500">{t('payments.history.empty')}</div>
+            ) : (
+              <div className="space-y-2">
+                {(g.payments || []).map((p) => (
+                  <div key={p.id} className="flex items-center justify-between border rounded p-3">
+                    <div>
+                      <div className="font-medium">{p.parent ? `${p.parent.firstName || ''} ${p.parent.lastName || ''}`.trim() : t('common.none')}</div>
+                      <div className="text-xs text-gray-400">{p.createdAt ? new Date(p.createdAt).toLocaleDateString('fr-FR') : ''} {p.invoiceNumber ? ` • ${p.invoiceNumber}` : ''}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-green-700 font-semibold">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(p.amount || 0))}</div>
+                      <button onClick={() => downloadInvoice(p.id)} className="px-3 py-1 bg-blue-600 text-white rounded text-sm">{t('payments.download_invoice') || 'Télécharger'}</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+    </>;
+  };
 
   
 
@@ -191,6 +416,46 @@ export default function PaymentHistoryPage() {
       if (json && json.record) {
         setData(d => d.map(r => r.id === id ? json.record : r));
       }
+      // Notify other tabs/windows that payment history changed for this year/month
+      try {
+        const payload = { year, month, ts: Date.now() };
+        // BroadcastChannel (preferred)
+        try {
+          const Win = window as unknown as { BroadcastChannel?: typeof BroadcastChannel };
+          if (Win.BroadcastChannel) {
+            const bc = new Win.BroadcastChannel('__frimousse_payment_history__');
+            bc.postMessage(payload);
+            bc.close();
+          }
+        } catch (bcErr) {
+          // ignore BroadcastChannel errors
+          console.warn('BroadcastChannel send failed', bcErr);
+        }
+
+        // localStorage fallback to trigger storage events
+        try {
+          localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload));
+        } catch (lsErr) {
+          // ignore localStorage errors (private mode etc.)
+          console.warn('localStorage publish failed', lsErr);
+        }
+
+        // Same-tab custom event for immediate listeners
+        try {
+          window.dispatchEvent(new CustomEvent('paymentHistory:changed', { detail: payload }));
+        } catch {
+          // ignore
+        }
+      } catch (notifyErr) {
+        // never fail the main flow if notify fails
+        console.warn('Failed to notify other tabs of payment history change', notifyErr);
+      }
+      // If we're currently viewing nanny grouped data, refresh it locally so the change is visible immediately
+      try {
+        if (viewMode === 'by-nanny') await loadNannyGroups();
+      } catch (ngErr) {
+        console.warn('Failed to reload nanny groups after togglePaid', ngErr);
+      }
     } catch (err) {
       console.error('Failed to toggle paid', err);
       // revert optimistic
@@ -211,6 +476,12 @@ export default function PaymentHistoryPage() {
         </div>
 
         <div className="bg-white rounded-lg p-4 mb-4 shadow-sm">
+          <div className="mb-3">
+            <div className="inline-flex rounded-md shadow-sm" role="tablist" aria-label="Payment view">
+              <button type="button" onClick={() => setViewMode('by-family')} className={`px-3 py-2 rounded-l-md ${viewMode === 'by-family' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_family') || 'Par famille'}</button>
+              <button type="button" onClick={() => setViewMode('by-nanny')} className={`px-3 py-2 rounded-r-md ${viewMode === 'by-nanny' ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 border'}`}>{t('payments.view.by_nanny') || 'Par nounou'}</button>
+            </div>
+          </div>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col md:flex-row gap-3 items-start md:items-center">
               <div className="flex gap-2 items-center flex-wrap justify-center md:justify-start w-full md:w-auto">
@@ -261,84 +532,23 @@ export default function PaymentHistoryPage() {
         </div>
 
         <div className="grid gap-4">
-            {modalVisible && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/40" onClick={() => setModalVisible(false)} />
-                <div role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc" className="relative max-w-md w-full bg-white rounded-lg shadow-lg p-6 mx-4">
-                  <h3 id="modal-title" className="text-lg font-semibold text-gray-900">Information</h3>
-                  <p id="modal-desc" className="mt-3 text-sm text-gray-700">{modalMessage}</p>
-                  <div className="mt-6 flex justify-end">
-                    <button onClick={() => setModalVisible(false)} className="px-4 py-2 bg-green-600 text-white rounded">OK</button>
-                  </div>
-                </div>
-              </div>
-            )}
-          {error && <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded">{error}</div>}
-          {loading && <div>{t('loading')}</div>}
-          {!loading && filtered.length === 0 && <div className="text-gray-500">{t('payments.history.empty')}</div>}
-          {filtered.map(rec => (
-            <div key={rec.id} className="rounded-lg overflow-hidden shadow">
-              {/* Family header gradient */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 md:p-6 bg-gradient-to-r from-green-50 to-green-100 gap-4">
-                 <div className="flex items-center gap-4">
-                   <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center font-bold">{(rec.parent ? `${rec.parent.firstName || ''}`.slice(0,1) + (rec.parent?.lastName || '').slice(0,1) : '--').toUpperCase()}</div>
-                   <div>
-                     <div className="text-lg font-bold text-gray-900">{rec.parent ? `${rec.parent.firstName || ''} ${rec.parent.lastName || ''}`.trim() : t('common.none')}</div>
-                     <div className="text-sm text-gray-500">{rec.parent?.email ?? ''}{rec.parent?.phone ? ` • ${rec.parent?.phone}` : ''}</div>
-                   </div>
-                 </div>
-                 <div className="text-right">
-                   <div className="flex items-center justify-end gap-2">
-                     <div className="text-xs text-gray-500">
-                       {rec.invoiceNumber ? <span className="mr-2 font-medium">{rec.invoiceNumber}</span> : null}
-                       {rec.createdAt ? new Date(rec.createdAt).toLocaleDateString('fr-FR') : ''}
-                     </div>
-                     { rec.paid ? <div className="text-sm text-green-700 font-semibold bg-green-100 px-3 py-1 rounded-full">{t('payments.status.paid')}</div> : <div className="text-sm text-gray-500">{t('payments.status.unpaid')}</div> }
-                     {user && (user.role === 'admin' || (user.role && user.role.toLowerCase().includes('super'))) && (
-                       <button onClick={() => togglePaid(rec.id, !rec.paid)} className="text-sm px-2 py-1 bg-blue-500 text-white rounded">{rec.paid ? t('payments.actions.mark_unpaid') : t('payments.actions.mark_paid')}</button>
-                     )}
-                   </div>
-                 </div>
-               </div>
-
-               {/* Detail by child header */}
-               <div className="px-6 py-4 bg-white border-t">
-                 <div className="text-sm text-gray-600 font-medium mb-3">{t('payments.detail.header', { month: new Date(year, month-1).toLocaleString(locale || 'fr-FR', { month: 'long', year: 'numeric' }) })}</div>
-                 <div className="space-y-3">
-                   {Array.isArray(rec.details) && rec.details.length > 0 ? rec.details.map((d, idx) => (
-                    <div key={idx} className="bg-gray-50 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-orange-200 text-orange-700 flex items-center justify-center font-bold">{(d.childName || '').slice(0,1).toUpperCase()}</div>
-                        <div>
-                          <div className="font-semibold text-gray-800">{d.childName}</div>
-                          <div className="text-xs text-gray-400">{/* age/group not available */}</div>
-                        </div>
-                      </div>
-                      <div className="text-right text-sm">
-                    <div className="text-gray-500"><span className="inline-block mr-2">📅</span>{d.daysPresent} {t('payments.days')}</div>
-                    <div className="text-green-600 font-semibold mt-1">{d.daysPresent} × {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.ratePerDay)} = {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.subtotal)}</div>
-                      </div>
-                    </div>
-                   )) : (
-                     <div className="text-gray-500">{t('payments.no_child_this_month')}</div>
-                   )}
-                 </div>
-               </div>
-
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 md:p-6 bg-gradient-to-r from-green-50 to-green-100 gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-gray-800">{t('payments.family.total_label')}</div>
-                  <div className="text-xs text-gray-500">{Array.isArray(rec.details) ? t('payments.family.summary', { n: String(rec.details.length), days: String(rec.details.reduce((s,d)=>s+(d.daysPresent||0),0)) }) : ''}</div>
-                </div>
-                <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
-                  <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
-                  <div className="w-full md:w-auto flex justify-center md:justify-end">
-                    <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
-                  </div>
+          {modalVisible && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/40" onClick={() => setModalVisible(false)} />
+              <div role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc" className="relative max-w-md w-full bg-white rounded-lg shadow-lg p-6 mx-4">
+                <h3 id="modal-title" className="text-lg font-semibold text-gray-900">Information</h3>
+                <p id="modal-desc" className="mt-3 text-sm text-gray-700">{modalMessage}</p>
+                <div className="mt-6 flex justify-end">
+                  <button onClick={() => setModalVisible(false)} className="px-4 py-2 bg-green-600 text-white rounded">OK</button>
                 </div>
               </div>
             </div>
-          ))}
+          )}
+
+          {error && <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded">{error}</div>}
+
+          {/* Render selected view */}
+          {viewMode === 'by-family' ? <FamilyList /> : <NannyList />}
         </div>
       </div>
     </div>
