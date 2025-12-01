@@ -10,7 +10,7 @@ type Detail = { childName: string; daysPresent: number; ratePerDay: number; subt
 type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string };
 type NannyGroup = {
   nanny: { id: string; name?: string | null };
-  payments: Array<{ id: string; amount: number; createdAt?: string | null; parent?: { firstName?: string | null; lastName?: string | null }; invoiceNumber?: string | null }>;
+  payments: Array<{ id: string; amount: number; createdAt?: string | null; parent?: { firstName?: string | null; lastName?: string | null; email?: string | null }; invoiceNumber?: string | null }>;
   total: number;
 };
 
