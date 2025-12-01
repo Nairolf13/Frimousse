@@ -68,6 +68,9 @@ function PhotoConsentToggle({ childId }: { childId: string }) {
   const [consent, setConsent] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const isAdmin = user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super'));
+  const isParent = user && user.role === 'parent';
+
   useEffect(() => {
     let mounted = true;
     async function load() {
@@ -82,9 +85,9 @@ function PhotoConsentToggle({ childId }: { childId: string }) {
       else console.error('Failed to load photo consent', e instanceof Error ? e.message : String(e));
       }
     }
-    if (user && user.role === 'parent') load();
+    if (user && (isParent || isAdmin)) load();
     return () => { mounted = false; };
-  }, [childId, user, API_URL]);
+  }, [childId, user, API_URL, isParent, isAdmin]);
 
   const toggle = async () => {
     setLoading(true);
@@ -103,7 +106,7 @@ function PhotoConsentToggle({ childId }: { childId: string }) {
     } finally { setLoading(false); }
   };
 
-  if (!user || user.role !== 'parent') return null;
+  if (!user || (!isParent && !isAdmin)) return null;
   if (consent === null) return <div className="text-sm text-gray-500">Chargement du consentement...</div>;
   return (
     <div className="flex items-center gap-2">
@@ -932,8 +935,8 @@ export default function Children() {
                           <span className="text-xs text-gray-500">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
                         </div>
                       </div>
-                      {/* Photo consent toggle for parents */}
-                      {user && user.role === 'parent' && child.parentId === (user.parentId || undefined) && (
+                      {/* Photo consent toggle for parents and admins */}
+                      {user && ((user.role === 'parent' && child.parentId === (user.parentId || undefined)) || isAdminUser) && (
                         <div className="mt-3">
                           <PhotoConsentToggle childId={child.id} />
                         </div>
