@@ -341,6 +341,7 @@ export default function Nannies() {
   }, [centerFilter]);
 
   useEffect(() => {
+    // initial load
     fetchNannies();
     fetchWithRefresh(`${API_URL}/assignments`, { credentials: 'include' })
       .then(res => res.json())
@@ -348,7 +349,8 @@ export default function Nannies() {
     return () => {
       if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
     };
-  }, [fetchNannies]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // If super-admin, load centers for filter
   useEffect(() => {
