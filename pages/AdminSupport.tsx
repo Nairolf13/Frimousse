@@ -593,7 +593,11 @@ export default function AdminSupportPage() {
                               const openTickets = userTickets.filter(ticket => ticket.status === 'open');
 
                               return (
-                                <div key={user.id} className="bg-gray-50 rounded-lg p-3">
+                                <div 
+                                  key={user.id} 
+                                  className="bg-gray-50 rounded-lg p-3 cursor-pointer hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                                  onClick={() => openUserTickets(user)}
+                                >
                                   <div className="flex items-center justify-between">
                                     <div>
                                       <div className="font-medium text-gray-900">{user.name}</div>

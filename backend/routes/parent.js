@@ -48,7 +48,13 @@ router.get('/admin', requireAuth, async (req, res) => {
     let parents = [];
     if (prisma.parent && typeof prisma.parent.findMany === 'function') {
       const where = {};
-      if (!isSuperAdmin(user) && user.centerId) where.centerId = user.centerId;
+      // Si super-admin et centerId fourni dans la query, filtrer par ce centre
+      if (isSuperAdmin(user) && req.query.centerId) {
+        where.centerId = req.query.centerId;
+      } else if (!isSuperAdmin(user) && user.centerId) {
+        // Sinon, filtrer par le centre de l'utilisateur
+        where.centerId = user.centerId;
+      }
       // If user is a nanny, restrict parents to those whose children are assigned to this nanny
       if (user && user.role === 'nanny') {
         const nannyRec = await prisma.nanny.findUnique({ where: { id: user.nannyId } });

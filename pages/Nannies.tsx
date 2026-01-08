@@ -338,7 +338,7 @@ export default function Nannies() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [centerFilter]);
 
   useEffect(() => {
     fetchNannies();
@@ -750,22 +750,19 @@ export default function Nannies() {
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-6 w-full filter-responsive">
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('nanny.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
           {user && typeof user.role === 'string' && user.role === 'super-admin' && (
-            <div className="flex items-center">
-              <label className="text-sm font-medium mr-2">Filtrer par centre:</label>
-              <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border rounded px-3 h-9 min-w-0 max-w-xs text-sm bg-white">
-                <option value="">Tous les centres</option>
-                {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
+            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base w-full md:w-auto min-h-[44px]">
+              <option value="">Tous les centres</option>
+              {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
           )}
-          <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border rounded px-3 py-2 text-xs md:text-base bg-white text-gray-700 shadow-sm w-full md:w-auto">
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('nanny.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64 min-h-[44px]" />
+          <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-base bg-white text-gray-700 shadow-sm w-full md:w-auto min-h-[44px]">
             <option value="">{t('nanny.filter.any')}</option>
             <option value="Disponible">{t('nanny.filter.disponible')}</option>
             <option value="En congé">{t('nanny.filter.en_conge')}</option>
           </select>
-          <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-xs md:text-base w-full md:w-auto">
+          <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base w-full md:w-auto min-h-[44px]">
             <option value="">{t('nanny.filter.experience_any')}</option>
             <option value="junior">{t('nanny.filter.experience_junior')}</option>
             <option value="senior">{t('nanny.filter.experience_senior')}</option>

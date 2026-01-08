@@ -9,7 +9,13 @@ function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 router.get('/schedules', auth, async (req, res) => {
   try {
   const where = {};
-  if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+  // Si super-admin et centerId fourni dans la query, filtrer par ce centre
+  if (isSuperAdmin(req.user) && req.query.centerId) {
+    where.centerId = req.query.centerId;
+  } else if (!isSuperAdmin(req.user)) {
+    // Sinon, filtrer par le centre de l'utilisateur
+    where.centerId = req.user.centerId;
+  }
   const schedules = await prisma.schedule.findMany({ include: { nannies: true }, where, orderBy: { date: 'asc' } });
     res.json(schedules);
   } catch (err) {

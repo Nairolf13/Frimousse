@@ -55,7 +55,7 @@ interface Billing {
   amount: number;
 }
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { getCached, setCached } from '../src/utils/apiCache';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
@@ -228,7 +228,7 @@ export default function Children() {
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   }
 
-  const fetchChildren = async () => {
+  const fetchChildren = useCallback(async () => {
     setLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -295,11 +295,15 @@ export default function Children() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [centerFilter]);
 
   useEffect(() => {
     // initial load
     fetchChildren();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
   const fetchParents = async () => {
       try {
         // Only admins or staff (nanny) should request the admin parent list
@@ -385,12 +389,12 @@ export default function Children() {
       }
     };
     fetchBillings();
-  }, [user]);
+  }, [user, centerFilter]);
 
   // reload children when center filter changes
   useEffect(() => {
     fetchChildren();
-  }, [centerFilter]);
+  }, [fetchChildren]);
 
   // If super-admin, load centers for filter
   useEffect(() => {
@@ -690,22 +694,19 @@ export default function Children() {
           </div>
           <div className="w-full md:w-auto">
             <div className="flex flex-col md:flex-row md:items-center gap-2">
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
               {user && (user as { role?: string | null }).role === 'super-admin' && (
-                <div className="ml-2">
-                  <label className="text-sm font-medium mr-2">Filtrer par centre:</label>
-                  <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border rounded px-3 h-9 min-w-0 max-w-xs text-sm">
-                    <option value="">Tous les centres</option>
-                    {centers.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                  </select>
-                </div>
+                <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm md:text-base min-h-[44px] md:ml-0">
+                  <option value="">Tous les centres</option>
+                  {centers.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                </select>
               )}
-              <div className="flex gap-2">
-                <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm">
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
+              <div className="flex gap-2 w-full md:w-auto">
+                <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm md:text-base min-h-[44px] flex-1 md:flex-none md:w-auto">
                   <option value="">{t('children.group.all')}</option>
                   {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
                 </select>
-                <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm">
+                <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm md:text-base min-h-[44px] flex-1 md:flex-none md:w-auto">
                   <option value="name">{t('children.sort.name')}</option>
                   <option value="age">{t('children.sort.age')}</option>
                 </select>

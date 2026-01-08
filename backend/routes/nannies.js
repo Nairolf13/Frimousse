@@ -15,7 +15,13 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
 router.get('/', auth, async (req, res) => {
   const where = {};
-  if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+  // Si super-admin et centerId fourni dans la query, filtrer par ce centre
+  if (isSuperAdmin(req.user) && req.query.centerId) {
+    where.centerId = req.query.centerId;
+  } else if (!isSuperAdmin(req.user)) {
+    // Sinon, filtrer par le centre de l'utilisateur
+    where.centerId = req.user.centerId;
+  }
   // include linked user so we can return address fields stored on User
   const nannies = await prisma.nanny.findMany({ where, include: { assignedChildren: true, user: true } });
   // flatten user address fields onto the nanny object for frontend convenience
