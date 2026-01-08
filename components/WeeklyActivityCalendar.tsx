@@ -233,9 +233,8 @@ export default function WeeklyActivityCalendar() {
           </div>
           <div className="flex flex-col md:flex-row items-center gap-2 mt-2 md:mt-0">
               {user && (user as { role?: string | null }).role === 'super-admin' && (
-              <div className="flex items-center flex-nowrap w-full md:w-auto mb-2 md:mb-0 md:mr-2 justify-center md:justify-start">
-                <label className="text-sm font-medium mr-2 whitespace-nowrap">Filtrer par centre:</label>
-                  <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border rounded px-3 h-9 min-w-0 max-w-xs text-sm">
+              <div className="w-full md:w-auto mb-2 md:mb-0 md:mr-2">
+                  <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm w-full md:w-auto min-h-[44px]">
                   <option value="">Tous les centres</option>
                   {centers.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -243,11 +242,11 @@ export default function WeeklyActivityCalendar() {
                 </select>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#60;</button>
-              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#62;</button>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition flex-shrink-0">&#60;</button>
+              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition flex-shrink-0">&#62;</button>
               {!isParent && (
-                <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base ml-2">{t('activities.add')}</button>
+                <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base flex-1 md:flex-none md:ml-2">{t('activities.add')}</button>
               )}
             </div>
           </div>

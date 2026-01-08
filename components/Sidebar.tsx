@@ -48,8 +48,11 @@ function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, st
     { to: '/dashboard', label: t('nav.dashboard'), icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
     { to: '/feed', label: t('nav.feed'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
     { to: '/notifications', label: t('nav.notifications'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
-    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/centers', label: 'Centres', icon: <HiOutlineOfficeBuilding className="w-5 h-5 mr-3" /> }] : []),
-    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/support', label: 'Support', icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }] : []),
+    // Admin links regroupés
+    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [
+      { to: '/admin/centers', label: 'Centres', icon: <HiOutlineOfficeBuilding className="w-5 h-5 mr-3" /> },
+      { to: '/admin/support', label: 'Support', icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }
+    ] : []),
     { to: '/children', label: t('nav.children'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
     { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
     { to: '/nannies', label: t('nav.nannies'), icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
@@ -68,6 +71,9 @@ export default function Sidebar() {
   const { t } = useI18n();
   const [supportCount, setSupportCount] = useState<number | null>(null);
   const [isShortLandscape, setIsShortLandscape] = useState(false);
+  
+  // Debug: vérifier le rôle de l'utilisateur
+  console.log('User role in Sidebar:', user?.role);
   // consume the global notifications context (single-tab polling)
   const { unreadCount, unreadReviews } = useNotificationsContext();
   const centerId = user && (user as { centerId?: string }).centerId;

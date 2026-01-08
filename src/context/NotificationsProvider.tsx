@@ -312,7 +312,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         window.removeEventListener('focus', debouncedLoad);
       }
     };
-  }, [startPolling, stopPolling, load]);
+  }, [startPolling, stopPolling, load, user]);
 
   const value = { unreadCount: unread, unreadReviews, refresh: load, refreshReviews: loadReviews };
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

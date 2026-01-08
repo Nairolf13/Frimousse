@@ -90,34 +90,9 @@ module.exports = async function (req, res, next) {
     const ok = await hasValidSubscriptionForRefresh(user);
     if (!ok) return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
 
-    // rotate refresh tokens: delete old, create new
-    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-    // If a token collision occurs (very unlikely), retry generation a few times
-    let newRefreshToken = null;
-    const maxAttempts = 5;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        newRefreshToken = generateRefreshTokenForMiddleware(user);
-        await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-        break; // success
-      } catch (e) {
-        // Prisma unique constraint error code P2002; retry on token uniqueness violation
-        const isUniqueErr = e && e.code === 'P2002' && e.meta && Array.isArray(e.meta.target) && e.meta.target.includes('token');
-        if (isUniqueErr) {
-          console.warn(`Refresh token collision on attempt ${attempt}, regenerating token`);
-          // if last attempt, rethrow
-          if (attempt === maxAttempts) throw e;
-          // otherwise loop to generate another token
-          continue;
-        }
-        // non-unique error: rethrow
-        throw e;
-      }
-    }
+    // Generate new access token but KEEP existing refresh token (no rotation in middleware to avoid loops)
     const accessTokenNew = generateAccessTokenForMiddleware(user);
-    // set cookies using same options as authController
     res.cookie('accessToken', accessTokenNew, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
-    res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
 
     setUserOnRequest(user);
     return next();

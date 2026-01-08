@@ -188,7 +188,7 @@ export default function Feed() {
     }
 
     loadPostsWithCache();
-  }, []);
+  }, [centerFilter]);
 
   // Reload when center filter changes
   useEffect(() => {
