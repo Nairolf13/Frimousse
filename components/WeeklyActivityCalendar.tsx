@@ -98,10 +98,10 @@ export default function WeeklyActivityCalendar() {
       try {
         const res = await fetchWithRefresh(`${API_URL}/centers`, { credentials: 'include' });
         if (!res || !res.ok) return;
-        const data = await res.json();
+        const json = await res.json();
         if (!mounted) return;
-        if (Array.isArray(data)) setCenters(data.map((c: Center) => ({ id: c.id, name: c.name })));
-        else if (data && data.centers && Array.isArray(data.centers)) setCenters(data.centers.map((c: Center) => ({ id: c.id, name: c.name })));
+        const centersData = json.data || json.centers || json;
+        if (Array.isArray(centersData)) setCenters(centersData.map((c: Center) => ({ id: c.id, name: c.name })));
       } catch (e) {
         console.error('Failed to load centers for filter', e);
       }

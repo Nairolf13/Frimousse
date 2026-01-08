@@ -364,10 +364,10 @@ export default function Nannies() {
       try {
         const res = await fetchWithRefresh(`${API_URL}/centers`, { credentials: 'include' });
         if (!res || !res.ok) return;
-        const data = await res.json();
+        const json = await res.json();
         if (!mounted) return;
-        if (Array.isArray(data)) setCenters(data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
-        else if (data && typeof data === 'object' && 'centers' in data && Array.isArray((data as { centers: unknown[] }).centers)) setCenters((data as { centers: { id: string; name: string }[] }).centers.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        const centersData = json.data || json.centers || json;
+        if (Array.isArray(centersData)) setCenters(centersData.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
       } catch (e) {
         console.error('Failed to load centers for filter', e);
       }

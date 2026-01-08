@@ -405,15 +405,14 @@ export default function Children() {
       try {
         const res = await fetchWithRefresh(`${API_URL}/centers`, { credentials: 'include' });
         if (!res || !res.ok) return;
-        const data = await res.json();
+        const json = await res.json();
         if (!mounted) return;
-        // Accept either an array or an object { centers: [...] } for backward compatibility
-        if (Array.isArray(data)) {
-          setCenters(data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
-        } else if (data && typeof data === 'object' && 'centers' in data && Array.isArray((data as { centers: unknown[] }).centers)) {
-          setCenters((data as { centers: { id: string; name: string }[] }).centers.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        // API now returns { data: [...] }
+        const centersData = json.data || json.centers || json;
+        if (Array.isArray(centersData)) {
+          setCenters(centersData.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
         } else {
-          console.debug('Unexpected /api/centers response shape', data);
+          console.debug('Unexpected /api/centers response shape', json);
         }
       } catch (e) {
         console.error('Failed to load centers for filter', e);
