@@ -343,10 +343,18 @@ router.get('/', authMiddleware, async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-  const { limit = 20, cursor } = req.query;
+  const { limit = 20, cursor, centerId } = req.query;
   try {
+    // Super-admin can optionally filter by centerId; others only see their center
+    let whereClause = {};
+    if (user.role === 'super-admin') {
+      if (centerId) whereClause = { centerId: String(centerId) };
+      else whereClause = {};
+    } else {
+      whereClause = { centerId: user.centerId || undefined };
+    }
     const posts = await prisma.feedPost.findMany({
-      where: { centerId: user.centerId || undefined },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
         medias: true,

@@ -2,6 +2,7 @@ import AppRoutes from '../routes';
 import { useEffect, useState } from 'react';
 import { AuthContext } from './context/AuthContext';
 import { AssistantProvider } from './context/AssistantContext';
+import NotificationsProvider from './context/NotificationsProvider';
 import type { User } from './context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { HelmetProvider } from 'react-helmet-async';
@@ -10,7 +11,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   useEffect(() => {
     // Skip authentication check on public pages to avoid 401 errors in console
-    const publicPaths = ['/', '/about', '/fonctionnalites', '/tarifs', '/support', '/confidentialite', '/cgu', '/mentions-legales', '/guide-demarrage', '/guide-ajouter-enfant', '/guide-planning', '/guide-export-rapport', '/guide-securite', '/login', '/register', '/reset-password', '/invite'];
+    const publicPaths = ['/', '/about', '/fonctionnalites', '/tarifs', '/confidentialite', '/cgu', '/mentions-legales', '/guide-demarrage', '/guide-ajouter-enfant', '/guide-planning', '/guide-export-rapport', '/guide-securite', '/login', '/register', '/reset-password', '/invite'];
     if (typeof window !== 'undefined' && publicPaths.includes(window.location.pathname)) {
       return;
     }
@@ -66,9 +67,11 @@ function App() {
   return (
     <HelmetProvider>
       <AuthContext.Provider value={{ user }}>
-        <AssistantProvider>
-          <AppRoutes />
-        </AssistantProvider>
+        <NotificationsProvider>
+          <AssistantProvider>
+            <AppRoutes />
+          </AssistantProvider>
+        </NotificationsProvider>
       </AuthContext.Provider>
     </HelmetProvider>
   );

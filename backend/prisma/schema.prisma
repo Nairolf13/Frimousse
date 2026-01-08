@@ -58,8 +58,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
+
 
 model User {
   id               String         @id @default(uuid())
@@ -82,6 +82,7 @@ model User {
   refreshTokens    RefreshToken[]
   pushSubscriptions PushSubscription[]
   notifications    Notification[]
+  supportTickets   SupportTicket[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   feedPosts        FeedPost[]
@@ -385,4 +386,32 @@ model EmailLog {
   createdAt        DateTime @default(now())
 
   @@index([paymentHistoryId])
+}
+
+// Support tickets system
+model SupportTicket {
+  id          String   @id @default(uuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  subject     String
+  message     String
+  status      String   @default("open") // 'open' | 'closed'
+  adminSeenAt DateTime? // when an admin last marked the ticket as seen (not visible to user)
+  replies     SupportReply[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model SupportReply {
+  id          String   @id @default(uuid())
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId    String
+  message     String
+  isFromAdmin Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([ticketId])
 }

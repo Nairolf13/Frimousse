@@ -49,7 +49,7 @@ function getWeekDates(date: Date) {
   });
 }
 
-export default function NannyCalendar({ nannyId }: { nannyId: string }) {
+export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string | null; centerId?: string | null }) {
   const { locale, t } = useI18n();
   const [children, setChildren] = useState<Child[]>([]);
   const [showForm, setShowForm] = useState<{ date: string } | null>(null);
@@ -57,10 +57,11 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   useEffect(() => {
-    fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' })
+    const url = `${API_URL}/children${centerId ? `?centerId=${encodeURIComponent(centerId)}` : ''}`;
+    fetchWithRefresh(url, { credentials: 'include' })
       .then(res => res.json())
-      .then(setChildren);
-  }, []);
+      .then(setChildren).catch(() => setChildren([]));
+  }, [centerId]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   useEffect(() => {
@@ -68,10 +69,15 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
     const month = currentDate.getMonth();
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
-    fetchWithRefresh(`${API_URL}/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
+    const params = new URLSearchParams();
+    if (nannyId) params.set('nannyId', nannyId);
+    if (centerId) params.set('centerId', centerId);
+    params.set('start', first.toISOString());
+    params.set('end', last.toISOString());
+    fetchWithRefresh(`${API_URL}/assignments?${params.toString()}`, { credentials: 'include' })
       .then(res => res.json())
-      .then(setAssignments);
-  }, [nannyId, currentDate]);
+      .then(setAssignments).catch(() => setAssignments([]));
+  }, [nannyId, currentDate, centerId]);
 
   const monthGrid = getMonthGrid(currentDate);
   const monthLabel = new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(currentDate);
@@ -112,10 +118,9 @@ export default function NannyCalendar({ nannyId }: { nannyId: string }) {
         const pad = (n: number) => n.toString().padStart(2, '0');
         const dayStr = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
         const assigns = assignments.filter(a => {
-          return (
-            a.nanny.id === nannyId &&
-            a.date.split('T')[0] === dayStr
-          );
+          const matchesDate = a.date.split('T')[0] === dayStr;
+          const matchesNanny = nannyId ? (a.nanny && a.nanny.id === nannyId) : true;
+          return matchesDate && matchesNanny;
         });
             return (
               <div key={idx} className={

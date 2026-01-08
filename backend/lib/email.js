@@ -8,6 +8,10 @@ function renderTemplate(templateName, lang, substitutions = {}) {
   try {
     html = fs.readFileSync(templatePath, 'utf8');
     for (const key of Object.keys(substitutions)) {
+      // Support {{{key}}} for unescaped HTML (3 braces)
+      const reTriple = new RegExp(`{{{${key}}}}`, 'g');
+      html = html.replace(reTriple, substitutions[key] == null ? '' : substitutions[key]);
+      // Support {{key}} for regular text (2 braces)
       const re = new RegExp(`{{${key}}}`, 'g');
       html = html.replace(re, substitutions[key] == null ? '' : substitutions[key]);
     }

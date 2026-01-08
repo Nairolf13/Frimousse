@@ -226,6 +226,7 @@ async function notifyUsers(userIds, payloadObj) {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
   const contact = process.env.VAPID_CONTACT || 'mailto:notifications@lesfrimousses.com';
+  
   // Persist notifications in DB for all target users even if push sending is disabled
   try {
     const toStore = Object.assign({ icon: '/imgs/LogoFrimousse-192.png', badge: '/imgs/LogoFrimousse-512.png' }, payloadObj || {});
@@ -233,6 +234,7 @@ async function notifyUsers(userIds, payloadObj) {
     // createMany is faster; ignore errors if DB doesn't support it in some envs
     try {
       await prisma.notification.createMany({ data: createRows });
+      console.log('[push] Created', createRows.length, 'notifications in DB');
     } catch (e) {
       // fallback: create individually
       for (const r of createRows) {
@@ -243,12 +245,18 @@ async function notifyUsers(userIds, payloadObj) {
     if (DEBUG) console.error('[push] failed to persist notifications', e && e.message ? e.message : e);
   }
 
-  if (!publicKey || !privateKey) return;
+  if (!publicKey || !privateKey) {
+    console.log('[push] No VAPID keys configured, skipping web push');
+    return;
+  }
+  
+  console.log('[push] Setting VAPID details...');
   webpush.setVapidDetails(contact, publicKey, privateKey);
 
   if (DEBUG) console.debug('[push] notifyUsers target userIds=', userIds);
   // collect subscriptions for these users
   const subs = await prisma.pushSubscription.findMany({ where: { userId: { in: userIds } } });
+  console.log('[push] Found', subs?.length || 0, 'push subscriptions');
   if (DEBUG) console.debug('[push] notifyUsers found subs=', subs && subs.length ? subs.length : 0);
   if (!subs || subs.length === 0) return;
   // Deduplicate subscriptions by endpoint to avoid sending multiple notifications to the same device
@@ -259,6 +267,7 @@ async function notifyUsers(userIds, payloadObj) {
     if (!prev || (s.createdAt && prev.createdAt && new Date(s.createdAt) > new Date(prev.createdAt))) grouped.set(endpoint, s);
   }
   const uniqueSubs = Array.from(grouped.values());
+  console.log('[push] Sending to', uniqueSubs.length, 'unique subscriptions');
   if (DEBUG && uniqueSubs.length !== subs.length) console.debug('[push] notifyUsers deduped subs', subs.length, '->', uniqueSubs.length);
 
   const safePayloadObj = Object.assign({ icon: '/imgs/LogoFrimousse-192.png', badge: '/imgs/LogoFrimousse-512.png' }, payloadObj || {});
@@ -266,11 +275,14 @@ async function notifyUsers(userIds, payloadObj) {
 
   for (const s of uniqueSubs) {
     try {
-      await webpush.sendNotification(s.subscription, payload);
+      console.log('[push] Sending notification to subscription', s.id);
+      const result = await webpush.sendNotification(s.subscription, payload);
+      console.log('[push] ✓ Successfully sent to', s.id, 'status:', result?.statusCode || 'ok');
     } catch (err) {
       const statusCode = (err && err.statusCode) || (err && err.status) || null;
-      console.error('Failed to send push to', s.id, statusCode || '', err && err.body ? err.body : (err && err.message) || err);
+      console.error('[push] ✗ Failed to send push to', s.id, 'status:', statusCode || 'unknown', 'error:', err && err.body ? err.body : (err && err.message) || err);
       if (statusCode === 404 || statusCode === 410) {
+        console.log('[push] Deleting expired subscription', s.id);
         try { await prisma.pushSubscription.delete({ where: { id: s.id } }); } catch (delErr) { console.error('Failed to delete subscription', s.id, delErr); }
       }
     }

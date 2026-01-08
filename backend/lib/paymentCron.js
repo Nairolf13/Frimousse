@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { sendTemplatedMail } = require('./email');
 const { generateInvoiceBuffer } = require('./invoiceGenerator');
+const { notifyUsers } = require('./pushNotifications');
 
 const RATE_PER_DAY = 2;
 
@@ -11,12 +12,11 @@ async function calculatePaymentsForMonth(year, monthIndex) {
     include: { children: { include: { child: true } } }
   });
 
-  // Diagnostic: log how many parents we will process
-  try {
-    console.log(`PaymentCron: calculatePaymentsForMonth for ${year}-${monthIndex + 1} found ${Array.isArray(parents) ? parents.length : 0} parents`);
-  } catch (e) {
-    // ignore
-  }
+  // Compteurs pour le rapport final
+  let totalInvoices = 0;
+  let sentInvoices = 0;
+  let failedInvoices = 0;
+  const failedEmails = [];
 
   for (const parent of parents) {
     let total = 0;
@@ -45,12 +45,6 @@ async function calculatePaymentsForMonth(year, monthIndex) {
         subtotal
       });
     }
-    // Diagnostic: log computed totals per parent so we can see why no emails are sent
-    try {
-      console.log(`PaymentCron: computed total for parent=${parent.id} total=${Number(total).toFixed(2)}`);
-    } catch (e) {
-      // ignore
-    }
 
     try {
       const existing = await prisma.paymentHistory.findFirst({ where: { parentId: parent.id, year, month: monthIndex + 1 } });
@@ -73,15 +67,14 @@ async function calculatePaymentsForMonth(year, monthIndex) {
       // If invoice total > 0, send an email to the parent.
       try {
         if (phRecord && Number(phRecord.total) > 0) {
+          totalInvoices++;
           // Send invoice whenever total > 0 (even if unchanged). The only case we skip is when total === 0.
-          console.log(`PaymentCron: parent=${parent.id} existingTotal=${existing ? existing.total : 'nil'} newTotal=${Number(total).toFixed(2)} willSendBecauseTotalGtZero=true`);
-          // proceed to send regardless of existing total
           const parentEmail = parent.email || (parent.user && parent.user.email) || null;
           const parentName = `${parent.firstName || ''} ${parent.lastName || ''}`.trim();
           if (!parentEmail) {
-            console.log(`PaymentCron: parent=${parent.id} has no email (parent.email/user.email empty) — skipping send`);
+            failedInvoices++;
+            failedEmails.push({ parentId: parent.id, parentName: parentName || 'Nom inconnu', reason: 'Pas d\'email' });
           } else {
-            console.log(`PaymentCron: parent=${parent.id} email=${parentEmail} name="${parentName || ''}" will be emailed for paymentHistory=${phRecord.id}`);
             try {
               // generate invoice PDF buffer and attach
               const pdfBuffer = await generateInvoiceBuffer(prisma, phRecord.id).catch(err => {
@@ -120,8 +113,11 @@ async function calculatePaymentsForMonth(year, monthIndex) {
                 paymentHistoryId: phRecord.id,
                 bypassOptOut: true
               });
+              sentInvoices++;
             } catch (e) {
               console.error('Failed to send invoice email to parent', parent.id, parentEmail, e);
+              failedInvoices++;
+              failedEmails.push({ parentId: parent.id, parentName, parentEmail, reason: e.message || 'Erreur inconnue' });
             }
           }
         }
@@ -131,6 +127,85 @@ async function calculatePaymentsForMonth(year, monthIndex) {
     } catch (err) {
       console.error('Failed to upsert paymentHistory for parent', parent.id, err);
     }
+  }
+
+  // Envoyer une notification + email au super admin avec le résumé
+  try {
+    // Récupérer tous les super-admins
+    const superAdmins = await prisma.user.findMany({ 
+      where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } }, 
+      select: { id: true, email: true, name: true } 
+    });
+
+    if (superAdmins.length > 0) {
+      const monthName = new Date(year, monthIndex, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      
+      // Notification push
+      const adminIds = superAdmins.map(a => a.id).filter(Boolean);
+      const notifTitle = `✅ Factures envoyées - ${monthName}`;
+      const notifBody = `${sentInvoices}/${totalInvoices} factures envoyées avec succès${failedInvoices > 0 ? `, ${failedInvoices} échec(s)` : ''}`;
+      
+      await notifyUsers(adminIds, {
+        title: notifTitle,
+        body: notifBody,
+        data: { 
+          url: '/payment-history',
+          type: 'invoices.sent',
+          year,
+          month: monthIndex + 1,
+          totalInvoices,
+          sentInvoices,
+          failedInvoices
+        }
+      });
+
+      // Email au super admin
+      for (const admin of superAdmins) {
+        if (admin.email) {
+          try {
+            let emailBody = `<h2>Rapport d'envoi des factures - ${monthName}</h2>`;
+            emailBody += `<p><strong>Résumé :</strong></p>`;
+            emailBody += `<ul>`;
+            emailBody += `<li>Total de factures à envoyer : <strong>${totalInvoices}</strong></li>`;
+            emailBody += `<li>Factures envoyées avec succès : <strong style="color: green;">${sentInvoices}</strong></li>`;
+            emailBody += `<li>Échecs : <strong style="color: ${failedInvoices > 0 ? 'red' : 'green'};">${failedInvoices}</strong></li>`;
+            emailBody += `</ul>`;
+            
+            if (failedEmails.length > 0) {
+              emailBody += `<h3 style="color: red;">Détails des échecs :</h3>`;
+              emailBody += `<table border="1" cellpadding="5" style="border-collapse: collapse;">`;
+              emailBody += `<tr><th>Parent</th><th>Email</th><th>Raison</th></tr>`;
+              for (const fail of failedEmails) {
+                emailBody += `<tr>`;
+                emailBody += `<td>${fail.parentName || 'N/A'}</td>`;
+                emailBody += `<td>${fail.parentEmail || 'N/A'}</td>`;
+                emailBody += `<td>${fail.reason || 'N/A'}</td>`;
+                emailBody += `</tr>`;
+              }
+              emailBody += `</table>`;
+            } else {
+              emailBody += `<p style="color: green;">✅ Toutes les factures ont été envoyées avec succès !</p>`;
+            }
+
+            await sendTemplatedMail({
+              templateName: 'generic',
+              lang: 'fr',
+              to: admin.email,
+              subject: `📊 Rapport d'envoi des factures - ${monthName}`,
+              substitutions: {
+                title: `Rapport d'envoi des factures`,
+                content: emailBody
+              },
+              bypassOptOut: true
+            });
+          } catch (emailErr) {
+            console.error(`PaymentCron: Échec envoi email rapport au super admin ${admin.email}`, emailErr);
+          }
+        }
+      }
+    }
+  } catch (notifErr) {
+    console.error('PaymentCron: Échec envoi notification/email final au super admin', notifErr);
   }
 }
 
@@ -170,8 +245,6 @@ async function calculatePayments() {
   const targetMonth = monthIndex - 1;
   const targetYear = targetMonth === -1 ? year - 1 : year;
   const targetMonthIndex = targetMonth === -1 ? 11 : targetMonth;
-
-  console.log(`PaymentCron: now (tz=${tz}) = ${now.toISOString()} localMonthIndex=${monthIndex} -> target ${targetYear}-${targetMonthIndex + 1}`);
 
   await calculatePaymentsForMonth(targetYear, targetMonthIndex);
 }

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import Sidebar from '../components/Sidebar';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useI18n } from '../src/lib/useI18n';
 import { HiOutlineCheck, HiOutlineClock, HiOutlineExclamationCircle, HiOutlineEye, HiOutlineDownload, HiOutlineRefresh, HiOutlineDocumentText, HiOutlineSearch } from 'react-icons/hi';
@@ -99,7 +98,7 @@ export default function AdminEmailLogs() {
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
-    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const mql = window.matchMedia('(min-width: 768px) and (max-height: 600px)');
     const onChange = () => setIsShortLandscape(Boolean(mql.matches));
     onChange();
     if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
@@ -371,7 +370,6 @@ export default function AdminEmailLogs() {
 
   return (
     <div className={`relative z-0 min-h-screen bg-gray-50 p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
-      {!isShortLandscape && <Sidebar />}
       <main className="flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-4">
         <div className="w-full max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-6">

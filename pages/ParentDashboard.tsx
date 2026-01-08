@@ -47,6 +47,8 @@ const ParentDashboard: React.FC = () => {
   };
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
+  const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
+  const [centerFilter, setCenterFilter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adminData, setAdminData] = useState<AdminData>(null);
   const [parentBilling, setParentBilling] = useState<Record<string, number>>({});
@@ -175,7 +177,7 @@ const ParentDashboard: React.FC = () => {
       setError(null);
       try {
         if (isAdminView(authUser)) {
-          const res = await fetchWithRefresh(`api/parent/admin`, { credentials: 'include' });
+          const res = await fetchWithRefresh(`api/parent/admin${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`, { credentials: 'include' });
           const text = await res.text();
           let json: unknown = null;
           try { json = text ? JSON.parse(text) : null; } catch { json = text; }
@@ -228,7 +230,7 @@ const ParentDashboard: React.FC = () => {
           try {
             const now = new Date();
             const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const billRes = await fetchWithRefresh(`api/parent/billing?month=${month}`, { credentials: 'include' });
+            const billRes = await fetchWithRefresh(`api/parent/billing?month=${month}${centerFilter ? `&centerId=${encodeURIComponent(centerFilter)}` : ''}`, { credentials: 'include' });
             if (billRes.ok) {
               const billJson = await billRes.json();
               setParentBilling(billJson || {});
@@ -247,7 +249,31 @@ const ParentDashboard: React.FC = () => {
       }
     };
     load();
-  }, [authUser, user]);
+  }, [authUser, user, centerFilter]);
+
+  // If super-admin, load centers for filter
+  useEffect(() => {
+    let mounted = true;
+    const loadCenters = async () => {
+      const u = user as { role?: string | null } | null;
+      if (!u || u.role !== 'super-admin') return;
+      try {
+        const res = await fetchWithRefresh(`api/centers`, { credentials: 'include' });
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        if (Array.isArray(data)) {
+          setCenters(data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        } else if (data && typeof data === 'object' && 'centers' in data && Array.isArray((data as { centers: unknown[] }).centers)) {
+          setCenters((data as { centers: { id: string; name: string }[] }).centers.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        }
+      } catch (e) {
+        console.error('Failed to load centers for filter', e);
+      }
+    };
+    loadCenters();
+    return () => { mounted = false; };
+  }, [user]);
 
       // Build a parent object for the connected parent user so we can reuse ParentCard UI
       const userInfo = (user as UserInfo) ?? null;
@@ -308,9 +334,21 @@ const ParentDashboard: React.FC = () => {
                   }).length}</div>
                 </div>
               </div>
+              {/* moved super-admin center filter next to the search input for desktop */}
             </div>
-            <div className="w-full md:w-auto">
+            <div className="w-full md:w-auto flex items-center md:justify-end gap-2">
               <input type="text" placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
+              {user && typeof user.role === 'string' && user.role === 'super-admin' && (
+                <div className="flex items-center">
+                  <label className="text-sm font-medium mr-2 whitespace-nowrap">Filtrer par centre:</label>
+                  <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border rounded px-3 h-9 min-w-0 max-w-xs text-sm">
+                    <option value="">Tous les centres</option>
+                    {centers.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           </div>
 

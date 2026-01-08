@@ -133,7 +133,12 @@ router.get('/', auth, async (req, res) => {
 
     // Base where clause for center access
     const where = {};
-    if (!isSuperAdmin(req.user)) {
+    if (isSuperAdmin(req.user)) {
+      // allow optional centerId filter for super-admins
+      if (req.query && req.query.centerId) {
+        where.centerId = String(req.query.centerId);
+      }
+    } else {
       if (!req.user || !req.user.centerId) {
         return res.status(403).json({ error: 'Forbidden: user not linked to any center' });
       }

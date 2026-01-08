@@ -172,7 +172,9 @@ try {
 // paymentHistoryRoutes mounted later after invoice and admin routes
 
 const adminEmailLogsRoutes = require('./routes/adminEmailLogs');
+const supportRoutes = require('./routes/support');
 app.use('/api/admin', adminEmailLogsRoutes);
+app.use('/api/support', supportRoutes);
 
 
 const paymentInvoiceRoutes = require('./routes/paymentInvoice');

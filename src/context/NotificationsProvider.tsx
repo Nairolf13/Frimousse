@@ -12,6 +12,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const leaderRef = useRef<boolean>(false);
   const consecutive429 = useRef<number>(0);
   const pollingIntervalRef = useRef<number>(30_000);
+  const loadDebounceRef = useRef<number | null>(null);
   const { user } = useAuth();
 
   // elect a leader: simplest approach — the first tab that mounts becomes the leader by writing to localStorage
@@ -114,7 +115,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     try {
       // If there's no authenticated user, don't attempt notification API calls which will return 401.
       if (!user) {
-        publish(0);
         return;
       }
       const cached = getCached<{ unread: number }>(cacheKey);
@@ -133,13 +133,16 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
         publishRateLimit('/api/notifications/unread-count', until);
         return;
       }
-      if (!res.ok) return publish(0);
+      if (!res.ok) {
+        return publish(0);
+      }
       consecutive429.current = 0;
       const j = await res.json();
       const value = Number(j.unread) || 0;
       setCached(cacheKey, { unread: value }, 15_000);
       publish(value);
-    } catch {
+    } catch (e) {
+      console.error('[NotificationsProvider] Error loading notifications:', e);
       publish(0);
     }
   }, [publish, user]);
@@ -241,11 +244,75 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }, []);
 
+  // Rafraîchir immédiatement quand l'utilisateur se connecte
+  useEffect(() => {
+    if (user) {
+      void load();
+      void loadReviews();
+    }
+  }, [user, load, loadReviews]);
+
+  // Écouter les changements de notifications (marquées comme lues, supprimées, etc.)
+  useEffect(() => {
+    const handleNotificationsChanged = () => {
+      if (user) {
+        void load();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('notifications:changed', handleNotificationsChanged);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('notifications:changed', handleNotificationsChanged);
+      }
+    };
+  }, [user, load]);
+
   useEffect(() => {
     // start polling by default in the first mounted tab
     startPolling();
-    return () => stopPolling();
-  }, [startPolling, stopPolling]);
+    
+    // Fonction debouncée pour rafraîchir (évite les appels multiples en rafale)
+    const debouncedLoad = () => {
+      if (loadDebounceRef.current) {
+        clearTimeout(loadDebounceRef.current);
+      }
+      loadDebounceRef.current = window.setTimeout(() => {
+        if (user) {
+          void load();
+        }
+        loadDebounceRef.current = null;
+      }, 300); // 300ms debounce
+    };
+    
+    // Écouter les messages du service worker (notification push reçue)
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'push-received') {
+        debouncedLoad();
+      }
+    };
+    
+    if (typeof window !== 'undefined') {
+      // Écouter les messages du service worker
+      navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage);
+      // Aussi rafraîchir quand la fenêtre reprend le focus (notifications reçues en arrière-plan)
+      window.addEventListener('focus', debouncedLoad);
+    }
+    
+    return () => {
+      stopPolling();
+      if (loadDebounceRef.current) {
+        clearTimeout(loadDebounceRef.current);
+      }
+      if (typeof window !== 'undefined') {
+        navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage);
+        window.removeEventListener('focus', debouncedLoad);
+      }
+    };
+  }, [startPolling, stopPolling, load]);
 
   const value = { unreadCount: unread, unreadReviews, refresh: load, refreshReviews: loadReviews };
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

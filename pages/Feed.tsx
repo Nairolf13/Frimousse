@@ -88,6 +88,8 @@ export default function Feed() {
   const [noChildSelected, setNoChildSelected] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
+  const [centerFilter, setCenterFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [likesModalOpen, setLikesModalOpen] = useState(false);
   const [likers, setLikers] = useState<{ id: string; name: string }[]>([]);
@@ -167,14 +169,15 @@ export default function Feed() {
 
   useEffect(() => {
     async function loadPostsWithCache() {
-      const cacheKey = '/api/feed';
+      const cacheKey = `/api/feed${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
       const cached = getCached<{ posts: Post[] }>(cacheKey);
       if (cached) {
         setPosts(cached.posts || []);
         return;
       }
       try {
-        const res = await fetchWithRefresh('api/feed');
+        const url = `/api/feed${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+        const res = await fetchWithRefresh(url);
         if (!res || !res.ok) return;
         const body = await res.json();
         setPosts(body.posts || []);
@@ -186,6 +189,24 @@ export default function Feed() {
 
     loadPostsWithCache();
   }, []);
+
+  // Reload when center filter changes
+  useEffect(() => {
+    const load = async () => {
+      const cacheKey = `/api/feed${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+      try {
+        const url = `/api/feed${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+        const res = await fetchWithRefresh(url);
+        if (!res || !res.ok) return;
+        const body = await res.json();
+        setPosts(body.posts || []);
+        setCached(cacheKey, { posts: body.posts || [] }, DEFAULT_TTL);
+      } catch (e) {
+        if (import.meta.env.DEV) console.error('Failed to load feed for center filter', e);
+      }
+    };
+    load();
+  }, [centerFilter]);
 
   // load center name when AuthContext user is available ( mirrors Sidebar behaviour )
   useEffect(() => {
@@ -234,6 +255,25 @@ export default function Feed() {
       if (mounted) setCenterName(null);
     }
     loadCenter();
+    return () => { mounted = false; };
+  }, [currentUser]);
+
+  // If super-admin, load centers for filter
+  useEffect(() => {
+    let mounted = true;
+    const loadCenters = async () => {
+      if (!currentUser || currentUser.role !== 'super-admin') return;
+      try {
+        const res = await fetchWithRefresh('/api/centers', { credentials: 'include' });
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        if (Array.isArray(data)) setCenters(data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+      } catch (e) {
+        if (import.meta.env.DEV) console.error('Failed to load centers for filter', e);
+      }
+    };
+    loadCenters();
     return () => { mounted = false; };
   }, [currentUser]);
 
@@ -668,6 +708,18 @@ export default function Feed() {
               <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{centerName ? `• ${centerName}` : t('feed.center_news')}</div>
             </div>
         </div>
+
+        {currentUser && currentUser.role === 'super-admin' && (
+          <div className="mb-4">
+            <label className="text-sm font-medium mr-2">Filtrer par centre:</label>
+            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border rounded px-2 py-1">
+              <option value="">Tous les centres</option>
+              {centers.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Composer */}
   <form onSubmit={handleSubmit} className="bg-[#f0f9ff] rounded-2xl shadow p-3 md:p-6 mb-6 border border-gray-200">

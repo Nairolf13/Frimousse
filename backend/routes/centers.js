@@ -1,10 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prismaClient');
 const requireAuth = require('../middleware/authMiddleware');
 // small debug wrapper: enable birthday logs only when SHOW_BIRTHDAY_LOGS=1
 const debug = process.env.SHOW_BIRTHDAY_LOGS === '1' ? console.debug.bind(console) : () => {};
+
+// GET /api/centers - Get all centers (super-admin only)
+router.get('/', requireAuth, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'super-admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Only select fields that exist on the Center model in Prisma schema
+    const centers = await prisma.center.findMany({
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    res.json(centers);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
 
 // GET /api/centers/:id
 router.get('/:id', requireAuth, async (req, res) => {

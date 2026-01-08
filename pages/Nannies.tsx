@@ -9,14 +9,14 @@ import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 const API_URL = import.meta.env.VITE_API_URL;
 
 
-function PlanningModal({ nanny, onClose }: { nanny: Nanny; onClose: () => void }) {
+function PlanningModal({ nanny, onClose, centerId }: { nanny: Nanny; onClose: () => void; centerId?: string | null }) {
   const { t } = useI18n();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
         <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
         <h2 className="text-xl font-bold mb-4 text-center">{t('nanny.planning.of', { name: nanny.name })}</h2>
-        <NannyCalendar nannyId={nanny.id} />
+        <NannyCalendar nannyId={nanny.id} centerId={centerId} />
       </div>
     </div>
   );
@@ -94,6 +94,8 @@ export default function Nannies() {
   
     const [assignments, setAssignments] = useState<Assignment[]>([]); 
   const [loading, setLoading] = useState(true);
+    const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
+    const [centerFilter, setCenterFilter] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   // --- geodata/autocomplete (copied from ParentDashboard/RegisterPage)
   type GeodataPlace = { house_number?: string | null; street?: string | null; city?: string | null; state?: string | null; country?: string | null; postcode?: string | null; name?: string };
@@ -258,7 +260,7 @@ export default function Nannies() {
 
   const fetchNannies = React.useCallback(() => {
     setLoading(true);
-    const cacheKeyNannies = `${API_URL}/nannies`;
+    const cacheKeyNannies = `${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
     const cached = getCached<Nanny[]>(cacheKeyNannies);
     if (cached) {
         setNannies(cached);
@@ -300,7 +302,7 @@ export default function Nannies() {
       }
     (async () => {
       try {
-        const res = await fetchWithRefresh(`${API_URL}/nannies/batch/details`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        const res = await fetchWithRefresh(`${API_URL}/nannies/batch/details${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
         if (!res.ok) throw new Error('Failed to load nannies');
         const enriched = await res.json();
         setNannies(enriched);
@@ -320,7 +322,7 @@ export default function Nannies() {
         console.error('Failed to fetch nannies batch details', err);
         // fallback: simple list fetch
         try {
-          const res = await fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' });
+          const res = await fetchWithRefresh(`${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`, { credentials: 'include' });
           const nannies = await res.json();
           setNannies(nannies);
           const amounts: Record<string, number> = {};
@@ -347,6 +349,32 @@ export default function Nannies() {
       if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
     };
   }, [fetchNannies]);
+
+  // reload nannies when center filter changes
+  useEffect(() => {
+    fetchNannies();
+  }, [centerFilter, fetchNannies]);
+
+  // If super-admin, load centers for filter
+  useEffect(() => {
+    let mounted = true;
+    const loadCenters = async () => {
+      const u = user as { role?: string | null } | null;
+      if (!u || u.role !== 'super-admin') return;
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/centers`, { credentials: 'include' });
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        if (Array.isArray(data)) setCenters(data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        else if (data && typeof data === 'object' && 'centers' in data && Array.isArray((data as { centers: unknown[] }).centers)) setCenters((data as { centers: { id: string; name: string }[] }).centers.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+      } catch (e) {
+        console.error('Failed to load centers for filter', e);
+      }
+    };
+    loadCenters();
+    return () => { mounted = false; };
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -422,7 +450,7 @@ export default function Nannies() {
         };
         setNannies(prev => [optimisticNanny, ...prev]);
         try {
-          const cacheKey = `${API_URL}/nannies`;
+          const cacheKey = `${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
           const existing = getCached<Nanny[]>(cacheKey) || [];
           setCached(cacheKey, [optimisticNanny, ...existing]);
         } catch (err) { void err; }
@@ -493,7 +521,7 @@ export default function Nannies() {
         // Update local list with edited nanny if available
         if (savedNanny) {
           setNannies(prev => prev.map(n => (String(n.id) === String(editingId) ? savedNanny as Nanny : n)));
-          try { setCached(`${API_URL}/nannies`, getCached<Nanny[]>(`${API_URL}/nannies`)?.map(n => (String(n.id) === String(editingId) ? savedNanny as Nanny : n)) ); } catch (err) { void err; }
+          try { const cacheKey = `${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`; setCached(cacheKey, getCached<Nanny[]>(cacheKey)?.map(n => (String(n.id) === String(editingId) ? savedNanny as Nanny : n)) ); } catch (err) { void err; }
         }
         setMessages(m => ({ ...m, [editingId]: { text: 'Mise à jour effectuée', type: 'success' } }));
         setTimeout(() => setMessages(m => ({ ...m, [editingId]: null })), 3000);
@@ -533,7 +561,7 @@ export default function Nannies() {
             return [fullNanny as Nanny, ...prev];
           });
           try {
-            const cacheKey = `${API_URL}/nannies`;
+            const cacheKey = `${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
             const existing = getCached<Nanny[]>(cacheKey) || [];
             const optId = optimisticIdRef.current;
             if (optId) {
@@ -636,7 +664,7 @@ export default function Nannies() {
       // Remove the deleted nanny from local state so UI updates immediately
       setNannies(prev => prev.filter(n => String(n.id) !== String(deleteId)));
       // Also clear cached nannies so subsequent fetches reflect deletion
-  try { setCached(`${API_URL}/nannies`, undefined); } catch { /* ignore cache errors */ }
+  try { setCached(`${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`, undefined); } catch { /* ignore cache errors */ }
       // refetch to ensure related data (cotisations, totals) are up to date
       fetchNannies();
       // show inline success banner
@@ -723,6 +751,15 @@ export default function Nannies() {
 
         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-6 w-full filter-responsive">
           <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('nanny.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64" />
+          {user && typeof user.role === 'string' && user.role === 'super-admin' && (
+            <div className="flex items-center">
+              <label className="text-sm font-medium mr-2">Filtrer par centre:</label>
+              <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border rounded px-3 h-9 min-w-0 max-w-xs text-sm bg-white">
+                <option value="">Tous les centres</option>
+                {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
           <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border rounded px-3 py-2 text-xs md:text-base bg-white text-gray-700 shadow-sm w-full md:w-auto">
             <option value="">{t('nanny.filter.any')}</option>
             <option value="Disponible">{t('nanny.filter.disponible')}</option>
@@ -956,8 +993,13 @@ export default function Nannies() {
                     style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
                   >
                     <div
-                      className={`absolute inset-0 w-full h-full p-3 sm:p-4 md:p-6 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
+                      className={`absolute inset-0 w-full h-full p-3 sm:p-4 md:p-6 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent cursor-pointer hover:opacity-95 transition-opacity`}
                       style={{ backfaceVisibility: 'hidden' }}
+                      onClick={() => setPlanningNanny(nanny)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPlanningNanny(nanny); } }}
+                      aria-label={`Voir le planning de ${nanny.name}`}
                     >
                         <div className="w-full pt-2 sm:pt-3 text-center">
                           <div className="flex items-center justify-center">
@@ -991,7 +1033,7 @@ export default function Nannies() {
                         <span className="flex items-center gap-2 w-full justify-start">
                           <span className="w-5 text-center text-sm sm:text-base" role="img" aria-label="Email">✉️</span>
                           {nanny.email ? (
-                            <a href={`mailto:${nanny.email}`} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
+                            <a href={`mailto:${nanny.email}`} onClick={(e) => e.stopPropagation()} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
                           ) : (
                             <span className="text-gray-400 text-xs sm:text-sm">—</span>
                           )}
@@ -999,7 +1041,7 @@ export default function Nannies() {
                         <span className="flex items-center gap-2 w-full justify-start">
                           <span aria-hidden className={`inline-block ${nanny.contact ? '' : 'text-gray-300'}`}>📞</span>
                           {nanny.contact ? (
-                            <a href={`tel:${nanny.contact}`} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
+                            <a href={`tel:${nanny.contact}`} onClick={(e) => e.stopPropagation()} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
                           ) : (
                             <span className="text-gray-400 text-xs sm:text-sm">—</span>
                           )}
@@ -1035,6 +1077,7 @@ export default function Nannies() {
                                   className="w-20 px-2 py-1 border rounded text-sm"
                                   value={cotisationAmounts[nanny.id] ?? 10}
                                   onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
+                                  onClick={(e) => e.stopPropagation()}
                                 />
                               ) : (
                                 <span className="text-base font-bold text-[#08323a]">10€</span>
@@ -1054,7 +1097,7 @@ export default function Nannies() {
                               <button
                                 className="ml-2 text-[#0b5566] text-xs font-semibold px-3 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={cotisation?.loading || isPaymentModalOpen}
-                                onClick={() => requestPay(nanny.id)}
+                                onClick={(e) => { e.stopPropagation(); requestPay(nanny.id); }}
                               >
                                 {cotisation?.loading ? t('nanny.payment.loading') : isPaymentModalOpen ? t('nanny.payment.confirming') : t('nanny.payment.pay')}
                               </button>
@@ -1085,7 +1128,7 @@ export default function Nannies() {
                         <div className="flex items-center gap-2 mt-2">
                           <div className="flex gap-1">
                             <button
-                              onClick={() => setPlanningNanny(nanny)}
+                              onClick={(e) => { e.stopPropagation(); setPlanningNanny(nanny); }}
                               className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
                               title={t('nanny.planning.button')}
                               aria-label={t('nanny.planning.button') as string}
@@ -1094,14 +1137,14 @@ export default function Nannies() {
                               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-current"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                             </button>
                             <button
-                              onClick={() => handleEdit(nanny)}
+                              onClick={(e) => { e.stopPropagation(); handleEdit(nanny); }}
                               className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
                               title={t('children.action.edit')}
                             >
                               <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
                             </button>
                             <button
-                                onClick={() => setDeleteId(nanny.id)}
+                                onClick={(e) => { e.stopPropagation(); setDeleteId(nanny.id); }}
                                 className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm"
                                 title={t('children.action.delete')}
                               >
@@ -1156,7 +1199,7 @@ export default function Nannies() {
       )}
 
       {planningNanny && (
-        <PlanningModal nanny={planningNanny} onClose={() => setPlanningNanny(null)} />
+        <PlanningModal nanny={planningNanny} onClose={() => setPlanningNanny(null)} centerId={centerFilter} />
       )}
       {/* Admin password reset confirmation modal */}
       {adminResetModal && adminResetModal.open && (

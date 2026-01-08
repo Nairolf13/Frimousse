@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
-import Select from 'react-select';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -18,6 +17,11 @@ interface Activity {
 }
 
 interface Nanny {
+  id: string;
+  name: string;
+}
+
+interface Center {
   id: string;
   name: string;
 }
@@ -60,6 +64,8 @@ export default function WeeklyActivityCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [activities, setActivities] = useState<Activity[]>([]);
   const [adding, setAdding] = useState(false);
+  const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
+  const [centerFilter, setCenterFilter] = useState<string | null>(null);
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     startTime: '07:00',
@@ -74,17 +80,42 @@ export default function WeeklyActivityCalendar() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
-    fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => setNannies(data));
-  }, []);
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchWithRefresh(`${API_URL}/schedules`, { credentials: 'include' })
+    const url = `${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+    fetchWithRefresh(url, { credentials: 'include' })
       .then(res => res.json())
-      .then(data => setActivities(data));
-  }, [currentDate]);
+      .then(data => setNannies(data)).catch(() => setNannies([]));
+  }, [centerFilter]);
+
+  // If super-admin, load centers for filter
+  useEffect(() => {
+    let mounted = true;
+    const u = (user as { role?: string | null } | null);
+    if (!u || u.role !== 'super-admin') return;
+    (async () => {
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/centers`, { credentials: 'include' });
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        if (Array.isArray(data)) setCenters(data.map((c: Center) => ({ id: c.id, name: c.name })));
+        else if (data && data.centers && Array.isArray(data.centers)) setCenters(data.centers.map((c: Center) => ({ id: c.id, name: c.name })));
+      } catch (e) {
+        console.error('Failed to load centers for filter', e);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [user]);
+
+  useEffect(() => {
+    const dateParam = currentDate.toISOString().split('T')[0];
+    const url = `${API_URL}/schedules${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}&date=${encodeURIComponent(dateParam)}` : `?date=${encodeURIComponent(dateParam)}`}`;
+    fetchWithRefresh(url, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => setActivities(data)).catch(() => setActivities([]));
+  }, [currentDate, centerFilter]);
 
 
   const handleAddActivity = async () => {
@@ -139,7 +170,9 @@ export default function WeeklyActivityCalendar() {
       alert('Erreur lors de la sauvegarde de l\'activité: ' + text);
       return;
     }
-    await fetchWithRefresh(`${API_URL}/schedules`, { credentials: 'include' })
+    const dateParam = currentDate.toISOString().split('T')[0];
+    const schedulesUrl = `${API_URL}/schedules${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}&date=${encodeURIComponent(dateParam)}` : `?date=${encodeURIComponent(dateParam)}`}`;
+    await fetchWithRefresh(schedulesUrl, { credentials: 'include' })
       .then(res => res.json())
       .then(data => setActivities(data));
     setForm({ date: new Date().toISOString().split('T')[0], startTime: '07:00', endTime: '08:00', name: '', comment: '', nannyIds: [], showNannyDropdown: false });
@@ -156,7 +189,9 @@ export default function WeeklyActivityCalendar() {
     setModalOpen(false);
     setSelectedActivity(null);
     await fetchWithRefresh(`${API_URL}/schedules/${id}`, { method: 'DELETE', credentials: 'include' });
-    await fetchWithRefresh(`${API_URL}/schedules`, { credentials: 'include' })
+    const dateParam = currentDate.toISOString().split('T')[0];
+    const schedulesUrl = `${API_URL}/schedules${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}&date=${encodeURIComponent(dateParam)}` : `?date=${encodeURIComponent(dateParam)}`}`;
+    await fetchWithRefresh(schedulesUrl, { credentials: 'include' })
       .then(res => res.json())
       .then((data) => setActivities(data));
   }
@@ -186,7 +221,6 @@ export default function WeeklyActivityCalendar() {
 
   const weekLabel = `${new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(weekDates[0])} - ${new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(weekDates[6])}`;
 
-  const { user } = useAuth();
   const isParent = !!user && String(user.role || '').toLowerCase() === 'parent';
 
   return (
@@ -197,12 +231,25 @@ export default function WeeklyActivityCalendar() {
             <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('activities.title')}</h1>
             <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{weekLabel}</div>
           </div>
-          <div className="flex items-center gap-2 mt-2 md:mt-0">
-            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#60;</button>
-            <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#62;</button>
-            {!isParent && (
-              <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base ml-2">{t('activities.add')}</button>
+          <div className="flex flex-col md:flex-row items-center gap-2 mt-2 md:mt-0">
+              {user && (user as { role?: string | null }).role === 'super-admin' && (
+              <div className="flex items-center flex-nowrap w-full md:w-auto mb-2 md:mb-0 md:mr-2 justify-center md:justify-start">
+                <label className="text-sm font-medium mr-2 whitespace-nowrap">Filtrer par centre:</label>
+                  <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border rounded px-3 h-9 min-w-0 max-w-xs text-sm">
+                  <option value="">Tous les centres</option>
+                  {centers.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
             )}
+            <div className="flex items-center gap-2">
+              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#60;</button>
+              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition">&#62;</button>
+              {!isParent && (
+                <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base ml-2">{t('activities.add')}</button>
+              )}
+            </div>
           </div>
         </div>
         <div className="hidden lg:block max-w-5xl mx-auto">
@@ -456,22 +503,19 @@ export default function WeeklyActivityCalendar() {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Nannies assignées</label>
-                <Select
-                  isMulti
-                  options={nannies.map(n => ({ value: n.id, label: n.name }))}
-                  value={nannies.filter(n => form.nannyIds.includes(n.id)).map(n => ({ value: n.id, label: n.name }))}
-                  onChange={selected => {
-                    setForm(f => ({ ...f, nannyIds: selected ? (selected as { value: string; label: string }[]).map(s => s.value) : [] }));
+                <select
+                  multiple
+                  value={form.nannyIds}
+                  onChange={e => {
+                    const sel = Array.from((e.target as HTMLSelectElement).selectedOptions).map(o => o.value);
+                    setForm(f => ({ ...f, nannyIds: sel }));
                   }}
-                  placeholder={t('children.nannies.label')}
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  styles={{
-                    control: (base) => ({ ...base, borderColor: '#bfdbfe', minHeight: '3rem', boxShadow: 'none' }),
-                    multiValue: (base) => ({ ...base, backgroundColor: '#dbeafe', color: '#1d4ed8' }),
-                    option: (base, state) => ({ ...base, backgroundColor: state.isSelected ? '#dbeafe' : '#fff', color: '#1d4ed8' }),
-                  }}
-                />
+                  className="border border-blue-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
+                >
+                  {nannies.map(n => (
+                    <option key={n.id} value={n.id}>{n.name}</option>
+                  ))}
+                </select>
               </div>
                 <div className="flex gap-2 mt-4">
                 <button type="submit" className="flex-1 bg-[#0b5566] text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition">{selectedActivity ? t('activities.modal.edit') ?? 'Modifier' : t('activities.modal.add') ?? 'Ajouter'}</button>
