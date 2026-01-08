@@ -43,15 +43,6 @@ export default function GuideAddChildPage() {
             <div className="mt-8 text-[#08323a] text-sm">Astuce : Utilisez les groupes pour organiser les enfants par tranche d'âge.</div>
           </div>
         </section>
-        <div className="max-w-4xl mx-auto text-center mt-10 mb-8">
-          <button
-            onClick={() => navigate('/support')} 
-            className="px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
-            aria-label="Retour au support (bas de page)"
-          >
-            ← Retour au support
-          </button>
-        </div>
       </main>
     </div>
   );

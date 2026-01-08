@@ -161,4 +161,18 @@ router.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Debug endpoint: Service worker reports when it receives a push (only when PUSH_DEBUG=true)
+router.post('/debug/received', async (req, res) => {
+  try {
+    if (process.env.PUSH_DEBUG !== 'true') {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[SW Debug] Error:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 module.exports = router;

@@ -2,7 +2,13 @@ const SW_VERSION = '__SW_VERSION__'; // replace at build time if possible (or ch
 
 self.addEventListener('push', function(event) {
   let data = {};
-  try { data = event.data.json(); } catch (e) { data = { title: 'Notification', body: event.data ? event.data.text() : '' }; }
+  try { 
+    data = event.data.json();
+  } catch (e) { 
+    console.error('[SW] Failed to parse push data:', e);
+    data = { title: 'Notification', body: event.data ? event.data.text() : '' }; 
+  }
+  
   const title = data.title || 'Frimousse';
   const options = {
     body: data.body || '',
@@ -11,6 +17,8 @@ self.addEventListener('push', function(event) {
     badge: data.badge || '/imgs/LogoFrimousse-512.png',
     data: data.data || {},
     tag: data.tag || undefined,
+    requireInteraction: false,
+    silent: false
   };
 
   // Report back to backend that SW received the push (useful for remote debugging).
@@ -23,9 +31,9 @@ self.addEventListener('push', function(event) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: data.title, body: data.body, tag: data.tag, data: data.data || {}, endpoint, receivedAt: Date.now() })
-      }).catch(()=>{});
+      }).catch((e)=>{ console.error('[SW] Report failed:', e); });
     } catch (e) {
-      // ignore
+      console.error('[SW] Report error:', e);
     }
   };
 
@@ -36,12 +44,19 @@ self.addEventListener('push', function(event) {
       for (const c of all) {
         try {
           c.postMessage({ type: 'push-received', title: data.title, body: data.body, data: data.data || {}, receivedAt: Date.now() });
-        } catch (e) {}
+        } catch (e) {
+          console.error('[SW] Failed to notify client:', e);
+        }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('[SW] Notify clients error:', e);
+    }
   };
 
-  event.waitUntil(Promise.all([self.registration.showNotification(title, options), report(), notifyClients()]));
+  const showNotif = self.registration.showNotification(title, options)
+    .catch((e) => console.error('[SW] Failed to show notification:', e));
+
+  event.waitUntil(Promise.all([showNotif, report(), notifyClients()]));
 });
 
 self.addEventListener('notificationclick', function(event) {

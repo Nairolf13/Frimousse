@@ -118,4 +118,36 @@ router.post('/emaillogs/:id/resend', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/admin/centers
+router.get('/centers', requireAuth, async (req, res) => {
+  try {
+    // only super-admins
+    if (!req.user || req.user.role !== 'super-admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const centers = await prisma.center.findMany({
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+        _count: {
+          select: {
+            users: true,
+            parents: true,
+            children: true,
+            nannies: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json({ data: centers });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

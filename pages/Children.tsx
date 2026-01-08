@@ -204,6 +204,8 @@ export default function Children() {
   const [photoConsentMap, setPhotoConsentMap] = useState<Record<string, boolean>>({});
   const [prescriptionModal, setPrescriptionModal] = useState<{ open: boolean; url?: string | null; childName?: string | null }>({ open: false, url: null, childName: null });
   const [emptyPrescriptionModal, setEmptyPrescriptionModal] = useState<{ open: boolean; childName?: string | null }>({ open: false, childName: null });
+  const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
+  const [centerFilter, setCenterFilter] = useState<string | null>(null);
   
 
   
@@ -230,12 +232,12 @@ export default function Children() {
     setLoading(true);
     try {
       const today = new Date().toISOString().split('T')[0];
-  const cacheKeyChildren = `${API_URL}/children`;
+  const cacheKeyChildren = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
   const cachedChildren = getCached<unknown[]>(cacheKeyChildren);
   let childrenDataRaw: unknown[] | null = cachedChildren ?? null;
       const assignmentsPromise = fetchWithRefresh(`${API_URL}/assignments?start=${today}&end=${today}`, { credentials: 'include' });
       if (!childrenDataRaw) {
-        const childrenRes = await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' });
+        const childrenRes = await fetchWithRefresh(`${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`, { credentials: 'include' });
         childrenDataRaw = await childrenRes.json();
         // cache children list for short TTL
         setCached(cacheKeyChildren, childrenDataRaw);
@@ -254,7 +256,7 @@ export default function Children() {
   setChildren(childrenData);
   // keep the shared cache in sync after a fresh load
   try {
-    const cacheKeyChildren = `${API_URL}/children`;
+    const cacheKeyChildren = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
     setCached(cacheKeyChildren, childrenData);
   } catch {
     // noop
@@ -353,9 +355,9 @@ export default function Children() {
       try {
         const todayMonth = getCurrentMonth();
         // try to reuse cached children list
-        const cacheKeyChildren = `${API_URL}/children`;
+        const cacheKeyChildren = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
         const cachedChildren = getCached<unknown[]>(cacheKeyChildren);
-        const childrenData: Child[] = cachedChildren ? (cachedChildren as unknown as Child[]) : (await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' }).then(r => r.json()));
+        const childrenData: Child[] = cachedChildren ? (cachedChildren as unknown as Child[]) : (await fetchWithRefresh(`${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`, { credentials: 'include' }).then(r => r.json()));
         const billingData: Record<string, Billing> = {};
         const ids = childrenData.map(c => c.id);
         if (ids.length > 0) {
@@ -383,6 +385,38 @@ export default function Children() {
       }
     };
     fetchBillings();
+  }, [user]);
+
+  // reload children when center filter changes
+  useEffect(() => {
+    fetchChildren();
+  }, [centerFilter]);
+
+  // If super-admin, load centers for filter
+  useEffect(() => {
+    let mounted = true;
+    const loadCenters = async () => {
+      const u = user as { role?: string | null } | null;
+      if (!u || u.role !== 'super-admin') return;
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/centers`, { credentials: 'include' });
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        // Accept either an array or an object { centers: [...] } for backward compatibility
+        if (Array.isArray(data)) {
+          setCenters(data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        } else if (data && typeof data === 'object' && 'centers' in data && Array.isArray((data as { centers: unknown[] }).centers)) {
+          setCenters((data as { centers: { id: string; name: string }[] }).centers.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        } else {
+          console.debug('Unexpected /api/centers response shape', data);
+        }
+      } catch (e) {
+        console.error('Failed to load centers for filter', e);
+      }
+    };
+    loadCenters();
+    return () => { mounted = false; };
   }, [user]);
 
   // cleanup any pending timers when component unmounts
@@ -498,7 +532,7 @@ export default function Children() {
           });
           // update shared cache after optimistic add/edit
           try {
-            const cacheKeyChildren = `${API_URL}/children`;
+            const cacheKeyChildren = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
             const existing = getCached<Child[]>(cacheKeyChildren) ?? [];
             const updated = wasEditing ? existing.map(c => c.id === newChild.id ? newChild : c) : [newChild, ...existing];
             setCached(cacheKeyChildren, updated);
@@ -561,13 +595,13 @@ export default function Children() {
   const deletedName = deletedChild ? deletedChild.name : "l'enfant";
   setChildren(prev => prev.filter(c => c.id !== deleteId));
   // update shared cache to remove deleted child
-  try {
-    const cacheKeyChildren = `${API_URL}/children`;
-    const existing = getCached<Child[]>(cacheKeyChildren) ?? [];
-    setCached(cacheKeyChildren, existing.filter(c => c.id !== deleteId));
-  } catch {
-    // ignore cache issues
-  }
+    try {
+      const cacheKeyChildren = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+      const existing = getCached<Child[]>(cacheKeyChildren) ?? [];
+      setCached(cacheKeyChildren, existing.filter(c => c.id !== deleteId));
+    } catch {
+      // ignore cache issues
+    }
   setDeleteId(null);
   // show success message banner and clear any previous timer
   if (successTimer.current) {
@@ -657,6 +691,15 @@ export default function Children() {
           <div className="w-full md:w-auto">
             <div className="flex flex-col md:flex-row md:items-center gap-2">
               <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
+              {user && (user as { role?: string | null }).role === 'super-admin' && (
+                <div className="ml-2">
+                  <label className="text-sm font-medium mr-2">Filtrer par centre:</label>
+                  <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border rounded px-3 h-9 min-w-0 max-w-xs text-sm">
+                    <option value="">Tous les centres</option>
+                    {centers.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
+                  </select>
+                </div>
+              )}
               <div className="flex gap-2">
                 <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm">
                   <option value="">{t('children.group.all')}</option>

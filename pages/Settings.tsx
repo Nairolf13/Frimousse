@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe';
 import { useI18n } from '../src/lib/useI18n';
 import LanguageDropdown from '../components/LanguageDropdown';
+import { HiOutlineChat, HiOutlinePaperAirplane, HiOutlineClock, HiOutlineCheckCircle } from 'react-icons/hi';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -11,6 +12,32 @@ type ParentForm = { role: 'parent'; id: string; firstName: string; lastName: str
 type NannyForm = { role: 'nanny'; id: string; name: string; availability?: string; experience?: number; contact?: string; email?: string; birthDate?: string };
 type UserForm = { role: 'user'; id: string; name?: string; email?: string; phone?: string; address?: string; postalCode?: string; city?: string; region?: string; country?: string; birthDate?: string; lat?: number | null; lon?: number | null; geodataRaw?: unknown };
 type ProfileForm = ParentForm | NannyForm | UserForm | null;
+
+type Ticket = {
+  id: string;
+  subject: string;
+  message: string;
+  status: 'open' | 'closed';
+  createdAt: string;
+  updatedAt: string;
+  replies: Reply[];
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    center?: {
+      id: string;
+      name: string;
+    };
+  };
+};
+
+type Reply = {
+  id: string;
+  message: string;
+  isFromAdmin: boolean;
+  createdAt: string;
+};
 
 function ProfileEditor({ onClose }: { onClose: () => void }) {
   const { t } = useI18n();
@@ -349,7 +376,7 @@ function ProfileButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button className="flex-1 bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" onClick={() => setOpen(true)}>{t('settings.profile.edit')}</button>
+      <button className="flex-1 bg-[#0b5566] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#08323a]" onClick={() => setOpen(true)}>{t('settings.profile.edit')}</button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/30 backdrop-blur-sm overflow-auto py-8">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
@@ -398,6 +425,19 @@ export default function Settings() {
   const [deleteError, setDeleteError] = useState('');
   const { t, setLocale } = useI18n();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [showSupportModal, setShowSupportModal] = useState(false);
+  const [supportTickets, setSupportTickets] = useState<Ticket[]>([]);
+  const [supportLoading, setSupportLoading] = useState(false);
+  const [supportError, setSupportError] = useState<string | null>(null);
+  const [ticketsByCenter, setTicketsByCenter] = useState<Record<string, Ticket[]>>({});
+  const [showNewTicket, setShowNewTicket] = useState(false);
+  const [newSubject, setNewSubject] = useState('');
+  const [newMessage, setNewMessage] = useState('');
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [replyMessage, setReplyMessage] = useState('');
+  const supportModalContainerRef = useRef<HTMLDivElement | null>(null);
+  const replyInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     // detect if current user is admin to show admin-only settings
@@ -406,7 +446,8 @@ export default function Settings() {
         const res = await fetchWithRefresh(`${API_URL}/user/me`, { credentials: 'include' });
         if (!res.ok) return;
         const u = await res.json();
-  if (u && (u.role === 'admin' || (typeof u.role === 'string' && u.role.toLowerCase().includes('super')))) setIsAdmin(true);
+        if (u && (u.role === 'admin' || (typeof u.role === 'string' && u.role.toLowerCase().includes('super')))) setIsAdmin(true);
+        if (u && typeof u.role === 'string' && u.role.toLowerCase().includes('super')) setIsSuperAdmin(true);
       } catch {
         // ignore
       }
@@ -453,6 +494,164 @@ export default function Settings() {
       }
     })();
   }, []);
+
+  const loadSupportTickets = useCallback(async () => {
+    setSupportLoading(true);
+    setSupportError(null);
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/support/tickets`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Erreur serveur');
+      const data = await res.json();
+      setSupportTickets(data.tickets || []);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSupportError(msg);
+    } finally {
+      setSupportLoading(false);
+    }
+  }, []);
+  const loadTicketsByCenter = useCallback(async () => {
+    setSupportLoading(true);
+    setSupportError(null);
+    try {
+      // Load all tickets
+      const ticketsRes = await fetchWithRefresh(`${API_URL}/support/admin/tickets`, { credentials: 'include' });
+      if (!ticketsRes.ok) throw new Error('Erreur chargement tickets');
+      const ticketsData = await ticketsRes.json();
+      const tickets = ticketsData.tickets || [];
+
+      // Group tickets by center and collect unique centers
+      const grouped: Record<string, Ticket[]> = {};
+      const uniqueCenters = new Map<string, {id: string, name: string}>();
+
+      tickets.forEach((ticket: Ticket) => {
+        if (ticket.user.center) {
+          uniqueCenters.set(ticket.user.center.id, ticket.user.center);
+          const key = `${ticket.user.center.id}:${ticket.user.center.name}`;
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(ticket);
+        } else {
+          // Tickets without center
+          const key = 'unknown:Centre inconnu';
+          if (!grouped[key]) grouped[key] = [];
+          grouped[key].push(ticket);
+        }
+      });
+
+      setTicketsByCenter(grouped);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSupportError(msg);
+    } finally {
+      setSupportLoading(false);
+    }
+  }, []);
+  const createSupportTicket = async () => {
+    if (!newSubject.trim() || !newMessage.trim()) return;
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/support/tickets`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: newSubject, message: newMessage })
+      });
+      if (!res.ok) throw new Error('Erreur lors de la création du ticket');
+      const data = await res.json().catch(() => null);
+      const created: Ticket | null = data && (data.ticket || data) ? (data.ticket || data) : null;
+      setNewSubject('');
+      setNewMessage('');
+      setShowNewTicket(false);
+      // Ensure support modal is visible and select the created ticket
+      setShowSupportModal(true);
+      if (created && created.id) {
+        setSelectedTicket(created);
+        // Optimistically add to list so it appears immediately
+        setSupportTickets(prev => [created, ...prev.filter(t => t.id !== created.id)]);
+      }
+      // Refresh list from server to keep in sync
+      await loadSupportTickets();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setSupportError(msg);
+    }
+  };
+
+  const sendSupportReply = async () => {
+    if (!selectedTicket || !replyMessage.trim()) return;
+    const message = replyMessage.trim();
+    // sendSupportReply called
+
+    // Create temp reply for instant UI feedback
+    const tempReply = {
+      id: `temp-${Date.now()}`,
+      message,
+      isFromAdmin: false,
+      createdAt: new Date().toISOString()
+    } as unknown as Reply;
+
+    // Optimistically update selectedTicket and supportTickets
+    setSelectedTicket(prev => prev ? { ...prev, replies: [...(prev.replies || []), tempReply] } : prev);
+    setSupportTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, replies: [...(t.replies || []), tempReply] } : t));
+    setReplyMessage('');
+
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/support/tickets/${selectedTicket.id}/reply`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message })
+      });
+      if (!res.ok) throw new Error('Erreur lors de l\'envoi de la réponse');
+
+      const data = await res.json();
+      const realReply = data.reply;
+
+      // Replace temp reply with real reply
+      setSelectedTicket(prev => prev ? {
+        ...prev,
+        replies: (prev.replies || []).map(r => r.id === tempReply.id ? realReply : r)
+      } : prev);
+      setSupportTickets(prev => prev.map(t => t.id === selectedTicket.id ? {
+        ...t,
+        replies: (t.replies || []).map(r => r.id === tempReply.id ? realReply : r)
+      } : t));
+
+      // Refresh list from server to keep in sync
+      await loadSupportTickets();
+    } catch (e: unknown) {
+      console.error('Error sending support reply:', e);
+      // Remove temp reply on error
+      setSelectedTicket(prev => prev ? { ...prev, replies: (prev.replies || []).filter(r => !String(r.id).startsWith('temp-')) } : prev);
+      setSupportTickets(prev => prev.map(t => t.id === selectedTicket.id ? { ...t, replies: (t.replies || []).filter(r => !String(r.id).startsWith('temp-')) } : t));
+      const msg = e instanceof Error ? e.message : String(e);
+      setSupportError(msg);
+    }
+  };
+
+  useEffect(() => {
+    if (showSupportModal) {
+      loadSupportTickets();
+    }
+  }, [showSupportModal, loadSupportTickets]);
+
+  // Auto-scroll to selected ticket conversation and focus reply input
+  useEffect(() => {
+    if (!showSupportModal || !selectedTicket) return;
+    setTimeout(() => {
+      try {
+        if (supportModalContainerRef.current) {
+          supportModalContainerRef.current.scrollTop = supportModalContainerRef.current.scrollHeight;
+        }
+      } catch { /* ignore */ }
+      try { replyInputRef.current?.focus(); } catch { /* ignore */ }
+    }, 80);
+  }, [showSupportModal, selectedTicket]);
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      loadTicketsByCenter();
+    }
+  }, [isSuperAdmin, loadTicketsByCenter]);
 
   return (
   <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
@@ -527,28 +726,8 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="md:flex-1 pr-3">
-                <div className="font-semibold text-gray-800">{t('settings.language.title')}</div>
-                <div className="text-gray-500 text-sm">{t('settings.language.desc')}</div>
-              </div>
-              <div className="md:flex-none w-full md:w-auto">
-                <div className="max-w-[320px] md:max-w-[420px]">
-                  <LanguageDropdown value={language} onChange={(code) => { setLanguage(code); setLocale(code === 'en' ? 'en' : 'fr'); }} />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow p-4 md:col-span-2">
-              <div className="font-semibold text-gray-800 mb-4">Gestion du compte</div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button className="flex-1 bg-[#fcdcdf] text-[#7a2a2a] font-semibold rounded-lg px-4 py-2 shadow hover:bg-[#fbd5d8]" onClick={() => setShowDeleteModal(true)}>{t('settings.account.delete')}</button>
-                <ProfileButton />
-              </div>
-            </div>
-
-            {isAdmin && (
-              <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full md:col-span-2">
+            {isAdmin ? (
+              <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">
                 <div>
                   <div className="font-semibold text-gray-800">🧾 {t('admin.emaillogs.title')}</div>
                   <div className="text-gray-500 text-sm">{t('admin.emaillogs.description')}</div>
@@ -556,19 +735,69 @@ export default function Settings() {
                 <div className="mt-4 flex items-center gap-3">
                   <button
                     onClick={() => { window.location.href = '/admin/emaillogs'; }}
-                    className="bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]"
+                    className="bg-[#0b5566] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#08323a]"
                   >
                     {t('admin.emaillogs.title')}
                   </button>
-                 
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="md:flex-1 pr-3">
+                  <div className="font-semibold text-gray-800">{t('settings.language.title')}</div>
+                  <div className="text-gray-500 text-sm">{t('settings.language.desc')}</div>
+                </div>
+                <div className="md:flex-none w-full md:w-auto">
+                  <div className="max-w-[320px] md:max-w-[420px]">
+                    <LanguageDropdown value={language} onChange={(code) => { setLanguage(code); setLocale(code === 'en' ? 'en' : 'fr'); }} />
+                  </div>
                 </div>
               </div>
             )}
 
-            
+            {!isSuperAdmin && (
+              <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">
+                <div>
+                  <div className="font-semibold text-gray-800">Support Client</div>
+                  <div className="text-gray-500 text-sm">Besoin d'aide ? Contactez notre équipe de support</div>
+                </div>
+                <div className="mt-4">
+                  <button
+                    onClick={() => setShowSupportModal(true)}
+                    className="bg-[#0b5566] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#08323a]"
+                  >
+                    Ouvrir un ticket
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {isAdmin && (
+              <div className="bg-white rounded-2xl shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div className="md:flex-1 pr-3">
+                  <div className="font-semibold text-gray-800">{t('settings.language.title')}</div>
+                  <div className="text-gray-500 text-sm">{t('settings.language.desc')}</div>
+                </div>
+                <div className="md:flex-none w-full md:w-auto">
+                  <div className="max-w-[320px] md:max-w-[420px]">
+                    <LanguageDropdown value={language} onChange={(code) => { setLanguage(code); setLocale(code === 'en' ? 'en' : 'fr'); }} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white rounded-2xl shadow p-4 md:col-span-2">
+              <div className="font-semibold text-gray-800 mb-4">Gestion du compte</div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button className="flex-1 bg-red-600 text-white font-semibold rounded-lg px-4 py-2 shadow hover:bg-red-700" onClick={() => setShowDeleteModal(true)}>{t('settings.account.delete')}</button>
+                <ProfileButton />
+              </div>
+            </div>
+
+
 
                 <div className="md:col-span-2">
-              <button className="w-full bg-[#a9ddf2] text-[#0b5566] px-4 py-2 rounded-lg font-medium hover:bg-[#cfeef9]" style={{marginTop: '8px'}} onClick={async () => {
+              <button className="w-full bg-[#0b5566] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#08323a]" style={{marginTop: '8px'}} onClick={async () => {
                 try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
                 try {
                   // Preserve cookie consent so the banner doesn't reappear after logout/login
@@ -632,6 +861,203 @@ export default function Settings() {
           </div>
         )}
       </div>
+
+      {showSupportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm md:pl-64">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden m-4">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-bold">Support Client</h2>
+              <button
+                onClick={() => setShowSupportModal(false)}
+                className="text-gray-400 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-6">
+              {supportError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-700 rounded">{supportError}</div>
+              )}
+
+              {isSuperAdmin ? (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Tickets par centre</h3>
+                  {supportLoading && <div className="mb-4">Chargement...</div>}
+                  {Object.entries(ticketsByCenter).map(([centerKey, tickets]) => {
+                    const [, centerName] = centerKey.split(':');
+                    return (
+                      <div key={centerKey} className="border rounded-lg p-4">
+                        <h4 className="font-semibold mb-2">{centerName} ({tickets.length})</h4>
+                        <div className="space-y-2">
+                          {tickets.map(ticket => (
+                            <div key={ticket.id} className="p-3 bg-gray-50 rounded-lg">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <div className="font-medium">{ticket.subject}</div>
+                                  <div className="text-sm text-gray-600">Par: {ticket.user.name}</div>
+                                  <div className="text-xs text-gray-400">{new Date(ticket.createdAt).toLocaleDateString()}</div>
+                                </div>
+                                <div className={`px-2 py-1 rounded-full text-xs font-medium ${ticket.status === 'open' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                  {ticket.status === 'open' ? 'Ouvert' : 'Fermé'}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Mes tickets</h3>
+                    <button
+                      onClick={() => setShowNewTicket(true)}
+                      className="bg-[#0b5566] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#08323a]"
+                    >
+                      Nouveau ticket
+                    </button>
+                  </div>
+
+                  {supportLoading && <div className="mb-4">Chargement...</div>}
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-1">
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {supportTickets.map(ticket => (
+                      <div
+                        key={ticket.id}
+                        onClick={() => setSelectedTicket(ticket)}
+                        className={`p-3 rounded-lg cursor-pointer border ${selectedTicket?.id === ticket.id ? 'border-[#0b5566] bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 truncate">{ticket.subject}</div>
+                            <div className="text-xs text-gray-500">{new Date(ticket.createdAt).toLocaleDateString()}</div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {ticket.status === 'open' ? (
+                              <HiOutlineClock className="w-4 h-4 text-yellow-500" />
+                            ) : (
+                              <HiOutlineCheckCircle className="w-4 h-4 text-green-500" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {supportTickets.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">Aucun ticket</div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  {selectedTicket ? (
+                    <div ref={supportModalContainerRef} className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-semibold">{selectedTicket.subject}</h3>
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${selectedTicket.status === 'open' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                          {selectedTicket.status === 'open' ? 'Ouvert' : 'Fermé'}
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 mb-4">
+                        <div className="bg-white p-3 rounded-lg">
+                          <div className="text-sm text-gray-600 mb-1">Votre message initial</div>
+                          <div className="text-sm">{selectedTicket.message}</div>
+                          <div className="text-xs text-gray-400 mt-2">{new Date(selectedTicket.createdAt).toLocaleString()}</div>
+                        </div>
+
+                        {selectedTicket.replies.map(reply => (
+                          <div key={reply.id} className={`p-3 rounded-lg ${reply.isFromAdmin ? 'bg-blue-50 ml-4' : 'bg-white'}`}>
+                            <div className="text-sm text-gray-600 mb-1">{reply.isFromAdmin ? 'Support' : 'Vous'}</div>
+                            <div className="text-sm">{reply.message}</div>
+                            <div className="text-xs text-gray-400 mt-2">{new Date(reply.createdAt).toLocaleString()}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {selectedTicket.status === 'open' && (
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                                ref={replyInputRef}
+                                value={replyMessage}
+                                onChange={e => setReplyMessage(e.target.value)}
+                            placeholder="Tapez votre réponse..."
+                            className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                            onKeyPress={e => e.key === 'Enter' && sendSupportReply()}
+                          />
+                          <button
+                            onClick={sendSupportReply}
+                            className="bg-[#0b5566] text-white px-4 py-2 rounded-lg hover:bg-[#08323a]"
+                          >
+                            <HiOutlinePaperAirplane className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-center h-64">
+                      <div className="text-center text-gray-500">
+                        <HiOutlineChat className="w-12 h-12 mx-auto mb-4" />
+                        <div>Sélectionnez un ticket pour voir la conversation</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showNewTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm md:pl-64">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md m-4">
+            <h2 className="text-lg font-bold mb-4">Nouveau ticket</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Sujet</label>
+                <input
+                  type="text"
+                  value={newSubject}
+                  onChange={e => setNewSubject(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2"
+                  placeholder="Sujet de votre demande"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Message</label>
+                <textarea
+                  value={newMessage}
+                  onChange={e => setNewMessage(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 h-24 resize-none"
+                  placeholder="Décrivez votre problème..."
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowNewTicket(false)}
+                  className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={createSupportTicket}
+                  className="flex-1 bg-[#0b5566] text-white px-4 py-2 rounded-lg hover:bg-[#08323a]"
+                >
+                  Créer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

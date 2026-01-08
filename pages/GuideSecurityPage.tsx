@@ -37,20 +37,11 @@ export default function GuideSecurityPage() {
               <li>Chaque utilisateur dispose d’un accès personnalisé et sécurisé (mot de passe, rôle).</li>
               <li>Les données sont stockées sur des serveurs sécurisés et régulièrement sauvegardées.</li>
               <li>Respect du RGPD : consentement parental, droit à l’oubli, transparence sur l’utilisation des données.</li>
-              <li>En cas de problème, contactez le support ou consultez la politique de confidentialité.</li>
+              <li>En cas de problème, contactez le support via les paramètres de votre compte ou consultez la politique de confidentialité.</li>
             </ol>
             <div className="mt-8 text-[#08323a] text-sm">La sécurité et la confidentialité sont une priorité pour Frimousse.</div>
           </div>
         </section>
-        <div className="max-w-4xl mx-auto text-center mt-10 mb-8">
-          <button
-            onClick={() => navigate('/support')} 
-            className="px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
-            aria-label="Retour au support (bas de page)"
-          >
-            ← Retour au support
-          </button>
-        </div>
       </main>
     </div>
   );

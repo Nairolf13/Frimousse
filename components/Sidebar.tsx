@@ -3,12 +3,13 @@ import { useAuth } from '../src/context/AuthContext';
 import type { User as AuthUser } from '../src/context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useI18n } from '../src/lib/useI18n';
-import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell, HiOutlineCurrencyDollar, HiOutlineChatAlt } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell, HiOutlineCurrencyDollar, HiOutlineChatAlt, HiOutlineOfficeBuilding } from 'react-icons/hi';
 import { FaRobot } from 'react-icons/fa';
 import MobileMenu from './MobileMenu';
 // caching and rate-limit managed by hooks
 import { useNotificationsContext } from '../src/context/notificationsContext';
 import { useCenterInfo } from '../src/hooks/useCenterInfo';
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 
 function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, string>) => string) {
@@ -47,6 +48,8 @@ function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, st
     { to: '/dashboard', label: t('nav.dashboard'), icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
     { to: '/feed', label: t('nav.feed'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
     { to: '/notifications', label: t('nav.notifications'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
+    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/centers', label: 'Centres', icon: <HiOutlineOfficeBuilding className="w-5 h-5 mr-3" /> }] : []),
+    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/support', label: 'Support', icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }] : []),
     { to: '/children', label: t('nav.children'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
     { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
     { to: '/nannies', label: t('nav.nannies'), icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
@@ -63,12 +66,52 @@ export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuth();
   const { t } = useI18n();
+  const [supportCount, setSupportCount] = useState<number | null>(null);
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   // consume the global notifications context (single-tab polling)
   const { unreadCount, unreadReviews } = useNotificationsContext();
   const centerId = user && (user as { centerId?: string }).centerId;
   const { center } = useCenterInfo(centerId ?? null);
   const [centerName, setCenterName] = useState<string | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    const loadSupportCount = async () => {
+      try {
+        if (!user || typeof user.role !== 'string' || !user.role.toLowerCase().includes('super')) return;
+        const res = await fetchWithRefresh('/api/support/admin/tickets/unread-count', { credentials: 'include' });
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        if (data && typeof data.unread === 'number') setSupportCount(data.unread);
+      } catch (e) {
+        console.error('Failed to load support ticket count', e);
+      }
+    };
+    // debounce multiple triggers (avoid repeated refreshes when notificationsContext polls)
+    const timer = setTimeout(() => { loadSupportCount(); }, 250);
+    return () => { mounted = false; clearTimeout(timer); };
+  }, [user, unreadCount]);
+
+  // Écouter l'événement custom pour rafraîchir le compteur quand un ticket est marqué comme lu
+  useEffect(() => {
+    const refreshSupportCount = async () => {
+      try {
+        if (!user || typeof user.role !== 'string' || !user.role.toLowerCase().includes('super')) return;
+        const res = await fetchWithRefresh('/api/support/admin/tickets/unread-count', { credentials: 'include' });
+        if (!res || !res.ok) return;
+        const data = await res.json();
+        if (data && typeof data.unread === 'number') setSupportCount(data.unread);
+      } catch (e) {
+        console.error('Failed to refresh support count', e);
+      }
+    };
+    window.addEventListener('support-tickets-updated', refreshSupportCount);
+    return () => window.removeEventListener('support-tickets-updated', refreshSupportCount);
+  }, [user]);
+
+  // Note: We don't mark tickets as read just by visiting /admin/support
+  // Tickets are marked as read only when admin opens a specific user's conversation
+
   useEffect(() => {
     setCenterName(center?.name ?? null);
   }, [center]);
@@ -143,6 +186,9 @@ export default function Sidebar() {
                   <span className="flex-1">{link.label}</span>
                   {link.to === '/notifications' && unreadCount > 0 ? (
                     <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-600 text-white">{unreadCount}</span>
+                  ) : null}
+                  {link.to === '/admin/support' && typeof supportCount === 'number' && supportCount > 0 ? (
+                    <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-600 text-white">{supportCount}</span>
                   ) : null}
                   {link.to === '/admin/reviews' && typeof unreadReviews === 'number' && unreadReviews > 0 ? (
                     <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white">{unreadReviews}</span>
