@@ -35,3 +35,5 @@ backend/tmp_http_patch.js
 # Ignore backup JSONs
 /backend/backups/*.json
 __tests__
+# Fichiers de debug temporaires
+backend/tmp_*.js
