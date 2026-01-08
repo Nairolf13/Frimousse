@@ -350,11 +350,6 @@ export default function Nannies() {
     };
   }, [fetchNannies]);
 
-  // reload nannies when center filter changes
-  useEffect(() => {
-    fetchNannies();
-  }, [centerFilter, fetchNannies]);
-
   // If super-admin, load centers for filter
   useEffect(() => {
     let mounted = true;
