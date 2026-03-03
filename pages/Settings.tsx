@@ -726,7 +726,7 @@ export default function Settings() {
               </div>
             </div>
 
-            {isSuperAdmin ? (
+            {isAdmin ? (
               <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">
                 <div>
                   <div className="font-semibold text-gray-800">🧾 {t('admin.emaillogs.title')}</div>

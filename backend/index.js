@@ -18,6 +18,9 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const app = express();
 
+// Trust first proxy (nginx) for correct IP detection with rate limiting
+app.set('trust proxy', 1);
+
 const requiredEnvs = ['JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'STRIPE_SECRET_KEY'];
 for (const e of requiredEnvs) {
   if (!process.env[e]) {

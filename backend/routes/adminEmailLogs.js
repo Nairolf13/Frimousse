@@ -7,9 +7,10 @@ const requireAuth = require('../middleware/authMiddleware');
 // GET /api/admin/emaillogs?limit=50&page=1&page=1
 router.get('/emaillogs', requireAuth, async (req, res) => {
   try {
-    // only super-admins
+    // admins and super-admins
     function isSuperAdmin(user) { if (!user || !user.role) return false; const r = String(user.role).toLowerCase(); return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super'); }
-    if (!isSuperAdmin(req.user)) return res.status(403).json({ error: 'Forbidden' });
+    function isAdmin(user) { return user && user.role === 'admin'; }
+    if (!isSuperAdmin(req.user) && !isAdmin(req.user)) return res.status(403).json({ error: 'Forbidden' });
 
     const limit = Math.min(parseInt(req.query.limit || '50', 10), 200);
     const page = Math.max(parseInt(req.query.page || '1', 10), 1);
@@ -40,10 +41,9 @@ router.get('/emaillogs', requireAuth, async (req, res) => {
     }
 
     // Restrict to email logs for parents in the same center as the admin.
-    // If the admin user has a centerId, only include EmailLogs linked to a PaymentHistory
-    // whose parent.centerId matches the admin's centerId. If the admin has no centerId
-    // (super-admin), keep full access.
-    if (req.user && req.user.centerId) {
+    // Super admins have full access regardless of centerId.
+    // Regular admins only see EmailLogs linked to their center.
+    if (req.user && req.user.centerId && !isSuperAdmin(req.user)) {
       where.paymentHistory = { is: { parent: { centerId: req.user.centerId } } };
     }
 
@@ -68,14 +68,15 @@ router.get('/emaillogs', requireAuth, async (req, res) => {
 router.post('/emaillogs/:id/resend', requireAuth, async (req, res) => {
   try {
     function isSuperAdmin(user) { if (!user || !user.role) return false; const r = String(user.role).toLowerCase(); return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super'); }
-    if (!isSuperAdmin(req.user)) return res.status(403).json({ error: 'Forbidden' });
+    function isAdmin(user) { return user && user.role === 'admin'; }
+    if (!isSuperAdmin(req.user) && !isAdmin(req.user)) return res.status(403).json({ error: 'Forbidden' });
     const id = req.params.id;
     const log = await prisma.emailLog.findUnique({ where: { id }, include: { paymentHistory: true } });
     if (!log) return res.status(404).json({ error: 'EmailLog not found' });
     if (!log.paymentHistory) return res.status(400).json({ error: 'No paymentHistory linked to this EmailLog' });
 
-    // Ensure admin belongs to the same center as the parent (unless admin has no centerId)
-    if (req.user && req.user.centerId) {
+    // Ensure admin belongs to the same center as the parent (super admins have full access)
+    if (req.user && req.user.centerId && !isSuperAdmin(req.user)) {
       const ph = log.paymentHistory;
       const parent = await prisma.parent.findUnique({ where: { id: ph.parentId } });
       if (!parent) return res.status(400).json({ error: 'Parent not found' });
