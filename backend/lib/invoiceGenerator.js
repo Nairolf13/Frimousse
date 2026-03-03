@@ -62,9 +62,11 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
       }
       if (!issuer) issuer = { name: '', address: '', postalCode: '', city: '', country: '', email: '' };
 
+      // Date de facture = date du jour d'envoi
       const now = new Date();
-      const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : now;
-      const dueDate = new Date(invoiceDate.getTime() + 15 * 24 * 3600 * 1000);
+      const invoiceDate = now;
+      // Échéance = le 10 du même mois
+      const dueDate = new Date(now.getFullYear(), now.getMonth(), 10);
       const invoiceNumber = `FA-${invoiceDate.getFullYear()}-${ph.id.slice(0, 6)}`;
 
       const doc = new PDFDocument({ size: 'A4', margin: 36 });

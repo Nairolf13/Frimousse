@@ -50,6 +50,8 @@ router.post('/schedules', auth, async (req, res) => {
 
       // notify participating nannies and parents of children cared for by those nannies
       (async () => {
+        // Skip activity emails if disabled via environment variable
+        if (process.env.DISABLE_ACTIVITY_EMAILS === 'true') return;
         try {
           const { sendTemplatedMail } = require('../lib/email');
           const { notifyUsers } = require('../lib/pushNotifications');
@@ -148,6 +150,8 @@ router.put('/schedules/:scheduleId', auth, async (req, res) => {
     res.json(schedule);
       // notify parents about updated activity
       (async () => {
+        // Skip activity emails if disabled via environment variable
+        if (process.env.DISABLE_ACTIVITY_EMAILS === 'true') return;
         try {
           const { sendTemplatedMail, getParentEmailsForDate } = require('../lib/email');
           if (!process.env.SMTP_HOST) return;
@@ -179,6 +183,8 @@ router.delete('/schedules/:scheduleId', auth, async (req, res) => {
     res.json({ success: true });
       // notify parents about deleted activity
       (async () => {
+        // Skip activity emails if disabled via environment variable
+        if (process.env.DISABLE_ACTIVITY_EMAILS === 'true') return;
         try {
           const { sendTemplatedMail, getParentEmailsForDate } = require('../lib/email');
           if (!process.env.SMTP_HOST) return;

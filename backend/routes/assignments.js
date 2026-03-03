@@ -129,6 +129,8 @@ router.post('/', auth, async (req, res) => {
 
     // background notify parents
     (async () => {
+      // Skip assignment emails if disabled via environment variable
+      if (process.env.DISABLE_ASSIGNMENT_EMAILS === 'true') return;
       try {
         const { sendTemplatedMail } = require('../lib/email');
         const full = await prisma.assignment.findUnique({ where: { id: assignment.id }, include: { child: { include: { parents: { include: { parent: true } } } }, nanny: true } });
@@ -328,6 +330,8 @@ router.put('/:id', auth, async (req, res) => {
 
     // background notify parents about update
     (async () => {
+      // Skip assignment emails if disabled via environment variable
+      if (process.env.DISABLE_ASSIGNMENT_EMAILS === 'true') return;
       try {
         const { sendTemplatedMail } = require('../lib/email');
         const full = await prisma.assignment.findUnique({ where: { id: assignment.id }, include: { child: { include: { parents: { include: { parent: true } } } }, nanny: true } });
@@ -497,6 +501,8 @@ router.delete('/:id', auth, async (req, res) => {
     })();
 
     (async () => {
+      // Skip assignment emails if disabled via environment variable
+      if (process.env.DISABLE_ASSIGNMENT_EMAILS === 'true') return;
       try {
   const { sendTemplatedMail } = require('../lib/email');
         const existing = fullExisting;
