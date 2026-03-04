@@ -4,12 +4,14 @@ import App from './App.tsx'
 import CheckoutSuccessHandler from '../components/CheckoutSuccessHandler'
 import UpgradeModalProvider from '../components/UpgradeModalProvider'
 import CookieConsent from './components/CookieConsent'
+import IosSafariBanner from './components/IosSafariBanner'
 import { I18nProvider } from './lib/i18n'
 
 createRoot(document.getElementById('root')!).render(
   <>
     <CheckoutSuccessHandler />
     <CookieConsent />
+    <IosSafariBanner />
     <I18nProvider>
       <App />
       <UpgradeModalProvider />
