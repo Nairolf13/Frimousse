@@ -166,7 +166,7 @@ export default function Sidebar() {
         <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white/95 backdrop-blur-sm shadow-lg flex-col p-0 border-r border-gray-100/80 z-30">
          <div className="flex items-center gap-3 px-6 pt-7 pb-5">
           <div className="w-14 h-14 rounded-2xl overflow-hidden bg-brand-50 flex items-center justify-center ring-1 ring-brand-100 shadow-sm">
-            <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-10 h-10 object-contain" />
+            <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-14 h-14 object-contain" />
           </div>
          <div className="flex flex-col">
            <span className="font-extrabold text-lg text-gray-900 leading-tight">{displayCenterName(centerName)}</span>

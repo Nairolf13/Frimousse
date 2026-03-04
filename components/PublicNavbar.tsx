@@ -55,7 +55,7 @@ export default function PublicNavbar({ variant = "dark" }: PublicNavbarProps) {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${logoRing}`}>
-              <img loading="lazy" src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-6 h-6 object-contain" />
+              <img loading="lazy" src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-6 h-6 object-contain" />
             </div>
             <span className={`font-bold text-[15px] hidden sm:inline tracking-tight ${logoText}`}>Les frimousses</span>
           </Link>

@@ -119,7 +119,7 @@ exports.register = async (req, res) => {
         substitutions: {
           name: user.name || '',
           code: verificationCode,
-          logoUrl: `${frontendUrl}/imgs/LogoFrimousse.webp`
+          logoUrl: `${frontendUrl}/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp`
         },
         prisma
       });
@@ -346,7 +346,7 @@ exports.login = async (req, res) => {
               substitutions: {
                 name: user.name || '',
                 code: verificationCode,
-                logoUrl: `${frontendUrl}/imgs/LogoFrimousse.webp`
+                logoUrl: `${frontendUrl}/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp`
               },
               prisma
             });
@@ -646,7 +646,7 @@ exports.resendVerification = async (req, res) => {
       substitutions: {
         name: user.name || '',
         code: verificationCode,
-        logoUrl: `${frontendUrl}/imgs/LogoFrimousse.webp`
+                logoUrl: `${frontendUrl}/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp`
       },
       prisma
     });
