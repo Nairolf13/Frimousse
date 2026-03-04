@@ -136,6 +136,9 @@ app.use('/api/user', userRoutes);
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
+const oauthRoutes = require('./routes/oauth');
+app.use('/api/auth', oauthRoutes);
+
 const assignmentsRoutes = require('./routes/assignments');
 app.use('/api/assignments', assignmentsRoutes);
 

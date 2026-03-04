@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../src/context/AuthContext';
+import OAuthButtons from '../components/OAuthButtons';
 
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -17,6 +18,23 @@ export default function LoginPage() {
   const [subscribeToken, setSubscribeToken] = useState<string | null>(null);
 
   const { setUser } = useAuth();
+
+  // Show a message if redirected from a failed OAuth attempt
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthErr = params.get('error');
+    if (oauthErr) {
+      const messages: Record<string, string> = {
+        oauth_config: 'La connexion sociale n\'est pas encore configurée. Utilisez email/mot de passe.',
+        oauth_no_code: 'Connexion annulée.',
+        oauth_failed: 'Échec de la connexion sociale. Veuillez réessayer.',
+        oauth_no_account: 'Aucun compte trouvé. Veuillez d\'abord vous inscrire.',
+      };
+      setError(messages[oauthErr] || 'Erreur de connexion.');
+      // clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,6 +135,16 @@ export default function LoginPage() {
           <button type="button" onClick={() => setForgotOpen(true)} className="text-[#0b5566] hover:underline">Mot de passe oublié ?</button>
         </div>
         <button type="submit" className="w-full bg-[#0b5566] text-white py-2 rounded-full font-semibold hover:opacity-95 transition">Se connecter</button>
+
+        {/* Divider */}
+        <div className="flex items-center w-full my-5">
+          <div className="flex-1 border-t border-gray-300" />
+          <span className="px-3 text-sm text-gray-400">ou</span>
+          <div className="flex-1 border-t border-gray-300" />
+        </div>
+
+        <OAuthButtons mode="login" />
+
         <div className="mt-4 text-sm text-[#08323a]">Pas encore de compte ? <a href="/register" className="text-[#0b5566] hover:underline">Créer un compte</a></div>
       </form>
       {forgotOpen && (

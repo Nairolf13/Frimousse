@@ -8,6 +8,7 @@ import BirthdayModal from './BirthdayModal';
 export default function ProtectedLayout() {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+  const [profileCompleted, setProfileCompleted] = useState(true);
   const navigate = useNavigate();
   const outlet = useOutlet();
   // tutorial/welcome modal disabled by default
@@ -49,6 +50,10 @@ export default function ProtectedLayout() {
         }
         const data = await res.json();
         setAuthenticated(true);
+        // Check if user needs to complete their profile (OAuth users)
+        if (data && data.profileCompleted === false) {
+          setProfileCompleted(false);
+        }
         try {
           if (data && data.centerId) {
             try { localStorage.setItem('currentCenterId', String(data.centerId)); } catch { /* ignore */ }
@@ -68,11 +73,14 @@ export default function ProtectedLayout() {
     if (!loading && !authenticated) {
       navigate('/login', { replace: true });
     }
+    if (!loading && authenticated && !profileCompleted) {
+      navigate('/complete-profile', { replace: true });
+    }
     if (!loading && authenticated) {
       // mark welcome as shown to prevent tutorial modal from appearing
       try { localStorage.setItem('welcomeShown', '1'); } catch { /* ignore */ }
     }
-  }, [loading, authenticated, navigate]);
+  }, [loading, authenticated, profileCompleted, navigate]);
 
   if (loading) return <div className="flex items-center justify-center h-screen">Chargement...</div>;
   if (!authenticated) return null;

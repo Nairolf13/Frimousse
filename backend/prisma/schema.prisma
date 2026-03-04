@@ -67,16 +67,20 @@ model User {
   email            String         @unique
   password         String
   name             String
+  phone            String?
   address          String?
   city             String?
   postalCode       String?
   region           String?
   country          String?
   role             String
+  profileCompleted Boolean        @default(true)
   stripeCustomerId String?
   emailVerified    Boolean        @default(false)
   verificationCode String?
   verificationCodeExpires DateTime?
+  oauthProvider    String?
+  oauthProviderId  String?
   nanny            Nanny?         @relation("NannyUser", fields: [nannyId], references: [id])
   nannyId          String?        @unique
   parent           Parent?        @relation("UserParent", fields: [parentId], references: [id])
