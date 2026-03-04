@@ -697,16 +697,13 @@ export default function Feed() {
   }
 
   return (
-    <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full max-w-full overflow-x-hidden box-border`}>
-      <div className="max-w-7xl mx-auto w-full max-w-full px-2 sm:px-4 md:px-6 overflow-x-hidden box-border children-responsive-row">
-          <div className="max-w-4xl mx-auto w-full">
-            <div className="mb-6 p-0">
-              <div className="bg-white/30 backdrop-blur-sm rounded-3xl p-4 md:p-6 space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
-          <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.feed')}</h1>
-              <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{centerName ? `• ${centerName}` : t('feed.center_news')}</div>
-            </div>
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.feed')}</h1>
+            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{centerName ? `• ${centerName}` : t('feed.center_news')}</div>
+          </div>
         </div>
 
         {currentUser && currentUser.role === 'super-admin' && (
@@ -978,9 +975,6 @@ export default function Feed() {
           />
         )}
         </div>
-              </div>
-            </div>
-          </div>
 
           {/* Error modal (shows friendly messages for publish/upload failures) */}
           {errorModalOpen && (

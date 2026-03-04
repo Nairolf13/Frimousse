@@ -169,9 +169,8 @@ export default function AdminCenters() {
   };
 
   return (
-    <div className={`relative z-0 min-h-screen bg-gray-50 p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
-      <main className="flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-4">
-        <div className="w-full max-w-5xl mx-auto">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+        <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>Centres</h1>
@@ -387,7 +386,6 @@ export default function AdminCenters() {
             </>
           )}
         </div>
-      </main>
 
       {/* Modal de modification */}
       {showEditModal && editingCenter && (

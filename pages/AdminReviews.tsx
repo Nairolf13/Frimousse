@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Sidebar from '../components/Sidebar';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 type Review = {
@@ -23,6 +22,17 @@ export default function AdminReviews() {
   const [newUnapprovedCount, setNewUnapprovedCount] = useState(0);
   const baselineUnapprovedRef = useRef<number | null>(null);
   const pollRef = useRef<number | null>(null);
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
 
   const load = useCallback(async (status: 'all' | 'pending' | 'approved' = filter, pageNum = page) => {
     setLoading(true);
@@ -106,15 +116,13 @@ export default function AdminReviews() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
-      <Sidebar />
-      <main className="flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-4 md:ml-64">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
         {toast && (
           <div className="fixed right-6 top-6 z-50">
             <div className="bg-green-600 text-white px-4 py-2 rounded shadow">{toast}</div>
           </div>
         )}
-        <div className="w-full max-w-5xl mx-auto">
+        <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
             <div className="self-start md:self-auto">
               <h1 className="text-2xl font-bold">Gestion des avis</h1>
@@ -174,7 +182,6 @@ export default function AdminReviews() {
             </div>
           )}
         </div>
-      </main>
     </div>
   );
 }

@@ -60,7 +60,7 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
     const url = `${API_URL}/children${centerId ? `?centerId=${encodeURIComponent(centerId)}` : ''}`;
     fetchWithRefresh(url, { credentials: 'include' })
       .then(res => res.json())
-      .then(setChildren).catch(() => setChildren([]));
+      .then(data => setChildren(Array.isArray(data) ? data : [])).catch(() => setChildren([]));
   }, [centerId]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -101,16 +101,16 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-6 gap-2">
-  <div className="text-lg md:text-2xl font-bold text-gray-900">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
+  <div className="text-lg md:text-2xl font-bold text-gray-900 capitalize">{monthLabel}</div>
         <div className="flex items-center gap-2">
           <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></button>
           <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
         </div>
       </div>
       <div className="block w-full">
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0">
           {shortWeekDays.map((day, i) => (
-            <div key={i} className="text-center text-gray-500 font-semibold text-xs py-1">{day}</div>
+            <div key={i} className="text-center text-gray-700 font-bold text-xs py-2 border-b-2 border-gray-300 uppercase tracking-wide">{day}</div>
           ))}
           {monthGrid.flat().map((day, idx) => {
             const isToday = day.toDateString() === new Date().toDateString();
@@ -125,14 +125,14 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
             return (
               <div key={idx} className={
                 "align-top p-1 h-full flex flex-col " +
-                (isToday ? 'border-2 border-green-400 rounded-xl ' : 'border border-gray-100 ') +
-                (isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60') +
+                (isToday ? 'border-2 border-brand-500 rounded-xl ' : 'border border-gray-300 ') +
+                (isCurrentMonth ? 'bg-white' : 'bg-gray-100 opacity-60') +
                 " relative"
               }>
                 <div className="flex items-center justify-between mb-1">
-                  <span className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}>{day.getDate()}</span>
+                  <span className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-900' : 'text-gray-400')}>{day.getDate()}</span>
                   <button
-                    className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold"
+                    className="text-brand-500 hover:text-brand-700 text-lg font-bold"
                     title={t('children.add')}
                     onClick={() => { setShowForm({ date: dayStr }); setSelectedChild(''); setError(''); }}
                   >+
@@ -142,8 +142,8 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
                   <div className="text-gray-300 text-xs">—</div>
                 ) : (
                   assigns.slice(0, 2).map((a, j) => (
-                    <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-[#a9ddf2]' : 'bg-[#fff7e6]') + " shadow-sm group"}>
-                      <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-[#08323a]' : 'bg-[#856400]')}></span>
+                    <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-brand-200/60' : 'bg-cream-100') + " shadow-sm group"}>
+                      <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-brand-700' : 'bg-amber-600')}></span>
                       <span className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]" title={a.child.name}>{a.child.name}</span>
                     </div>
                   ))

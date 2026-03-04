@@ -1,6 +1,5 @@
 import SEO from '../components/SEO';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import Sidebar from '../components/Sidebar';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 // icons intentionally removed from suggestion cards
@@ -94,12 +93,10 @@ export default function Assistant() {
   }
 
   return (
-    <div className={`relative z-0 min-h-screen bg-[#f1f5f9] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
-      {!isShortLandscape && <Sidebar />}
-      <main className="flex-1">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <SEO title={t('assistant.title', 'Assistant Frimousse')} />
 
-        <div className="max-w-7xl mx-auto w-full">
           <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
               <div className="flex-1 min-w-0">
@@ -192,8 +189,7 @@ export default function Assistant() {
               </div>
             </div>
           </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

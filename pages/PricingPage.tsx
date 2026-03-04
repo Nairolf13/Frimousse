@@ -1,4 +1,6 @@
 import SEO from '../components/SEO';
+import PublicNavbar from '../components/PublicNavbar';
+import PublicFooter from '../components/PublicFooter';
 import { useEffect, useState} from 'react';
 import { useNavigate } from 'react-router-dom';
 // Stripe Checkout redirect only: no Elements or inline card collection
@@ -99,7 +101,7 @@ export default function PricingPage() {
 
 
   return (
-    <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-[#f7f4d7] p-0 m-0">
+    <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
         title={"Tarifs | Frimousse Association"}
         description={"Découvrez les tarifs de Frimousse pour crèches associatives, micro-crèches, garderies, centres de loisirs et MAM. Abonnement mensuel, offre gratuite, options modulaires."}
@@ -107,119 +109,150 @@ export default function PricingPage() {
         image={"/frimousse-cover.png"}
       />
       <script async src="https://js.stripe.com/v3/buy-button.js"></script>
-      <header className="w-full bg-gradient-to-r from-[#a9ddf2] to-[#f7f4d7] border-b border-[#fcdcdf] sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between py-3 px-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
-              <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
-            </div>
-            <div className="w-full text-center">
-              <span className="font-bold text-base text-[#08323a]">Les Frimousses</span>
-            </div>
-          </div>
-        </div>
-      </header>
+
+      <PublicNavbar />
+
       <main className="flex-1 w-full">
+        {/* ── Hero ── */}
+        <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
+          <div className="absolute top-1/4 -left-32 w-[500px] h-[500px] bg-brand-400/20 rounded-full blur-[100px]" />
+          <div className="absolute bottom-1/4 -right-32 w-[400px] h-[400px] bg-brand-300/15 rounded-full blur-[100px]" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.03)_1px,transparent_1px)] bg-[size:64px_64px]" />
+
+          <div className="relative z-10 max-w-4xl mx-auto text-center px-6">
+            <span className="inline-block text-xs font-bold uppercase tracking-widest text-white bg-white/15 px-4 py-1.5 rounded-full mb-6 border border-white/20">Tarifs</span>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold !text-[#ffffff] leading-[1.1] tracking-tight mb-6">
+              Des forfaits simples,
+              <br />
+              <span className="bg-gradient-to-r from-brand-200 via-brand-100 to-cream-100 bg-clip-text text-transparent">transparents et adaptés</span>
+            </h1>
+            <p className="text-lg md:text-xl !text-[#ffffff] max-w-2xl mx-auto leading-relaxed">
+              Crèches associatives, micro-crèches, garderies, centres de loisirs, MAM… Trouvez l'offre qui correspond à votre structure.
+            </p>
+          </div>
+
+          <div className="absolute bottom-0 left-0 right-0">
+            <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto block"><path d="M0 120V60C240 15 480 0 720 25C960 50 1200 80 1440 50V120H0Z" fill="white"/></svg>
+          </div>
+        </section>
+
+        {/* ── Global message ── */}
         {globalMessage && (
-          <div className={`max-w-4xl mx-auto mt-6 p-3 rounded ${globalMessage.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : globalMessage.type === 'error' ? 'bg-red-50 border border-red-200 text-red-800' : 'bg-blue-50 border border-blue-200 text-blue-800'}`} role="status">
-            {globalMessage.text}
+          <div className="max-w-4xl mx-auto mt-6 px-6">
+            <div className={`p-4 rounded-2xl text-sm font-medium ${globalMessage.type === 'success' ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : globalMessage.type === 'error' ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-blue-50 border border-blue-200 text-blue-700'}`} role="status">
+              {globalMessage.text}
+            </div>
           </div>
         )}
-        <section className="w-full py-12 px-6 bg-white border-b border-gray-100">
-          <div className="max-w-4xl mx-auto text-center">
-            <button
-              onClick={() => navigate('/')} 
-              className="mb-8 px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
-              aria-label="Retour à l'accueil"
-            >
-              ← Retour à l'accueil
-            </button>
-            <h1 className="text-3xl md:text-4xl font-bold text-[#0b5566] mb-6">Tarifs</h1>
-            <p className="text-gray-700 text-base sm:text-lg mb-10">
-              Des forfaits simples et transparents, adaptés à toutes les structures d’accueil d’enfants : crèches associatives, micro-crèches, garderies, centres de loisirs, MAM…
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch w-full">
+
+        {/* ── Pricing Cards ── */}
+        <section className="py-16 md:py-20 px-6">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
               {plans.map((plan, idx) => (
                 <div
                   key={idx}
-                  className={`rounded-lg border shadow p-6 flex flex-col items-center bg-[#f7f4d7] ${plan.highlight ? 'border-[#0b5566] shadow-lg' : 'border-[#fcdcdf]'} h-full min-w-0 w-full max-w-md mx-auto md:max-w-[420px] md:w-full md:h-auto min-h-[380px] md:min-h-[420px]`}
-                  style={{width: '100%', maxWidth: '420px', margin: '0 auto'}}
+                  className={`relative rounded-3xl border-2 p-8 flex flex-col transition-all duration-300 ${
+                    plan.highlight
+                      ? 'border-brand-500 bg-brand-50/40 shadow-xl shadow-brand-200/30 scale-[1.03] md:scale-105 z-10'
+                      : 'border-gray-200 bg-white hover:border-brand-200 hover:shadow-lg hover:shadow-brand-100/30 hover:-translate-y-1'
+                  }`}
                 >
-                  <h2 className={`text-xl font-bold mb-2 ${plan.highlight ? 'text-[#0b5566]' : 'text-[#08323a]'}`}>{plan.name}</h2>
-                  <div className="text-3xl font-extrabold mb-2">{plan.price}</div>
-                  <div className="mb-4 text-[#08323a] text-center">{plan.description}</div>
-                  <div className="flex-1 w-full flex flex-col">
-                    <ul className="mb-6 text-left space-y-2 text-[#08323a] flex-1">
-                      {plan.features.map((f, i) => (
-                        <li key={i} className="flex items-center gap-2"><span className="text-[#0b5566]">✔</span> {f}</li>
-                      ))}
-                    </ul>
+                  {plan.highlight && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                      <span className="bg-brand-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-md">Populaire</span>
+                    </div>
+                  )}
+
+                  <div className="mb-6">
+                    <h2 className={`text-lg font-bold mb-1 ${plan.highlight ? 'text-brand-600' : 'text-gray-900'}`}>{plan.name}</h2>
+                    <p className="text-gray-500 text-sm">{plan.description}</p>
                   </div>
+
+                  <div className="mb-8">
+                    <span className="text-4xl font-extrabold text-gray-900">{plan.price.split('/')[0]}</span>
+                    {plan.price.includes('/') && <span className="text-gray-400 text-base font-medium ml-1">/ {plan.price.split('/ ')[1]}</span>}
+                  </div>
+
+                  <ul className="space-y-3 mb-8 flex-1">
+                    {plan.features.map((f, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm text-gray-700">
+                        <div className="w-5 h-5 rounded-full bg-brand-50 text-brand-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
                   {plan.buyButtonId ? (
-                    <div className="w-full flex flex-col items-center mt-4">
+                    <div className="w-full flex flex-col items-center">
                       {paidInfoShown === plan.name && (
-                        <div className="w-full max-w-xs mb-2 flex items-start justify-between">
-                          <div className="rounded-md bg-yellow-100 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800 flex-1">
-                            Les abonnements payants ne sont pas encore disponibles — contactez-nous pour plus de renseignements.
-                          </div>
-                          <button aria-label="Fermer" onClick={() => setPaidInfoShown(null)} className="ml-2 text-sm text-gray-600">✕</button>
+                        <div className="w-full mb-3 flex items-start justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                          <p className="text-sm text-amber-800">Les abonnements payants ne sont pas encore disponibles — contactez-nous pour plus de renseignements.</p>
+                          <button aria-label="Fermer" onClick={() => setPaidInfoShown(null)} className="text-amber-400 hover:text-amber-600 transition-colors flex-shrink-0">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                          </button>
                         </div>
                       )}
                       <button
-                        className="w-full max-w-xs h-11 px-4 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-not-allowed rounded bg-gray-300 text-gray-600"
+                        className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200"
                         type="button"
                         aria-disabled="true"
-                        title="Les abonnements payants ne sont pas encore disponibles. Contactez-nous pour plus d’informations."
+                        title="Les abonnements payants ne sont pas encore disponibles."
                         onClick={() => setPaidInfoShown(plan.name)}
                       >
                         {plan.cta}
                       </button>
                     </div>
                   ) : (
-                    <div className="w-full flex justify-center mt-4">
-                      <button
-                        className="w-full max-w-xs h-11 px-4 font-semibold transition shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2 flex items-center justify-center cursor-pointer rounded"
-                        type="button"
-                        style={{ backgroundColor: '#0b5566', color: '#fff' }}
-                        onClick={() => {
-                          if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
-                          // If user clicked the free trial, navigate to register when not logged in.
-                          if (plan.name === 'Découverte') {
-                            if (userRole) return setGlobalMessage({ type: 'info', text: 'Vous êtes déjà connecté.' });
-                            return navigate('/register');
-                          }
-                          // For paid plans, keep existing admin guard
-                          if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
-                          // For Essentiel/Pro use direct mode (30 days trial)
-                          return startDirect(plan.name.toLowerCase());
-                        }}
-                      >
-                        <span className="Text Text-color--default Text-fontWeight--500 Text--truncate" data-testid="hosted-buy-button-text">
-                          {plan.cta}
-                        </span>
-                      </button>
-                    </div>
+                    <button
+                      className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all shadow-sm hover:shadow-md active:scale-[0.98] bg-brand-500 text-white hover:bg-brand-600"
+                      type="button"
+                      onClick={() => {
+                        if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
+                        if (plan.name === 'Découverte') {
+                          if (userRole) return setGlobalMessage({ type: 'info', text: 'Vous êtes déjà connecté.' });
+                          return navigate('/register');
+                        }
+                        if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
+                        return startDirect(plan.name.toLowerCase());
+                      }}
+                    >
+                      {plan.cta}
+                    </button>
                   )}
                 </div>
               ))}
             </div>
-            <div className="mt-10 text-gray-600 text-sm">
+
+            <div className="mt-14 text-center text-gray-400 text-sm space-y-1">
               <p>Tarifs hors taxes. Sans engagement. Options sur devis : formation, migration de données, modules personnalisés.</p>
-              <p className="mt-2">Pour les réseaux, fédérations ou structures multi-sites, contactez-nous pour une offre sur-mesure.</p>
+              <p>Pour les réseaux, fédérations ou structures multi-sites, contactez-nous pour une offre sur-mesure.</p>
             </div>
           </div>
         </section>
-  {/* Discovery chooser removed */}
-        <div className="max-w-4xl mx-auto text-center mt-10 mb-8">
-          <button
-            onClick={() => navigate('/')}
-            className="px-4 py-2 rounded bg-[#0b5566] text-white hover:opacity-95 transition font-semibold shadow focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] focus:ring-offset-2"
-            aria-label="Retour à l'accueil (bas de page)"
-          >
-            ← Retour à l'accueil
-          </button>
-        </div>
+
+        {/* ── FAQ / CTA ── */}
+        <section className="py-20 px-6 bg-gray-50">
+          <div className="max-w-3xl mx-auto text-center">
+            <span className="inline-block text-xs font-bold uppercase tracking-widest text-brand-500 bg-brand-50 px-4 py-1.5 rounded-full mb-4">Une question ?</span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-4">Besoin d'aide pour choisir ?</h2>
+            <p className="text-gray-500 text-lg mb-8 max-w-xl mx-auto">Notre équipe est disponible pour vous guider vers l'offre la plus adaptée à votre structure.</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <a href="/support" className="bg-brand-500 text-white px-8 py-3.5 rounded-2xl font-bold text-base shadow-sm hover:bg-brand-600 hover:shadow-md transition-all inline-flex items-center gap-2">
+                Contacter le support
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
+              </a>
+              <button onClick={() => navigate('/')} className="text-gray-600 border-2 border-gray-200 hover:border-gray-300 px-8 py-3.5 rounded-2xl font-bold text-base transition-all hover:bg-gray-50">
+                ← Retour à l'accueil
+              </button>
+            </div>
+          </div>
+        </section>
       </main>
+
+      <PublicFooter />
     </div>
   );
 }

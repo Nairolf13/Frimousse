@@ -652,8 +652,8 @@ export default function Children() {
   ];
 
   return (
-    <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
-      <div className="max-w-7xl mx-auto w-full children-responsive-row">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4 children-responsive-row">
         {/* inline success banner is used instead of top-right toast */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full children-responsive-header">
           <div>

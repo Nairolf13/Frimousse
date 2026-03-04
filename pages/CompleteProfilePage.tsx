@@ -83,7 +83,7 @@ export default function CompleteProfilePage() {
           const len = el.value ? el.value.length : 0;
           el.setSelectionRange(len, len);
         }
-      } catch {}
+      } catch { /* ignored */ }
     }, 0);
   };
 
@@ -106,7 +106,7 @@ export default function CompleteProfilePage() {
         if (!res.ok) return;
         const data = (await res.json()) as Country[];
         setCountries(data || []);
-      } catch {}
+      } catch { /* ignored */ }
     })();
   }, []);
 

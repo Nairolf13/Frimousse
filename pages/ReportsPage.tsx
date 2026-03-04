@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
-import Sidebar from '../components/Sidebar';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
 
@@ -264,10 +263,8 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] flex flex-col md:flex-row">
-      {!isShortLandscape && <Sidebar />}
-      <main className={`flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-2 ${!isShortLandscape ? 'md:ml-64' : ''}`}>
-        <div className="w-full max-w-5xl mx-auto">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
           <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.reports')}</h1>
           <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.reports.description')}</div>
           <div className="flex flex-col md:flex-row flex-wrap gap-2 mb-4 md:mb-6 items-stretch md:items-center">
@@ -528,7 +525,6 @@ export default function ReportsPage() {
           </div>
         )}
         </div>
-      </main>
     </div>
   );
 }
