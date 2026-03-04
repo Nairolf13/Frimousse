@@ -66,7 +66,7 @@ function App() {
   }, []);
   return (
     <HelmetProvider>
-      <AuthContext.Provider value={{ user }}>
+      <AuthContext.Provider value={{ user, setUser }}>
         <NotificationsProvider>
           <AssistantProvider>
             <AppRoutes />

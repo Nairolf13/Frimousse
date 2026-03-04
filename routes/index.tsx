@@ -10,6 +10,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 const LandingPage = lazy(() => import('../pages/LandingPage'));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/RegisterPage'));
+const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage'));
 const InvitePage = lazy(() => import('../pages/InvitePage'));
 const ResetPassword = lazy(() => import('../pages/ResetPassword'));
 const Dashboard = lazy(() => import('../pages/Dashboard'));
@@ -65,6 +66,7 @@ const AdminSupport = lazy(() => import('../pages/AdminSupport'));
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/invite" element={<InvitePage />} />
           <Route path="/about" element={<AboutPage />} />

@@ -69,7 +69,13 @@ exports.register = async (req, res) => {
     }
   }
 
-  console.log('register userData:', userData);
+  // Generate 6-digit verification code
+  const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+  const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+  userData.emailVerified = false;
+  userData.verificationCode = verificationCode;
+  userData.verificationCodeExpires = verificationCodeExpires;
+  
   let user;
   try {
     user = await prisma.user.create({ data: userData });
@@ -98,35 +104,39 @@ exports.register = async (req, res) => {
     console.error('Failed to create decouverte subscription record', e);
   }
 
+  // Send verification email instead of welcome email
   (async () => {
     try {
-  if (process.env.SMTP_HOST && user.email) {
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
-          secure: process.env.SMTP_SECURE === 'true',
-          auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-        });
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-        const templatePath = `${__dirname}/../emailTemplates/welcome_${lang}.html`;
-        const fs = require('fs');
-        let html = null;
-        try {
-          html = fs.readFileSync(templatePath, 'utf8');
-          html = html.replace(/{{name}}/g, user.name || '').replace(/{{loginUrl}}/g, `${frontendUrl}/login`);
-        } catch (e) {
-          html = null;
-        }
-        const subject = lang === 'fr' ? 'Bienvenue sur Frimousse' : 'Welcome to Frimousse';
-        await require('../lib/email').sendTemplatedMail({ templateName: 'welcome', lang, to: user.email, subject, substitutions: { name: user.name || '', loginUrl: `${frontendUrl}/login` }, prisma });
-      }
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
+      const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+      const subject = lang === 'fr' ? 'Vérifiez votre adresse email - Frimousse' : 'Verify your email - Frimousse';
+      await require('../lib/email').sendTemplatedMail({
+        templateName: 'verification',
+        lang,
+        to: user.email,
+        subject,
+        substitutions: {
+          name: user.name || '',
+          code: verificationCode,
+          logoUrl: `${frontendUrl}/imgs/LogoFrimousse.webp`
+        },
+        prisma
+      });
     } catch (err) {
-      console.error('Failed to send welcome email', err);
+      console.error('Failed to send verification email', err);
     }
   })();
-  res.status(201).json({ id: user.id, email: user.email, name: user.name, role: user.role, nannyId: user.nannyId, centerId: user.centerId || null });
+  
+  res.status(201).json({ 
+    id: user.id, 
+    email: user.email, 
+    name: user.name, 
+    role: user.role, 
+    nannyId: user.nannyId, 
+    centerId: user.centerId || null,
+    requiresVerification: true 
+  });
 };
 
 // Create user + Stripe customer + return SetupIntent client secret for card collection
@@ -309,6 +319,50 @@ exports.login = async (req, res) => {
     if (!user) return res.status(401).json({ message: "Adresse e-mail inconnue. Vérifiez l'adresse saisie." });
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ message: "Mot de passe incorrect. Utilisez 'Mot de passe oublié' si nécessaire." });
+    
+    // Check if email is verified
+    if (!user.emailVerified) {
+      // only generate/send a new code if there isn't one or it has expired
+      const now = new Date();
+      if (!user.verificationCode || !user.verificationCodeExpires || now > user.verificationCodeExpires) {
+        const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+        const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { verificationCode, verificationCodeExpires }
+        });
+
+        // try sending email, but ignore any failure so login path still returns 403
+        (async () => {
+          try {
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+            const lang = 'fr';
+            const subject = 'Code de vérification - Frimousse';
+            await require('../lib/email').sendTemplatedMail({
+              templateName: 'verification',
+              lang,
+              to: user.email,
+              subject,
+              substitutions: {
+                name: user.name || '',
+                code: verificationCode,
+                logoUrl: `${frontendUrl}/imgs/LogoFrimousse.webp`
+              },
+              prisma
+            });
+          } catch (err) {
+            console.error('Failed to send verification email on login attempt', err);
+          }
+        })();
+      }
+
+      return res.status(403).json({ 
+        error: 'email_not_verified',
+        message: "Veuillez vérifier votre adresse email avant de vous connecter.",
+        email: user.email
+      });
+    }
+    
   // Enforce subscription: super-admin bypass. For admin users, require their own subscription.
   // For parent/nanny/other non-admin users, allow access when their center has an admin with an active/trialing subscription.
   async function hasValidSubscription(u) {
@@ -468,5 +522,138 @@ exports.resetPassword = async (req, res) => {
   } catch (err) {
     console.error('resetPassword error', err);
     return res.status(400).json({ error: 'Token invalide ou expiré' });
+  }
+};
+
+// Verify email with code
+exports.verifyEmail = async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const code = String(req.body.code || '').trim();
+    
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email et code requis' });
+    }
+    
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+    
+    if (user.emailVerified) {
+      return res.json({ ok: true, message: 'Email déjà vérifié' });
+    }
+    
+    if (!user.verificationCode || !user.verificationCodeExpires) {
+      return res.status(400).json({ error: 'Aucun code de vérification en attente' });
+    }
+    
+    if (new Date() > new Date(user.verificationCodeExpires)) {
+      return res.status(400).json({ error: 'Code expiré. Demandez un nouveau code.', expired: true });
+    }
+    
+    if (user.verificationCode !== code) {
+      return res.status(400).json({ error: 'Code incorrect' });
+    }
+    
+    // Mark email as verified and clear the code
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerified: true,
+        verificationCode: null,
+        verificationCodeExpires: null
+      }
+    });
+    
+    // create tokens and set cookies (log the user in immediately)
+    const accessToken = generateAccessToken(updated);
+    const refreshToken = generateRefreshToken(updated);
+    await prisma.refreshToken.deleteMany({ where: { userId: updated.id } });
+    await prisma.refreshToken.create({ data: { token: refreshToken, userId: updated.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+    res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
+    res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
+    
+    // Send welcome email now that email is verified
+    (async () => {
+      try {
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const lang = 'fr';
+        const subject = 'Bienvenue sur Frimousse';
+        await require('../lib/email').sendTemplatedMail({
+          templateName: 'welcome',
+          lang,
+          to: user.email,
+          subject,
+          substitutions: {
+            name: user.name || '',
+            loginUrl: `${frontendUrl}/login`
+          },
+          prisma
+        });
+      } catch (err) {
+        console.error('Failed to send welcome email after verification', err);
+      }
+    })();
+    
+    // respond with some user data so frontend can redirect
+    return res.json({ ok: true, id: updated.id, email: updated.email, name: updated.name, role: updated.role, centerId: updated.centerId || null });
+  } catch (err) {
+    console.error('verifyEmail error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
+
+// Resend verification code
+exports.resendVerification = async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email requis' });
+    }
+    
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    }
+    
+    if (user.emailVerified) {
+      return res.json({ ok: true, message: 'Email déjà vérifié' });
+    }
+    
+    // Generate new code
+    const verificationCode = String(Math.floor(100000 + Math.random() * 900000));
+    const verificationCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
+    
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verificationCode,
+        verificationCodeExpires
+      }
+    });
+    
+    // Send new verification email
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const lang = 'fr';
+    const subject = 'Nouveau code de vérification - Frimousse';
+    await require('../lib/email').sendTemplatedMail({
+      templateName: 'verification',
+      lang,
+      to: user.email,
+      subject,
+      substitutions: {
+        name: user.name || '',
+        code: verificationCode,
+        logoUrl: `${frontendUrl}/imgs/LogoFrimousse.webp`
+      },
+      prisma
+    });
+    
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('resendVerification error', err);
+    return res.status(500).json({ error: 'Erreur serveur' });
   }
 };
