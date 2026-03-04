@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
 import parentService from '../services/parent';
 
 type Nanny = { id: string; name: string };
@@ -24,6 +23,17 @@ export default function ParentChildReports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [childName, setChildName] = useState<string | null>(null);
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
+  }, []);
 
   const formatReportDate = (dateStr?: string, timeStr?: string) => {
     if (!dateStr) return '';
@@ -96,10 +106,8 @@ export default function ParentChildReports() {
   }, [childId]);
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] flex flex-col md:flex-row">
-      <Sidebar />
-      <main className="flex-1 flex flex-col items-center py-4 px-2 md:py-8 md:px-4 md:ml-64">
-        <div className="w-full max-w-5xl mx-auto">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
             <div className="self-start md:self-auto">
               <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-[#a9ddf2] text-[#0b5566] hover:bg-[#cfeef9] cursor-pointer" onClick={() => navigate(-1)}>
@@ -139,8 +147,7 @@ export default function ParentChildReports() {
               ))
             )}
           </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

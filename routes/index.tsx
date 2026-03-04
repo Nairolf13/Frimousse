@@ -6,56 +6,84 @@ import GuideExportReportPage from '../pages/GuideExportReportPage';
 import GuideSecurityPage from '../pages/GuideSecurityPage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
+/**
+ * Wrapper around React.lazy that auto-reloads the page when a dynamic
+ * import fails (e.g. after a new deployment replaced the hashed chunks).
+ * A sessionStorage flag prevents infinite reload loops.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
+  return lazy(() =>
+    factory().catch((err: unknown) => {
+      const key = 'chunk-reload';
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        // Return a never-resolving promise so React doesn't render the broken module
+        return new Promise(() => {});
+      }
+      // Already tried reloading once — throw to let error boundary handle it
+      sessionStorage.removeItem(key);
+      throw err;
+    })
+  );
+}
+
+// Clear the reload flag once we successfully load the page
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => sessionStorage.removeItem('chunk-reload'));
+}
+
 // Lazy load non-critical pages for better code splitting
-const LandingPage = lazy(() => import('../pages/LandingPage'));
-const LoginPage = lazy(() => import('../pages/LoginPage'));
-const RegisterPage = lazy(() => import('../pages/RegisterPage'));
-const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage'));
-const CompleteProfilePage = lazy(() => import('../pages/CompleteProfilePage'));
-const InvitePage = lazy(() => import('../pages/InvitePage'));
-const ResetPassword = lazy(() => import('../pages/ResetPassword'));
-const Dashboard = lazy(() => import('../pages/Dashboard'));
-const Children = lazy(() => import('../pages/Children'));
-const Nannies = lazy(() => import('../pages/Nannies'));
-const ProtectedLayout = lazy(() => import('../components/ProtectedLayout'));
-const MonPlanning = lazy(() => import('../pages/MonPlanning'));
-const Activites = lazy(() => import('../pages/Activites'));
-const ReportsPage = lazy(() => import('../pages/ReportsPage'));
-const NotificationsPage = lazy(() => import('../pages/Notifications'));
-const Settings = lazy(() => import('../pages/Settings'));
-const PaymentHistory = lazy(() => import('../pages/PaymentHistory'));
-const ParentDashboard = lazy(() => import('../pages/ParentDashboard'));
-const ParentChildSchedule = lazy(() => import('../pages/ParentChildSchedule'));
-const ParentChildReports = lazy(() => import('../pages/ParentChildReports'));
-const Feed = lazy(() => import('../pages/Feed'));
-const AdminReviews = lazy(() => import('../pages/AdminReviews'));
-const AboutPage = lazy(() => import('../pages/AboutPage'));
-const FeaturesPage = lazy(() => import('../pages/FeaturesPage'));
-const PricingPage = lazy(() => import('../pages/PricingPage'));
-const PrivacyPolicyPage = lazy(() => import('../pages/PrivacyPolicyPage'));
-const TermsPage = lazy(() => import('../pages/TermsPage'));
-const LegalNoticePage = lazy(() => import('../pages/LegalNoticePage'));
+const LandingPage = lazyWithRetry(() => import('../pages/LandingPage'));
+const LoginPage = lazyWithRetry(() => import('../pages/LoginPage'));
+const RegisterPage = lazyWithRetry(() => import('../pages/RegisterPage'));
+const VerifyEmailPage = lazyWithRetry(() => import('../pages/VerifyEmailPage'));
+const CompleteProfilePage = lazyWithRetry(() => import('../pages/CompleteProfilePage'));
+const InvitePage = lazyWithRetry(() => import('../pages/InvitePage'));
+const ResetPassword = lazyWithRetry(() => import('../pages/ResetPassword'));
+const Dashboard = lazyWithRetry(() => import('../pages/Dashboard'));
+const Children = lazyWithRetry(() => import('../pages/Children'));
+const Nannies = lazyWithRetry(() => import('../pages/Nannies'));
+const ProtectedLayout = lazyWithRetry(() => import('../components/ProtectedLayout'));
+const MonPlanning = lazyWithRetry(() => import('../pages/MonPlanning'));
+const Activites = lazyWithRetry(() => import('../pages/Activites'));
+const ReportsPage = lazyWithRetry(() => import('../pages/ReportsPage'));
+const NotificationsPage = lazyWithRetry(() => import('../pages/Notifications'));
+const Settings = lazyWithRetry(() => import('../pages/Settings'));
+const PaymentHistory = lazyWithRetry(() => import('../pages/PaymentHistory'));
+const ParentDashboard = lazyWithRetry(() => import('../pages/ParentDashboard'));
+const ParentChildSchedule = lazyWithRetry(() => import('../pages/ParentChildSchedule'));
+const ParentChildReports = lazyWithRetry(() => import('../pages/ParentChildReports'));
+const Feed = lazyWithRetry(() => import('../pages/Feed'));
+const AdminReviews = lazyWithRetry(() => import('../pages/AdminReviews'));
+const AboutPage = lazyWithRetry(() => import('../pages/AboutPage'));
+const FeaturesPage = lazyWithRetry(() => import('../pages/FeaturesPage'));
+const PricingPage = lazyWithRetry(() => import('../pages/PricingPage'));
+const SupportPage = lazyWithRetry(() => import('../pages/SupportPage'));
+const PrivacyPolicyPage = lazyWithRetry(() => import('../pages/PrivacyPolicyPage'));
+const TermsPage = lazyWithRetry(() => import('../pages/TermsPage'));
+const LegalNoticePage = lazyWithRetry(() => import('../pages/LegalNoticePage'));
 
 
 
 export default function AppRoutes() {
-  const AssistantPage = lazy(() => import('../pages/Assistant'));
-  const AdminEmailLogs = lazy(() => import('../pages/AdminEmailLogs'));
-  const AdminCenters = lazy(() => import('../pages/AdminCenters'));
-const AdminSupport = lazy(() => import('../pages/AdminSupport'));
+  const AssistantPage = lazyWithRetry(() => import('../pages/Assistant'));
+  const AdminEmailLogs = lazyWithRetry(() => import('../pages/AdminEmailLogs'));
+  const AdminCenters = lazyWithRetry(() => import('../pages/AdminCenters'));
+const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
 
   // Loading fallback component
   const LoadingFallback = () => (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-      background: '#f7f4d7'
-    }}>
-      <div style={{ textAlign: 'center' }}>
-        <img src="/imgs/LogoFrimousse.webp" alt="Les Frimousses" style={{ width: '80px', height: '80px', marginBottom: '1rem' }} />
-        <div style={{ color: '#08323a', fontFamily: 'system-ui, sans-serif' }}>Chargement...</div>
+    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
+      <div className="flex flex-col items-center gap-6 animate-fade-in">
+        <div className="w-24 h-24 rounded-full flex items-center justify-center bg-white/10 shadow-lg mb-2">
+          <img src="/imgs/LogoFrimousse.webp" alt="Les Frimousses" className="w-16 h-16 object-contain" />
+        </div>
+        <div className="text-white text-xl font-bold tracking-tight">Chargement…</div>
+        <div className="mt-2">
+          <svg className="animate-spin w-8 h-8 text-white/70" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.2"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" fill="none"/></svg>
+        </div>
       </div>
     </div>
   );
@@ -74,6 +102,7 @@ const AdminSupport = lazy(() => import('../pages/AdminSupport'));
           <Route path="/about" element={<AboutPage />} />
           <Route path="/fonctionnalites" element={<FeaturesPage />} />
           <Route path="/tarifs" element={<PricingPage />} />
+          <Route path="/support" element={<SupportPage />} />
           <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
           <Route path="/cgu" element={<TermsPage />} />
           <Route path="/mentions-legales" element={<LegalNoticePage />} />

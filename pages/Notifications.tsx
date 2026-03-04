@@ -72,8 +72,8 @@ export default function NotificationsPage() {
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   return (
-    <div className={`min-h-screen bg-[#f7f8fa] w-full flex flex-col items-center ${!isShortLandscape ? 'md:pl-64' : ''} px-2 md:px-8 py-8`}>
-      <div className="w-full max-w-6xl mx-auto">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.notifications.title')}</h1>
           <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.notifications.desc')}</div>

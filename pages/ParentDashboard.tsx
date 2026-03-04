@@ -294,9 +294,9 @@ const ParentDashboard: React.FC = () => {
   const stats: AdminStats = adminData?.stats ?? { parentsCount: 0, childrenCount: 0, presentToday: 0 };
   const parents: Parent[] = adminData?.parents ?? [];
     return (
-      <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
         {/* inline successMessage banner will show inside forms when needed */}
-        <div className="max-w-7xl mx-auto w-full">
+        <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
           {/* successMessage banner removed from top to render in the same place as Children (below form) */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
             <div>

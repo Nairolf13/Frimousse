@@ -141,8 +141,8 @@ export default function ParentChildSchedule() {
   const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
-    <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
-      <div className="max-w-7xl mx-auto w-full">
+    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 w-full">
           <div>
             <button className="mr-2 cursor-pointer flex items-center gap-2 bg-[#a9ddf2] text-[#0b5566] px-3 py-1 rounded" onClick={() => navigate(-1)}>

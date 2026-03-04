@@ -13,11 +13,7 @@ const InvitePage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
-  function getApiUrl(): string {
-  const meta = import.meta as { env?: { VITE_API_URL?: string } };
-  return meta?.env?.VITE_API_URL ?? 'https://www.lesfrimousses.com/api';
-  }
-  const API_URL = getApiUrl();
+  const API_URL = import.meta.env.VITE_API_URL || '';
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +23,7 @@ const InvitePage: React.FC = () => {
     if (password !== confirm) return setError('Les mots de passe ne correspondent pas');
     try {
   setLoading(true);
-  const res = await fetchWithRefresh(`${API_URL}/parent/accept-invite`, {
+  const res = await fetchWithRefresh(`${API_URL}/auth/accept-invite`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password })
       });
       const body = await res.json();

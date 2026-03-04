@@ -224,9 +224,8 @@ export default function WeeklyActivityCalendar() {
   const isParent = !!user && String(user.role || '').toLowerCase() === 'parent';
 
   return (
-    <div className="min-h-screen bg-[#f7f8fa] flex flex-col items-center py-8 px-2">
-      <div className="w-full max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+    <div>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
           <div>
             <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('activities.title')}</h1>
             <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{weekLabel}</div>
@@ -524,7 +523,6 @@ export default function WeeklyActivityCalendar() {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }

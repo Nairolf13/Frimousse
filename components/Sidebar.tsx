@@ -153,16 +153,8 @@ export default function Sidebar() {
   }
   let userName = 'Utilisateur';
   let userRole = 'Utilisateur';
-  let userInitials = 'UT';
   if (user && user.name) {
     userName = user.name;
-    userInitials = user.name
-      .split(' ')
-      .filter(Boolean)
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
   }
   if (user && user.role) {
     userRole = user.role;
@@ -171,42 +163,46 @@ export default function Sidebar() {
     <>
       <MobileMenu />
       {!isShortLandscape && (
-        <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white shadow-lg flex-col p-0 border-r border-gray-100 z-30">
-         <div className="flex items-center gap-3 px-6 pt-8 pb-6">
-          <div className="w-20 h-16 rounded-full overflow-hidden bg-white flex items-center justify-center">
-            <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
+        <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white/95 backdrop-blur-sm shadow-lg flex-col p-0 border-r border-gray-100/80 z-30">
+         <div className="flex items-center gap-3 px-6 pt-7 pb-5">
+          <div className="w-14 h-14 rounded-2xl overflow-hidden bg-brand-50 flex items-center justify-center ring-1 ring-brand-100 shadow-sm">
+            <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-10 h-10 object-contain" />
           </div>
-         <span className="font-extrabold text-xl text-gray-900">{displayCenterName(centerName)}</span>
+         <div className="flex flex-col">
+           <span className="font-extrabold text-lg text-gray-900 leading-tight">{displayCenterName(centerName)}</span>
+           <span className="text-xs text-gray-400 font-medium">Gestion crèche</span>
+         </div>
         </div>
-        <nav className="flex-1 px-2">
-          <ul className="space-y-1">
+        <div className="mx-4 mb-3 border-t border-gray-100"></div>
+        <nav className="flex-1 px-3 overflow-y-auto">
+          <ul className="space-y-0.5">
             {getNavLinks(user, t).map(link => (
               <li key={link.to}>
                 <Link
                   to={link.to}
-                  className={`flex items-center px-4 py-2 rounded-lg font-medium transition text-base ${location.pathname === link.to ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'text-gray-500 hover:bg-gray-50'}`}
+                  className={`flex items-center px-3 py-2.5 rounded-xl font-medium transition-all duration-150 text-sm ${location.pathname === link.to ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
                 >
                   {link.icon}
                   <span className="flex-1">{link.label}</span>
                   {link.to === '/notifications' && unreadCount > 0 ? (
-                    <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-600 text-white">{unreadCount}</span>
+                    <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-red-500 text-white">{unreadCount}</span>
                   ) : null}
                   {link.to === '/admin/support' && typeof supportCount === 'number' && supportCount > 0 ? (
-                    <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-600 text-white">{supportCount}</span>
+                    <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-indigo-500 text-white">{supportCount}</span>
                   ) : null}
                   {link.to === '/admin/reviews' && typeof unreadReviews === 'number' && unreadReviews > 0 ? (
-                    <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-600 text-white">{unreadReviews}</span>
+                    <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-blue-500 text-white">{unreadReviews}</span>
                   ) : null}
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        <div className="mt-auto flex items-center gap-3 px-6 py-6">
-          <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-base font-bold text-blue-700 border border-blue-100">{userInitials}</div>
-          <div>
-            <div className="font-semibold text-gray-900 leading-tight">{userName}</div>
-            <div className="text-xs text-gray-400">{userRole}</div>
+        <div className="mx-4 border-t border-gray-100"></div>
+        <div className="flex items-center gap-3 px-5 py-5">
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-gray-900 leading-tight text-sm truncate">{userName}</div>
+            <div className="text-xs text-gray-400 capitalize">{userRole}</div>
           </div>
         </div>
         </aside>

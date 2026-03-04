@@ -82,14 +82,27 @@ export default function ProtectedLayout() {
     }
   }, [loading, authenticated, profileCompleted, navigate]);
 
-  if (loading) return <div className="flex items-center justify-center h-screen">Chargement...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen bg-gray-50">
+      <div className="flex flex-col items-center gap-4 animate-fade-in">
+        <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
+          <img src="/imgs/LogoFrimousse.webp" alt="" className="w-8 h-8 object-contain animate-pulse" />
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-brand-300 animate-bounce [animation-delay:0ms]"></div>
+          <div className="w-2 h-2 rounded-full bg-brand-400 animate-bounce [animation-delay:150ms]"></div>
+          <div className="w-2 h-2 rounded-full bg-brand-500 animate-bounce [animation-delay:300ms]"></div>
+        </div>
+      </div>
+    </div>
+  );
   if (!authenticated) return null;
 
 
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-  <main className="flex-1 bg-gray-50 p-6 max-w-full overflow-x-hidden box-border">
+  <main className="flex-1 bg-gray-50 p-4 md:p-6 max-w-full overflow-x-hidden box-border">
   {/* Welcome/tutorial modal disabled */}
         {outlet}
       </main>

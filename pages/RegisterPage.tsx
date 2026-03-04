@@ -530,92 +530,149 @@ export default function RegisterPage() {
   }) && confirmPassword.trim().length > 0;
 
   return (
-    <div ref={containerRef} className="h-screen flex items-center justify-center bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2] overflow-hidden">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-6 w-full max-w-xl md:max-w-2xl flex flex-col items-center max-h-[95vh] overflow-auto">
-        <div className="w-20 h-20 mb-4">
-          <img src="/imgs/LogoFrimousse.webp" alt="Logo" className="w-full h-full object-contain" />
+    <div ref={containerRef} className="min-h-dvh w-full bg-white md:flex md:flex-row">
+      {/* Desktop left branding panel — sticky */}
+      <div className="hidden md:flex md:w-[38%] lg:w-[35%] xl:w-[30%] bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 flex-col items-center justify-center p-10 relative overflow-hidden md:sticky md:top-0 md:h-screen md:flex-shrink-0">
+        {/* Decorative circles */}
+        <div className="absolute -top-20 -left-20 w-72 h-72 bg-white/5 rounded-full" />
+        <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-white/5 rounded-full" />
+        <div className="absolute top-1/3 right-10 w-28 h-28 bg-white/10 rounded-full" />
+        
+        <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-24 h-24 object-contain drop-shadow-lg mb-8 relative z-10" />
+        <h1 className="text-3xl lg:text-4xl font-extrabold text-white text-center tracking-tight leading-tight relative z-10">
+          Bienvenue sur<br />Frimousse
+        </h1>
+        <p className="mt-4 text-brand-100 text-center text-base lg:text-lg max-w-xs leading-relaxed relative z-10">
+          La plateforme de gestion pour les assistantes maternelles et crèches.
+        </p>
+        <div className="mt-10 flex flex-col gap-4 relative z-10">
+          <div className="flex items-center gap-3 text-white/90">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span className="text-sm font-medium">Planning & suivi en temps réel</span>
+          </div>
+          <div className="flex items-center gap-3 text-white/90">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span className="text-sm font-medium">Rapports & exports automatiques</span>
+          </div>
+          <div className="flex items-center gap-3 text-white/90">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span className="text-sm font-medium">Communication parents simplifiée</span>
+          </div>
         </div>
-        <h2 className="text-2xl font-bold mb-2 text-[#0b5566] text-center">Inscription</h2>
-        <p className="mb-4 text-[#08323a] text-center">Créez votre compte Frimousse</p>
+      </div>
+
+      {/* Form panel */}
+      <div className="flex-1 px-4 sm:px-6 md:px-10 lg:px-16 py-6 md:py-10">
+      <form onSubmit={handleSubmit} className="w-full max-w-3xl mx-auto">
+
+        {/* Mobile header */}
+        <div className="flex flex-col items-center md:items-start mb-6">
+          <div className="w-16 h-16 mb-3 md:hidden">
+            <img src="/imgs/LogoFrimousse.webp" alt="Logo" className="w-full h-full object-contain" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Créer un compte</h2>
+          <p className="mt-1 text-gray-500 text-sm">Rejoignez Frimousse en quelques minutes</p>
+        </div>
 
         <OAuthButtons mode="register" />
 
-        {/* Divider */}
-        <div className="flex items-center w-full my-5">
-          <div className="flex-1 border-t border-gray-300" />
-          <span className="px-3 text-sm text-gray-400">ou par email</span>
-          <div className="flex-1 border-t border-gray-300" />
+        <div className="flex items-center w-full my-6">
+          <div className="flex-1 border-t border-gray-400" />
+          <span className="px-4 text-xs font-medium text-gray-400 uppercase tracking-wider">ou par email</span>
+          <div className="flex-1 border-t border-gray-400" />
         </div>
 
-  <div className="text-sm text-gray-500 mb-4">Champs obligatoires <span className="text-red-600">*</span></div>
-        {error && <div className="mb-4 text-red-600 w-full text-center">{error}</div>}
-        {success && <div className="mb-4 text-[#0b5566] w-full text-center">Inscription réussie. Redirection…</div>}
+        {error && <div className="mb-5 text-red-600 text-sm text-center bg-red-50 rounded-xl px-4 py-3">{error}</div>}
+        {success && <div className="mb-5 text-brand-600 text-sm text-center bg-brand-50 rounded-xl px-4 py-3">Inscription réussie. Redirection…</div>}
 
-        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Nom <span className="text-red-600">*</span>
-          <input name="name" value={form.name} onChange={handleChange} placeholder="Nom et prénom" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-        </label>
+        {/* ── Section 1 : Identité ── */}
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-8 h-8 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-brand-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0"/></svg>
+          </div>
+          <h3 className="text-sm font-bold text-gray-800">Identité</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Nom complet <span className="text-red-500">*</span></label>
+            <input name="name" value={form.name} onChange={handleChange} placeholder="Jean Dupont" required className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Email <span className="text-red-500">*</span></label>
+            <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="jean@exemple.fr" required className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
+          </div>
+        </div>
 
-        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Email <span className="text-red-600">*</span>
-          <input name="email" type="email" value={form.email} onChange={handleChange}placeholder="Email" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-        </label>
-
-        <label className="block mb-3 w-full text-left font-medium text-[#08323a]">Société / Crèche <span className="text-red-600">*</span>
-          <input name="centerName" value={form.centerName} onChange={handleChange} placeholder="Nom de la crèche ou société" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-        </label>
-        
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full mb-3">
-           <label className="block text-left font-medium text-[#08323a]">Adresse <span className="text-red-600">*</span>
+        {/* ── Section 2 : Structure ── */}
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21"/></svg>
+          </div>
+          <h3 className="text-sm font-bold text-gray-800">Votre structure</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="md:col-span-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Société / Crèche <span className="text-red-500">*</span></label>
+            <input name="centerName" value={form.centerName} onChange={handleChange} placeholder="Nom de la crèche ou société" className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Adresse <span className="text-red-500">*</span></label>
             <div className="relative">
-              <input name="address" value={form.address} onChange={handleChange} placeholder="Adresse " className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <input name="address" value={form.address} onChange={handleChange} placeholder="123 rue de la Paix" className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
               {openAddress && placeSuggestions.length > 0 && (
-                <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-56 overflow-auto rounded shadow">
-                      {placeSuggestions.map((p, idx) => {
+                <ul className="absolute z-20 left-0 right-0 bg-white border border-gray-400 mt-1 max-h-56 overflow-auto rounded-xl shadow-lg">
+                  {placeSuggestions.map((p, idx) => {
                     const summary = [p.house_number && `${p.house_number} ${p.street}`, p.street || p.name, p.postcode, p.state, p.country].filter(Boolean).join(', ');
                     const label = p.name || (p.house_number ? `${p.house_number} ${p.street}` : p.street || '');
                     return (
-                      <li key={idx} role="button" tabIndex={0} onClick={() => { selectPlace(p); }} className="px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                        <div className="text-sm font-medium">{label}</div>
-                        <div className="text-xs text-gray-500">{summary}</div>
+                      <li key={idx} role="button" tabIndex={0} onClick={() => { selectPlace(p); }} className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <div className="text-sm font-medium text-gray-800">{label}</div>
+                        <div className="text-xs text-gray-400">{summary}</div>
                       </li>
                     );
                   })}
                 </ul>
               )}
             </div>
-          </label>
-          <label className="block text-left font-medium text-[#08323a]">Pays <span className="text-red-600">*</span>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Pays <span className="text-red-500">*</span></label>
             <div className="relative">
-              <input name="country" value={form.country} onChange={handleChange} placeholder="Pays" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <input name="country" value={form.country} onChange={handleChange} placeholder="France" autoComplete="off" className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
               {openCountry && countrySuggestions.length > 0 && (
-                <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-44 overflow-auto rounded shadow">
+                <ul className="absolute z-20 left-0 right-0 bg-white border border-gray-400 mt-1 max-h-44 overflow-auto rounded-xl shadow-lg">
                   {countrySuggestions.map((c, idx) => (
-                    <li key={idx} role="button" tabIndex={0} onClick={() => selectCountry(c.name)} className="px-3 py-2 hover:bg-gray-100 cursor-pointer">{c.name}</li>
+                    <li key={idx} role="button" tabIndex={0} onClick={() => selectCountry(c.name)} className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors text-sm">{c.name}</li>
                   ))}
                 </ul>
               )}
             </div>
-          </label>
-
-          <label className="block text-left font-medium text-[#08323a]">Région <span className="text-red-600">*</span>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Région <span className="text-red-500">*</span></label>
             <div className="relative">
-              <input name="region" value={form.region} onChange={handleChange} placeholder="Région / Département" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <input name="region" value={form.region} onChange={handleChange} placeholder="Île-de-France" autoComplete="off" className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
               {openRegion && regionSuggestions.length > 0 && (
-                <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-44 overflow-auto rounded shadow">
+                <ul className="absolute z-20 left-0 right-0 bg-white border border-gray-400 mt-1 max-h-44 overflow-auto rounded-xl shadow-lg">
                   {regionSuggestions.map((r, idx) => (
-                    <li key={idx} role="button" tabIndex={0} onClick={() => selectRegion(r)} className="px-3 py-2 hover:bg-gray-100 cursor-pointer">{r}</li>
+                    <li key={idx} role="button" tabIndex={0} onClick={() => selectRegion(r)} className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors text-sm">{r}</li>
                   ))}
                 </ul>
               )}
             </div>
-          </label>
-
-         
-          <label className="block text-left font-medium text-[#08323a]">Ville <span className="text-red-600">*</span>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Ville <span className="text-red-500">*</span></label>
             <div className="relative">
-              <input name="city" value={form.city} onChange={handleChange} placeholder="Ville" autoComplete="off" className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <input name="city" value={form.city} onChange={handleChange} placeholder="Paris" autoComplete="off" className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
               {openCity && citySuggestions.length > 0 && (
-                <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-56 overflow-auto rounded shadow">
+                <ul className="absolute z-20 left-0 right-0 bg-white border border-gray-400 mt-1 max-h-56 overflow-auto rounded-xl shadow-lg">
                   {citySuggestions.map((p, idx) => {
                     const display = p.city || p.name || '';
                     const summary = [p.postcode, p.state, p.country].filter(Boolean).join(', ');
@@ -629,139 +686,133 @@ export default function RegisterPage() {
                         setCitySuggestions([]);
                         setOpenCity(false);
                         applyAndFocus('address', '');
-                      }} className="px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                        <div className="text-sm font-medium">{display}</div>
-                        <div className="text-xs text-gray-500">{summary}</div>
+                      }} className="px-4 py-2.5 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <div className="text-sm font-medium text-gray-800">{display}</div>
+                        <div className="text-xs text-gray-400">{summary}</div>
                       </li>
                     );
                   })}
                 </ul>
               )}
             </div>
-          </label>
-        </div>
-
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full mb-3">
-    <div className="sm:col-span-2 block text-left font-medium text-[#08323a]">Code postal <span className="text-red-600">*</span></div>
-
+          </div>
           <div>
-            <input name="postalCode" value={form.postalCode} onChange={handleChange} placeholder="Code postal" onBlur={() => {
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Code postal <span className="text-red-500">*</span></label>
+            <input name="postalCode" value={form.postalCode} onChange={handleChange} placeholder="75001" onBlur={() => {
               try {
-                if (!resolvedCountryCode) {
-                  // clear postal code when leaving the field if country is not known
-                  updateForm({ postalCode: '' });
-                }
-              } catch (err) {
-                console.error('postalCode onBlur error', err);
-              }
-            }} className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-          </div>
-
-          <div className="text-xs flex items-center">
-            {form.postalCode ? (
-              resolvedCountryCode ? (
-                postalCodeIsValid ? (
-                  <span className="text-green-600">✓ Code postal valide</span>
+                if (!resolvedCountryCode) { updateForm({ postalCode: '' }); }
+              } catch (err) { console.error('postalCode onBlur error', err); }
+            }} className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
+            <div className="text-xs mt-1.5">
+              {form.postalCode ? (
+                resolvedCountryCode ? (
+                  postalCodeIsValid ? (
+                    <span className="text-green-600">✓ Code postal valide</span>
+                  ) : (
+                    <span className="text-red-500">✕ Code postal invalide pour le pays sélectionné</span>
+                  )
                 ) : (
-                  <span className="text-red-600">✕ Code postal invalide pour le pays sélectionné</span>
+                  <span className="text-gray-400">Sélectionnez d'abord le pays</span>
                 )
-              ) : (
-                <span className="text-gray-600">Sélectionnez d'abord le pays pour valider le code postal</span>
-              )
-            ) : (
-              <span className="text-gray-500">Entrez un code postal</span>
-            )}
+              ) : null}
+            </div>
           </div>
-
         </div>
 
-  <label className="block mb-3 w-full text-left font-medium text-gray-700">Mot de passe <span className="text-red-600">*</span>
-          <div className="relative">
-            <input name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="Mot de passe" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] pr-10" />
-            <button type="button" tabIndex={-1} aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#0b5566] text-lg focus:outline-none" onClick={() => setShowPassword(v => !v)}>{showPassword ? '🙈' : '👁️'}</button>
+        {/* ── Section 3 : Sécurité ── */}
+        <div className="flex items-center gap-2.5 mb-4 mt-6">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
           </div>
-        </label>
-
-        {/* Password rules live feedback */}
-        <div className="w-full mb-3">
-          <div className="text-sm font-medium text-[#08323a] mb-2">Votre mot de passe doit contenir :</div>
-          <ul className="text-sm space-y-1">
-            <li className={`flex items-center gap-2 ${hasUpper ? 'text-green-600' : 'text-red-600'}`}>
-              <svg className={`w-4 h-4 ${hasUpper ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span>Une lettre majuscule (A-Z)</span>
-            </li>
-            <li className={`flex items-center gap-2 ${hasDigit ? 'text-green-600' : 'text-red-600'}`}>
-              <svg className={`w-4 h-4 ${hasDigit ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span>Un chiffre (0-9)</span>
-            </li>
-            <li className={`flex items-center gap-2 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`}>
-              <svg className={`w-4 h-4 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span>Un caractère spécial (ex. !@#$%)</span>
-            </li>
-            <li className={`flex items-center gap-2 ${hasLength ? 'text-green-600' : 'text-red-600'}`}>
-              <svg className={`w-4 h-4 ${hasLength ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span>Au moins {minLength} caractères</span>
-            </li>
-          </ul>
+          <h3 className="text-sm font-bold text-gray-800">Sécurité</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Mot de passe <span className="text-red-500">*</span></label>
+            <div className="relative">
+              <input name="password" type={showPassword ? "text" : "password"} value={form.password} onChange={handleChange} placeholder="••••••••" required className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all pr-10" />
+              <button type="button" tabIndex={-1} aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-500 text-base focus:outline-none transition-colors" onClick={() => setShowPassword(v => !v)}>{showPassword ? '🙈' : '👁️'}</button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Confirmer <span className="text-red-500">*</span></label>
+            <div className="relative">
+              <input name="confirmPassword" type={showConfirm ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" required className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all pr-10" />
+              <button type="button" tabIndex={-1} aria-label={showConfirm ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand-500 text-base focus:outline-none transition-colors" onClick={() => setShowConfirm(v => !v)}>{showConfirm ? '🙈' : '👁️'}</button>
+            </div>
+          </div>
+        </div>
+        {/* Password strength chips */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${hasUpper ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+            {hasUpper ? '✓' : '○'} Majuscule
+          </span>
+          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${hasDigit ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+            {hasDigit ? '✓' : '○'} Chiffre
+          </span>
+          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${hasSpecial ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+            {hasSpecial ? '✓' : '○'} Spécial
+          </span>
+          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${hasLength ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+            {hasLength ? '✓' : '○'} {minLength}+ caractères
+          </span>
         </div>
 
-  <label className="block mb-3 w-full text-left font-medium text-gray-700">Confirmer le mot de passe <span className="text-red-600">*</span>
-          <div className="relative">
-            <input name="confirmPassword" type={showConfirm ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmer le mot de passe" required className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] pr-10" />
-            <button type="button" tabIndex={-1} aria-label={showConfirm ? "Masquer le mot de passe" : "Afficher le mot de passe"} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#0b5566] text-lg focus:outline-none" onClick={() => setShowConfirm(v => !v)}>{showConfirm ? '🙈' : '👁️'}</button>
+        {/* ── Section 4 : Offre ── */}
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="w-8 h-8 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z"/></svg>
           </div>
-        </label>
-
-        <div className="w-full mb-4 mt-6">
-          <label className="block mb-2 font-medium text-[#08323a]">Offres</label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button type="button" onClick={() => setInitialPlan('decouverte')} className={`p-3 rounded-lg border text-sm focus:outline-none flex flex-col items-center text-center min-h-[140px] ${initialPlan === 'decouverte' ? 'border-[#0b5566] bg-[#f7f4d7]' : 'border-gray-200 bg-white hover:shadow-sm'}`}>
-              <div><div className="font-semibold text-[#0b5566]">Découverte</div><div className="text-xs text-gray-600">Essai 15 jours</div></div>
-              <div className="mt-3 text-xs text-gray-600">Tester Frimousse sans engagement</div>
-              <div className="mt-auto text-base font-bold text-[#0b5566]">0€</div>
-            </button>
-
-            <button type="button" onClick={() => setInitialPlan('essentiel')} className={`p-3 rounded-lg border text-sm focus:outline-none flex flex-col items-center text-center min-h-[140px] ${initialPlan === 'essentiel' ? 'border-[#0b5566] bg-white shadow' : 'border-gray-200 bg-white hover:shadow-sm'}`}>
-              <div><div className="font-semibold text-[#0b5566]">Essentiel</div><div className="text-xs text-gray-600">Pour petites structures</div></div>
-              <div className="mt-3 text-xs text-gray-600">Jusqu’à 10 enfants, exports et notifications</div>
-              <div className="mt-auto text-base font-bold text-[#0b5566]">29,99€ <span className="text-xs text-gray-500">/ mois</span></div>
-            </button>
-
-            <button type="button" onClick={() => setInitialPlan('pro')} className={`p-3 rounded-lg border text-sm focus:outline-none flex flex-col items-center text-center min-h-[140px] ${initialPlan === 'pro' ? 'border-[#0b5566] bg-white shadow' : 'border-gray-200 bg-white hover:shadow-sm'}`}>
-              <div><div className="font-semibold text-[#0b5566]">Pro</div><div className="text-xs text-gray-600">Pour structures avancées</div></div>
-              <div className="mt-3 text-xs text-gray-600">Enfants illimités, Assistant IA </div>
-              <div className="mt-auto text-base font-bold text-[#0b5566]">59,99€ <span className="text-xs text-gray-500">/ mois</span></div>
-            </button>
-          </div>
+          <h3 className="text-sm font-bold text-gray-800">Choisir une offre</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <button type="button" onClick={() => setInitialPlan('decouverte')} className={`group p-5 rounded-2xl border-2 focus:outline-none flex flex-col items-center text-center transition-all ${initialPlan === 'decouverte' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
+            <div className="text-base font-extrabold text-brand-600 tracking-tight">Découverte</div>
+            <div className="text-[11px] font-medium text-gray-400 mt-0.5">Essai 15 jours</div>
+            <div className="mt-2 text-xs text-gray-500 leading-relaxed">Tester Frimousse sans engagement</div>
+            <div className="mt-auto pt-3 text-2xl font-black text-brand-500">0€</div>
+          </button>
+          <button type="button" onClick={() => setInitialPlan('essentiel')} className={`group p-5 rounded-2xl border-2 focus:outline-none flex flex-col items-center text-center transition-all ${initialPlan === 'essentiel' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
+            <div className="text-base font-extrabold text-brand-600 tracking-tight">Essentiel</div>
+            <div className="text-[11px] font-medium text-gray-400 mt-0.5">Petites structures</div>
+            <div className="mt-2 text-xs text-gray-500 leading-relaxed">10 enfants, exports, notifications</div>
+            <div className="mt-auto pt-3 text-2xl font-black text-brand-500">29,99€ <span className="text-xs font-normal text-gray-400">/ mois</span></div>
+          </button>
+          <button type="button" onClick={() => setInitialPlan('pro')} className={`group p-5 rounded-2xl border-2 focus:outline-none flex flex-col items-center text-center transition-all ${initialPlan === 'pro' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
+            <div className="text-base font-extrabold text-brand-600 tracking-tight">Pro</div>
+            <div className="text-[11px] font-medium text-gray-400 mt-0.5">Structures avancées</div>
+            <div className="mt-2 text-xs text-gray-500 leading-relaxed">Illimité, Assistant IA</div>
+            <div className="mt-auto pt-3 text-2xl font-black text-brand-500">59,99€ <span className="text-xs font-normal text-gray-400">/ mois</span></div>
+          </button>
         </div>
 
         {(initialPlan === 'essentiel' || initialPlan === 'pro') && (
-          <div className="w-full max-w-xl md:max-w-2xl mt-2 px-6">
-            <div className="rounded-md bg-yellow-100 border-l-4 border-yellow-400 p-3 text-sm text-yellow-800">
-              Les abonnements payant ne sont pas encore disponibles veuillez essayer la version gratuite sans engagement — Contactez-nous pour plus de renseignements.
+          <div className="w-full mb-4">
+            <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-700">
+              Les abonnements payants ne sont pas encore disponibles — essayez la version gratuite sans engagement.
             </div>
           </div>
         )}
 
-        <div className="w-full">
-          <button type="submit" disabled={initLoading || completeLoading || initialPlan !== 'decouverte' || !passwordValid || !postalCodeIsValid || !allFieldsFilled} title={initialPlan !== 'decouverte' ? 'Les abonnements payants ne sont pas encore disponibles. Contactez-nous pour plus d’informations.' : (!allFieldsFilled ? 'Remplissez tous les champs obligatoires.' : (!passwordValid ? 'Le mot de passe ne respecte pas les règles requises.' : (!postalCodeIsValid ? 'Le code postal est invalide.' : undefined)))} aria-disabled={initialPlan !== 'decouverte' ? 'true' : (!passwordValid || !postalCodeIsValid || !allFieldsFilled ? 'true' : 'false')} className={`w-full py-2 rounded-full font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#a9ddf2] ${initLoading || completeLoading || initialPlan !== 'decouverte' || !passwordValid || !postalCodeIsValid || !allFieldsFilled ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-[#0b5566] text-white hover:opacity-95'}`}>
-            {initLoading || completeLoading ? 'Patientez…' : (initialPlan === 'decouverte' ? 'S’inscrire' : 'S’inscrire et payer')}
-          </button>
-          {!passwordValid && <div className="text-xs text-red-600 mt-2">Le mot de passe doit respecter toutes les règles ci-dessus.</div>}
-        </div>
+        {/* Submit */}
+        <button type="submit" disabled={initLoading || completeLoading || initialPlan !== 'decouverte' || !passwordValid || !postalCodeIsValid || !allFieldsFilled} title={initialPlan !== 'decouverte' ? 'Les abonnements payants ne sont pas encore disponibles. Contactez-nous pour plus d\'informations.' : (!allFieldsFilled ? 'Remplissez tous les champs obligatoires.' : (!passwordValid ? 'Le mot de passe ne respecte pas les règles requises.' : (!postalCodeIsValid ? 'Le code postal est invalide.' : undefined)))} aria-disabled={initialPlan !== 'decouverte' ? 'true' : (!passwordValid || !postalCodeIsValid || !allFieldsFilled ? 'true' : 'false')} className={`w-full py-3.5 rounded-xl font-semibold text-sm tracking-wide transition-all focus:outline-none focus:ring-2 focus:ring-brand-200 mt-2 ${initLoading || completeLoading || initialPlan !== 'decouverte' || !passwordValid || !postalCodeIsValid || !allFieldsFilled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-brand-500 text-white hover:bg-brand-600 active:scale-[0.98] shadow-sm hover:shadow-md'}`}>
+          {initLoading || completeLoading ? 'Patientez…' : (initialPlan === 'decouverte' ? 'Créer mon compte' : 'Créer mon compte et payer')}
+        </button>
+        {!passwordValid && form.password.length > 0 && <div className="text-xs text-red-500 mt-2 text-center">Le mot de passe ne respecte pas toutes les règles ci-dessus.</div>}
 
-        <div className="mt-4 text-sm text-[#08323a]">Déjà un compte ? <a href="/login" className="text-[#0b5566] hover:underline">Se connecter</a></div>
+        <p className="mt-5 text-center text-sm text-gray-400">Déjà un compte ? <a href="/login" className="text-brand-500 font-semibold hover:underline">Se connecter</a></p>
 
       </form>
+      </div>
 
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
-          <div role="dialog" aria-modal="true" className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
-            <h3 className="text-lg font-bold text-[#0b5566] mb-2">Abonnement requis</h3>
+          <div role="dialog" aria-modal="true" className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-bold text-brand-500 mb-2">Abonnement requis</h3>
             <p className="text-sm text-gray-700 mb-4">{upgradeMessage || 'Cette action nécessite un abonnement. Passez à un plan supérieur pour continuer.'}</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => { window.location.href = '/pricing'; }} className="px-4 py-2 bg-[#0b5566] text-white rounded-md">Aller aux offres</button>
-              <button onClick={() => setShowUpgradeModal(false)} className="px-4 py-2 border rounded-md">Fermer</button>
+              <button onClick={() => { window.location.href = '/pricing'; }} className="px-4 py-2 bg-brand-500 text-white rounded-xl font-semibold hover:bg-brand-600 transition">Aller aux offres</button>
+              <button onClick={() => setShowUpgradeModal(false)} className="px-4 py-2 border border-gray-200 rounded-xl font-medium hover:bg-gray-50 transition">Fermer</button>
             </div>
           </div>
         </div>

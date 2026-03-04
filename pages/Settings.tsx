@@ -654,10 +654,14 @@ export default function Settings() {
   }, [isSuperAdmin, loadTicketsByCenter]);
 
   return (
-  <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
-      <div className="max-w-7xl mx-auto w-full">
-        <div className="max-w-3xl mx-auto p-6">
-          <h1 className="text-2xl md:text-3xl font-extrabold mb-6 tracking-tight" style={{ color: '#0b5566' }}>{t('settings.title')}</h1>
+  <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('settings.title')}</h1>
+            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('settings.description', 'Gérez vos préférences et votre compte')}</div>
+          </div>
+        </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-stretch">
             <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">
@@ -860,7 +864,6 @@ export default function Settings() {
             </div>
           </div>
         )}
-      </div>
 
       {showSupportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm md:pl-64">

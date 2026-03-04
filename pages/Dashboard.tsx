@@ -174,12 +174,12 @@ export default function Dashboard() {
       .catch(() => setAssignments([]));
 
     fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' })
-      .then(res => res.json())
+      .then(res => { if (!res.ok) throw new Error(String(res.status)); return res.json(); })
       .then(data => setChildrenCount(Array.isArray(data) ? data.length : 0))
       .catch(() => setChildrenCount(0));
 
-    fetch(`${API_URL}/nannies`, { credentials: 'include' })
-      .then(res => res.json())
+    fetchWithRefresh(`${API_URL}/nannies`, { credentials: 'include' })
+      .then(res => { if (!res.ok) throw new Error(String(res.status)); return res.json(); })
       .then((data: Nanny[]) => {
         if (Array.isArray(data)) {
           setActiveCaregivers(data.filter((n: Nanny) => n.availability === 'Disponible').length);
@@ -369,62 +369,63 @@ export default function Dashboard() {
   const selectedAssignment = selectedId ? assignments.find(a => a.id === selectedId) : undefined;
 
   return (
-  <div className={`relative z-0 min-h-screen bg-[#fcfcff] p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+  <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       {successMessage && (
-        <div className="fixed top-6 right-6 z-50 bg-green-50 border border-green-200 text-green-800 px-4 py-2 rounded-lg shadow-md">
+        <div className="fixed top-6 right-6 z-50 bg-green-50 border border-green-200 text-green-800 px-5 py-3 rounded-xl shadow-lg animate-slide-up flex items-center gap-2">
+          <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
           {successMessage}
         </div>
       )}
       
-      <div className="max-w-7xl mx-auto w-full">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.dashboard')}</h1>
-          <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('dashboard.welcome')}</div>
+          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight text-brand-500">{t('page.dashboard')}</h1>
+          <div className="text-sm md:text-base font-medium text-brand-700/60">{t('dashboard.welcome')}</div>
         </div>
-          <div className="flex items-center gap-2 self-start md:self-end">
+          <div className="flex items-center gap-3 self-start md:self-end">
           <input type="date" value={currentDate.toISOString().split('T')[0]} onChange={e => setCurrentDate(new Date(e.target.value))}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-[120px] sm:w-auto" />
+            className="border border-gray-200 rounded-xl px-3 py-2.5 text-gray-700 bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300 w-[130px] sm:w-auto" />
           {!(user && user.role === 'parent') && (
-            <button type="button" onClick={() => handleQuickAdd(new Date())} className="bg-[#0b5566] text-white font-semibold rounded-lg px-4 py-2 text-base shadow hover:opacity-95 transition whitespace-nowrap">+ {t('global.add')}</button>
+            <button type="button" onClick={() => handleQuickAdd(new Date())} className="bg-brand-500 text-white font-semibold rounded-xl px-5 py-2.5 text-sm shadow-sm hover:bg-brand-600 active:scale-[0.98] transition-all whitespace-nowrap">+ {t('global.add')}</button>
           )}
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 mb-8 w-full">
-        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4 mb-8 w-full">
+        <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-gray-100 hover:shadow-md transition-shadow w-full">
             <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{totalChildren}</span>
-            <span className="rounded-full p-2" style={{ background: '#a9ddf2', color: '#08323a' }}><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg></span>
+            <span className="rounded-full p-2 bg-brand-200 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg></span>
           </div>
           <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.children_registered')}</div>
-          <div className={`${childrenChangePercent !== null && childrenChangePercent < 0 ? 'text-red-500' : 'text-[#0b5566]'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{childrenChangePercent === null ? '—' : `${childrenChangePercent > 0 ? '+' : ''}${childrenChangePercent}%`} {t('dashboard.since_last_month')}</div>
+          <div className={`${childrenChangePercent !== null && childrenChangePercent < 0 ? 'text-red-500' : 'text-brand-500'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{childrenChangePercent === null ? '—' : `${childrenChangePercent > 0 ? '+' : ''}${childrenChangePercent}%`} {t('dashboard.since_last_month')}</div>
         </div>
-        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
+        <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-gray-100 hover:shadow-md transition-shadow w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{presentToday}</span>
-            <span className="bg-[#a9ddf2] text-[#0b5566] rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
+            <span className="bg-brand-200 text-brand-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
           </div>
           <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.present_today')}</div>
-          <div className="text-[#0b5566] text-xs sm:text-sm font-semibold flex items-center gap-1">{t('dashboard.presence_rate')} {presentRate}%</div>
+          <div className="text-brand-500 text-xs sm:text-sm font-semibold flex items-center gap-1">{t('dashboard.presence_rate')} {presentRate}%</div>
         </div>
-        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
+        <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-gray-100 hover:shadow-md transition-shadow w-full">
             <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{activeCaregivers}</span>
-            <span className="rounded-full p-2" style={{ background: '#f7f4d7', color: '#08323a' }}><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21C7 21 2 17 2 12V7a5 5 0 0 1 10 0v5c0 5-5 9-10 9z"/></svg></span>
+            <span className="rounded-full p-2 bg-cream-100 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21C7 21 2 17 2 12V7a5 5 0 0 1 10 0v5c0 5-5 9-10 9z"/></svg></span>
           </div>
           <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.active_caregivers')}</div>
           <div className="text-gray-400 text-xs sm:text-sm font-medium flex items-center gap-1">{t('dashboard.no_change')}</div>
         </div>
-        <div className="bg-white rounded-2xl shadow p-3 md:p-6 flex flex-col items-start gap-2 border border-[#f3f3fa] max-w-xs w-full">
+        <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-gray-100 hover:shadow-md transition-shadow w-full">
           <div className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl sm:text-3xl font-bold text-gray-900">{weeklyAverage}%</span>
-            <span className="rounded-full p-2" style={{ background: '#fcdcdf', color: '#08323a' }}><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 17l4-4 4 4"/></svg></span>
+            <span className="rounded-full p-2 bg-pink-100 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 17l4-4 4 4"/></svg></span>
           </div>
           <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.weekly_average')}</div>
-          <div className={`${weeklyChangePercent !== null && weeklyChangePercent < 0 ? 'text-red-500' : 'text-[#0b5566]'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{weeklyChangePercent === null ? '—' : `${weeklyChangePercent > 0 ? '+' : ''}${weeklyChangePercent}%`} {t('dashboard.since_last_week')}</div>
+          <div className={`${weeklyChangePercent !== null && weeklyChangePercent < 0 ? 'text-red-500' : 'text-brand-500'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{weeklyChangePercent === null ? '—' : `${weeklyChangePercent > 0 ? '+' : ''}${weeklyChangePercent}%`} {t('dashboard.since_last_week')}</div>
         </div>
       </div>
-      <div className="bg-white rounded-2xl shadow p-4 md:p-6 border border-[#f3f3fa] w-full mx-auto">
+      <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 border border-gray-100 w-full mx-auto">
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-6 gap-2">
       <div className="text-lg md:text-2xl font-bold text-gray-900">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
           <div className="flex items-center gap-2">
@@ -433,9 +434,9 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="block sm:hidden w-full overflow-x-auto">
-          <div className="grid grid-cols-7 gap-1 w-full">
+          <div className="grid grid-cols-7 gap-0 w-full">
             {shortWeekDays.map((day, i) => (
-              <div key={i} className="text-center text-gray-500 font-semibold text-xs py-1">{day}</div>
+              <div key={i} className="text-center text-gray-700 font-bold text-xs py-2 border-b-2 border-gray-300 uppercase tracking-wide">{day}</div>
             ))}
             {monthGrid.flat().map((day, idx) => {
               const assigns = assignments.filter(a => {
@@ -451,13 +452,13 @@ export default function Dashboard() {
               return (
                 <div key={idx} className={
                   "align-top p-1 h-full flex flex-col " +
-                  (isToday ? 'border-2 border-[#0b5566] rounded-xl ' : 'border border-gray-100 ') +
-                  (isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60') +
+                  (isToday ? 'border-2 border-brand-500 rounded-xl ' : 'border border-gray-300 ') +
+                  (isCurrentMonth ? 'bg-white' : 'bg-gray-100 opacity-60') +
                   " relative"
                 }>
                   <div className="flex items-center justify-between mb-1">
                     <span
-                      className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}
+                      className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-900' : 'text-gray-400')}
                       onClick={() => {
                         setDayModalAssignments(assigns);
                         setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
@@ -468,15 +469,15 @@ export default function Dashboard() {
                       {day.getDate()}
                     </span>
                           {!(user && user.role === 'parent') && (
-                            <button type="button" onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
+                            <button type="button" onClick={() => handleQuickAdd(day)} className="text-brand-500 hover:text-brand-700 text-lg font-bold">+</button>
                           )}
                   </div>
                   {assigns.length === 0 ? (
                     <div className="text-gray-300 text-xs">—</div>
                   ) : (
                         assigns.slice(0, 2).map((a, j) => (
-                      <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-[#a9ddf2]' : 'bg-[#fff7e6]') + " shadow-sm group"}>
-                        <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-[#08323a]' : 'bg-[#856400]')}></span>
+                      <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-brand-200/60' : 'bg-cream-100') + " shadow-sm group"}>
+                        <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-brand-700' : 'bg-amber-600')}></span>
                         <span
                           className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]"
                           title={a.child.name}
@@ -506,7 +507,7 @@ export default function Dashboard() {
             <thead>
               <tr>
                 {shortWeekDays.map((day, i) => (
-                  <th key={i} className="p-2 text-center text-gray-500 font-semibold text-base">
+                  <th key={i} className="p-2 text-center text-gray-700 font-bold text-base border-b-2 border-gray-300 uppercase tracking-wide">
                     {day}
                   </th>
                 ))}
@@ -529,13 +530,13 @@ export default function Dashboard() {
                     return (
                       <td key={dIdx} className={
                         "align-top p-2 h-28 " +
-                        (isToday ? 'border-2 border-[#0b5566] rounded-xl ' : 'border border-gray-100 ') +
-                        (isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60') +
+                        (isToday ? 'border-2 border-brand-500 rounded-xl ' : 'border border-gray-300 ') +
+                        (isCurrentMonth ? 'bg-white' : 'bg-gray-100 opacity-60') +
                         " relative"
                       }>
                         <div className="flex items-center justify-between mb-1">
                           <span
-                            className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}
+                            className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-900' : 'text-gray-400')}
                             onClick={() => {
                               setDayModalAssignments(assigns);
                               setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
@@ -546,7 +547,7 @@ export default function Dashboard() {
                             {day.getDate()}
                           </span>
                           {!(user && user.role === 'parent') && (
-                            <button type="button" onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
+                            <button type="button" onClick={() => handleQuickAdd(day)} className="text-brand-500 hover:text-brand-700 text-lg font-bold">+</button>
                           )}
                         </div>
                         {assigns.length === 0 ? (
@@ -554,8 +555,8 @@ export default function Dashboard() {
                         ) : (
                           <>
                             {assigns.slice(0, 2).map((a, j) => (
-                            <div key={a.id} className={"flex items-center gap-2 mb-2 px-2 py-1 rounded-lg " + (j === 0 ? 'bg-[#a9ddf2]' : 'bg-[#f7f4d7]') + " shadow-sm group"}>
-                                      <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-[#08323a]' : 'bg-[#856400]')}></span>
+                            <div key={a.id} className={"flex items-center gap-2 mb-2 px-2 py-1 rounded-lg " + (j === 0 ? 'bg-brand-200/60' : 'bg-cream-100') + " shadow-sm group"}>
+                                      <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-brand-700' : 'bg-amber-600')}></span>
                                 <span
                                       className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[120px]"
                                       title={a.child.name}

@@ -225,44 +225,43 @@ export default function MobileMenu() {
       {!open && <MobileMenuButton showOnMd={true} onOpen={() => setOpen(true)} />}
       {open && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="flex items-center gap-3 px-6 pt-8 pb-6">
-            <div className="w-12 h-12 rounded-full overflow-hidden bg-white flex items-center justify-center">
-              <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
+          <div className="flex items-center gap-3 px-6 pt-7 pb-5">
+            <div className="w-12 h-12 rounded-2xl overflow-hidden bg-brand-50 flex items-center justify-center ring-1 ring-brand-100 shadow-sm">
+              <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-8 h-8 object-contain" />
             </div>
-            <span className="font-extrabold text-xl text-gray-900">{displayCenterName(centerName)}</span>
+            <span className="font-extrabold text-lg text-gray-900">{displayCenterName(centerName)}</span>
             <button
-              className="ml-auto bg-gray-100 rounded-full p-2 border border-gray-200"
+              className="ml-auto bg-gray-100 rounded-xl p-2.5 border border-gray-200 hover:bg-gray-200 transition-colors"
               onClick={() => setOpen(false)}
               aria-label={t('menu.close')}
             >
-              <HiOutlineX className="w-6 h-6 text-gray-700" />
+              <HiOutlineX className="w-5 h-5 text-gray-600" />
             </button>
           </div>
-          <nav className="flex-1 px-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
-            <ul className="space-y-1" style={{ paddingBottom: '96px' }}>
+          <div className="mx-4 mb-2 border-t border-gray-100"></div>
+          <nav className="flex-1 px-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+            <ul className="space-y-0.5" style={{ paddingBottom: '96px' }}>
               {getNavLinks(user, t).map((link) => (
                 <li key={link.to}>
                   <Link
                     to={link.to}
-                    className={`flex items-center px-4 py-3 rounded-lg font-medium transition text-lg ${location.pathname === link.to ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'text-gray-500 hover:bg-gray-50'}`}
+                    className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-150 text-base ${location.pathname === link.to ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
                     onClick={() => setOpen(false)}
                   >
                     {link.icon}
                     <span className="flex-1">{link.label}</span>
                     {link.to === '/notifications' && unreadCount > 0 ? (
-                      <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-600 text-white">{unreadCount}</span>
+                      <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-red-500 text-white">{unreadCount}</span>
                     ) : null}
                   </Link>
                 </li>
               ))}
             </ul>
           </nav>
-          <div className="mt-auto flex items-center gap-3 px-6 py-6">
-            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-base font-bold text-blue-700 border border-blue-100">
-              {user ? (user.name || 'U').split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
-            </div>
+          <div className="mx-4 border-t border-gray-100"></div>
+          <div className="flex items-center gap-3 px-5 py-5">
             <div>
-              <div className="font-semibold text-gray-900 leading-tight">{user?.name || 'Utilisateur'}</div>
+              <div className="font-semibold text-gray-900 leading-tight text-sm">{user?.name || 'Utilisateur'}</div>
               <div className="text-xs text-gray-400 capitalize">{user?.role ? user.role.replace('_', ' ') : 'Utilisateur'}</div>
             </div>
           </div>
