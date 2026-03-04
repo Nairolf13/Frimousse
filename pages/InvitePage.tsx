@@ -10,6 +10,8 @@ const InvitePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
   function getApiUrl(): string {
   const meta = import.meta as { env?: { VITE_API_URL?: string } };
@@ -49,11 +51,17 @@ const InvitePage: React.FC = () => {
           <form onSubmit={submit} className="space-y-3">
             <div>
               <label className="text-sm">Mot de passe</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full border rounded px-3 py-2" />
+              <div className="relative">
+                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="w-full border rounded px-3 py-2 pr-10" />
+                <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-lg" aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}>{showPassword ? '🙈' : '👁️'}</button>
+              </div>
             </div>
             <div>
               <label className="text-sm">Confirmer</label>
-              <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} className="w-full border rounded px-3 py-2" />
+              <div className="relative">
+                <input type={showConfirm ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} className="w-full border rounded px-3 py-2 pr-10" />
+                <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-lg" aria-label={showConfirm ? 'Masquer la confirmation' : 'Afficher la confirmation'}>{showConfirm ? '🙈' : '👁️'}</button>
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <button type="submit" disabled={loading} className="bg-green-500 text-white px-4 py-2 rounded">{loading ? 'Envoi...' : 'Valider'}</button>
