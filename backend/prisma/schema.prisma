@@ -74,6 +74,9 @@ model User {
   country          String?
   role             String
   stripeCustomerId String?
+  emailVerified    Boolean        @default(false)
+  verificationCode String?
+  verificationCodeExpires DateTime?
   nanny            Nanny?         @relation("NannyUser", fields: [nannyId], references: [id])
   nannyId          String?        @unique
   parent           Parent?        @relation("UserParent", fields: [parentId], references: [id])

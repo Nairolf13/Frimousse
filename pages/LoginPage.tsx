@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '../src/context/AuthContext';
 
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const [prefillEmail, setPrefillEmail] = useState('');
   const [subscribeToken, setSubscribeToken] = useState<string | null>(null);
 
+  const { setUser } = useAuth();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -27,6 +30,12 @@ export default function LoginPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        // Handle email not verified
+        if (res.status === 403 && data.error === 'email_not_verified') {
+          // the server has just sent a fresh verification code
+          window.location.href = `/verify-email?email=${encodeURIComponent(data.email || email)}&sent=1`;
+          return;
+        }
         if (res.status === 402 && data && data.error) {
           setError(data.error);
           setNeedsSubscription(true);
@@ -35,6 +44,16 @@ export default function LoginPage() {
           return;
         }
         throw new Error(data?.message || data?.error || 'Identifiants invalides');
+      }
+      // refresh user context synchronously using already imported setUser
+      try {
+        const meRes = await fetch(`${API_URL}/api/user/me`, { credentials: 'include' });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          setUser(meData);
+        }
+      } catch {
+        // ignore
       }
       window.location.href = '/dashboard';
     } catch (err: unknown) {

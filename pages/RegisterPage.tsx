@@ -320,6 +320,13 @@ export default function RegisterPage() {
             regData?.message || regData?.error || "Erreur lors de l'inscription"
           );
 
+        // Redirect to email verification page
+        if (regData.requiresVerification) {
+          // verification code has already been sent by the backend
+          window.location.href = `/verify-email?email=${encodeURIComponent(regData.email)}`;
+          return;
+        }
+
         const loginRes = await fetch(`${API_URL}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -335,6 +342,15 @@ export default function RegisterPage() {
           setShowUpgradeModal(true);
           setInitLoading(false);
           return;
+        }
+        
+        // Handle email not verified on login
+        if (loginRes.status === 403) {
+          const loginData = await loginRes.json().catch(() => ({}));
+          if (loginData.error === 'email_not_verified') {
+            window.location.href = `/verify-email?email=${encodeURIComponent(form.email)}`;
+            return;
+          }
         }
 
         const loginData = await loginRes.json().catch(() => ({}));

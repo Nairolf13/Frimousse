@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Verify your email</title>
+  </head>
+  <body style="margin:0;padding:20px;background:#f3f4f6;font-family:Inter, system-ui, -apple-system,'Segoe UI', Roboto, 'Helvetica Neue', Arial;">
+    <div style="max-width:640px;margin:28px auto;background:#ffffff;padding:28px;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.08);">
+      <div style="text-align:center;margin-bottom:20px;">
+        <img src="{{logoUrl}}" alt="Frimousse" style="width:80px;height:80px;object-fit:contain;" />
+      </div>
+      <h1 style="font-size:20px;margin:14px 0;color:#0f172a;text-align:center;">Verify your email address</h1>
+      <p style="color:#334155;line-height:1.45;margin:8px 0;text-align:center;">Hello {{name}},</p>
+      <p style="color:#334155;line-height:1.45;margin:8px 0;text-align:center;">Thank you for signing up for Frimousse. To activate your account, use the code below:</p>
+      <div style="text-align:center;margin:30px 0;">
+        <div style="display:inline-block;background:#f1f5f9;padding:20px 40px;border-radius:12px;border:2px dashed #0b5566;">
+          <span style="font-size:36px;font-weight:700;letter-spacing:8px;color:#0b5566;">{{code}}</span>
+        </div>
+      </div>
+      <p style="color:#64748b;line-height:1.45;margin:8px 0;text-align:center;font-size:14px;">This code expires in <strong>15 minutes</strong>.</p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:24px;text-align:center;">If you didn't create this account, you can ignore this email.</p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:6px;text-align:center;">© Frimousse</p>
+    </div>
+  </body>
+</html>
