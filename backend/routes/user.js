@@ -82,6 +82,14 @@ router.delete('/', auth, async (req, res) => {
       await tx.notification.deleteMany({ where: { userId: user.id } });
       await tx.subscription.deleteMany({ where: { userId: user.id } });
 
+      // Remove support tickets and their replies
+      const tickets = await tx.supportTicket.findMany({ where: { userId: user.id }, select: { id: true } });
+      const ticketIds = tickets.map(t => t.id);
+      if (ticketIds.length) {
+        await tx.supportReply.deleteMany({ where: { ticketId: { in: ticketIds } } });
+        await tx.supportTicket.deleteMany({ where: { id: { in: ticketIds } } });
+      }
+
       // Remove likes and comments made by the user
       await tx.feedLike.deleteMany({ where: { userId: user.id } });
       await tx.feedComment.deleteMany({ where: { authorId: user.id } });
@@ -94,12 +102,45 @@ router.delete('/', auth, async (req, res) => {
         await tx.feedPost.deleteMany({ where: { id: { in: postIds } } });
       }
 
-      // Remove the user record (after we've removed records that reference the user)
+      // --- Clean up linked Nanny record and all its dependent data ---
+      if (user.nannyId) {
+        const nannyId = user.nannyId;
+        // Remove assignments and reports linked to this nanny
+        await tx.assignment.deleteMany({ where: { nannyId } });
+        await tx.report.deleteMany({ where: { nannyId } });
+        // Remove child-nanny links
+        await tx.childNanny.deleteMany({ where: { nannyId } });
+        // Disconnect nanny from schedules
+        const schedules = await tx.schedule.findMany({ where: { nannies: { some: { id: nannyId } } }, select: { id: true } });
+        for (const s of schedules) {
+          await tx.schedule.update({ where: { id: s.id }, data: { nannies: { disconnect: { id: nannyId } } } });
+        }
+      }
+
+      // --- Clean up linked Parent record and all its dependent data ---
+      if (user.parentId) {
+        const parentId = user.parentId;
+        await tx.photoConsent.deleteMany({ where: { parentId } });
+        // Nullify email log references before deleting payment histories
+        const payments = await tx.paymentHistory.findMany({ where: { parentId }, select: { id: true } });
+        const paymentIds = payments.map(p => p.id);
+        if (paymentIds.length) {
+          await tx.emailLog.updateMany({ where: { paymentHistoryId: { in: paymentIds } }, data: { paymentHistoryId: null } });
+        }
+        await tx.paymentHistory.deleteMany({ where: { parentId } });
+        await tx.parentChild.deleteMany({ where: { parentId } });
+      }
+
+      // Remove the user record first (it holds the FK to nanny/parent)
       await tx.user.delete({ where: { id: user.id } });
 
-  
-  await tx.pushSubscription.deleteMany({ where: { userId: user.id } });
-  await tx.notification.deleteMany({ where: { userId: user.id } });
+      // Now delete the orphaned Nanny / Parent records
+      if (user.nannyId) {
+        await tx.nanny.delete({ where: { id: user.nannyId } });
+      }
+      if (user.parentId) {
+        await tx.parent.delete({ where: { id: user.parentId } });
+      }
     });
 
     res.json({ success: true });
