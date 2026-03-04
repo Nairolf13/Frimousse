@@ -227,7 +227,7 @@ export default function MobileMenu() {
         <div className="fixed inset-0 z-50 bg-white flex flex-col" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex items-center gap-3 px-6 pt-7 pb-5">
             <div className="w-12 h-12 rounded-2xl overflow-hidden bg-brand-50 flex items-center justify-center ring-1 ring-brand-100 shadow-sm">
-              <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-8 h-8 object-contain" />
+              <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-8 h-8 object-contain" />
             </div>
             <span className="font-extrabold text-lg text-gray-900">{displayCenterName(centerName)}</span>
             <button

@@ -202,7 +202,7 @@ export default function VerifyEmailPage() {
       <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2]">
         <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md text-center">
           <div className="w-20 h-20 mx-auto mb-4">
-            <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
+            <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-2xl font-bold mb-4 text-[#0b5566]">Erreur</h2>
           <p className="text-gray-600 mb-6">Aucune adresse email spécifiée.</p>
@@ -216,7 +216,7 @@ export default function VerifyEmailPage() {
     <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2]">
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md flex flex-col items-center">
         <div className="w-20 h-20 mb-4">
-          <img src="/imgs/LogoFrimousse.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
+          <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />
         </div>
         
         {success ? (
