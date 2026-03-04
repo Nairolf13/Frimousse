@@ -35,13 +35,10 @@ export default function VerifyEmailPage() {
     }
   }, [countdown]);
 
-  // if we arrived from login or registration, automatically trigger a resend
-  // so that the user actually receives a fresh code without having to click.
-  useEffect(() => {
-    if (cameFromLogin) {
-      handleResend();
-    }
-  }, [cameFromLogin]);
+  // No auto-resend needed here: the login endpoint already sends a fresh
+  // code when the user attempts to log in with an unverified email, and
+  // registration sends one during sign-up.  Auto-resending was causing a
+  // duplicate email with a different code.
   
   const handleInputChange = (index: number, value: string) => {
     // Only allow digits

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import OAuthButtons from '../components/OAuthButtons';
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -535,7 +536,17 @@ export default function RegisterPage() {
           <img src="/imgs/LogoFrimousse.webp" alt="Logo" className="w-full h-full object-contain" />
         </div>
         <h2 className="text-2xl font-bold mb-2 text-[#0b5566] text-center">Inscription</h2>
-        <p className="mb-6 text-[#08323a] text-center">Créez votre compte Frimousse</p>
+        <p className="mb-4 text-[#08323a] text-center">Créez votre compte Frimousse</p>
+
+        <OAuthButtons mode="register" />
+
+        {/* Divider */}
+        <div className="flex items-center w-full my-5">
+          <div className="flex-1 border-t border-gray-300" />
+          <span className="px-3 text-sm text-gray-400">ou par email</span>
+          <div className="flex-1 border-t border-gray-300" />
+        </div>
+
   <div className="text-sm text-gray-500 mb-4">Champs obligatoires <span className="text-red-600">*</span></div>
         {error && <div className="mb-4 text-red-600 w-full text-center">{error}</div>}
         {success && <div className="mb-4 text-[#0b5566] w-full text-center">Inscription réussie. Redirection…</div>}

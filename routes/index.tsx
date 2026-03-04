@@ -11,6 +11,7 @@ const LandingPage = lazy(() => import('../pages/LandingPage'));
 const LoginPage = lazy(() => import('../pages/LoginPage'));
 const RegisterPage = lazy(() => import('../pages/RegisterPage'));
 const VerifyEmailPage = lazy(() => import('../pages/VerifyEmailPage'));
+const CompleteProfilePage = lazy(() => import('../pages/CompleteProfilePage'));
 const InvitePage = lazy(() => import('../pages/InvitePage'));
 const ResetPassword = lazy(() => import('../pages/ResetPassword'));
 const Dashboard = lazy(() => import('../pages/Dashboard'));
@@ -69,6 +70,7 @@ const AdminSupport = lazy(() => import('../pages/AdminSupport'));
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/invite" element={<InvitePage />} />
+          <Route path="/complete-profile" element={<CompleteProfilePage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/fonctionnalites" element={<FeaturesPage />} />
           <Route path="/tarifs" element={<PricingPage />} />

@@ -34,7 +34,7 @@ async function resolveUserCenter(prismaClient, userRecord) {
 router.get('/me', auth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
-    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true }
+    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true, profileCompleted: true, oauthProvider: true }
   });
   if (!user) return res.status(404).json({ message: 'User not found' });
   try {
@@ -147,6 +147,52 @@ router.delete('/', auth, async (req, res) => {
   } catch (e) {
     const msg = e && e.message ? e.message : String(e);
     res.status(400).json({ error: msg });
+  }
+});
+
+// Complete profile for OAuth users (phone, address, city, postalCode, region, country, centerName)
+router.post('/complete-profile', auth, async (req, res) => {
+  try {
+    const { phone, address, city, postalCode, region, country, centerName } = req.body || {};
+
+    // Validate required fields
+    const missing = [];
+    if (!phone || !phone.trim()) missing.push('Téléphone');
+    if (!centerName || !centerName.trim()) missing.push('Société / Crèche');
+    if (!address || !address.trim()) missing.push('Adresse');
+    if (!city || !city.trim()) missing.push('Ville');
+    if (!postalCode || !postalCode.trim()) missing.push('Code postal');
+    if (!country || !country.trim()) missing.push('Pays');
+    if (missing.length) {
+      return res.status(400).json({ error: `Champs requis : ${missing.join(', ')}` });
+    }
+
+    // Update user profile
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        phone: phone.trim(),
+        address: address.trim(),
+        city: city.trim(),
+        postalCode: postalCode.trim(),
+        region: (region || '').trim() || null,
+        country: country.trim(),
+        profileCompleted: true,
+      },
+    });
+
+    // Update center name if provided
+    if (centerName && centerName.trim() && updated.centerId) {
+      await prisma.center.update({
+        where: { id: updated.centerId },
+        data: { name: centerName.trim() },
+      });
+    }
+
+    res.json({ message: 'Profil complété', profileCompleted: true });
+  } catch (e) {
+    console.error('complete-profile error', e);
+    res.status(400).json({ error: e && e.message ? e.message : String(e) });
   }
 });
 
