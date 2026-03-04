@@ -399,7 +399,15 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
       await prisma.feedLike.delete({ where: { id: existing.id } });
       return res.json({ liked: false });
     }
-    await prisma.feedLike.create({ data: { postId, userId: user.id } });
+    try {
+      await prisma.feedLike.create({ data: { postId, userId: user.id } });
+    } catch (createErr) {
+      // Handle race condition: if unique constraint fails, like already exists
+      if (createErr.code === 'P2002') {
+        return res.json({ liked: true });
+      }
+      throw createErr;
+    }
 
     // notify post owner in background
     (async () => {
