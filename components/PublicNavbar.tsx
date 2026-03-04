@@ -24,9 +24,6 @@ export default function PublicNavbar({ variant = "dark" }: PublicNavbarProps) {
     ? 'bg-brand-900/70 border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
     : 'bg-white/80 border-gray-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.06)]';
 
-  const logoRing = isDark
-    ? 'bg-white/15 ring-1 ring-white/20 group-hover:ring-white/40'
-    : 'bg-brand-50 ring-1 ring-brand-100 group-hover:ring-brand-200';
 
   const logoText = isDark ? 'text-white' : 'text-brand-700';
 
@@ -51,11 +48,11 @@ export default function PublicNavbar({ variant = "dark" }: PublicNavbarProps) {
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 pt-4 sm:pt-5">
-        <div className={`max-w-6xl mx-auto backdrop-blur-2xl rounded-full border px-5 sm:px-8 py-2.5 flex items-center justify-between ${barBg}`}>
+        <div className={`max-w-6xl mx-auto backdrop-blur-2xl rounded-full border px-5 sm:px-8 py-0 flex items-center justify-between ${barBg}`} style={{minHeight: 64, height: 64}}>
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${logoRing}`}>
-              <img loading="lazy" src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-6 h-6 object-contain" />
+          <Link to="/" className="flex items-center gap-1 group pl-0 sm:pl-2">
+            <div className="flex items-center justify-center transition-all mt-1 sm:-ml-4">
+              <img loading="lazy" src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-12 h-12 object-contain" />
             </div>
             <span className={`font-bold text-[15px] hidden sm:inline tracking-tight ${logoText}`}>Les frimousses</span>
           </Link>
