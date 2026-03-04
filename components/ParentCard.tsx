@@ -44,7 +44,6 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
   // do not display region/country in the card per UX request
   if (import.meta.env.DEV && !phoneVal && !emailVal) {
     // helpful debug when admin summary lacks contact fields
-    console.debug('ParentCard: missing phone/email for parent', parent);
   }
 
   const uploadPrescription = async (childId: string, file: File | null) => {

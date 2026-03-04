@@ -412,7 +412,7 @@ export default function Children() {
         if (Array.isArray(centersData)) {
           setCenters(centersData.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
         } else {
-          console.debug('Unexpected /api/centers response shape', json);
+          console.error('Unexpected /api/centers response shape', json);
         }
       } catch (e) {
         console.error('Failed to load centers for filter', e);

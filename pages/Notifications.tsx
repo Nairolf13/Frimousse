@@ -56,7 +56,7 @@ export default function NotificationsPage() {
         await fetchWithRefresh('/api/notifications/mark-all-read', { method: 'PUT', credentials: 'include' });
       } catch (e) {
         // ignore errors — we still load stats which will reflect server state
-        console.debug('mark-all-read on mount failed', e);
+        console.error('mark-all-read on mount failed', e);
       }
     })();
     loadStats();

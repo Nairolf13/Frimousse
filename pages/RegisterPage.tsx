@@ -186,7 +186,7 @@ export default function RegisterPage() {
 
   const fetchGeodata = useCallback(
     async (query: string) => {
-      console.debug('[geodata] fetchGeodata query=', query);
+      console.error('[geodata] fetchGeodata query=', query);
       if (!query || query.length < 2) {
         setPlaceSuggestions([]);
         setCitySuggestions([]);
@@ -196,14 +196,14 @@ export default function RegisterPage() {
         const res = await fetch(
           `/api/geodata/positionstack?q=${encodeURIComponent(query)}&limit=12`
         );
-        console.debug('[geodata] backend status', res.status);
+        console.error('[geodata] backend status', res.status);
         if (!res.ok) {
           setPlaceSuggestions([]);
           setCitySuggestions([]);
           return;
         }
         const data = (await res.json()) as GeodataPlace[];
-        console.debug('[geodata] backend returned', Array.isArray(data) ? data.length : typeof data);
+        console.error('[geodata] backend returned', Array.isArray(data) ? data.length : typeof data);
         const arr = data || [];
         // split results: city-like entries (city present, no street) vs address entries
         const cities = arr.filter((p) => {
@@ -239,7 +239,7 @@ export default function RegisterPage() {
     const q = (form.region || "").trim();
     if (searchTimer.current) window.clearTimeout(searchTimer.current);
     searchTimer.current = window.setTimeout(async () => {
-      console.debug('[geodata] region lookup q=', q);
+      console.error('[geodata] region lookup q=', q);
       if (!q || q.length < 2) return setRegionSuggestions([]);
       try {
         const res = await fetch(

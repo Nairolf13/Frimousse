@@ -707,7 +707,7 @@ const ParentDashboard: React.FC = () => {
             <div key={child.id} className="p-4 border rounded shadow-sm" style={{ borderColor: '#fcdcdf' }}>
               <div className="flex justify-between items-center">
                 <div>
-                  <button type="button" className="font-medium cursor-pointer text-[#08323a] hover:text-[#0b5566] text-left" onClick={(e) => { e.stopPropagation(); if (import.meta.env.DEV) console.debug('[ParentDashboard] child click', child); setSelectedChild(child); setShowChildModal(true); }}>{child.name}</button>
+                  <button type="button" className="font-medium cursor-pointer text-[#08323a] hover:text-[#0b5566] text-left" onClick={(e) => { e.stopPropagation(); if (import.meta.env.DEV) console.error('[ParentDashboard] child click', child); setSelectedChild(child); setShowChildModal(true); }}>{child.name}</button>
                   <div className="text-sm text-gray-500">Groupe: {child.group}</div>
                 </div>
                 <div className="flex space-x-2">

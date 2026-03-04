@@ -72,8 +72,6 @@ export default function Sidebar() {
   const [supportCount, setSupportCount] = useState<number | null>(null);
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   
-  // Debug: vérifier le rôle de l'utilisateur
-  console.log('User role in Sidebar:', user?.role);
   // consume the global notifications context (single-tab polling)
   const { unreadCount, unreadReviews } = useNotificationsContext();
   const centerId = user && (user as { centerId?: string }).centerId;

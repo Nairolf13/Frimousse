@@ -238,7 +238,7 @@ export default function Dashboard() {
     if (user && user.role === 'parent') return;
     const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
       .toISOString().split('T')[0];
-    console.debug('handleQuickAdd called', { localDate, userRole: user?.role, userNannyId: user?.nannyId });
+    console.error('handleQuickAdd called', { localDate, userRole: user?.role, userNannyId: user?.nannyId });
     setModalInitial({ date: localDate, childId: '', nannyId: user && user.nannyId ? user.nannyId : '' });
     setModalOpen(true);
   };

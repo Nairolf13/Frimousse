@@ -185,7 +185,7 @@ export default function PaymentHistoryPage() {
     }
 
     return () => {
-      try { if (bc) bc.close(); } catch (closeErr) { console.warn('Failed to close paymentHistory BroadcastChannel', closeErr); }
+      try { if (bc) bc.close(); } catch (closeErr) { console.error('Failed to close paymentHistory BroadcastChannel', closeErr); }
       window.removeEventListener('paymentHistory:changed', onNotify as EventListener);
       window.removeEventListener('storage', onStorage);
       if (pollInterval) clearInterval(pollInterval);
@@ -472,7 +472,7 @@ export default function PaymentHistoryPage() {
           }
         } catch (bcErr) {
           // ignore BroadcastChannel errors
-          console.warn('BroadcastChannel send failed', bcErr);
+          console.error('BroadcastChannel send failed', bcErr);
         }
 
         // localStorage fallback to trigger storage events
@@ -480,7 +480,7 @@ export default function PaymentHistoryPage() {
           localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload));
         } catch (lsErr) {
           // ignore localStorage errors (private mode etc.)
-          console.warn('localStorage publish failed', lsErr);
+          console.error('localStorage publish failed', lsErr);
         }
 
         // Same-tab custom event for immediate listeners
@@ -491,13 +491,13 @@ export default function PaymentHistoryPage() {
         }
       } catch (notifyErr) {
         // never fail the main flow if notify fails
-        console.warn('Failed to notify other tabs of payment history change', notifyErr);
+        console.error('Failed to notify other tabs of payment history change', notifyErr);
       }
       // If we're currently viewing nanny grouped data, refresh it locally so the change is visible immediately
       try {
         if (viewMode === 'by-nanny') await loadNannyGroups();
       } catch (ngErr) {
-        console.warn('Failed to reload nanny groups after togglePaid', ngErr);
+        console.error('Failed to reload nanny groups after togglePaid', ngErr);
       }
     } catch (err) {
       console.error('Failed to toggle paid', err);
