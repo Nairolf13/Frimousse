@@ -249,7 +249,6 @@ const ParentDashboard: React.FC = () => {
     load();
   }, [authUser, user, centerFilter, refreshBilling]);
 
-  // If super-admin, load centers for filter
   useEffect(() => {
     let mounted = true;
     const loadCenters = async () => {
