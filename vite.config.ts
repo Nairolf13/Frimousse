@@ -27,7 +27,24 @@ export default defineConfig({
     host: true,
     port: 5173,
     proxy: {
-      '/api': 'http://localhost:4000',
+      // forward API requests to the backend. When the backend is down the
+      // default Vite proxy prints a scary `ECONNREFUSED` stack trace.  we
+      // silence those here by attaching an error handler.
+      '/api': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('error', (err, req, res) => {
+            // ignore connection errors; frontend will handle the failed fetch
+            if (err.code === 'ECONNREFUSED') {
+              // optionally you could log to console.debug or nothing
+              console.debug('backend not running, proxy request failed', req.url);
+            } else {
+              console.error('proxy error', err);
+            }
+          });
+        }
+      }
     },
     // Improve source map handling for development
     sourcemapIgnoreList: (sourcePath) => {

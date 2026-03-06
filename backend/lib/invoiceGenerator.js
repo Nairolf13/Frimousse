@@ -229,11 +229,23 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
 
       doc.moveDown(3);
 
+      // compute raw subtotal of line items (before any adjustment or tax)
       const subtotal = items.reduce((acc, r) => acc + (Number(r.subtotal) || (Number(r.daysPresent || 0) * Number(r.ratePerDay || 0))), 0);
-      const discount = Number(ph.discount) || 0;
+      // load manual deduction for this parent/month so we can display it on the invoice
+      const monthStr = `${ph.year}-${String(ph.month).padStart(2,'0')}`;
+      let adjustments = [];
+      let adjustment = 0;
+      try {
+        adjustments = await prisma.invoiceAdjustment.findMany({ where: { parentId: ph.parentId, month: monthStr } });
+        adjustment = adjustments.reduce((s, a) => s + (a.amount || 0), 0);
+      } catch (e) {
+        adjustments = [];
+        adjustment = 0;
+      }
       const taxRate = Number(ph.taxRate) || 0;
       const taxValue = subtotal * (taxRate / 100);
-      const total = typeof ph.total === 'number' ? ph.total : (subtotal - discount + taxValue);
+      // total field stored in paymentHistory already accounts for adjustment, but fall back if missing
+      const total = typeof ph.total === 'number' ? ph.total : (subtotal + taxValue - adjustment);
 
       if (currentY + 120 > pageMaxY) addNewPage();
 
@@ -246,13 +258,16 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
       doc.text(subtotalLabel, subtotalLabelX, currentY + 6);
       doc.font('Helvetica-Bold').text(fmt(subtotal), totalsValX, currentY + 6, { align: 'right' });
       let offset = 24;
-      if (discount) {
-        const discountLabel = 'Remise:';
-        const discountLabelW = doc.widthOfString(discountLabel);
-        const discountLabelX = Math.max(totalsValX - discountLabelW - 4, leftX + 10);
-        doc.font('Helvetica').fillColor('#10b981').text(discountLabel, discountLabelX, currentY + 6 + offset);
-        doc.text(fmt(-Math.abs(discount)), totalsValX, currentY + 6 + offset, { align: 'right' });
-        offset += 18;
+      // if there are manual adjustments, list each one before tax
+      if (adjustments && adjustments.length > 0) {
+        for (const adj of adjustments) {
+          const adjLabel = adj.comment ? `Réduction – ${adj.comment}:` : 'Réduction:';
+          const adjLabelW = doc.widthOfString(adjLabel);
+          const adjLabelX = Math.max(totalsValX - adjLabelW - 4, leftX + 10);
+          doc.fillColor('#374151').text(adjLabel, adjLabelX, currentY + 6 + offset);
+          doc.fillColor('#16a34a').text(`- ${fmt(adj.amount)}`, totalsValX, currentY + 6 + offset, { align: 'right' });
+          offset += 18;
+        }
       }
       if (taxRate) {
         const taxLabel = `TVA (${taxRate}%):`;

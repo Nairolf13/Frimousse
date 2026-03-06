@@ -81,6 +81,9 @@ export default function Dashboard() {
   const [dayModalOpen, setDayModalOpen] = useState(false);
   const [dayModalAssignments, setDayModalAssignments] = useState<Assignment[]>([]);
   const [dayModalDate, setDayModalDate] = useState<string>('');
+  const [selectedDayIds, setSelectedDayIds] = useState<string[]>([]);
+  const [dayModalError, setDayModalError] = useState<string | null>(null);
+  const [dayModalSuccess, setDayModalSuccess] = useState<string | null>(null);
 
   const fetchAssignments = React.useCallback((start?: Date, end?: Date) => {
     let url = `${API_URL}/assignments`;
@@ -462,6 +465,9 @@ export default function Dashboard() {
                       onClick={() => {
                         setDayModalAssignments(assigns);
                         setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
+                        setSelectedDayIds([]);
+                        setDayModalError(null);
+                        setDayModalSuccess(null);
                         setDayModalOpen(true);
                       }}
                       title="Voir la liste des enfants gardés ce jour"
@@ -481,7 +487,12 @@ export default function Dashboard() {
                         <span
                           className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]"
                           title={a.child.name}
-                          onClick={() => { if (!(user && user.role === 'parent')) setSelectedId(a.id); }}
+                          onClick={() => {
+                            // open day modal to show all children present that day
+                            setDayModalAssignments(assigns);
+                            setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
+                            setDayModalOpen(true);
+                          }}
                         >
                           {a.child.name}
                         </span>
@@ -490,7 +501,14 @@ export default function Dashboard() {
                   )}
                   {assigns.length > 2 && (
                     <button
-                      onClick={() => { setDayModalAssignments(assigns); setDayModalDate(new Intl.DateTimeFormat(locale).format(day)); setDayModalOpen(true); }}
+                      onClick={() => {
+                        setDayModalAssignments(assigns);
+                        setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
+                        setSelectedDayIds([]);
+                        setDayModalError(null);
+                        setDayModalSuccess(null);
+                        setDayModalOpen(true);
+                      }}
                       className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200"
                       title={t('common.view_more', { n: String(assigns.length - 2) })}
                     >
@@ -540,6 +558,9 @@ export default function Dashboard() {
                             onClick={() => {
                               setDayModalAssignments(assigns);
                               setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
+                              setSelectedDayIds([]);
+                              setDayModalError(null);
+                              setDayModalSuccess(null);
                               setDayModalOpen(true);
                             }}
                             title="Voir la liste des enfants gardés ce jour"
@@ -560,7 +581,11 @@ export default function Dashboard() {
                                 <span
                                       className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[120px]"
                                       title={a.child.name}
-                                      onClick={() => { if (!(user && user.role === 'parent')) setSelectedId(a.id); }}
+                                      onClick={() => {
+                                        setDayModalAssignments(assigns);
+                                        setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
+                                        setDayModalOpen(true);
+                                      }}
                                     >
                                       {a.child.name}
                                     </span>
@@ -568,7 +593,7 @@ export default function Dashboard() {
                             ))}
                             {assigns.length > 2 && (
                               <button
-                                onClick={() => { setDayModalAssignments(assigns); setDayModalDate(new Intl.DateTimeFormat(locale).format(day)); setDayModalOpen(true); }}
+                                onClick={() => { setDayModalAssignments(assigns); setDayModalDate(new Intl.DateTimeFormat(locale).format(day)); setSelectedDayIds([]); setDayModalError(null); setDayModalSuccess(null); setDayModalOpen(true); }}
                                 className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200"
                                 title={`Voir ${assigns.length - 2} autres enfants`}
                               >
@@ -670,45 +695,105 @@ export default function Dashboard() {
       )}
       {dayModalOpen && (
         <div role="presentation" onClick={(e) => { if (e.target === e.currentTarget) { setDayModalOpen(false); } }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
             <button onClick={() => setDayModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-            <h2 className="text-xl font-bold mb-1 text-center">{t('page.children')}</h2>
-            <div className="text-sm text-gray-500 mb-4 text-center">{dayModalDate}</div>
+            <div className="py-3 px-6 flex justify-between items-center sticky top-0">
+              <h2 className="text-xl font-semibold text-gray-900">{t('page.children')}</h2>
+              <span className="text-sm text-gray-600">{dayModalDate}</span>
+            </div>
+            <div className="mt-4">
             {dayModalAssignments.length === 0 ? (
               <div className="text-gray-500 text-center">{t('children.none_on_date', { date: dayModalDate })}</div>
             ) : (
-              <div className="space-y-4 max-h-64 overflow-y-auto">
-                {Object.entries(dayModalAssignments.reduce((acc, a) => {
-                  if (!acc[a.nanny.name]) acc[a.nanny.name] = [];
-                  acc[a.nanny.name].push(a);
-                  return acc;
-                }, {} as Record<string, Assignment[]>)).map(([nannyName, assigns]) => (
-                  <div key={nannyName}>
-                    <div className="font-bold text-blue-700 mb-2 text-center">{nannyName}</div>
-                    <ul className="space-y-2">
-                      {assigns.map(a => (
-                        <li
-                          key={a.id}
-                          className="bg-blue-50 rounded px-3 py-2 text-gray-800 font-semibold text-center border border-blue-100 cursor-pointer hover:bg-blue-100 flex items-center justify-between"
-                          title={t('dashboard.click_to_delete_assignment')}
-                          onClick={() => {
-                            // reuse existing delete modal: set selectedId and close the day modal
-                            setSelectedId(a.id);
-                            // close the day modal to show the global delete modal
-                            setDayModalOpen(false);
-                            // set modal initial so the delete modal shows correct child/date context
-                            setModalInitial({ date: a.date.split('T')[0], childId: a.child.id, nannyId: a.nanny.id });
-                          }}
-                        >
-                          <span>{a.child.name}</span>
-                          <span className="text-xs text-red-600 ml-2">{t('modal.delete.confirm')}</span>
-                        </li>
-                      ))}
-                    </ul>
+              // only admins can bulk-delete; parents/nannies see read-only listing
+              user && user.role !== 'parent' && user.role !== 'nanny' ? (
+                <>
+                  <div className="max-h-96 overflow-auto mb-2">
+                    {dayModalAssignments.map(a => (
+                      <div
+                        key={a.id}
+                        className={"flex items-center justify-between p-3 border rounded-lg shadow-sm transition cursor-pointer " +
+                          (selectedDayIds.includes(a.id) ? 'bg-red-50 border-red-200' : 'hover:shadow-md hover:bg-gray-50')}
+                        onClick={() => {
+                          setSelectedDayIds(prev => {
+                            if (prev.includes(a.id)) return prev.filter(id => id !== a.id);
+                            return [...prev, a.id];
+                          });
+                        }}
+                      >
+                        <div>
+                          <div className="font-medium text-gray-800">{a.child.name}</div>
+                          <div className="text-xs text-gray-500">{a.nanny.name}</div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          value={a.id}
+                          checked={selectedDayIds.includes(a.id)}
+                          readOnly
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                  {(dayModalError || dayModalSuccess) && (
+                    <div className="w-full text-center mb-2">
+                      {dayModalError && <div className="text-red-600 text-xs">{dayModalError}</div>}
+                      {dayModalSuccess && <div className="text-green-600 text-xs">{dayModalSuccess}</div>}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      disabled={selectedDayIds.length === 0}
+                      className="flex-1 bg-red-500 text-white px-3 py-1 rounded disabled:opacity-50"
+                      onClick={async () => {
+                        if (selectedDayIds.length === 0) return;
+                        try {
+                          const res = await fetchWithRefresh(`${API_URL}/assignments`, {
+                            method: 'DELETE',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ids: selectedDayIds }),
+                          });
+                          if (res.ok) {
+                            const count = selectedDayIds.length;
+                            setAssignments(prev => prev.filter(a => !selectedDayIds.includes(a.id)));
+                            setDayModalOpen(false);
+                            setSelectedDayIds([]);
+                            setDayModalSuccess(t('children.delete_selected_success', { n: String(count) }));
+                            setSuccessMessage(t('children.delete_selected_success', { n: String(count) }));
+                          } else {
+                            setDayModalError('Erreur lors de la suppression');
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          setDayModalError('Erreur lors de la suppression');
+                        }
+                      }}
+                    >{t('children.delete_selected')}</button>
+                    <button className="flex-1 bg-gray-300 px-3 py-1 rounded" onClick={() => setDayModalOpen(false)}>Annuler</button>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-4 max-h-64 overflow-y-auto">
+                  {Object.entries(dayModalAssignments.reduce((acc, a) => {
+                    if (!acc[a.nanny.name]) acc[a.nanny.name] = [];
+                    acc[a.nanny.name].push(a);
+                    return acc;
+                  }, {} as Record<string, Assignment[]>)).map(([nannyName, assigns]) => (
+                    <div key={nannyName}>
+                      <div className="font-bold text-blue-700 mb-2 text-center">{nannyName}</div>
+                      <ul className="space-y-2">
+                        {assigns.map(a => (
+                          <li key={a.id} className="bg-blue-50 rounded-lg px-3 py-2 text-gray-800 font-semibold text-center border border-blue-100 shadow-sm">
+                            {a.child.name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )
             )}
+            </div>
           </div>
         </div>
       )}

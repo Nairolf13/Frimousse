@@ -52,6 +52,22 @@ const ParentDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [adminData, setAdminData] = useState<AdminData>(null);
   const [parentBilling, setParentBilling] = useState<Record<string, number>>({});
+  // helper to reload aggregated billing totals for the current month (filter applied)
+  const refreshBilling = React.useCallback(async () => {
+    try {
+      const now = new Date();
+      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const url = `api/parent/billing?month=${month}` + (centerFilter ? `&centerId=${encodeURIComponent(centerFilter)}` : '');
+      const billRes = await fetchWithRefresh(url, { credentials: 'include' });
+      if (billRes.ok) {
+        const billJson = await billRes.json();
+        setParentBilling(billJson || {});
+      }
+    } catch (e) {
+      if (import.meta.env.DEV) console.error('Error refreshing billing', e);
+    }
+  }, [centerFilter]);
+
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [showChildModal, setShowChildModal] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -200,21 +216,8 @@ const ParentDashboard: React.FC = () => {
             throw new Error(message);
           }
           setAdminData(json as AdminData);
-            try {
-              const now = new Date();
-              const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-              // single aggregated call
-              const billRes = await fetchWithRefresh(`api/parent/billing?month=${month}`, { credentials: 'include' });
-              if (billRes.ok) {
-                const billJson = await billRes.json();
-                // billJson is expected to be { [parentId]: total }
-                setParentBilling(billJson || {});
-              } else {
-                if (import.meta.env.DEV) console.error('Failed to fetch aggregated parent billing', await billRes.text());
-              }
-            } catch (e) {
-              if (import.meta.env.DEV) console.error('Error fetching aggregated parent billing', e);
-            }
+            // load billing totals for the current month
+            await refreshBilling();
         } else {
           const res = await fetchWithRefresh(`api/parent/children`, { credentials: 'include' });
           const text = await res.text();
@@ -227,14 +230,9 @@ const ParentDashboard: React.FC = () => {
           const childrenList = (json as Child[]) || [];
           setChildren(childrenList);
           // Compute billing for the connected parent so ParentCard shows the correct amount
+          // for parent view we reuse the same helper
           try {
-            const now = new Date();
-            const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            const billRes = await fetchWithRefresh(`api/parent/billing?month=${month}${centerFilter ? `&centerId=${encodeURIComponent(centerFilter)}` : ''}`, { credentials: 'include' });
-            if (billRes.ok) {
-              const billJson = await billRes.json();
-              setParentBilling(billJson || {});
-            }
+            await refreshBilling();
           } catch {
             // ignore billing computation errors for parent view
           }
@@ -249,7 +247,7 @@ const ParentDashboard: React.FC = () => {
       }
     };
     load();
-  }, [authUser, user, centerFilter]);
+  }, [authUser, user, centerFilter, refreshBilling]);
 
   // If super-admin, load centers for filter
   useEffect(() => {
@@ -555,6 +553,7 @@ const ParentDashboard: React.FC = () => {
                           parent={p}
                           color={color}
                           parentDue={parentBilling[String(p.id)] || 0}
+                          onAdjustmentSaved={refreshBilling}
                           onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }}
                           onEdit={async (par) => {
                             // prefill with available fields immediately
@@ -692,8 +691,7 @@ const ParentDashboard: React.FC = () => {
           <ParentCard
             parent={parentForCard}
             color={'bg-white'}
-            parentDue={parentBilling[String(parentForCard.id)] || 0}
-            onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }}
+            parentDue={parentBilling[String(parentForCard.id)] || 0}            onAdjustmentSaved={refreshBilling}            onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }}
             onEdit={undefined}
             onDelete={undefined}
             annualPerChild={15}

@@ -43,7 +43,7 @@ module.exports = async function (req, res, next) {
       return next();
     } catch (err) {
       // fallthrough to attempt refresh below
-      console.warn('Access token invalid or expired, attempting refresh if refreshToken cookie is present');
+      // access token invalid or expired, refresh will be attempted if possible
     }
   }
 

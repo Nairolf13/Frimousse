@@ -28,8 +28,8 @@ const InvitePage: React.FC = () => {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.message || body?.error || 'Erreur');
-      setSuccess('Mot de passe défini, vous pouvez maintenant vous connecter.');
-      setTimeout(() => navigate('/login'), 1500);
+      setSuccess('Mot de passe défini, vous allez être redirigé vers la connexion.');
+      navigate('/login');
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
       else setError('Erreur');

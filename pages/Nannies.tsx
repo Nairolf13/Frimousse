@@ -124,7 +124,7 @@ export default function Nannies() {
       const arr = data || [];
       const addresses = arr.filter((p) => !!(p.house_number || p.street));
       setPlaceSuggestions(addresses);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('geodata fetch error', err);
       setPlaceSuggestions([]);
     }
@@ -318,7 +318,7 @@ export default function Nannies() {
         setCotisationStatus(cotStatus);
         setCotisationParentsTotals(parentsTotals);
         try { setCached(cacheKeyNannies, enriched); } catch { /* ignore cache errors */ }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Failed to fetch nannies batch details', err);
         // fallback: simple list fetch
         try {
@@ -455,6 +455,20 @@ export default function Nannies() {
 
       await performSave(payload, editingId);
     } catch (err: unknown) {
+      // if something threw we need to cleanup optimistic entry as well
+      const optId = optimisticIdRef.current;
+      if (optId) {
+        setNannies(prev => prev.filter(n => String(n.id) !== String(optId)));
+        try {
+          const cacheKey = `${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+          const existing = getCached<Nanny[]>(cacheKey) || [];
+          setCached(cacheKey, existing.filter(n => String(n.id) !== String(optId)));
+        } catch {
+            /* ignore cache error */
+          }
+        optimisticIdRef.current = null;
+      }
+
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -464,6 +478,22 @@ export default function Nannies() {
   };
 
   const performSave = async (payload: Partial<typeof emptyForm> & { experience?: number; newPassword?: string }, editingId?: string | null) => {
+    // helper to wipe any optimistic row we previously inserted
+    const cleanupOptimistic = () => {
+      const optId = optimisticIdRef.current;
+      if (optId) {
+        setNannies(prev => prev.filter(n => String(n.id) !== String(optId)));
+        try {
+          const cacheKey = `${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+          const existing = getCached<Nanny[]>(cacheKey) || [];
+          setCached(cacheKey, existing.filter(n => String(n.id) !== String(optId)));
+        } catch {
+            /* ignore cache error */
+          }
+        optimisticIdRef.current = null;
+      }
+    };
+
     try {
       const res = await fetchWithRefresh(editingId ? `${API_URL}/nannies/${editingId}` : `${API_URL}/nannies`, {
         method: editingId ? 'PUT' : 'POST',
@@ -472,6 +502,7 @@ export default function Nannies() {
         body: JSON.stringify(payload),
       });
       if (res.status === 402) {
+        cleanupOptimistic();
         try {
           const body = await res.json().catch(() => ({}));
           setError(body && body.error ? String(body.error) : 'Limite atteinte pour votre plan.');
@@ -481,6 +512,7 @@ export default function Nannies() {
         return;
       }
       if (res.status === 409) {
+        cleanupOptimistic();
         try {
           const body = await res.json().catch(() => ({}));
           const msg = body && (body.message || body.error) ? String(body.message || body.error) : 'Un utilisateur avec cet email existe déjà.';
@@ -491,6 +523,7 @@ export default function Nannies() {
         return;
       }
       if (!res.ok) {
+        cleanupOptimistic();
         try {
           const body = await res.json().catch(() => ({}));
           const msg = body && (body.message || body.error) ? String(body.message || body.error) : 'Erreur lors de la sauvegarde';
@@ -592,6 +625,12 @@ export default function Nannies() {
         setSuccessMessage(t('nanny.added_success') || 'Nounou ajoutée.');
         if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
         successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
+        // make sure our local list is in sync with server in case the response lacked
+        // some fields or the cache was stale; we already updated the cache above and
+        // inserted/replaced the nanny in state, so a full refetch isn't usually
+        // necessary. If the cache update failed, the next user action (filter change,
+        // deletion, etc.) will trigger a network fetch.
+        // fetchNannies();  // disabled to avoid wiping optimistic update
       }
     } catch (err: unknown) {
       if (err instanceof Error) {

@@ -19,33 +19,47 @@ async function calculatePaymentsForMonth(year, monthIndex) {
   const failedEmails = [];
 
   for (const parent of parents) {
-    let total = 0;
-    const details = [];
+      let total = 0;
+      const details = [];
 
-    for (const pc of parent.children) {
-      const child = pc.child;
+      for (const pc of parent.children) {
+        const child = pc.child;
 
-      const days = await prisma.assignment.count({
-        where: {
-          childId: child.id,
-          date: {
-            gte: new Date(year, monthIndex, 1),
-            lte: new Date(year, monthIndex + 1, 0)
+        const days = await prisma.assignment.count({
+          where: {
+            childId: child.id,
+            date: {
+              gte: new Date(year, monthIndex, 1),
+              lte: new Date(year, monthIndex + 1, 0)
+            }
           }
-        }
-      });
+        });
 
-      const subtotal = days * RATE_PER_DAY;
-      total += subtotal;
+        const subtotal = days * RATE_PER_DAY;
+        total += subtotal;
 
-      details.push({
-        childName: child.name,
-        daysPresent: days,
-        ratePerDay: RATE_PER_DAY,
-        subtotal
-      });
-    }
+        details.push({
+          childName: child.name,
+          daysPresent: days,
+          ratePerDay: RATE_PER_DAY,
+          subtotal
+        });
+      }
 
+      // apply any manual adjustments/discounts for this parent-month
+      const invoiceMonth = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+      const adjList = await prisma.invoiceAdjustment.findMany({ where: { parentId: parent.id, month: invoiceMonth } });
+      const adjSum = adjList.reduce((sum, a) => sum + (a.amount || 0), 0);
+      if (adjSum) {
+        total -= adjSum;
+        // optionally include a details row showing the discount
+        details.push({
+          childName: 'Réduction',
+          daysPresent: 0,
+          ratePerDay: 0,
+          subtotal: -adjSum
+        });
+      }
     try {
       const existing = await prisma.paymentHistory.findFirst({ where: { parentId: parent.id, year, month: monthIndex + 1 } });
       let phRecord = null;

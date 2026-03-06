@@ -82,6 +82,17 @@ router.get('/:year/:month', auth, async (req, res) => {
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
+    // compute adjustment sum for each record
+    const monthStr = `${year}-${String(monthInt).padStart(2,'0')}`;
+    for (const rec of data || []) {
+      try {
+        const agg = await prisma.invoiceAdjustment.aggregate({ where: { parentId: rec.parentId, month: monthStr }, _sum: { amount: true } });
+        rec.adjustment = (agg && agg._sum && agg._sum.amount) ? agg._sum.amount : 0;
+      } catch (e) {
+        rec.adjustment = 0;
+      }
+    }
+
     // Compute invoiceNumber for each record so frontend can show a human-friendly invoice identifier
     const augmented = (data || []).map(rec => {
       try {
@@ -164,6 +175,17 @@ router.get('/:year/:month/group-by-nanny', auth, async (req, res) => {
 
     // Build grouping map: nannyId -> { payments: [...], total }
     const groups = new Map();
+
+    // compute adjustment for each record as in the base endpoint so UI can indicate it
+    const monthStr = `${year}-${String(monthInt).padStart(2,'0')}`;
+    for (const rec of (payments || [])) {
+      try {
+        const agg = await prisma.invoiceAdjustment.aggregate({ where: { parentId: rec.parentId, month: monthStr }, _sum: { amount: true } });
+        rec.adjustment = (agg && agg._sum && agg._sum.amount) ? agg._sum.amount : 0;
+      } catch (e) {
+        rec.adjustment = 0;
+      }
+    }
 
     for (const rec of (payments || [])) {
       const parent = rec.parent;
