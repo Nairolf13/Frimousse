@@ -38,6 +38,22 @@ export default function InvoiceAdjustmentModal({ parentId, month, onClose, onSav
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   })();
 
+  // notify page components that payment history changed for this month
+  const notifyPaymentHistory = () => {
+    const [y, m] = currentMonth.split('-').map(Number);
+    const payload = { year: y, month: m };
+    try {
+      const Win = window as unknown as { BroadcastChannel?: typeof BroadcastChannel };
+      if (Win.BroadcastChannel) {
+        const bc = new Win.BroadcastChannel('__frimousse_payment_history__');
+        bc.postMessage(payload);
+        bc.close();
+      }
+    } catch {}
+    try { localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload)); } catch {}
+    try { window.dispatchEvent(new CustomEvent('paymentHistory:changed', { detail: payload })); } catch {}
+  };
+
   // human‑readable month for display (e.g. "mars 2026")
   const formatMonth = (ym: string) => {
     const [y, m] = ym.split('-').map(Number);
@@ -78,6 +94,7 @@ export default function InvoiceAdjustmentModal({ parentId, month, onClose, onSav
       setAmount('');
       setComment('');
       await load();
+      notifyPaymentHistory();
       if (onSaved) onSaved();
     } catch (e) {
       console.error('save adjustment error', e);
@@ -93,6 +110,7 @@ export default function InvoiceAdjustmentModal({ parentId, month, onClose, onSav
     try {
       await parentService.deleteAdjustment(parentId, id);
       await load();
+      notifyPaymentHistory();
       if (onSaved) onSaved();
     } catch (e) {
       console.error('delete adjustment', e);
