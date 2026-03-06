@@ -4,8 +4,13 @@ import { useI18n } from '../src/lib/useI18n';
 const API_URL = import.meta.env.VITE_API_URL;
 
 // Helper: broadcast a payment-history update so any open history view reloads
+interface PaymentHistoryPayload {
+  year?: number;
+  month?: number;
+}
+
 function notifyPaymentHistory(year?: number, month?: number) {
-  const payload: any = {};
+  const payload: PaymentHistoryPayload = {};
   if (typeof year === 'number' && typeof month === 'number') {
     payload.year = year;
     payload.month = month;
@@ -17,9 +22,15 @@ function notifyPaymentHistory(year?: number, month?: number) {
       bc.postMessage(payload);
       bc.close();
     }
-  } catch {}
-  try { localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload)); } catch {}
-  try { window.dispatchEvent(new CustomEvent('paymentHistory:changed', { detail: payload })); } catch {}
+  } catch (err) {
+    console.error('broadcast paymentHistory notification failed', err);
+  }
+  try { localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload)); } catch (err) {
+    console.error('storing paymentHistory payload failed', err);
+  }
+  try { window.dispatchEvent(new CustomEvent('paymentHistory:changed', { detail: payload })); } catch (err) {
+    console.error('dispatching paymentHistory event failed', err);
+  }
 }
 
 

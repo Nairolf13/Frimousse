@@ -39,9 +39,13 @@ export default function InvoiceAdjustmentModal({ parentId, month, onClose, onSav
   })();
 
   // notify page components that payment history changed for this month
+  interface PaymentHistoryPayload {
+    year?: number;
+    month?: number;
+  }
   const notifyPaymentHistory = () => {
     const [y, m] = currentMonth.split('-').map(Number);
-    const payload = { year: y, month: m };
+    const payload: PaymentHistoryPayload = { year: y, month: m };
     try {
       const Win = window as unknown as { BroadcastChannel?: typeof BroadcastChannel };
       if (Win.BroadcastChannel) {
@@ -49,9 +53,15 @@ export default function InvoiceAdjustmentModal({ parentId, month, onClose, onSav
         bc.postMessage(payload);
         bc.close();
       }
-    } catch {}
-    try { localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload)); } catch {}
-    try { window.dispatchEvent(new CustomEvent('paymentHistory:changed', { detail: payload })); } catch {}
+    } catch (err) {
+      console.error('broadcast paymentHistory notification failed', err);
+    }
+    try { localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload)); } catch (err) {
+      console.error('storing paymentHistory payload failed', err);
+    }
+    try { window.dispatchEvent(new CustomEvent('paymentHistory:changed', { detail: payload })); } catch (err) {
+      console.error('dispatching paymentHistory event failed', err);
+    }
   };
 
   // human‑readable month for display (e.g. "mars 2026")
