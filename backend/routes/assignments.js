@@ -459,6 +459,63 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
+// support deleting multiple assignments in one request
+router.delete('/', auth, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'ids array required' });
+    }
+    // Parents are not allowed to delete assignments
+    if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
+
+    const deleted = [];
+    for (const id of ids) {
+      try {
+        const existing = await prisma.assignment.findUnique({
+          where: { id },
+          include: { child: { include: { parents: { include: { parent: true } } } } }
+        });
+        if (!existing) continue;
+        if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) continue;
+        if (!isSuperAdmin(req.user) && !isAdminRole(req.user)) {
+          const existingDate = new Date(existing.date);
+          existingDate.setHours(0,0,0,0);
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          if (existingDate < today) continue;
+        }
+        await prisma.assignment.delete({ where: { id } });
+        deleted.push(existing);
+      } catch (e) {
+        // ignore individual failures
+      }
+    }
+    // background update payments for deleted assignments
+    (async () => {
+      try {
+        const { upsertPaymentsForParentForMonth } = require('../lib/paymentCron');
+        for (const existing of deleted) {
+          const parents = (existing.child && existing.child.parents) ? (existing.child.parents.map(p => p.parent).filter(Boolean)) : [];
+          const assignDate = existing.date ? new Date(existing.date) : new Date();
+          const year = assignDate.getFullYear();
+          const monthIndex = assignDate.getMonth();
+          for (const parent of parents) {
+            try { await upsertPaymentsForParentForMonth(parent.id, year, monthIndex); } catch (e) { /* ignore */ }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+
+    res.json({ deletedCount: deleted.length });
+  } catch (err) {
+    logger.error('DELETE /assignments batch error', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 router.delete('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -466,23 +523,6 @@ router.delete('/:id', auth, async (req, res) => {
     if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
 
     const existing = await prisma.assignment.findUnique({ where: { id } });
-    if (!existing) return res.status(404).json({ message: 'Assignment not found' });
-
-    if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
-
-    if (!isSuperAdmin(req.user) && !isAdminRole(req.user)) {
-      const existingDate = new Date(existing.date);
-      existingDate.setHours(0,0,0,0);
-      const today = new Date();
-      today.setHours(0,0,0,0);
-      if (existingDate < today) {
-        return res.status(403).json({ message: 'Cannot delete past assignments' });
-      }
-    }
-
-    const fullExisting = await prisma.assignment.findUnique({ where: { id }, include: { child: { include: { parents: { include: { parent: true } } } }, nanny: true } });
-    await prisma.assignment.delete({ where: { id } });
-    res.json({ message: 'Assignment deleted' });
 
     // Update payment history for affected parents for the assignment's month (non-blocking)
     (async () => {

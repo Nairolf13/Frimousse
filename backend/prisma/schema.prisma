@@ -8,6 +8,7 @@ model Parent {
   children      ParentChild[]
   photoConsents PhotoConsent[] @relation("ParentPhotoConsents")
   paymentHistories PaymentHistory[]
+  invoiceAdjustments InvoiceAdjustment[]
   center        Center?        @relation(fields: [centerId], references: [id])
   centerId      String?
   createdAt     DateTime       @default(now())
@@ -366,7 +367,18 @@ model PaymentHistory {
   createdAt  DateTime @default(now())
   emailLogs  EmailLog[] @relation("PaymentHistoryEmailLogs")
 }
+model InvoiceAdjustment {
+  id        String   @id @default(uuid())
+  parent    Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  parentId  String
+  month     String
+  amount    Float
+  comment   String?
+  createdBy String?
+  createdAt DateTime @default(now())
 
+  @@index([parentId, month])
+}
 // Public reviews / testimonials left by parents or visitors (shown on Landing page)
 model Review {
   id         String   @id @default(uuid())

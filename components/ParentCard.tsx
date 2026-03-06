@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -17,7 +17,10 @@ type Parent = {
   children?: ChildRef[];
 };
 
-export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete, annualPerChild }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; annualPerChild?: number }) {
+import InvoiceAdjustmentModal from './InvoiceAdjustmentModal';
+import parentService from '../services/parent';
+
+export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete, annualPerChild, onAdjustmentSaved }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; annualPerChild?: number; onAdjustmentSaved?: () => void }) {
   const navigate = useNavigate();
   const { t, locale } = useI18n();
   const initials = ((parent.firstName && parent.lastName) ? `${parent.firstName[0] || ''}${parent.lastName[0] || ''}` : (parent.name || 'U')).toUpperCase().slice(0,2);
@@ -33,6 +36,27 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
   const { user } = useAuth();
   const uLike = user as unknown as { role?: string | null; parentId?: string | null } | null;
   const isCurrentParent = !!(uLike && typeof uLike.role === 'string' && uLike.role === 'parent' && uLike.parentId === parent.id);
+  const isAdminUser = !!(uLike && typeof uLike.role === 'string' && (uLike.role.toLowerCase().includes('admin') || uLike.role.toLowerCase().includes('super')));
+
+  const [showAdjModal, setShowAdjModal] = useState(false);
+  const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,'0')}`;
+  const [hasAdjustment, setHasAdjustment] = useState(false);
+  const [adjustmentSum, setAdjustmentSum] = useState(0);
+
+  // load adjustment state when component mounts or parent/month changes
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const adj = await parentService.getAdjustments(parent.id, currentMonth);
+        const sum = (adj || []).reduce((a, x) => a + (x.amount || 0), 0);
+        setAdjustmentSum(sum);
+        setHasAdjustment(sum > 0);
+      } catch (e) {
+        console.error('failed to load adjustments for parent card', e);
+      }
+    };
+    load();
+  }, [parent.id, currentMonth]);
 
   // try to tolerate different backend field names for phone/email
   const parentRecord = parent as Record<string, unknown>;
@@ -103,7 +127,7 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
   };
 
   return (
-    <div className={`rounded-2xl shadow ${color || 'bg-white'} relative flex flex-col min-h-[420px] h-full transition-transform duration-500 perspective-1000`} style={{height:'100%', perspective: '1000px'}}>
+    <div className={`rounded-2xl shadow ${color || 'bg-white'} relative flex flex-col min-h-[420px] h-full transition-transform duration-500 perspective-1000 ${hasAdjustment ? 'ring-2 ring-yellow-400' : ''}`} style={{height:'100%', perspective: '1000px'}}>
       <div className={`w-full h-full transition-transform duration-500 ${isDeleting ? 'rotate-y-180' : ''}`} style={{transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%'}}>
   <div className={`absolute inset-0 w-full h-full p-5 flex flex-col ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`} style={{backfaceVisibility: 'hidden', overflow: 'hidden'}}>
           <div className="flex items-center gap-3 mb-2 min-w-0">
@@ -213,9 +237,24 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
 
           <div className="flex-1 flex flex-col justify-end">
             <div className="text-sm text-gray-700 mb-3 text-center">
-              <div className="mb-1">{t('parent.cotisation.this_month')}: <span className="font-bold text-blue-700">{(parentDue || 0)}€</span></div>
+              <div className="mb-1 flex items-center justify-center gap-2">
+                {t('parent.cotisation.this_month')}: <span className="font-bold text-blue-700">{(parentDue || 0)}€</span>
+                {hasAdjustment && (
+                  <span title={t('adjustment.exists')} className="inline-block w-3 h-3 rounded-full bg-yellow-400" />
+                )}
+              </div>
+            {adjustmentSum > 0 && (
+              <div className="text-xs text-yellow-600">{t('adjustment.label')}€{adjustmentSum.toFixed(2)}</div>
+            )}
               <div className="text-xs">{t('parent.cotisation.annual_total')}: <span className="font-bold text-gray-900">{((parent.children?.length || 0) * (annualPerChild ?? 15))}€</span></div>
             </div>
+            {isAdminUser && (
+              <div className="text-center mb-2">
+                <button className="text-sm text-blue-600 hover:underline" onClick={() => setShowAdjModal(true)}>
+                  {t('adjustment.button')}
+                </button>
+              </div>
+            )}
             <div className="flex justify-center gap-2">
               <button onClick={() => { if (onEdit) onEdit(parent); }} className="bg-white border border-gray-200 text-gray-500 hover:text-yellow-500 rounded-full p-2 shadow-sm touch-manipulation min-w-[40px] min-h-[40px] flex items-center justify-center" title={t('children.action.edit')}>
                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
@@ -252,6 +291,24 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
             </div>
           </div>
         </div>
+      )}
+      {showAdjModal && (
+        <InvoiceAdjustmentModal
+          parentId={parent.id}
+          month={currentMonth}
+          onClose={() => setShowAdjModal(false)}
+          onSaved={async () => { setShowAdjModal(false); if (onAdjustmentSaved) onAdjustmentSaved();
+              // refresh badge and sum
+              try {
+                const adj = await parentService.getAdjustments(parent.id, currentMonth);
+                const sum = (adj || []).reduce((a, x) => a + (x.amount || 0), 0);
+                setAdjustmentSum(sum);
+                setHasAdjustment(sum > 0);
+              } catch (e) {
+                console.error('refresh badge', e);
+              }
+            }}
+        />
       )}
     </div>
   );

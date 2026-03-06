@@ -7,10 +7,10 @@ const meta = import.meta as { env?: { VITE_API_URL?: string } };
 const API_URL = meta?.env?.VITE_API_URL ?? '/api';
 
 type Detail = { childName: string; daysPresent: number; ratePerDay: number; subtotal: number };
-type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string };
+type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string; adjustment?: number };
 type NannyGroup = {
   nanny: { id: string; name?: string | null };
-  payments: Array<{ id: string; amount: number; createdAt?: string | null; parent?: { firstName?: string | null; lastName?: string | null; email?: string | null }; invoiceNumber?: string | null }>;
+  payments: Array<{ id: string; amount: number; createdAt?: string | null; parent?: { firstName?: string | null; lastName?: string | null; email?: string | null }; invoiceNumber?: string | null; adjustment?: number }>;
   total: number;
 };
 
@@ -289,6 +289,9 @@ export default function PaymentHistoryPage() {
             </div>
             <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
               <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
+              {rec.adjustment && Number(rec.adjustment) > 0 && (
+                <div className="text-xs text-yellow-600 ml-2">{t('adjustment.label')} {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.adjustment))}</div>
+              )}
               <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-2 justify-center md:justify-end">
                 <a href="#" onClick={e => { e.preventDefault(); downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`); }} className="px-4 py-2 bg-green-600 text-white rounded text-sm w-full md:w-auto text-center">{rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}</a>
                 <button type="button" onClick={() => { if (!rec.parent?.email) { showModal(t('payments.errors.no_email') || 'Aucune adresse e-mail trouvée'); return; } sendInvoice(rec.id, rec.parent?.firstName || rec.parent?.email || ''); }} className="px-4 py-2 bg-blue-600 text-white border rounded text-sm w-full md:w-auto text-center">{t('payments.send_invoice') || 'Envoyer'}</button>
@@ -327,6 +330,9 @@ export default function PaymentHistoryPage() {
                     </div>
                     <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-end w-full md:w-auto mt-3 md:mt-0">
                       <div className="text-green-700 font-semibold">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(p.amount || 0))}</div>
+                    {p.adjustment && Number(p.adjustment) > 0 && (
+                      <div className="text-xs text-yellow-600 ml-2">{t('adjustment.label')} {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(p.adjustment))}</div>
+                    )}
                       <button type="button" onClick={() => downloadInvoice(p.id)} className="px-3 py-1 bg-blue-600 text-white rounded text-sm w-full md:w-auto">{t('payments.download_invoice') || 'Télécharger'}</button>
                       <button type="button" onClick={() => sendInvoice(p.id, p.parent?.firstName || p.parent?.email || '')} className="px-3 py-1 bg-blue-600 text-white border rounded text-sm w-full md:w-auto">{t('payments.send_invoice') || 'Envoyer'}</button>
                     </div>

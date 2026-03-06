@@ -135,6 +135,74 @@ router.get('/admin', requireAuth, async (req, res) => {
   }
 });
 
+// Adjustments CRUD for admins (and parents may view their own)
+router.get('/:id/adjustments', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const month = String(req.query.month || '').trim();
+    if (month && !/^[0-9]{4}-[0-9]{2}$/.test(month)) return res.status(400).json({ message: 'Invalid month parameter, expected YYYY-MM' });
+    const userReq = req.user || {};
+    const isOwner = userReq.parentId && String(userReq.parentId) === String(id);
+    if (!canManageParents(userReq) && !isOwner) return res.status(403).json({ message: 'Forbidden' });
+    const where = { parentId: id };
+    if (month) where.month = month;
+    const adj = await prisma.invoiceAdjustment.findMany({ where, orderBy: { createdAt: 'desc' } });
+    res.json(adj);
+  } catch (err) {
+    console.error('/adjustments GET error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/:id/adjustments', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    let { month, amount, comment } = req.body;
+    if (!canManageParents(req.user || {})) return res.status(403).json({ message: 'Forbidden' });
+    // force to current month regardless of input to prevent carry‑over
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    if (month !== currentMonth) {
+      // ignore provided value and use current month
+      month = currentMonth;
+    }
+    if (!month || !/^[0-9]{4}-[0-9]{2}$/.test(month)) return res.status(400).json({ message: 'Month is required (YYYY-MM)' });
+    const amt = Number(amount);
+    if (!isFinite(amt) || amt <= 0) return res.status(400).json({ message: 'Amount must be positive' });
+    const adj = await prisma.invoiceAdjustment.create({ data: { parentId: id, month, amount: amt, comment: comment || null, createdBy: req.user && req.user.id } });
+    // update paymentHistory total if record exists
+    const [y, m] = month.split('-').map(Number);
+    const ph = await prisma.paymentHistory.findFirst({ where: { parentId: id, year: y, month: m } });
+    if (ph) {
+      await prisma.paymentHistory.update({ where: { id: ph.id }, data: { total: { decrement: adj.amount } } });
+    }
+    res.json(adj);
+  } catch (err) {
+    console.error('/adjustments POST error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.delete('/:id/adjustments/:adjId', requireAuth, async (req, res) => {
+  try {
+    const { id, adjId } = req.params;
+    if (!canManageParents(req.user || {})) return res.status(403).json({ message: 'Forbidden' });
+    const adj = await prisma.invoiceAdjustment.findUnique({ where: { id: adjId } });
+    if (!adj || adj.parentId !== id) return res.status(404).json({ message: 'Adjustment not found' });
+    // revert paymentHistory if exists
+    const [y, m] = adj.month.split('-').map(Number);
+    const ph = await prisma.paymentHistory.findFirst({ where: { parentId: id, year: y, month: m } });
+    if (ph) {
+      await prisma.paymentHistory.update({ where: { id: ph.id }, data: { total: { increment: adj.amount } } });
+    }
+    await prisma.invoiceAdjustment.delete({ where: { id: adjId } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('/adjustments DELETE error', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Aggregated billing per parent for a given month: returns { [parentId]: total }
 router.get('/billing', requireAuth, async (req, res) => {
   try {
@@ -178,6 +246,11 @@ router.get('/billing', requireAuth, async (req, res) => {
         const days = childCounts[cid] || 0;
         tot += days * 2;
       }
+      // subtract any manual adjustments for this parent/month
+      const adjMonth = `${year}-${String(mon).padStart(2,'0')}`;
+      const agg = await prisma.invoiceAdjustment.aggregate({ where: { parentId: pid, month: adjMonth }, _sum: { amount: true } });
+      const adjSum = (agg && agg._sum && agg._sum.amount) ? agg._sum.amount : 0;
+      tot -= adjSum;
       result[pid] = tot;
     }
     return res.json(result);

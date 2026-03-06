@@ -5,6 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '../src/context/AuthContext';
 interface Child {
   id: string;
   name: string;
@@ -51,11 +52,15 @@ function getWeekDates(date: Date) {
 
 export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string | null; centerId?: string | null }) {
   const { locale, t } = useI18n();
+  const { user } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
   const [showForm, setShowForm] = useState<{ date: string } | null>(null);
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  // modal for viewing assignments on a day and deleting multiple
+  const [dayModal, setDayModal] = useState<{ date: string; assigns: Assignment[] } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   useEffect(() => {
     const url = `${API_URL}/children${centerId ? `?centerId=${encodeURIComponent(centerId)}` : ''}`;
     fetchWithRefresh(url, { credentials: 'include' })
@@ -123,18 +128,29 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
           return matchesDate && matchesNanny;
         });
             return (
-              <div key={idx} className={
-                "align-top p-1 h-full flex flex-col " +
-                (isToday ? 'border-2 border-brand-500 rounded-xl ' : 'border border-gray-300 ') +
-                (isCurrentMonth ? 'bg-white' : 'bg-gray-100 opacity-60') +
-                " relative"
-              }>
+              <div
+                key={idx}
+                className={
+                  "align-top p-1 h-full flex flex-col " +
+                  (isToday ? 'border-2 border-brand-500 rounded-xl ' : 'border border-gray-300 ') +
+                  (isCurrentMonth ? 'bg-white' : 'bg-gray-100 opacity-60') +
+                  " relative cursor-pointer"
+                }
+                onClick={() => {
+                  if (assigns.length > 0) {
+                    setDayModal({ date: dayStr, assigns });
+                    setSelectedIds([]);
+                    setError('');
+                    setSuccess('');
+                  }
+                }}
+              >
                 <div className="flex items-center justify-between mb-1">
                   <span className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-900' : 'text-gray-400')}>{day.getDate()}</span>
                   <button
                     className="text-brand-500 hover:text-brand-700 text-lg font-bold"
                     title={t('children.add')}
-                    onClick={() => { setShowForm({ date: dayStr }); setSelectedChild(''); setError(''); }}
+                    onClick={e => { e.stopPropagation(); setShowForm({ date: dayStr }); setSelectedChild(''); setError(''); }}
                   >+
                   </button>
                 </div>
@@ -142,9 +158,19 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
                   <div className="text-gray-300 text-xs">—</div>
                 ) : (
                   assigns.slice(0, 2).map((a, j) => (
-                    <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-brand-200/60' : 'bg-cream-100') + " shadow-sm group"}>
+                    <div
+                      key={a.id}
+                      className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-brand-200/60' : 'bg-cream-100') + " shadow-sm group cursor-pointer"}
+                      onClick={() => {
+                        // open modal showing all assignments for this day
+                        setDayModal({ date: dayStr, assigns });
+                        setSelectedIds([]);
+                        setError('');
+                        setSuccess('');
+                      }}
+                    >
                       <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-brand-700' : 'bg-amber-600')}></span>
-                      <span className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]" title={a.child.name}>{a.child.name}</span>
+                      <span className="font-semibold text-gray-800 text-[11px] group-hover:underline hover:text-red-600 truncate max-w-[70px]" title={a.child.name}>{a.child.name}</span>
                     </div>
                   ))
                 )}
@@ -218,6 +244,100 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
           {error && <div className="text-red-600 text-xs mt-2 text-center w-full">{error}</div>}
           {success && <div className="text-green-600 text-xs mt-2 text-center w-full">{success}</div>}
         </form>
+      </div>
+    )}
+
+    {dayModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg relative overflow-hidden">
+          {/* header bar */}
+          <div className="bg-brand-500 text-white py-3 px-6 flex justify-between items-center">
+            <h2 className="text-xl font-semibold">
+              {t('children.present_on', {
+                date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(dayModal.date))
+              })}
+            </h2>
+            <button onClick={() => setDayModal(null)} className="text-white hover:opacity-80 text-2xl leading-none">×</button>
+          </div>
+          {!(user && user.role === 'nanny') ? (
+            <>
+              <div className="p-6 max-h-80 overflow-auto">
+                {dayModal.assigns.length === 0 ? (
+                  <div className="text-gray-500 text-center">{t('children.none_on_date', { date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(dayModal.date)) })}</div>
+                ) : (
+                  <div className="space-y-3">
+                    {dayModal.assigns.map(a => (
+                      <div key={a.id} className="flex items-center justify-between p-3 border rounded-lg shadow-sm hover:shadow-md transition">
+                        <div>
+                          <div className="font-medium text-gray-800">{a.child.name}</div>
+                          <div className="text-xs text-gray-500">{a.nanny.name}</div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          value={a.id}
+                          checked={selectedIds.includes(a.id)}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setSelectedIds(prev => {
+                              if (e.target.checked) return [...prev, val];
+                              return prev.filter(id => id !== val);
+                            });
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(error || success) && (
+                  <div className="w-full text-center mt-4">
+                    {error && <div className="text-red-600 text-xs">{error}</div>}
+                    {success && <div className="text-green-600 text-xs">{success}</div>}
+                  </div>
+                )}
+                {dayModal.assigns.length > 0 && (
+                  <div className="flex gap-2 mt-4">
+                    <button
+                      disabled={selectedIds.length === 0}
+                      className="flex-1 bg-red-500 text-white px-3 py-2 rounded disabled:opacity-50"
+                      onClick={async () => {
+                        if (selectedIds.length === 0) return;
+                        try {
+                          const res = await fetchWithRefresh(`${API_URL}/assignments`, {
+                            method: 'DELETE',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ids: selectedIds }),
+                          });
+                          if (res.ok) {
+                            const count = selectedIds.length;
+                            setAssignments(prev => prev.filter(a => !selectedIds.includes(a.id)));
+                            setDayModal(null);
+                            setSelectedIds([]);
+                            setSuccess(t('children.delete_selected_success', { n: count.toString() }) as unknown as string);
+                          } else {
+                            setError('Erreur lors de la suppression');
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          setError('Erreur lors de la suppression');
+                        }
+                      }}
+                    >{t('children.delete_selected')}</button>
+                    <button className="flex-1 bg-gray-300 px-3 py-2 rounded" onClick={() => setDayModal(null)}>Annuler</button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="p-6 max-h-80 overflow-auto space-y-2">
+              {dayModal.assigns.map(a => (
+                <div key={a.id} className="p-2 border rounded-lg bg-gray-50">
+                  {a.child.name}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     )}
     </div>

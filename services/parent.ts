@@ -67,6 +67,17 @@ type AdminData = {
   parents: ParentItem[];
 };
 
+// invoice/discount adjustment record
+export type Adjustment = {
+  id: string;
+  parentId?: string;
+  month: string; // YYYY-MM
+  amount: number;
+  comment?: string | null;
+  createdBy?: string | null;
+  createdAt?: string;
+};
+
 export default {
   async getChildren(): Promise<Child[]> {
   const res = await fetchWithRefresh(`/api/parent/children`, { credentials: 'include' });
@@ -87,5 +98,20 @@ export default {
   async getChild(childId: string): Promise<Child> {
   const res = await fetchWithRefresh(`/api/children/${childId}`, { credentials: 'include' });
     return handleRes<Child>(res);
+  },
+
+  // adjustments APIs
+  async getAdjustments(parentId: string, month: string): Promise<Adjustment[]> {
+    const res = await fetchWithRefresh(`/api/parent/${parentId}/adjustments?month=${encodeURIComponent(month)}`, { credentials: 'include' });
+    return handleRes<Adjustment[]>(res);
+  },
+  async createAdjustment(parentId: string, month: string, amount: number, comment?: string): Promise<Adjustment> {
+    const body = { month, amount, comment };
+    const res = await fetchWithRefresh(`/api/parent/${parentId}/adjustments`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    return handleRes<Adjustment>(res);
+  },
+  async deleteAdjustment(parentId: string, adjustmentId: string): Promise<{ success: boolean }> {
+    const res = await fetchWithRefresh(`/api/parent/${parentId}/adjustments/${adjustmentId}`, { method: 'DELETE', credentials: 'include' });
+    return handleRes<{ success: boolean }>(res);
   }
 };

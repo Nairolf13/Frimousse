@@ -440,6 +440,23 @@ export default function Children() {
     e.preventDefault();
     setError('');
     const wasEditing = Boolean(editingId);
+
+    // helpers and optimistic variables need to live at top level of handleSubmit
+    let optimisticId: string | null = null;
+    const cleanupOptimistic = () => {
+      if (optimisticId) {
+        setChildren(prev => prev.filter(c => c.id !== optimisticId));
+        try {
+          const cacheKeyChildren = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+          const existing = getCached<Child[]>(cacheKeyChildren) || [];
+          setCached(cacheKeyChildren, existing.filter(c => c.id !== optimisticId));
+        } catch {
+          /* ignore cache error */
+        }
+        optimisticId = null;
+      }
+    };
+
     try {
       // Build payload and omit parentId if not set to allow creating a child without a parent
         // compute age from birthDate if provided, otherwise fall back to form.age
@@ -490,8 +507,6 @@ export default function Children() {
         };
       if (form.parentId) payload.parentId = form.parentId;
 
-      // optimistic UI: insert a temporary child when creating a new one
-      let optimisticId: string | null = null;
       if (!editingId) {
         optimisticId = `optimistic-${Date.now()}`;
         const optimisticChild: Child = {
@@ -513,13 +528,22 @@ export default function Children() {
         setChildren(prev => [optimisticChild, ...prev]);
       }
 
-      const res = await fetchWithRefresh(editingId ? `${API_URL}/children/${editingId}` : `${API_URL}/children`, {
-        method: editingId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Erreur lors de la sauvegarde');
+      let res;
+      try {
+        res = await fetchWithRefresh(editingId ? `${API_URL}/children/${editingId}` : `${API_URL}/children`, {
+          method: editingId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          cleanupOptimistic();
+          throw new Error('Erreur lors de la sauvegarde');
+        }
+      } catch (err: unknown) {
+        cleanupOptimistic();
+        throw err;
+      }
       const saved = await res.json().catch(() => null);
       // optimistic update: if server returns the saved child, integrate it directly
       if (saved) {
@@ -542,6 +566,8 @@ export default function Children() {
           } catch {
             // ignore cache errors
           }
+          // clear optimistic id as we have a real record
+          optimisticId = null;
         } catch {
           // fallback: refetch
           fetchChildren();
@@ -550,6 +576,8 @@ export default function Children() {
         // fallback: refetch
         fetchChildren();
       }
+      // regardless of path above, ensure the list matches server state
+      fetchChildren();
       setForm(emptyForm);
       setEditingId(null);
       setShowForm(false);
@@ -563,6 +591,8 @@ export default function Children() {
       if (successTimer.current) { clearTimeout(successTimer.current); successTimer.current = null; }
       successTimer.current = window.setTimeout(() => { setSuccessMsg(''); successTimer.current = null; }, 2500) as unknown as number;
     } catch (err: unknown) {
+      // remove any optimistic entry if we failed
+      try { cleanupOptimistic(); } catch { /* ignore */ };
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -889,7 +919,7 @@ export default function Children() {
                 } else {
                   await fetchChildren();
                 }
-              } catch (err) {
+              } catch (err: unknown) {
                 if (import.meta.env.DEV) console.error('Error while updating cotisation', err);
                 else console.error('Error while updating cotisation', err instanceof Error ? err.message : String(err));
               } finally {
