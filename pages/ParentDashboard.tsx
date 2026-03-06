@@ -271,7 +271,6 @@ const ParentDashboard: React.FC = () => {
     return () => { mounted = false; };
   }, [user]);
 
-      // Build a parent object for the connected parent user so we can reuse ParentCard UI
       const userInfo = (user as UserInfo) ?? null;
       const parentForCard: Parent | null = userInfo ? {
         id: (userInfo.parentId ?? userInfo.id ?? 'me') as string,
