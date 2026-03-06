@@ -91,8 +91,13 @@ export default function Dashboard() {
    * If year/month are supplied we include them; otherwise we send a
    * generic notification which causes every view to refresh.
    */
+  interface PaymentHistoryPayload {
+    year?: number;
+    month?: number;
+  }
+
   const notifyPaymentHistory = (year?: number, month?: number) => {
-    const payload: any = {};
+    const payload: PaymentHistoryPayload = {};
     if (typeof year === 'number' && typeof month === 'number') {
       payload.year = year;
       payload.month = month;
@@ -105,15 +110,19 @@ export default function Dashboard() {
         bc.postMessage(payload);
         bc.close();
       }
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error('broadcast paymentHistory notification failed', err);
     }
     try {
       localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload));
-    } catch {}
+    } catch (err) {
+      console.error('storing paymentHistory payload failed', err);
+    }
     try {
       window.dispatchEvent(new CustomEvent('paymentHistory:changed', { detail: payload }));
-    } catch {}
+    } catch (err) {
+      console.error('dispatching paymentHistory event failed', err);
+    }
   };
 
   const fetchAssignments = React.useCallback((start?: Date, end?: Date) => {

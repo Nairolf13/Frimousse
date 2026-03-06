@@ -258,17 +258,11 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
       doc.text(subtotalLabel, subtotalLabelX, currentY + 6);
       doc.font('Helvetica-Bold').text(fmt(subtotal), totalsValX, currentY + 6, { align: 'right' });
       let offset = 24;
-      // if there are manual adjustments, list each one before tax
-      if (adjustments && adjustments.length > 0) {
-        for (const adj of adjustments) {
-          const adjLabel = adj.comment ? `Réduction – ${adj.comment}:` : 'Réduction:';
-          const adjLabelW = doc.widthOfString(adjLabel);
-          const adjLabelX = Math.max(totalsValX - adjLabelW - 4, leftX + 10);
-          doc.fillColor('#374151').text(adjLabel, adjLabelX, currentY + 6 + offset);
-          doc.fillColor('#16a34a').text(`- ${fmt(adj.amount)}`, totalsValX, currentY + 6 + offset, { align: 'right' });
-          offset += 18;
-        }
-      }
+      // manual adjustments are already applied to the `total` value stored on
+      // the paymentHistory record, but the customer requested that the PDF not
+      // show the reduction lines below the subtotal.  we'll keep computing the
+      // values above but simply skip rendering the individual adj entries.
+      // if you ever want to show them again you can reinstate the loop below.
       if (taxRate) {
         const taxLabel = `TVA (${taxRate}%):`;
         const taxLabelW = doc.widthOfString(taxLabel);
