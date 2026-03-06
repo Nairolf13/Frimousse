@@ -3,6 +3,25 @@ import { useI18n } from '../src/lib/useI18n';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+// Helper: broadcast a payment-history update so any open history view reloads
+function notifyPaymentHistory(year?: number, month?: number) {
+  const payload: any = {};
+  if (typeof year === 'number' && typeof month === 'number') {
+    payload.year = year;
+    payload.month = month;
+  }
+  try {
+    const Win = window as unknown as { BroadcastChannel?: typeof BroadcastChannel };
+    if (Win.BroadcastChannel) {
+      const bc = new Win.BroadcastChannel('__frimousse_payment_history__');
+      bc.postMessage(payload);
+      bc.close();
+    }
+  } catch {}
+  try { localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload)); } catch {}
+  try { window.dispatchEvent(new CustomEvent('paymentHistory:changed', { detail: payload })); } catch {}
+}
+
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../src/context/AuthContext';
@@ -222,6 +241,7 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
               { credentials: 'include' })
               .then(res => res.json())
               .then(setAssignments);
+            notifyPaymentHistory();
           }}
         >
           <button type="button" onClick={() => setShowForm(null)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
@@ -314,6 +334,7 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
                             setDayModal(null);
                             setSelectedIds([]);
                             setSuccess(t('children.delete_selected_success', { n: count.toString() }) as unknown as string);
+                            notifyPaymentHistory();
                           } else {
                             setError('Erreur lors de la suppression');
                           }

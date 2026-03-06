@@ -522,13 +522,43 @@ router.delete('/:id', auth, async (req, res) => {
     // Parents are not allowed to delete assignments
     if (req.user && req.user.role === 'parent') return res.status(403).json({ message: 'Forbidden' });
 
-    const existing = await prisma.assignment.findUnique({ where: { id } });
+    // We need the full record (with child/parents/nanny) in order to update payments and send notifications
+    const fullExisting = await prisma.assignment.findUnique({
+      where: { id },
+      include: {
+        child: { include: { parents: { include: { parent: true } } } },
+        nanny: true
+      }
+    });
+    if (!fullExisting) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+    // enforce same permissions as batch route
+    if (!isSuperAdmin(req.user) && fullExisting.centerId !== req.user.centerId) {
+      return res.status(404).json({ message: 'Assignment not found' });
+    }
+    if (!isSuperAdmin(req.user) && !isAdminRole(req.user)) {
+      const existingDate = new Date(fullExisting.date);
+      existingDate.setHours(0,0,0,0);
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      if (existingDate < today) {
+        return res.status(403).json({ message: 'Cannot delete past assignments' });
+      }
+    }
+    // existing simple record is kept for permission checks, but we'll use fullExisting from now on
+    const existing = fullExisting;
+
+    // delete the record now that we have its data
+    await prisma.assignment.delete({ where: { id } });
 
     // Update payment history for affected parents for the assignment's month (non-blocking)
     (async () => {
       try {
         const { upsertPaymentsForParentForMonth } = require('../lib/paymentCron');
-        const parents = (fullExisting.child && fullExisting.child.parents) ? (fullExisting.child.parents.map(p => p.parent).filter(Boolean)) : [];
+        const parents = (fullExisting && fullExisting.child && fullExisting.child.parents)
+          ? fullExisting.child.parents.map(p => p.parent).filter(Boolean)
+          : [];
         const assignDate = fullExisting && fullExisting.date ? new Date(fullExisting.date) : new Date();
         const year = assignDate.getFullYear();
         const monthIndex = assignDate.getMonth();
@@ -544,12 +574,11 @@ router.delete('/:id', auth, async (req, res) => {
       // Skip assignment emails if disabled via environment variable
       if (process.env.DISABLE_ASSIGNMENT_EMAILS === 'true') return;
       try {
-  const { sendTemplatedMail } = require('../lib/email');
-        const existing = fullExisting;
-        if (!existing) return;
-        const child = existing.child;
-        const nanny = existing.nanny;
-        const parentEmails = (child.parents || []).map(p => p.parent && p.parent.email).filter(Boolean);
+        const { sendTemplatedMail } = require('../lib/email');
+        if (!fullExisting) return;
+        const child = fullExisting.child;
+        const nanny = fullExisting.nanny;
+        const parentEmails = (child && child.parents ? child.parents.map(p => p.parent && p.parent.email).filter(Boolean) : []);
         if (!parentEmails.length) return;
 
         const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
@@ -666,6 +695,8 @@ router.delete('/:id', auth, async (req, res) => {
       }
     })();
 
+    // respond immediately that the delete was successful
+    return res.json({ deleted: true });
   } catch (err) {
   logger.error('DELETE /assignments error', err);
     res.status(500).json({ error: 'Erreur serveur' });

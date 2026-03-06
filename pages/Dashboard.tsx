@@ -85,6 +85,37 @@ export default function Dashboard() {
   const [dayModalError, setDayModalError] = useState<string | null>(null);
   const [dayModalSuccess, setDayModalSuccess] = useState<string | null>(null);
 
+  // helper to notify payment history listeners that the data may have changed
+  /**
+   * Notify any payment-history listeners that some data may have changed.
+   * If year/month are supplied we include them; otherwise we send a
+   * generic notification which causes every view to refresh.
+   */
+  const notifyPaymentHistory = (year?: number, month?: number) => {
+    const payload: any = {};
+    if (typeof year === 'number' && typeof month === 'number') {
+      payload.year = year;
+      payload.month = month;
+    }
+
+    try {
+      const Win = window as unknown as { BroadcastChannel?: typeof BroadcastChannel };
+      if (Win.BroadcastChannel) {
+        const bc = new Win.BroadcastChannel('__frimousse_payment_history__');
+        bc.postMessage(payload);
+        bc.close();
+      }
+    } catch {
+      // ignore
+    }
+    try {
+      localStorage.setItem('__frimousse_payment_history__', JSON.stringify(payload));
+    } catch {}
+    try {
+      window.dispatchEvent(new CustomEvent('paymentHistory:changed', { detail: payload }));
+    } catch {}
+  };
+
   const fetchAssignments = React.useCallback((start?: Date, end?: Date) => {
     let url = `${API_URL}/assignments`;
     const params: string[] = [];
@@ -285,6 +316,7 @@ export default function Dashboard() {
         const first = new Date(yearF, monthIdxF, 1);
         const last = new Date(yearF, monthIdxF + 1, 0);
         fetchAssignments(first, last);
+        notifyPaymentHistory();
 
         // fetch child name to show feedback
         try {
@@ -329,6 +361,7 @@ export default function Dashboard() {
         const first = new Date(yearF, monthIdxF, 1);
         const last = new Date(yearF, monthIdxF + 1, 0);
         fetchAssignments(first, last);
+        notifyPaymentHistory();
 
         // fetch child name to show feedback
         try {
@@ -674,6 +707,7 @@ export default function Dashboard() {
                       const first = new Date(year, monthIdx, 1);
                       const last = new Date(year, monthIdx + 1, 0);
                       fetchAssignments(first, last);
+                      notifyPaymentHistory();
 
                       setSuccessMessage(`${childName} a bien été supprimé du planning.`);
                       if (successTimer.current) window.clearTimeout(successTimer.current);
@@ -760,6 +794,7 @@ export default function Dashboard() {
                             setSelectedDayIds([]);
                             setDayModalSuccess(t('children.delete_selected_success', { n: String(count) }));
                             setSuccessMessage(t('children.delete_selected_success', { n: String(count) }));
+                            notifyPaymentHistory();
                           } else {
                             setDayModalError('Erreur lors de la suppression');
                           }

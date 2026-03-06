@@ -4,6 +4,9 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const auth = require('../middleware/authMiddleware');
 
+// Any change to RATE_PER_DAY should be mirrored in paymentCron.js
+const RATE_PER_DAY = 2;
+
 // Récupérer l’historique par mois/année
 router.get('/:year/:month', auth, async (req, res) => {
   const { year, month } = req.params;
@@ -82,7 +85,7 @@ router.get('/:year/:month', auth, async (req, res) => {
       return res.status(403).json({ message: 'Accès refusé' });
     }
 
-    // compute adjustment sum for each record
+    // compute adjustment sum for each record and ensure stored total matches reality
     const monthStr = `${year}-${String(monthInt).padStart(2,'0')}`;
     for (const rec of data || []) {
       try {
@@ -90,6 +93,31 @@ router.get('/:year/:month', auth, async (req, res) => {
         rec.adjustment = (agg && agg._sum && agg._sum.amount) ? agg._sum.amount : 0;
       } catch (e) {
         rec.adjustment = 0;
+      }
+
+      // Recompute actual total using assignments to guard against drift
+      try {
+        let actual = 0;
+        // find children of this parent
+        const kids = await prisma.child.findMany({ where: { parents: { some: { parentId: rec.parentId } } }, select: { id: true } });
+        if (kids && kids.length) {
+          const start = new Date(yearInt, monthInt - 1, 1);
+          const end = new Date(yearInt, monthInt, 0);
+          for (const k of kids) {
+            const days = await prisma.assignment.count({ where: { childId: k.id, date: { gte: start, lte: end } } });
+            actual += days * RATE_PER_DAY;
+          }
+        }
+        actual -= rec.adjustment || 0;
+        if (actual < 0) actual = 0;
+        if (rec.total !== actual) {
+          // fix the DB so future requests are correct
+          await prisma.paymentHistory.update({ where: { id: rec.id }, data: { total: actual } });
+          rec.total = actual;
+        }
+      } catch (e) {
+        // ignore calculation errors, leave rec.total as-is
+        console.error('reconciliation error for paymentHistory', rec.id, e);
       }
     }
 

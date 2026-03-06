@@ -60,6 +60,8 @@ async function calculatePaymentsForMonth(year, monthIndex) {
           subtotal: -adjSum
         });
       }
+      // never store a negative total; clamp at zero
+      if (total < 0) total = 0;
     try {
       const existing = await prisma.paymentHistory.findFirst({ where: { parentId: parent.id, year, month: monthIndex + 1 } });
       let phRecord = null;
@@ -235,6 +237,22 @@ async function upsertPaymentsForParentForMonth(parentId, year, monthIndex) {
     total += subtotal;
     details.push({ childName: child.name, daysPresent: days, ratePerDay: RATE_PER_DAY, subtotal });
   }
+
+  // apply any adjustments/discounts just like the monthly cron does
+  try {
+    const invoiceMonth = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+    const adjList = await prisma.invoiceAdjustment.findMany({ where: { parentId: parent.id, month: invoiceMonth } });
+    const adjSum = adjList.reduce((sum, a) => sum + (a.amount || 0), 0);
+    if (adjSum) {
+      total -= adjSum;
+      details.push({ childName: 'Réduction', daysPresent: 0, ratePerDay: 0, subtotal: -adjSum });
+    }
+  } catch (adjErr) {
+    console.error('Failed to apply adjustments in upsertPaymentsForParentForMonth', adjErr);
+  }
+  // clamp negative totals to zero
+  if (total < 0) total = 0;
+
   try {
     const existing = await prisma.paymentHistory.findFirst({ where: { parentId: parent.id, year, month: monthIndex + 1 } });
     if (existing) {

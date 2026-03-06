@@ -262,30 +262,40 @@ export default function PaymentHistoryPage() {
            <div className="px-6 py-4 bg-white border-t">
              <div className="text-sm text-gray-600 font-medium mb-3">{t('payments.detail.header', { month: new Date(year, month-1).toLocaleString(locale || 'fr-FR', { month: 'long', year: 'numeric' }) })}</div>
              <div className="space-y-3">
-               {Array.isArray(rec.details) && rec.details.length > 0 ? rec.details.map((d, idx) => (
-                <div key={idx} className="bg-gray-50 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-orange-200 text-orange-700 flex items-center justify-center font-bold">{(d.childName || '').slice(0,1).toUpperCase()}</div>
-                    <div>
-                      <div className="font-semibold text-gray-800">{d.childName}</div>
-                      <div className="text-xs text-gray-400">{/* age/group not available */}</div>
-                    </div>
-                  </div>
-                  <div className="text-right text-sm">
-                <div className="text-gray-500"><span className="inline-block mr-2">📅</span>{d.daysPresent} {t('payments.days')}</div>
-                <div className="text-green-600 font-semibold mt-1">{d.daysPresent} × {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.ratePerDay)} = {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.subtotal)}</div>
-                  </div>
-                </div>
-               )) : (
-                 <div className="text-gray-500">{t('payments.no_child_this_month')}</div>
-               )}
+               {(() => {
+                 const visible = Array.isArray(rec.details)
+                   ? rec.details.filter(d => !(d.daysPresent === 0 && d.ratePerDay === 0 && (d.childName||'').toLowerCase().includes('réduction')))
+                   : [];
+                 if (visible.length > 0) {
+                   return visible.map((d, idx) => (
+                     <div key={idx} className="bg-gray-50 rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                       <div className="flex items-center gap-3">
+                         <div className="w-10 h-10 rounded-full bg-orange-200 text-orange-700 flex items-center justify-center font-bold">{(d.childName || '').slice(0,1).toUpperCase()}</div>
+                         <div>
+                           <div className="font-semibold text-gray-800">{d.childName}</div>
+                           <div className="text-xs text-gray-400">{/* age/group not available */}</div>
+                         </div>
+                       </div>
+                       <div className="text-right text-sm">
+                         <div className="text-gray-500"><span className="inline-block mr-2">📅</span>{d.daysPresent} {t('payments.days')}</div>
+                         <div className="text-green-600 font-semibold mt-1">{d.daysPresent} × {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.ratePerDay)} = {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(d.subtotal)}</div>
+                       </div>
+                     </div>
+                   ));
+                 }
+                 return <div className="text-gray-500">{t('payments.no_child_this_month')}</div>;
+               })()}
              </div>
            </div>
 
           <div className="flex flex-col md:flex-row md:items-center md:justify-between p-4 md:p-6 bg-gradient-to-r from-green-50 to-green-100 gap-3">
             <div>
               <div className="text-sm font-semibold text-gray-800">{t('payments.family.total_label')}</div>
-              <div className="text-xs text-gray-500">{Array.isArray(rec.details) ? t('payments.family.summary', { n: String(rec.details.length), days: String(rec.details.reduce((s,d)=>s+(d.daysPresent||0),0)) }) : ''}</div>
+              <div className="text-xs text-gray-500">{Array.isArray(rec.details) ? (()=>{
+                const vis = rec.details.filter(d => !(d.daysPresent === 0 && d.ratePerDay === 0 && (d.childName||'').toLowerCase().includes('réduction')));
+                const days = vis.reduce((s,d)=>(s+(d.daysPresent||0)),0);
+                return t('payments.family.summary', { n: String(vis.length), days: String(days) });
+              })() : ''}</div>
             </div>
             <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
               <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
