@@ -62,10 +62,10 @@ import { useAuth } from '../src/context/AuthContext';
 import '../styles/filter-responsive.css';
 import '../styles/children-responsive.css';
 
-function PhotoConsentToggle({ childId }: { childId: string }) {
+function PhotoConsentToggle({ childId, initialConsent }: { childId: string; initialConsent?: boolean | null }) {
   const { user } = useAuth();
   const API_URL = import.meta.env.VITE_API_URL;
-  const [consent, setConsent] = useState<boolean | null>(null);
+  const [consent, setConsent] = useState<boolean | null>(initialConsent ?? null);
   const [loading, setLoading] = useState(false);
 
   const isAdmin = user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super'));
@@ -80,14 +80,16 @@ function PhotoConsentToggle({ childId }: { childId: string }) {
         if (!res.ok) return setConsent(false);
         const body = await res.json();
         setConsent(!!body.consent);
-    } catch (e: unknown) {
-      if (import.meta.env.DEV) console.error('Failed to load photo consent', e);
-      else console.error('Failed to load photo consent', e instanceof Error ? e.message : String(e));
+      } catch (e: unknown) {
+        if (import.meta.env.DEV) console.error('Failed to load photo consent', e);
+        else console.error('Failed to load photo consent', e instanceof Error ? e.message : String(e));
       }
     }
-    if (user && (isParent || isAdmin)) load();
+    // parents need their own value; admins rely on initialConsent that was
+    // populated by the batch endpoint in the parent component
+    if (user && isParent) load();
     return () => { mounted = false; };
-  }, [childId, user, API_URL, isParent, isAdmin]);
+  }, [childId, user, API_URL, isParent]);
 
   const toggle = async () => {
     setLoading(true);
@@ -106,7 +108,7 @@ function PhotoConsentToggle({ childId }: { childId: string }) {
     } finally { setLoading(false); }
   };
 
-  if (!user || (!isParent && !isAdmin)) return null;
+  if (!user || (!isParent && !isAdmin)) return null; // only parents/admins see the toggle
   if (consent === null) return <div className="text-sm text-gray-500">Chargement du consentement...</div>;
   return (
     <div className="flex items-center gap-2">
@@ -1008,10 +1010,15 @@ export default function Children() {
                           <span className="text-xs text-gray-500">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
                         </div>
                       </div>
-                      {/* Photo consent toggle for parents and admins */}
-                      {user && ((user.role === 'parent' && child.parentId === (user.parentId || undefined)) || isAdminUser) && (
+                      {/* Photo consent toggle for parent and admin.  Admins receive their
+                          initial state from the batch map to avoid hitting rate‑limits
+                          on page load. */}
+                      {user && (
+                          (user.role === 'parent' && child.parentId === (user.parentId || undefined))
+                          || isAdminUser
+                        ) && (
                         <div className="mt-3">
-                          <PhotoConsentToggle childId={child.id} />
+                          <PhotoConsentToggle childId={child.id} initialConsent={photoConsentMap[child.id] ?? null} />
                         </div>
                       )}
                       {/* Photo consent status badge (for admin/staff view) */}
