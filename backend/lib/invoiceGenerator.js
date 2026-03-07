@@ -94,7 +94,7 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
         if (adminIssuer.email) doc.fontSize(10).fillColor('#2563eb').text(adminIssuer.email);
       } else {
         doc.font('Helvetica').fontSize(12).fillColor('#2563eb').text('Crèche & Garderie');
-        doc.fontSize(10).fillColor('#2563eb').text('contact@lesfrimousses.fr');
+        doc.fontSize(10).fillColor('#2563eb').text('lespetitesfrimoussesdu13@gmail.com');
       }
 
       // meta boxes
@@ -261,7 +261,16 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
       // if there are manual adjustments, list each one before tax
       if (adjustments && adjustments.length > 0) {
         for (const adj of adjustments) {
-          const adjLabel = adj.comment ? `Réduction – ${adj.comment}:` : 'Réduction:';
+          // the comment field is optional; when it's just the generic "reduc"
+          // (or the user stored the string "reduction"), we prefer to leave
+          // the label simple so the PDF doesn't show "Réduction – reduc:".
+          let adjLabel = 'Réduction:';
+          if (adj.comment) {
+            const stripped = String(adj.comment).trim();
+            if (stripped && !/^reduc(?:tion)?$/i.test(stripped)) {
+              adjLabel = `Réduction – ${stripped}:`;
+            }
+          }
           const adjLabelW = doc.widthOfString(adjLabel);
           const adjLabelX = Math.max(totalsValX - adjLabelW - 4, leftX + 10);
           doc.fillColor('#374151').text(adjLabel, adjLabelX, currentY + 6 + offset);
