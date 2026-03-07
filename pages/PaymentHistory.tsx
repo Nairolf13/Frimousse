@@ -339,7 +339,7 @@ export default function PaymentHistoryPage() {
             </div>
             <div className="flex items-center gap-4 flex-col md:flex-row w-full md:w-auto">
               <div className="text-2xl font-extrabold text-green-700">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.total))}</div>
-              {rec.adjustment && Number(rec.adjustment) > 0 && (
+              {Number(rec.adjustment || 0) > 0 && (
                 <div className="text-xs text-yellow-600 ml-2">{t('adjustment.label')} {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(rec.adjustment))}</div>
               )}
               <div className="w-full md:w-auto flex flex-col md:flex-row items-center gap-2 justify-center md:justify-end">
@@ -380,7 +380,7 @@ export default function PaymentHistoryPage() {
                     </div>
                     <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-end w-full md:w-auto mt-3 md:mt-0">
                       <div className="text-green-700 font-semibold">{new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(p.amount || 0))}</div>
-                    {p.adjustment && Number(p.adjustment) > 0 && (
+                    {Number(p.adjustment || 0) > 0 && (
                       <div className="text-xs text-yellow-600 ml-2">{t('adjustment.label')} {new Intl.NumberFormat(locale || 'fr-FR', { style: 'currency', currency: 'EUR' }).format(Number(p.adjustment))}</div>
                     )}
                       <button type="button" onClick={() => downloadInvoice(p.id)} className="px-3 py-1 bg-blue-600 text-white rounded text-sm w-full md:w-auto">{t('payments.download_invoice') || 'Télécharger'}</button>
