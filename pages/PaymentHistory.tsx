@@ -70,9 +70,22 @@ export default function PaymentHistoryPage() {
     try { return JSON.stringify(e); } catch { return String(e); }
   }, []);
 
-  const loadData = useCallback(async () => {
+  // helper for comparing data without rerendering if identical
+  // use a generic so we avoid `any` lint errors; it doesn't really matter what
+  // type the array contains since we stringify elements for comparison.
+  const arraysEqual = <T,>(a: T[], b: T[]): boolean => {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (JSON.stringify(a[i]) !== JSON.stringify(b[i])) return false;
+    }
+    return true;
+  };
+
+  const loadData = useCallback(async (showSpinner = true) => {
+    // remember scroll position so we can restore it after refresh
+    const prevScroll = typeof window !== 'undefined' ? window.scrollY : 0;
     let mounted = true;
-    setLoading(true);
+    if (showSpinner) setLoading(true);
     setError('');
     // safeMessage is defined below and used across loaders
     try {
@@ -88,23 +101,34 @@ export default function PaymentHistoryPage() {
         throw new Error('Unexpected non-JSON response from API: ' + String(text).slice(0, 200));
       }
       const d = await res.json();
-      if (mounted) setData(Array.isArray(d) ? d : []);
+      if (mounted) {
+        const newData = Array.isArray(d) ? d : [];
+        if (!arraysEqual(data, newData)) {
+          setData(newData);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch payment history', err);
       setData([]);
       setError(safeMessage(err));
     } finally {
-      setLoading(false);
+      if (showSpinner) setLoading(false);
+      if (typeof window !== 'undefined') {
+        window.requestAnimationFrame(() => window.scrollTo(0, prevScroll));
+      }
     }
     return () => { mounted = false; };
-  }, [year, month, safeMessage]);
+  }, [year, month, safeMessage, data]);
 
-  const loadNannyGroups = useCallback(async () => {
+  const loadNannyGroups = useCallback(async (showSpinner = true) => {
     if (viewMode !== 'by-nanny') return;
+    // store scroll position; group fetch usually leaves you low on the page
+    const prevScroll = typeof window !== 'undefined' ? window.scrollY : 0;
     let mounted = true;
-    setLoadingNannyGroups(true);
+    if (showSpinner) setLoadingNannyGroups(true);
     setNannyGroupsError('');
-    setNannyGroups(null);
+    // capture current array for comparison below
+    const prev = nannyGroups;
     try {
       const res = await fetchWithRefresh(`${API_URL}/payment-history/${year}/${month}/group-by-nanny`, { credentials: 'include' });
       if (!res.ok) {
@@ -117,23 +141,31 @@ export default function PaymentHistoryPage() {
         throw new Error('Unexpected non-JSON response: ' + text.slice(0, 200));
       }
       const d = await res.json();
-      if (mounted) setNannyGroups(Array.isArray(d) ? d : []);
+      if (mounted) {
+        const newData = Array.isArray(d) ? d : [];
+        if (!arraysEqual(prev || [], newData)) {
+          setNannyGroups(newData);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch nanny groups', err);
       if (mounted) setNannyGroupsError(safeMessage(err));
     } finally {
-      if (mounted) setLoadingNannyGroups(false);
+      if (showSpinner && mounted) setLoadingNannyGroups(false);
+      if (typeof window !== 'undefined') {
+        window.requestAnimationFrame(() => window.scrollTo(0, prevScroll));
+      }
     }
     return () => { mounted = false; };
-  }, [viewMode, year, month, safeMessage]);
+  }, [viewMode, year, month, safeMessage, nannyGroups]);
 
   useEffect(() => {
     // Initial load + keep page in sync for current month using polling and cross-tab notifications
     // Initial load
-    loadData();
+    loadData(true);
     // If the user is viewing by-nanny, also load the grouped-by-nanny data
     if (viewMode === 'by-nanny') {
-      loadNannyGroups();
+      loadNannyGroups(true);
     }
 
     // Handler to refresh data when we receive a notification
@@ -144,13 +176,13 @@ export default function PaymentHistoryPage() {
         const detailMonth = payload && typeof payload.month !== 'undefined' ? Number(payload.month) : null;
         if (detailYear && detailMonth) {
           if (detailYear === year && detailMonth === month) {
-            loadData();
-            if (viewMode === 'by-nanny') loadNannyGroups();
+            loadData(false);
+            if (viewMode === 'by-nanny') loadNannyGroups(false);
           }
         } else {
           // generic notification: reload if viewing the month in question (especially useful for current month)
-          loadData();
-          if (viewMode === 'by-nanny') loadNannyGroups();
+          loadData(false);
+          if (viewMode === 'by-nanny') loadNannyGroups(false);
         }
       } catch { /* ignore */ }
     };
@@ -172,23 +204,31 @@ export default function PaymentHistoryPage() {
     const onStorage = (e: StorageEvent) => { if (e.key === '__frimousse_payment_history__') onNotify(); };
     window.addEventListener('storage', onStorage);
 
-    // Poll current month periodically (only if viewing current month)
+    // declare variables used in cleanup, even if polling is disabled
+    // these don’t change anymore since polling is disabled, so use const
+    const pollInterval: number | null = null;
+    const beatIv: number | null = null;
+
+    // polling disabled - rely on cross-tab notifications only
+    // (removing polling avoids excess traffic when many users are connected)
+    /*
     const now = new Date();
-    let pollInterval: number | null = null;
+    // if you ever want polling back, un-comment leader election above
     if (year === now.getFullYear() && month === now.getMonth() + 1) {
-      // poll every 30s; refresh both family data and nanny groups when viewing by-nanny
       pollInterval = window.setInterval(() => {
         if (document.visibilityState !== 'visible') return;
-        loadData();
-        if (viewMode === 'by-nanny') loadNannyGroups();
+        loadData(false);
+        if (viewMode === 'by-nanny') loadNannyGroups(false);
       }, 30_000);
     }
+    */
 
     return () => {
       try { if (bc) bc.close(); } catch (closeErr) { console.error('Failed to close paymentHistory BroadcastChannel', closeErr); }
       window.removeEventListener('paymentHistory:changed', onNotify as EventListener);
       window.removeEventListener('storage', onStorage);
       if (pollInterval) clearInterval(pollInterval);
+      if (beatIv) clearInterval(beatIv);
     };
   }, [year, month, viewMode, loadData, loadNannyGroups]);
 
