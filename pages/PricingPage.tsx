@@ -12,9 +12,11 @@ const plans = [
     price: '0€',
     description: 'Pour tester Frimousse sans engagement (15 jours max)',
     features: [
-      'Limite sur la création de compte',
+      "Jusqu'à 2 enfants",
+      "Jusqu'à 2 nounous",
+      "Jusqu'à 2 parents",
+      "Jusqu'à 2 rapports",
       'Support par email',
-      'Accès web responsive',
     ],
     cta: 'Essai gratuit',
     highlight: false,
@@ -25,28 +27,30 @@ const plans = [
     price: '29€ / mois',
     description: 'Pour les MAM, micro-crèches et petites structures',
     features: [
-      'Jusqu’à 10 enfants',
-      'Notifications email',
+      "Jusqu'à 10 enfants",
+      "Jusqu'à 10 nounous",
+      "Jusqu'à 10 parents",
       'Support par email',
     ],
     cta: 'Choisir Essentiel',
     highlight: false,
-  buyButtonId: 'buy_btn_1Ru88bExeKKlzm3U232ITaMN', 
-  productId: 'prod_SpdCOBUbbne4oo',
+    buyButtonId: 'buy_btn_1Ru88bExeKKlzm3U232ITaMN',
+    productId: 'prod_SpdCOBUbbne4oo',
   },
   {
     name: 'Pro',
     price: '59€ / mois',
     description: 'Pour crèches, garderies, centres de loisirs',
     features: [
-      'Création de comptes illimités',
-      'facturations détaillées',
+      'Enfants, nounous et parents illimités',
+      'Rapports illimités',
+      'Facturations détaillées',
       'Assistant IA',
       'Support prioritaire',
     ],
     cta: 'Choisir Pro',
     highlight: true,
-    buyButtonId: 'buy_btn_1Ru84HExeKKlzm3UMPmR820n', 
+    buyButtonId: 'buy_btn_1Ru84HExeKKlzm3UMPmR820n',
     productId: 'prod_SpdCOBUbbne4oo',
   },
 ];
@@ -87,7 +91,7 @@ export default function PricingPage() {
       window.location.href = data.url;
     } catch (err) {
       const message = err && (err as Error).message ? (err as Error).message : String(err);
-      setGlobalMessage({ type: 'error', text: message || 'Erreur lors de la création de l’abonnement.' });
+      setGlobalMessage({ type: 'error', text: message || "Erreur lors de la creation de l'abonnement." });
     } finally {
       // nothing to cleanup
     }

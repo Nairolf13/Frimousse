@@ -2,6 +2,7 @@ import SEO from '../components/SEO';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 // icons intentionally removed from suggestion cards
 import { useAssistant } from '../src/context/AssistantContext';
 import type { Message as AssistantMessage } from '../src/context/AssistantContext';
@@ -11,6 +12,8 @@ type Message = { id: string; role: 'assistant' | 'user'; text: string };
 export default function Assistant() {
   const { t, locale } = useI18n();
   const { user } = useAuth();
+  const navigate = useNavigate();
+
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,26 +21,6 @@ export default function Assistant() {
   const { messages, pushMessage } = useAssistant();
   const scroller = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  function localPush(msg: Message) {
-    pushMessage(msg as AssistantMessage);
-    // after DOM updates, scroll to the appropriate place
-    setTimeout(() => {
-      try {
-        if (msg.role === 'assistant') {
-          const el = scroller.current?.querySelector(`[data-msg-id="${msg.id}"]`) as HTMLElement | null;
-          if (el && typeof el.scrollIntoView === 'function') {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            return;
-          }
-        }
-      } catch {
-        // ignore
-      }
-      // fallback: scroll to bottom
-      scroller.current?.scrollTo({ top: scroller.current!.scrollHeight, behavior: 'smooth' });
-    }, 120);
-  }
 
   const resizeTextarea = useCallback(() => {
     const ta = textareaRef.current;
@@ -60,6 +43,49 @@ export default function Assistant() {
     window.addEventListener('orientationchange', onChange);
     return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
   }, []);
+
+  // Gate: only Pro plan (or super-admin) can access the assistant
+  const userPlan = (user?.plan || '').toLowerCase();
+  const isSuperAdmin = user?.role === 'super-admin';
+  const hasPro = isSuperAdmin || userPlan === 'pro';
+
+  if (!hasPro) {
+    return (
+      <div className="min-h-screen bg-[#fcfcff] p-2 sm:p-4 md:pl-64 w-full flex items-center justify-center">
+        <div className="max-w-md text-center bg-white rounded-2xl shadow-lg p-8">
+          <div className="text-5xl mb-4">🔒</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('assistant.locked.title', 'Fonctionnalite reservee au plan Pro')}</h2>
+          <p className="text-gray-500 mb-6">{t('assistant.locked.description', "L'assistant IA est disponible uniquement avec le plan Pro. Mettez a niveau votre abonnement pour y acceder.")}</p>
+          <button
+            onClick={() => navigate('/pricing')}
+            className="bg-brand-500 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-brand-600 transition-all"
+          >
+            {t('assistant.locked.cta', 'Voir les tarifs')}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function localPush(msg: Message) {
+    pushMessage(msg as AssistantMessage);
+    // after DOM updates, scroll to the appropriate place
+    setTimeout(() => {
+      try {
+        if (msg.role === 'assistant') {
+          const el = scroller.current?.querySelector(`[data-msg-id="${msg.id}"]`) as HTMLElement | null;
+          if (el && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      // fallback: scroll to bottom
+      scroller.current?.scrollTo({ top: scroller.current!.scrollHeight, behavior: 'smooth' });
+    }, 120);
+  }
 
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault();

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
+const requirePlan = require('../middleware/requirePlan');
 const { PrismaClient } = require('@prisma/client');
 const PDFDocument = require('pdfkit');
 const { generateInvoiceBuffer } = require('../lib/invoiceGenerator');
@@ -80,7 +81,7 @@ function renderTableHeader(doc, leftX, pageWidth, cols) {
   return { headerY: headerY + headerH, headerH };
 }
 
-router.get('/invoice/:id', auth, async (req, res) => {
+router.get('/invoice/:id', auth, requirePlan('pro'), async (req, res) => {
   // always disable caching so clients never see stale PDFs
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
@@ -145,7 +146,7 @@ router.get('/invoice/:id', auth, async (req, res) => {
     return res.status(500).json({ message: 'Server error generating invoice' });
   }
 });    // robust stream error handling: ensure PDF stream errors don't crash the process
-router.post('/invoice/:id/send', auth, async (req, res) => {
+router.post('/invoice/:id/send', auth, requirePlan('pro'), async (req, res) => {
   try {
     const id = req.params.id;
     if (!id) return res.status(400).json({ message: 'Missing id' });

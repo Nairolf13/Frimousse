@@ -8,6 +8,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const logger = require('../lib/logger');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
+const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const multer = require('multer');
 const os = require('os');
 const fs = require('fs');
@@ -34,6 +35,7 @@ function validatePrescriptionMime(mimetype) {
   return ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(mimetype);
 }
 
+// Public: used on the landing page to display total children count (no auth needed)
 router.get('/count', async (req, res) => {
   try {
     const count = await prisma.child.count();
@@ -93,7 +95,7 @@ router.get('/:id/billing', auth, async (req, res) => {
   res.json({ childId: id, month, days, amount });
 });
 
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, requireActiveSubscription, async (req, res) => {
   try {
    
     let resolvedParentId = null;
@@ -193,10 +195,11 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-router.post('/', auth, discoveryLimit('child'), async (req, res) => {
-  // Only admins, nannies, or super-admin can create children.
-  if (req.user && req.user.role === 'parent') {
-    return res.status(403).json({ error: 'Forbidden: parents cannot create children' });
+router.post('/', auth, requireActiveSubscription, discoveryLimit('child'), async (req, res) => {
+  // Only admins or super-admin can create children.
+  const role = req.user && req.user.role;
+  if (role !== 'admin' && !isSuperAdmin(req.user)) {
+    return res.status(403).json({ error: 'Forbidden: seuls les administrateurs peuvent créer des enfants' });
   }
     const { name, age, sexe, parentId, parentName, parentContact, allergies, group, birthDate } = req.body;
     const parentMail = req.body.parentMail !== undefined ? String(req.body.parentMail || '').trim().toLowerCase() : undefined;
@@ -338,7 +341,7 @@ router.post('/', auth, discoveryLimit('child'), async (req, res) => {
   }
 });
 
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
   const { id } = req.params;
   // Parents are not allowed to update child records
   if (req.user && req.user.role === 'parent') {
@@ -440,7 +443,7 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
   const { id } = req.params;
   if (req.user && req.user.role === 'parent') {
     return res.status(403).json({ error: 'Forbidden: parents cannot delete children' });

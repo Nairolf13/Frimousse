@@ -46,7 +46,38 @@ router.get('/me', auth, async (req, res) => {
   } catch (e) {
     // ignore resolution errors and return whatever we have
   }
-  res.json(user);
+
+  // Attach the current subscription plan so the frontend can gate features
+  let plan = null;
+  try {
+    if (user.role === 'super-admin') {
+      plan = 'pro'; // super-admin has full access
+    } else {
+      let sub = null;
+      if (user.role === 'admin') {
+        sub = await prisma.subscription.findFirst({ where: { userId: user.id, status: { in: ['trialing', 'active'] } }, orderBy: { createdAt: 'desc' } });
+      } else {
+        // Non-admin: look up center admin's subscription
+        let centerId = user.centerId;
+        if (!centerId && user.parentId) {
+          const parent = await prisma.parent.findUnique({ where: { id: user.parentId } });
+          if (parent) centerId = parent.centerId;
+        }
+        if (centerId) {
+          const admins = await prisma.user.findMany({ where: { centerId }, select: { id: true, role: true } });
+          const adminIds = admins.filter(a => { const r = String(a.role || '').toLowerCase(); return r.includes('admin') || r.includes('super'); }).map(a => a.id);
+          if (adminIds.length > 0) {
+            sub = await prisma.subscription.findFirst({ where: { userId: { in: adminIds }, status: { in: ['trialing', 'active'] } }, orderBy: { createdAt: 'desc' } });
+          }
+        }
+      }
+      if (sub) plan = sub.plan;
+    }
+  } catch (e) {
+    // ignore — plan stays null
+  }
+
+  res.json({ ...user, plan });
 });
 
 router.get('/all', async (req, res) => {

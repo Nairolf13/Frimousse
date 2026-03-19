@@ -28,6 +28,7 @@ function getCache(key) {
 /**
  * Proxy RestCountries - returns a compact list { name, cca2, cca3, region }
  */
+// Public: used on register page and complete-profile (unauthenticated users need country list)
 router.get('/countries', async (req, res) => {
   try {
     const resp = await fetch('https://restcountries.com/v3.1/all?fields=name,cca2,cca3,region');
@@ -49,6 +50,7 @@ router.get('/countries', async (req, res) => {
  * Proxy PositionStack for address / city autocomplete
  * Example: /api/geodata/positionstack?q=paris
  */
+// Public: used on register/complete-profile pages for address autocomplete (unauthenticated users)
 router.get('/positionstack', async (req, res) => {
   try {
     const rawQ = String(req.query.q || '').trim();

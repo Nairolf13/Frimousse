@@ -9,9 +9,10 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const JWT_SECRET = process.env.JWT_SECRET;
 const fs = require('fs');
 const path = require('path');
+const { sendPaymentFailedAlert } = require('../lib/subscriptionAlertCron');
 const GENERATED_DIR = path.join(__dirname, '..', 'generated');
 const GENERATED_PRICES_PATH = path.join(GENERATED_DIR, 'stripe_prices.json');
-const PROCESSED_EVENTS_PATH = path.join(GENERATED_DIR, 'processed_stripe_events.json');
+// PROCESSED_EVENTS_PATH removed: idempotency now uses DB (StripeEvent model)
 
 // Helper: resolve a plan name to a Stripe price ID.
 // If the corresponding env var is already a price_xxx, return it.
@@ -65,6 +66,10 @@ async function resolvePriceId(plan) {
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!endpointSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not set — rejecting webhook');
+    return res.status(500).send('Webhook secret not configured');
+  }
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
@@ -72,20 +77,18 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     console.error('Webhook signature error', err && err.message ? err.message : err);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-  // Idempotency: ensure we don't process the same Stripe event twice
+
+  // Idempotency via DB: ensure we don't process the same Stripe event twice
   try {
-    await fs.promises.mkdir(GENERATED_DIR, { recursive: true });
-  } catch (e) { /* ignore */ }
-  let processed = {};
-  try {
-    const raw = await fs.promises.readFile(PROCESSED_EVENTS_PATH, 'utf8').catch(() => '{}');
-    processed = JSON.parse(raw || '{}');
+    const existing = await prisma.stripeEvent.findUnique({ where: { id: event.id } });
+    if (existing) return res.json({ received: true, skipped: true });
+    // Mark as processed immediately (atomic upsert prevents race conditions)
+    await prisma.stripeEvent.create({ data: { id: event.id } });
   } catch (e) {
-    processed = {};
-  }
-  if (processed[event.id]) {
-    // already processed
-    return res.json({ received: true, skipped: true });
+    // If create fails with unique constraint, another request already processed it
+    if (e && e.code === 'P2002') return res.json({ received: true, skipped: true });
+    console.error('StripeEvent idempotency check failed', e);
+    return res.status(500).send('Internal error');
   }
 
   try {
@@ -181,6 +184,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         const sub = await prisma.subscription.findUnique({ where: { stripeSubscriptionId: stripeSubId } });
         if (sub) {
           await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'past_due' } });
+          // Notify admin by email (fire-and-forget)
+          sendPaymentFailedAlert(stripeSubId).catch(e => console.error('sendPaymentFailedAlert error', e));
         }
         break;
       }
@@ -205,14 +210,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     }
   } catch (e) {
     console.error('Error processing webhook event', e);
-  }
-
-  // mark event as processed
-  try {
-    processed[event.id] = { processedAt: new Date().toISOString() };
-    await fs.promises.writeFile(PROCESSED_EVENTS_PATH, JSON.stringify(processed, null, 2), 'utf8');
-  } catch (e) {
-    console.error('Failed to write processed events file', e && e.message ? e.message : e);
   }
 
   res.json({ received: true });
@@ -527,6 +524,86 @@ router.get('/', requireAuth, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Get full subscription details for the admin dashboard (including Stripe billing portal URL)
+// Restricted to admins and super-admins only.
+router.get('/my', requireAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (user.role !== 'admin' && user.role !== 'super-admin') {
+      return res.status(403).json({ error: 'Forbidden: réservé aux administrateurs' });
+    }
+
+    let sub = null;
+    let subUserId = user.id;
+    sub = await prisma.subscription.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+
+    if (!sub) return res.json({ subscription: null });
+
+    // Try to get billing portal URL from Stripe (so admin can manage payment method)
+    let portalUrl = null;
+    try {
+      const dbUser = await prisma.user.findUnique({ where: { id: subUserId } });
+      if (dbUser && dbUser.stripeCustomerId) {
+        const session = await stripe.billingPortal.sessions.create({
+          customer: dbUser.stripeCustomerId,
+          return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/subscription`,
+        });
+        portalUrl = session.url;
+      }
+    } catch (e) {
+      // Billing portal may not be configured yet — not a fatal error
+      console.warn('Could not create billing portal session:', e && e.message ? e.message : e);
+    }
+
+    res.json({ subscription: sub, portalUrl });
+  } catch (e) {
+    console.error('GET /subscriptions/my error', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Change subscription plan (upgrade or downgrade)
+router.post('/change-plan', requireAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
+      return res.status(403).json({ error: 'Forbidden: seuls les administrateurs peuvent changer de plan' });
+    }
+
+    const { plan } = req.body;
+    if (!plan || !['essentiel', 'pro'].includes(plan)) {
+      return res.status(400).json({ error: 'Plan invalide. Valeurs acceptées: essentiel, pro' });
+    }
+
+    const sub = await prisma.subscription.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+    if (!sub) return res.status(404).json({ error: 'Aucun abonnement trouvé' });
+    if (!sub.stripeSubscriptionId) return res.status(400).json({ error: 'Pas de subscription Stripe associée' });
+
+    const priceId = await resolvePriceId(plan);
+    if (!priceId) return res.status(500).json({ error: 'Price ID non configuré pour ce plan' });
+
+    // Retrieve current Stripe subscription to get the item id
+    const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
+    const itemId = stripeSub.items.data[0]?.id;
+    if (!itemId) return res.status(400).json({ error: 'Impossible de trouver l\'item de l\'abonnement Stripe' });
+
+    // Update the subscription in Stripe (prorate immediately)
+    await stripe.subscriptions.update(sub.stripeSubscriptionId, {
+      items: [{ id: itemId, price: priceId }],
+      proration_behavior: 'create_prorations',
+    });
+
+    // Update local DB
+    await prisma.subscription.update({ where: { id: sub.id }, data: { plan } });
+
+    res.json({ success: true, plan });
+  } catch (e) {
+    console.error('POST /subscriptions/change-plan error', e);
+    res.status(500).json({ error: 'Erreur lors du changement de plan' });
   }
 });
 

@@ -90,9 +90,13 @@ module.exports = async function (req, res, next) {
     const ok = await hasValidSubscriptionForRefresh(user);
     if (!ok) return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
 
-    // Generate new access token but KEEP existing refresh token (no rotation in middleware to avoid loops)
-    const accessTokenNew = generateAccessTokenForMiddleware(user);
-    res.cookie('accessToken', accessTokenNew, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
+    // Rotate refresh token on every use to limit exposure if a token is stolen
+    const newAccessToken = generateAccessTokenForMiddleware(user);
+    const newRefreshToken = generateRefreshTokenForMiddleware(user);
+    await prisma.refreshToken.delete({ where: { token: refreshToken } }).catch(() => {});
+    await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } });
+    res.cookie('accessToken', newAccessToken, Object.assign({ maxAge: 15 * 60 * 1000 }, cookieOptions()));
+    res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: 7 * 24 * 60 * 60 * 1000 }, cookieOptions()));
 
     setUserOnRequest(user);
     return next();

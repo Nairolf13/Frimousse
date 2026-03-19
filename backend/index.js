@@ -21,6 +21,8 @@ const app = express();
 // Trust first proxy (nginx) for correct IP detection with rate limiting
 app.set('trust proxy', 1);
 
+// STRIPE_WEBHOOK_SECRET est optionnel au démarrage — le webhook refusera les requêtes si absent,
+// mais cela ne bloque pas le serveur (utile tant que Stripe n'est pas encore configuré en prod).
 const requiredEnvs = ['JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'STRIPE_SECRET_KEY'];
 for (const e of requiredEnvs) {
   if (!process.env[e]) {
@@ -35,7 +37,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 if (!process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
   throw new Error('La clé STRIPE_SECRET_KEY ne semble pas valide (doit commencer par sk_). Vérifiez backend/.env');
 }
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
 
 
 const meRoutes = require('./routes/me');
@@ -54,7 +56,8 @@ const allowedOrigins = isProd
   ? [
       'https://lesfrimousses.com',
       'https://www.lesfrimousses.com',
-      'http://localhost:5173'
+      'https://frimousse-asso.fr',
+      'https://www.frimousse-asso.fr',
     ]
   : [
       'http://localhost:5173',
@@ -208,18 +211,7 @@ if (isProd) {
   });
 }
 
-app.post('/create-payment-intent', async (req, res) => {
-  try {
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: 1000, 
-      currency: 'eur',
-      automatic_payment_methods: {enabled: true},
-    });
-    res.send({ clientSecret: paymentIntent.client_secret });
-  } catch (error) {
-    res.status(500).send({error: error.message});
-  }
-});
+// /create-payment-intent removed: was unauthenticated and unused.
 
 
 const PORT = process.env.PORT || 4000;
@@ -232,4 +224,12 @@ try {
   console.log('Payment cron loaded');
 } catch (err) {
   console.error('Failed to load payment cron', err);
+}
+
+// Start subscription alert cron (trial expiry warnings + payment failed emails)
+try {
+  require('./lib/subscriptionAlertCron');
+  console.log('Subscription alert cron loaded');
+} catch (err) {
+  console.error('Failed to load subscription alert cron', err);
 }

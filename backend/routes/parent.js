@@ -3,6 +3,7 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
+const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -40,7 +41,7 @@ router.get('/children', requireAuth, async (req, res) => {
 });
 
 // Admin listing (must be before '/:id' so 'admin' isn't treated as an id)
-router.get('/admin', requireAuth, async (req, res) => {
+router.get('/admin', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
     const user = req.user || {};
     if (!canManageParents(user)) return res.status(403).json({ message: 'Forbidden' });
@@ -282,10 +283,10 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
+router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'), async (req, res) => {
   try {
   const userReq = req.user || {};
-  if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
+  if (!isAdminRole(userReq) && !isSuperAdmin(userReq)) return res.status(403).json({ message: 'Forbidden: seuls les administrateurs peuvent créer des parents' });
 
   // normalize email to avoid case-sensitivity issues
   const { name, phone, password, address, postalCode, city, region, country } = req.body;
@@ -386,7 +387,7 @@ router.post('/', requireAuth, discoveryLimit('parent'), async (req, res) => {
   }
 });
 
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
     const { id } = req.params;
     const userReq = req.user || {};
@@ -483,7 +484,7 @@ router.get('/by-email', requireAuth, async (req, res) => {
   }
 });
 
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
   const userReq = req.user || {};
   if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });

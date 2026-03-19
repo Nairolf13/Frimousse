@@ -435,3 +435,11 @@ model SupportReply {
 
   @@index([ticketId])
 }
+
+// Stripe webhook idempotency: tracks processed event IDs to prevent double-processing
+model StripeEvent {
+  id          String   @id // Stripe event id (e.g. evt_xxx)
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
+}
