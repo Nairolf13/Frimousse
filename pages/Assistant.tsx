@@ -9,7 +9,7 @@ import type { Message as AssistantMessage } from '../src/context/AssistantContex
 type Message = { id: string; role: 'assistant' | 'user'; text: string };
 
 export default function Assistant() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { user } = useAuth();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   const [message, setMessage] = useState('');
@@ -77,7 +77,7 @@ export default function Assistant() {
       const res = await fetch('/api/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: historyPayload }),
+        body: JSON.stringify({ message: text, history: historyPayload, locale }),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();

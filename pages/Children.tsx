@@ -62,8 +62,9 @@ import { useAuth } from '../src/context/AuthContext';
 import '../styles/filter-responsive.css';
 import '../styles/children-responsive.css';
 
-function PhotoConsentToggle({ childId, initialConsent }: { childId: string; initialConsent?: boolean | null }) {
+function PhotoConsentToggle({ childId, initialConsent, onChange }: { childId: string; initialConsent?: boolean | null; onChange?: (newVal: boolean) => void }) {
   const { user } = useAuth();
+  const { t } = useI18n();
   const API_URL = import.meta.env.VITE_API_URL;
   const [consent, setConsent] = useState<boolean | null>(initialConsent ?? null);
   const [loading, setLoading] = useState(false);
@@ -101,7 +102,9 @@ function PhotoConsentToggle({ childId, initialConsent }: { childId: string; init
         return;
       }
       const body = await res.json();
-      setConsent(!!body.consent);
+      const newVal = !!body.consent;
+      setConsent(newVal);
+      if (onChange) onChange(newVal);
     } catch (e: unknown) {
       if (import.meta.env.DEV) console.error('Failed to toggle consent', e);
       else console.error('Failed to toggle consent', e instanceof Error ? e.message : String(e));
@@ -109,14 +112,14 @@ function PhotoConsentToggle({ childId, initialConsent }: { childId: string; init
   };
 
   if (!user || (!isParent && !isAdmin)) return null; // only parents/admins see the toggle
-  if (consent === null) return <div className="text-sm text-gray-500">Chargement du consentement...</div>;
+  if (consent === null) return <div className="text-sm text-gray-500">{t('children.photo_consent.loading')}</div>;
   return (
     <div className="flex items-center gap-2">
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={consent} onChange={toggle} disabled={loading} />
-        <span className="text-sm">Autoriser les photos</span>
+        <span className="text-sm">{t('children.photo_consent.toggle_label')}</span>
       </label>
-      <span className="text-xs text-gray-400">{consent ? 'Autorisé' : 'Non autorisé'}</span>
+      <span className="text-xs text-gray-400">{consent ? t('children.photo_consent.allowed') : t('children.photo_consent.denied')}</span>
     </div>
   );
 }
@@ -1018,7 +1021,11 @@ export default function Children() {
                           || isAdminUser
                         ) && (
                         <div className="mt-3">
-                          <PhotoConsentToggle childId={child.id} initialConsent={photoConsentMap[child.id] ?? null} />
+                          <PhotoConsentToggle
+                            childId={child.id}
+                            initialConsent={photoConsentMap[child.id] ?? null}
+                            onChange={(val) => setPhotoConsentMap(prev => ({ ...prev, [child.id]: val }))}
+                          />
                         </div>
                       )}
                       {/* Photo consent status badge (for admin/staff view) */}

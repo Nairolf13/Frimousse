@@ -10,6 +10,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'assistant.header.subtitle': "· Conseils et aide pour la petite enfance",
     'assistant.intro.title': "Assistant",
     'assistant.intro.description': "Je suis votre assistant pour la petite enfance. Je peux vous aider avec :",
+    'assistant.welcome': "👋 Bonjour ! Je suis votre assistant spécialisé dans la garde d'enfants. Posez votre question et je vous répondrai de manière claire et bienveillante.",
     'assistant.option.nutrition': "Conseils nutrition",
     'assistant.option.nutrition.example': "Que cuisiner pour mon enfant ?",
     'assistant.option.education': "Conseils pédagogiques",
@@ -180,6 +181,10 @@ const translations: Record<Locale, Record<string, string>> = {
   'children.photo_consent.yes': 'Autorisation photos: Oui',
   'children.photo_consent.no': 'Autorisation photos: Non',
   'children.photo_consent.unknown': 'Autorisation: —',
+  'children.photo_consent.toggle_label': 'Autoriser les photos',
+  'children.photo_consent.allowed': 'Autorisé',
+  'children.photo_consent.denied': 'Non autorisé',
+  'children.photo_consent.loading': 'Chargement du consentement...',
   'common.ok': 'OK',
   'common.at': 'à',
   // parent / form / card translations
@@ -303,6 +308,7 @@ const translations: Record<Locale, Record<string, string>> = {
   'feed.tag_children': 'Taguer des enfants',
   'feed.no_authorization': 'Pas d\'autorisation',
     'settings.title': 'Paramètres',
+    'settings.description': 'Gérez vos préférences et votre compte',
     'settings.email.title': 'Notifications par email',
     'settings.email.desc': "Recevoir un email pour chaque nouveau rapport ou affectation",
     'settings.push.title': 'Notifications push',
@@ -310,6 +316,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'settings.language.title': 'Langue',
     'settings.language.desc': "Choisissez la langue de l'interface",
     'settings.account.title': 'Gestion du compte',
+    'settings.support.title': 'Support Client',
+    'settings.support.open_ticket': 'Ouvrir un ticket',
+    'settings.support.description': 'Besoin d\'aide ? Contactez notre équipe de support',
     'settings.account.delete': 'Supprimer le compte',
     'settings.profile.edit': 'Modifier le profil',
     'settings.save': 'Enregistrer',
@@ -346,7 +355,24 @@ const translations: Record<Locale, Record<string, string>> = {
   },
   en: {
     // nav
-    'nav.assistant': 'Assistant IA',
+    'nav.assistant': 'AI Assistant',
+    'assistant.welcome': "👋 Hello! I'm your child-care assistant. Ask your question and I will answer clearly and kindly.",
+    'assistant.intro.title': 'Assistant',
+    'assistant.intro.description': "I'm your child-care assistant. I can help with:",
+    'assistant.option.nutrition': 'Nutrition advice',
+    'assistant.option.nutrition.example': 'What to cook for my child?',
+    'assistant.option.education': 'Educational tips',
+    'assistant.option.education.example': 'Development and age-appropriate learning',
+    'assistant.option.activities': 'Suggested activities',
+    'assistant.option.activities.example': 'Games and exercises by age',
+    'assistant.loading': 'Loading...',
+    'assistant.send.button': 'Send',
+    'assistant.user.fallback': 'Guest',
+    'assistant.input.aria': 'Your question',
+    'assistant.input.placeholder': 'Ask the assistant...',
+    'assistant.title': 'Frimousse Assistant',
+    'assistant.header.title': 'Frimousse Assistant',
+    'assistant.header.subtitle': '· Advice and help for child care',
     'common.none': '—',
     'common.view_more': 'View more',
     'common.info': 'Information',
@@ -357,7 +383,7 @@ const translations: Record<Locale, Record<string, string>> = {
   'adjustment.title': 'Discounts for {month}',
   'adjustment.loading': 'Loading…',
   'adjustment.none': 'No discounts applied',
-  'adjustment.button': 'Add manual discount',
+  'adjustment.button': 'Add discount',
   'adjustment.amount': 'Amount',
   'adjustment.comment': 'Comment',
   'adjustment.optional': 'optional',
@@ -587,6 +613,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'settings.push.desc': 'Receive notifications in your browser (reminders and announcements)',
     'settings.language.title': 'Language',
     'settings.language.desc': 'Choose the interface language',
+    'settings.description': 'Manage your preferences and account',
     'settings.account.title': 'Account management',
     'settings.account.delete': 'Delete account',
     'settings.profile.edit': 'Edit profile',
@@ -594,6 +621,9 @@ const translations: Record<Locale, Record<string, string>> = {
     'settings.cancel': 'Cancel',
     'settings.logout': 'Log out',
     'settings.change_password': 'Change password',
+    'settings.support.title': 'Customer support',
+    'settings.support.description': 'Need help? Contact our support team',
+    'settings.support.open_ticket': 'Open a ticket',
     'settings.delete_confirm.title': 'Confirm account deletion',
     'settings.delete_confirm.body': 'Are you sure you want to delete your account? This action is irreversible and all your data will be lost.',
   'settings.delete_confirm.confirm': 'Delete',
@@ -957,6 +987,10 @@ translations.en['children.deleting'] = 'Deleting...';
 translations.en['children.photo_consent.yes'] = 'Photo consent: Yes';
 translations.en['children.photo_consent.no'] = 'Photo consent: No';
 translations.en['children.photo_consent.unknown'] = 'Photo consent: —';
+translations.en['children.photo_consent.toggle_label'] = 'Allow photos';
+translations.en['children.photo_consent.allowed'] = 'Allowed';
+translations.en['children.photo_consent.denied'] = 'Not allowed';
+translations.en['children.photo_consent.loading'] = 'Loading consent...';
 
 // parent / form / card translations (en)
 translations.en['parent.form.firstName'] = 'First name';

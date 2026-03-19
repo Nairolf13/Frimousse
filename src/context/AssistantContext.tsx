@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
+import { useI18n } from '../lib/useI18n';
 
 export type Message = { id: string; role: 'assistant' | 'user'; text: string };
 
@@ -13,9 +14,10 @@ const AssistantContext = createContext<{
 
 export function AssistantProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 'm0', role: 'assistant', text: "👋 Bonjour ! Je suis votre assistant spécialisé dans la garde d'enfants. Posez votre question et je vous répondrai de manière claire et bienveillante." },
-  ]);
+  const { t, locale } = useI18n();
+
+  const initialMessage = React.useMemo<Message>(() => ({ id: 'm0', role: 'assistant', text: t('assistant.welcome') }), [t]);
+  const [messages, setMessages] = useState<Message[]>([initialMessage]);
 
   const storageKey = React.useMemo(() => `assistant_convo_${user?.id ?? 'anon'}`, [user?.id]);
 
@@ -42,6 +44,13 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
     }
   }, [messages, storageKey]);
 
+  // if user switches language and conversation is still empty except welcome, update it
+  useEffect(() => {
+    if (messages.length === 1 && messages[0].role === 'assistant' && messages[0].text !== initialMessage.text) {
+      setMessages([initialMessage]);
+    }
+  }, [locale, messages, initialMessage]);
+
   // clear when user logs out
   useEffect(() => {
     if (!user) {
@@ -50,9 +59,9 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
       } catch {
         // ignore
       }
-      setMessages([{ id: 'm0', role: 'assistant', text: "👋 Bonjour ! Je suis votre assistant spécialisé dans la garde d'enfants. Posez votre question et je vous répondrai de manière claire et bienveillante." }]);
+      setMessages([initialMessage]);
     }
-  }, [user, storageKey]);
+  }, [user, storageKey, initialMessage]);
 
   const pushMessage = (m: Message) => setMessages(prev => [...prev, m]);
 
