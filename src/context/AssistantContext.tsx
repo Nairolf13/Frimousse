@@ -16,7 +16,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { t, locale } = useI18n();
 
-  const initialMessage = React.useMemo(() => ({ id: 'm0', role: 'assistant', text: t('assistant.welcome') }), [t, locale]);
+  const initialMessage = React.useMemo<Message>(() => ({ id: 'm0', role: 'assistant', text: t('assistant.welcome') }), [t]);
   const [messages, setMessages] = useState<Message[]>([initialMessage]);
 
   const storageKey = React.useMemo(() => `assistant_convo_${user?.id ?? 'anon'}`, [user?.id]);
