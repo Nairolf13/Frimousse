@@ -746,13 +746,13 @@ export default function Settings() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-2xl shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div className="md:flex-1 pr-3">
+              <div className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3">
+                <div className="min-w-0">
                   <div className="font-semibold text-gray-800">{t('settings.language.title')}</div>
                   <div className="text-gray-500 text-sm">{t('settings.language.desc')}</div>
                 </div>
-                <div className="md:flex-none w-full md:w-auto">
-                  <div className="max-w-[320px] md:max-w-[420px]">
+                <div className="w-full">
+                  <div className="w-full max-w-[320px] md:max-w-[420px]">
                     <LanguageDropdown value={language} onChange={(code) => { setLanguage(code); setLocale(code === 'en' ? 'en' : 'fr'); }} />
                   </div>
                 </div>
@@ -762,28 +762,28 @@ export default function Settings() {
             {!isSuperAdmin && (
               <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">
                 <div>
-                  <div className="font-semibold text-gray-800">Support Client</div>
-                  <div className="text-gray-500 text-sm">Besoin d'aide ? Contactez notre équipe de support</div>
+                  <div className="font-semibold text-gray-800">{t('settings.support.title', 'Support Client')}</div>
+                  <div className="text-gray-500 text-sm">{t('settings.support.description', "Besoin d'aide ? Contactez notre équipe de support")}</div>
                 </div>
                 <div className="mt-4">
                   <button
                     onClick={() => setShowSupportModal(true)}
                     className="bg-[#0b5566] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#08323a]"
                   >
-                    Ouvrir un ticket
+                    {t('settings.support.open_ticket', 'Ouvrir un ticket')}
                   </button>
                 </div>
               </div>
             )}
 
             {isAdmin && (
-              <div className="bg-white rounded-2xl shadow p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div className="md:flex-1 pr-3">
+              <div className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3">
+                <div className="min-w-0">
                   <div className="font-semibold text-gray-800">{t('settings.language.title')}</div>
                   <div className="text-gray-500 text-sm">{t('settings.language.desc')}</div>
                 </div>
-                <div className="md:flex-none w-full md:w-auto">
-                  <div className="max-w-[320px] md:max-w-[420px]">
+                <div className="w-full">
+                  <div className="w-full max-w-[320px] md:max-w-[420px]">
                     <LanguageDropdown value={language} onChange={(code) => { setLanguage(code); setLocale(code === 'en' ? 'en' : 'fr'); }} />
                   </div>
                 </div>
@@ -791,7 +791,7 @@ export default function Settings() {
             )}
 
             <div className="bg-white rounded-2xl shadow p-4 md:col-span-2">
-              <div className="font-semibold text-gray-800 mb-4">Gestion du compte</div>
+              <div className="font-semibold text-gray-800 mb-4">{t('settings.account.title')}</div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <button className="flex-1 bg-red-600 text-white font-semibold rounded-lg px-4 py-2 shadow hover:bg-red-700" onClick={() => setShowDeleteModal(true)}>{t('settings.account.delete')}</button>
                 <ProfileButton />
@@ -869,7 +869,7 @@ export default function Settings() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm md:pl-64">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden m-4">
             <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-lg font-bold">Support Client</h2>
+              <h2 className="text-lg font-bold">{t('settings.support.title', 'Support Client')}</h2>
               <button
                 onClick={() => setShowSupportModal(false)}
                 className="text-gray-400 hover:text-gray-700 text-2xl"
