@@ -166,12 +166,18 @@ export default function PricingPage() {
 
                   <div className="w-full flex flex-col items-center" style={{ minHeight: '220px' }}>
                     {plan.buyButtonId ? (
-                      <div style={{ marginBottom: '5px' }}>
+                      <div style={{ marginBottom: '5px', position: 'relative' }}>
                         {/* @ts-expect-error stripe-buy-button is a custom HTML element */}
                         <stripe-buy-button
                           buy-button-id={plan.buyButtonId}
                           publishable-key={import.meta.env.VITE_STRIPE_PUBLISHABLE}
                         />
+                        <div
+                          title="Paiement temporairement indisponible"
+                          style={{ position: 'absolute', inset: 0, borderRadius: '8px', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(2px)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <span style={{ fontSize: '11px', color: '#555', fontWeight: 600, textAlign: 'center', padding: '0 8px' }}>Bientôt disponible</span>
+                        </div>
                       </div>
                     ) : (
                       <div style={{ background: 'rgb(12, 85, 102)', borderRadius: '7px', width: '290px', padding: '24px 12px', boxSizing: 'border-box', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '13px' }}>
@@ -185,17 +191,17 @@ export default function PricingPage() {
                         <button
                           type="button"
                           onClick={() => navigate('/register')}
-                          style={{ width: '100%', padding: '11px 16px', borderRadius: '6px', background: 'hsl(195deg, 66.67%, 96.47%)', color: 'rgb(12, 85, 102)', border: 'none', fontSize: '15px', fontWeight: 500, cursor: 'pointer', marginBottom: '8px', letterSpacing: '0.01em' }}
+                          style={{ width: '100%', padding: '11px 16px', borderRadius: '6px', background: 'hsl(195deg, 66.67%, 96.47%)', color: 'rgb(82, 89, 92)', border: 'none', fontSize: '15px', fontWeight: 500, cursor: 'pointer', marginBottom: '8px', letterSpacing: '0.01em' }}
                         >
                           {plan.cta}
                         </button>
                         <p style={{ color: '#ffffff', fontSize: '12px', textAlign: 'center', margin: 0 }}>Moyens de paiement pris en charge:</p>
                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', marginTop: '3px' }}>
-                          <svg height="16" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="3" fill="#006FCF"/><path d="M8.971 10.268l.774 1.876H8.203l.768-1.876zm16.075-.078h-2.538v.882h2.507v1.116h-2.507v.918h2.538v1.168L26.34 12h1.196l1.696-1.812V12h1.674v-3.399l-1.827.001-1.033 2.303zM8.53 8.588H5.825L3.17 14.393h1.803l.494-1.209h2.682l.495 1.209H10.4L8.53 8.588zm6.605 1.127c0-.346-.272-.515-.637-.515H12.95v1.108h1.548c.365 0 .637-.177.637-.593zm1.207 4.678h-1.812L14.373 12.2c-.162-.199-.35-.274-.562-.274H12.95v2.467h-1.612V8.588h3.291c1.192 0 2.042.735 2.042 1.825 0 .812-.466 1.386-1.117 1.627l1.788 2.353zm7.57-5.805h-4.738v5.805h1.623v-1.996h2.571c1.313 0 2.232-.934 2.232-1.9-.001-.979-.919-1.909-1.688-1.909zm-.35 2.468h-2.765V9.72h2.765c.393 0 .692.385.692.668 0 .294-.299.668-.692.668z" fill="#fff"/></svg>
+                          <img src="/imgs/card-amex.svg" alt="Amex" style={{ height: '16px', width: 'auto', objectFit: 'contain' }} />
                           <svg height="16" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="3" fill="#252525"/><circle cx="15" cy="12" r="7" fill="#EB001B"/><circle cx="23" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.8a7 7 0 0 1 0 10.4A7 7 0 0 1 19 6.8z" fill="#FF5F00"/></svg>
                           <svg height="16" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="3" fill="#fff"/><path d="M28.3 10.1H28c-.4 1-.7 1.5-1 3h1.9c-.3-1.5-.3-2.2-.6-3zm2.9 5.9h-1.7c-.1 0-.1 0-.2-.1l-.2-.9-.1-.2h-2.4c-.1 0-.2 0-.2.2l-.3.9c0 .1-.1.1-.1.1h-2.1l.2-.5L27 8.7c0-.5.3-.7.8-.7h1.5c.1 0 .2 0 .2.2l1.4 6.5c.1.4.2.7.2 1.1.1.1.1.1.1.2zm-13.4-.3l.4-1.8c.1 0 .2.1.2.1.7.3 1.4.5 2.1.4.2 0 .5-.1.7-.2.5-.2.5-.7.1-1.1-.2-.2-.5-.3-.8-.5-.4-.2-.8-.4-1.1-.7-1.2-1-.8-2.4-.1-3.1.6-.4.9-.8 1.7-.8 1.2 0 2.5 0 3.1.2h.1c-.1.6-.2 1.1-.4 1.7-.5-.2-1-.4-1.5-.4-.3 0-.6 0-.9.1-.2 0-.3.1-.4.2-.2.2-.2.5 0 .7l.5.4c.4.2.8.4 1.1.6.5.3 1 .8 1.1 1.4.2.9-.1 1.7-.9 2.3-.5.4-.7.6-1.4.6-1.4 0-2.5.1-3.4-.2-.1.2-.1.2-.2.1zm-3.1.3c.1-.7.1-.7.2-1 .5-2.2 1-4.5 1.4-6.7.1-.2.1-.3.3-.3H18c-.2 1.2-.4 2.1-.7 3.2-.3 1.5-.6 3-1 4.5 0 .2-.1.2-.3.2M5 8.2c0-.1.2-.2.3-.2h3.4c.5 0 .9.3 1 .8l.9 4.4c0 .1 0 .1.1.2 0-.1.1-.1.1-.1l2.1-5.1c-.1-.1 0-.2.1-.2h2.1c0 .1 0 .1-.1.2l-3.1 7.3c-.1.2-.1.3-.2.4-.1.1-.3 0-.5 0H9.7c-.1 0-.2 0-.2-.2L7.9 9.5c-.2-.2-.5-.5-.9-.6-.6-.3-1.7-.5-1.9-.5L5 8.2z" fill="#142688"/></svg>
                           <svg height="16" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="3" fill="#fff"/><path d="M18.093 11.976v3.2h-1.018v-7.9h2.691a2.447 2.447 0 0 1 1.747.692 2.28 2.28 0 0 1 .725 1.714 2.28 2.28 0 0 1-.725 1.714 2.414 2.414 0 0 1-1.747.678l-1.673.002zm0-3.732v2.788h1.698c.414 0 .808-.166 1.09-.46a1.558 1.558 0 0 0-.012-2.186 1.52 1.52 0 0 0-1.078-.448l-1.698.306zm6.484 1.39c.755 0 1.35.202 1.784.605.435.404.652.955.652 1.654v3.344h-.97v-.753h-.045c-.42.62-1.1.93-1.85.93a2.38 2.38 0 0 1-1.638-.57 1.809 1.809 0 0 1-.666-1.422c0-.6.227-1.077.68-1.43.454-.352 1.06-.528 1.82-.528.647 0 1.18.118 1.598.355v-.25a1.23 1.23 0 0 0-.45-.966 1.624 1.624 0 0 0-1.092-.39c-.633 0-1.134.267-1.503.8l-.893-.562c.49-.706 1.22-1.06 2.173-1.06v.043zm-1.32 4.08c0 .28.128.54.35.706.22.166.495.256.776.256.42 0 .823-.167 1.12-.46.298-.294.467-.695.467-1.113-.294-.234-.705-.352-1.233-.352-.384 0-.705.094-.964.282a.856.856 0 0 0-.516.68zm8.376-3.92l-3.392 7.8h-1.05l1.257-2.72-2.228-5.08h1.11l1.603 3.873 1.59-3.873h1.11z" fill="#3C4043"/><path d="M13.8 11.02a5.538 5.538 0 0 0-.08-.92H9v1.74h2.7a2.4 2.4 0 0 1-1 1.58v1.3h1.62a5.01 5.01 0 0 0 1.48-3.7z" fill="#4285F4"/><path d="M9 15.8c1.35 0 2.49-.45 3.32-1.22l-1.62-1.26a3.15 3.15 0 0 1-1.7.48 3.13 3.13 0 0 1-2.94-2.16H4.4v1.3A5 5 0 0 0 9 15.8z" fill="#34A853"/><path d="M6.06 11.64A3.12 3.12 0 0 1 5.9 10.6c0-.36.06-.71.16-1.04V8.26H4.4A5.02 5.02 0 0 0 4 10.6c0 .81.19 1.57.4 2.34l1.66-1.3z" fill="#FBBC04"/><path d="M9 7.44a2.7 2.7 0 0 1 1.92.75l1.43-1.43A4.8 4.8 0 0 0 9 5.4a5 5 0 0 0-4.6 2.86l1.66 1.3A3.13 3.13 0 0 1 9 7.44z" fill="#EA4335"/></svg>
-                          <svg height="16" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="3" fill="#fff"/><path d="M14.56 7h3.7c1.67 0 2.84.88 2.7 2.55-.2 2.26-1.52 3.5-3.55 3.5h-.93c-.27 0-.46.18-.52.47l-.42 2.62h-1.84l1.43-8.72.43-.42zm1.1 4.34h.72c.9 0 1.54-.52 1.65-1.44.08-.6-.28-.97-.9-.97h-.74l-.73 2.41zm5.74-1.67h1.77l-.1.66c.44-.5.97-.77 1.65-.77.98 0 1.5.62 1.5 1.56 0 .2-.03.45-.08.7l-.55 3.12h-1.77l.52-2.92c.03-.16.05-.32.05-.44 0-.36-.19-.56-.55-.56-.5 0-.85.37-.98 1.06l-.47 2.86h-1.77l.78-5.27zm5.9 0h1.77l-1.1 5.27h-1.77l1.1-5.27zm.3-1.9c0-.55.45-1 1-.1s-.45 1-1 1-1-.45-1-1zm3.57 1.9h1.71l.04 3.13 1.47-3.13h1.88l-2.72 5.27h-1.9l-.48-5.27z" fill="#003087"/><path d="M10.5 7h3.7c1.67 0 2.84.88 2.7 2.55-.2 2.26-1.52 3.5-3.55 3.5h-.93c-.27 0-.46.18-.52.47l-.42 2.62H9.64L11.07 7.4l-.57-.4z" fill="#009cde"/></svg>
+                          <img src="/imgs/card-paypal.svg" alt="PayPal" style={{ height: '16px', width: 'auto', objectFit: 'contain' }} />
                         </div>
                       </div>
                     )}
