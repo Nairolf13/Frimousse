@@ -8,15 +8,15 @@
   "theme_color": "#0b5566",
   "icons": [
     {
-      "src": "/imgs/LogoFrimousse-192.png",
+      "src": "/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/webp"
     },
     {
-      "src": "/imgs/LogoFrimousse-512.png",
+      "src": "/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp",
       "sizes": "512x512",
-      "type": "image/png"
-  ,  "purpose": "maskable any"
+      "type": "image/webp",
+      "purpose": "maskable any"
     }
   ]
 }

@@ -31,6 +31,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
           const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
           const [showReviewForm, setShowReviewForm] = useState(false);
           const [reviewName, setReviewName] = useState('');
+          const [reviewEmail, setReviewEmail] = useState('');
           const [reviewRating, setReviewRating] = useState<number | null>(5);
           const [reviewContent, setReviewContent] = useState('');
           const [submittingReview, setSubmittingReview] = useState(false);
@@ -391,7 +392,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                             setSubmittingReview(true);
                             setReviewError(null);
                             try {
-                              const payload = { authorName: reviewName || null, content: reviewContent, rating: reviewRating, centerId: null };
+                              const payload = { authorName: reviewName || null, email: reviewEmail, content: reviewContent, rating: reviewRating, centerId: null };
                               const res = await fetch(`${API_URL}/reviews`, {
                                 method: 'POST',
                                 credentials: 'include',
@@ -416,6 +417,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                               }
                               setShowReviewForm(false);
                               setReviewName('');
+                              setReviewEmail('');
                               setReviewRating(5);
                               setReviewContent('');
                             } catch (err: unknown) {
@@ -429,7 +431,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                           className="mt-8 mx-auto w-full max-w-3xl bg-white rounded-3xl border border-gray-100 p-8 shadow-sm"
                         >
                           <div className="flex flex-col gap-5">
-                            <div className="flex flex-col md:flex-row md:items-center md:gap-6">
+                            <div className="flex flex-col md:flex-row md:items-start md:gap-6">
                               <div className="flex-1">
                                 <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Nom</label>
                                 <input
@@ -439,6 +441,19 @@ import ConfirmDialog from '../components/ConfirmDialog';
                                   placeholder="Votre prénom"
                                   aria-label="Nom"
                                 />
+                              </div>
+                              <div className="flex-1 mt-3 md:mt-0">
+                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Email</label>
+                                <input
+                                  type="email"
+                                  required
+                                  className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all"
+                                  value={reviewEmail}
+                                  onChange={e => setReviewEmail(e.target.value)}
+                                  placeholder="votre@email.com"
+                                  aria-label="Email"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">🔒 Votre email ne sera pas visible sur l'avis, uniquement votre nom.</p>
                               </div>
 
                               <div className="mt-3 md:mt-0 md:w-48">
@@ -499,7 +514,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                                 setSubmittingReview(true);
                                 setReviewError(null);
                                 try {
-                                  const payload = { authorName: reviewName || null, content: reviewContent, rating: reviewRating, centerId: null };
+                                  const payload = { authorName: reviewName || null, email: reviewEmail, content: reviewContent, rating: reviewRating, centerId: null };
                                   const res = await fetch(`${API_URL}/reviews`, {
                                     method: 'POST',
                                     credentials: 'include',
@@ -524,6 +539,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                                   }
                                   setShowReviewForm(false);
                                   setReviewName('');
+                                  setReviewEmail('');
                                   setReviewRating(5);
                                   setReviewContent('');
                                 } catch (err: unknown) {
@@ -545,6 +561,20 @@ import ConfirmDialog from '../components/ConfirmDialog';
                                   placeholder="Votre prénom"
                                   aria-label="Nom"
                                 />
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Email</label>
+                                <input
+                                  type="email"
+                                  required
+                                  className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all"
+                                  value={reviewEmail}
+                                  onChange={e => setReviewEmail(e.target.value)}
+                                  placeholder="votre@email.com"
+                                  aria-label="Email"
+                                />
+                                <p className="text-xs text-gray-400 mt-1">🔒 Votre email ne sera pas visible .</p>
                               </div>
 
                               <div>

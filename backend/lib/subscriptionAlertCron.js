@@ -158,6 +158,51 @@ async function sendPaymentFailedAlert(stripeSubscriptionId) {
 }
 
 // ---------------------------------------------------------------------------
+// Send payment succeeded alert
+// ---------------------------------------------------------------------------
+
+async function sendPaymentSucceededAlert(stripeSubscriptionId) {
+  try {
+    const sub = await prisma.subscription.findFirst({ where: { stripeSubscriptionId } });
+    if (!sub || !sub.userId) return;
+
+    const user = await prisma.user.findUnique({ where: { id: sub.userId }, select: { email: true, name: true } });
+    if (!user || !user.email) return;
+
+    const planLabel = sub.plan ? (sub.plan.charAt(0).toUpperCase() + sub.plan.slice(1)) : 'votre plan';
+
+    const content = `
+      <p>Bonjour ${user.name || ''},</p>
+      <p>Votre paiement pour l'abonnement <strong>${planLabel}</strong> sur Les Frimousses a bien été <strong style="color:#16a34a;">accepté</strong>.</p>
+      <p>Votre accès est actif et vos fonctionnalités sont disponibles immédiatement.</p>
+      <p>Vous pouvez consulter vos factures et gérer votre abonnement depuis votre espace personnel.</p>
+      <p style="margin-top: 24px;">
+        <a href="${FRONTEND_URL}/subscription"
+           style="background:#16a34a;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;">
+          Voir mon abonnement
+        </a>
+      </p>
+      <p style="margin-top:16px;font-size:13px;color:#666;">
+        Merci de faire confiance à Frimousse pour la gestion de votre crèche.
+      </p>
+    `;
+
+    await sendTemplatedMail({
+      templateName: 'generic',
+      lang: 'fr',
+      to: user.email,
+      subject: '✅ Paiement confirmé — abonnement actif',
+      substitutions: { title: 'Paiement confirmé', content },
+      bypassOptOut: true,
+    });
+
+    console.log(`[subscriptionAlertCron] Payment succeeded alert sent to ${user.email}`);
+  } catch (e) {
+    console.error('[subscriptionAlertCron] Failed to send payment succeeded alert', e && e.message ? e.message : e);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Schedule daily check at 08:00
 // ---------------------------------------------------------------------------
 
@@ -176,4 +221,4 @@ if (cronEnabled) {
   console.log(`Subscription alert cron scheduled (daily 08:00, tz=${cronTimezone})`);
 }
 
-module.exports = { checkTrialAlerts, sendPaymentFailedAlert, task };
+module.exports = { checkTrialAlerts, sendPaymentFailedAlert, sendPaymentSucceededAlert, task };

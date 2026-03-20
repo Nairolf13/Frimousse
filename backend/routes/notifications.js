@@ -1,10 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
+const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-router.get('/', auth, async (req, res) => {
+router.use(auth);
+// unread-count is exempt from subscription check (used in header for all users)
+router.use((req, res, next) => {
+  if (req.path === '/unread-count' || req.path === '/stats') return next();
+  return requireActiveSubscription(req, res, next);
+});
+
+router.get('/', async (req, res) => {
   try {
     const userId = req.user.id;
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
@@ -22,7 +30,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-router.get('/unread-count', auth, async (req, res) => {
+router.get('/unread-count', async (req, res) => {
   try {
     const userId = req.user.id;
     const unread = await prisma.notification.count({ where: { userId, read: false } });
@@ -33,7 +41,7 @@ router.get('/unread-count', auth, async (req, res) => {
 });
 
 // GET /api/notifications/stats - return unread / today / week counts for current user
-router.get('/stats', auth, async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const userId = req.user.id;
     const now = new Date();
@@ -53,7 +61,7 @@ router.get('/stats', auth, async (req, res) => {
 });
 
 // PUT /api/notifications/:id/read - mark as read
-router.put('/:id/read', auth, async (req, res) => {
+router.put('/:id/read', async (req, res) => {
   try {
     const { id } = req.params;
     const n = await prisma.notification.updateMany({ where: { id, userId: req.user.id }, data: { read: true } });
@@ -65,7 +73,7 @@ router.put('/:id/read', auth, async (req, res) => {
 });
 
 // PUT /api/notifications/:id/unread - mark as unread
-router.put('/:id/unread', auth, async (req, res) => {
+router.put('/:id/unread', async (req, res) => {
   try {
     const { id } = req.params;
     const n = await prisma.notification.updateMany({ where: { id, userId: req.user.id }, data: { read: false } });
@@ -77,7 +85,7 @@ router.put('/:id/unread', auth, async (req, res) => {
 });
 
 // DELETE /api/notifications/:id - delete
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const n = await prisma.notification.deleteMany({ where: { id, userId: req.user.id } });
@@ -89,7 +97,7 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 // PUT /api/notifications/mark-all-read - mark all notifications for current user as read
-router.put('/mark-all-read', auth, async (req, res) => {
+router.put('/mark-all-read', async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await prisma.notification.updateMany({ where: { userId, read: false }, data: { read: true } });
@@ -100,7 +108,7 @@ router.put('/mark-all-read', auth, async (req, res) => {
 });
 
 // DELETE /api/notifications - delete all notifications for current user
-router.delete('/', auth, async (req, res) => {
+router.delete('/', async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await prisma.notification.deleteMany({ where: { userId } });

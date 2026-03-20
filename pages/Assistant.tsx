@@ -57,7 +57,7 @@ export default function Assistant() {
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('assistant.locked.title', 'Fonctionnalite reservee au plan Pro')}</h2>
           <p className="text-gray-500 mb-6">{t('assistant.locked.description', "L'assistant IA est disponible uniquement avec le plan Pro. Mettez a niveau votre abonnement pour y acceder.")}</p>
           <button
-            onClick={() => navigate('/pricing')}
+            onClick={() => navigate('/tarifs')}
             className="bg-brand-500 text-white px-6 py-3 rounded-2xl font-semibold hover:bg-brand-600 transition-all"
           >
             {t('assistant.locked.cta', 'Voir les tarifs')}
@@ -139,7 +139,7 @@ export default function Assistant() {
 
                       {/* Intro card */}
                       <div className="bg-white rounded-2xl p-5 shadow-md relative overflow-visible">
-                            <div className="absolute left-3 top-6 w-8 h-8 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-lg sm:text-xl font-bold" aria-hidden="true">🤖</div>
+                            <div className="absolute left-3 top-6 w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-sm sm:text-base font-bold" aria-hidden="true">🤖</div>
                         <div className="max-w-4xl w-full mx-auto relative">
                         
                           <div className="flex flex-col items-center text-center">

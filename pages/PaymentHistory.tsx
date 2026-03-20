@@ -94,6 +94,7 @@ export default function PaymentHistoryPage() {
       if (!res.ok) {
         let text = '';
         try { text = await res.clone().text(); } catch { text = ''; }
+        if (res.status === 402) { if (mounted) setLoading(false); return; }
         throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
       }
       if (!ct.includes('application/json')) {
@@ -133,6 +134,7 @@ export default function PaymentHistoryPage() {
       const res = await fetchWithRefresh(`${API_URL}/payment-history/${year}/${month}/group-by-nanny`, { credentials: 'include' });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
+        if (res.status === 402) { if (mounted) setLoadingNannyGroups(false); return; }
         throw new Error(`HTTP ${res.status} ${res.statusText} - ${text}`);
       }
       const ct = res.headers.get('content-type') || '';

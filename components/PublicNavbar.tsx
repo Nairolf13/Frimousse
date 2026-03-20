@@ -119,7 +119,7 @@ export default function PublicNavbar({ variant = "dark" }: PublicNavbarProps) {
             <hr className="my-4 border-gray-100" />
             <div className="flex flex-col gap-2">
               <Link to="/login" onClick={() => setMobileOpen(false)} className="text-center text-base font-semibold text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-50 transition-all">Connexion</Link>
-              <Link to="/register" onClick={() => setMobileOpen(false)} className="text-center text-base font-bold bg-brand-500 text-white px-4 py-3 rounded-xl hover:bg-brand-600 transition-all">Essai gratuit</Link>
+              <Link to="/register" onClick={() => setMobileOpen(false)} className="text-center text-base font-bold bg-brand-500 text-white px-4 py-3 rounded-xl hover:bg-brand-600 transition-all" style={{ color: '#ffffff' }}>Essai gratuit</Link>
             </div>
           </div>
         </div>

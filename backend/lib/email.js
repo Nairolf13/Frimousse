@@ -116,10 +116,10 @@ async function sendTemplatedMail({ templateName, lang, to, subject, text, substi
   // merge attachments: logo + extraAttachments
   const attachments = [];
   try {
-    const localLogoPath = path.join(__dirname, '..', '..', 'public', 'imgs', 'LogoFrimousse.webp');
+    const localLogoPath = path.join(__dirname, '..', '..', 'public', 'imgs', 'ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp');
     if (fs.existsSync(localLogoPath)) {
       substitutions.logoUrl = `cid:logo-frimousse`;
-      attachments.push({ filename: 'LogoFrimousse.webp', path: localLogoPath, cid: 'logo-frimousse' });
+      attachments.push({ filename: 'ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', path: localLogoPath, cid: 'logo-frimousse' });
     }
   } catch (e) {
     // ignore

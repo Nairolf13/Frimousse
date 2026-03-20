@@ -3,7 +3,7 @@ import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
 import { useEffect, useState} from 'react';
 import { useNavigate } from 'react-router-dom';
-// Stripe Checkout redirect only: no Elements or inline card collection
+
 
 
 const plans = [
@@ -20,26 +20,29 @@ const plans = [
     ],
     cta: 'Essai gratuit',
     highlight: false,
-    buyButtonId: null,
+    buyButtonId: 'buy_btn_1TD0WfExeKKlzm3Un3W2jlnN',
   },
   {
     name: 'Essentiel',
-    price: '29€ / mois',
+    price: '29,99€ / mois',
     description: 'Pour les MAM, micro-crèches et petites structures',
     features: [
       "Jusqu'à 10 enfants",
       "Jusqu'à 10 nounous",
       "Jusqu'à 10 parents",
+      "Jusqu'à 10 rapports",
       'Support par email',
+      '7 jours d\'essai gratuit',
+      'Annulation à tout moment',
     ],
     cta: 'Choisir Essentiel',
     highlight: false,
-    buyButtonId: 'buy_btn_1Ru88bExeKKlzm3U232ITaMN',
+    buyButtonId: 'buy_btn_1TCnIxExeKKlzm3Usl5rSHd6',
     productId: 'prod_SpdCOBUbbne4oo',
   },
   {
     name: 'Pro',
-    price: '59€ / mois',
+    price: '59,99€ / mois',
     description: 'Pour crèches, garderies, centres de loisirs',
     features: [
       'Enfants, nounous et parents illimités',
@@ -47,10 +50,12 @@ const plans = [
       'Facturations détaillées',
       'Assistant IA',
       'Support prioritaire',
+      '7 jours d\'essai gratuit',
+      'Annulation à tout moment',
     ],
     cta: 'Choisir Pro',
     highlight: true,
-    buyButtonId: 'buy_btn_1Ru84HExeKKlzm3UMPmR820n',
+    buyButtonId: 'buy_btn_1TCnKPExeKKlzm3UzKRMp1NZ',
     productId: 'prod_SpdCOBUbbne4oo',
   },
 ];
@@ -60,42 +65,12 @@ export default function PricingPage() {
   const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams('');
   const subscribeTokenFromQs = search.get('subscribeToken');
   const prefillEmailFromQs = search.get('prefillEmail');
-  const [userRole, setUserRole] = useState<string | null>(null);
-  // removed pending discovery modal state (Découverte now redirects to /register)
   const [globalMessage, setGlobalMessage] = useState<null | { type: 'success' | 'error' | 'info'; text: string }>(null);
-  const [userRoleLoading, setUserRoleLoading] = useState(true);
-  const [paidInfoShown, setPaidInfoShown] = useState<string | null>(null);
 
   useEffect(() => {
-    setUserRoleLoading(true);
-    fetch('api/me', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setUserRole(data?.role || null))
-      .catch(() => setUserRole(null))
-      .finally(() => setUserRoleLoading(false));
     if (prefillEmailFromQs) setGlobalMessage({ type: 'info', text: `Continuer l'abonnement pour ${prefillEmailFromQs}` });
   }, [prefillEmailFromQs, subscribeTokenFromQs]);
 
-  // startDiscovery removed: Découverte redirects to /register
-
-  async function startDirect(planKey: string, selPlan?: string) {
-    try {
-      const effectivePlan = planKey;
-      const endpoint = subscribeTokenFromQs ? '/subscriptions/create-checkout-with-token' : '/subscriptions/create-checkout';
-      const body: { plan: string; mode: 'direct' | 'discovery'; selectedPlan?: string; subscribeToken?: string } = { plan: effectivePlan, mode: 'direct' };
-      if (selPlan) body.selectedPlan = selPlan;
-      if (subscribeTokenFromQs) body.subscribeToken = subscribeTokenFromQs;
-      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: subscribeTokenFromQs ? 'omit' : 'include', body: JSON.stringify(body) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.url) throw new Error(data.error || 'Impossible de créer la session de paiement');
-      window.location.href = data.url;
-    } catch (err) {
-      const message = err && (err as Error).message ? (err as Error).message : String(err);
-      setGlobalMessage({ type: 'error', text: message || "Erreur lors de la creation de l'abonnement." });
-    } finally {
-      // nothing to cleanup
-    }
-  }
 
   // No modal state to close; discovery chooser uses setPendingPlan(null)
 
@@ -158,7 +133,7 @@ export default function PricingPage() {
                   key={idx}
                   className={`relative rounded-3xl border-2 p-8 flex flex-col transition-all duration-300 ${
                     plan.highlight
-                      ? 'border-brand-500 bg-brand-50/40 shadow-xl shadow-brand-200/30 scale-[1.03] md:scale-105 z-10'
+                      ? 'border-brand-500 bg-brand-50/40 shadow-xl shadow-brand-200/30 z-10'
                       : 'border-gray-200 bg-white hover:border-brand-200 hover:shadow-lg hover:shadow-brand-100/30 hover:-translate-y-1'
                   }`}
                 >
@@ -168,12 +143,12 @@ export default function PricingPage() {
                     </div>
                   )}
 
-                  <div className="mb-6">
+                  <div className="mb-6 min-h-[64px]">
                     <h2 className={`text-lg font-bold mb-1 ${plan.highlight ? 'text-brand-600' : 'text-gray-900'}`}>{plan.name}</h2>
                     <p className="text-gray-500 text-sm">{plan.description}</p>
                   </div>
 
-                  <div className="mb-8">
+                  <div className="mb-8 min-h-[56px]">
                     <span className="text-4xl font-extrabold text-gray-900">{plan.price.split('/')[0]}</span>
                     {plan.price.includes('/') && <span className="text-gray-400 text-base font-medium ml-1">/ {plan.price.split('/ ')[1]}</span>}
                   </div>
@@ -189,49 +164,21 @@ export default function PricingPage() {
                     ))}
                   </ul>
 
-                  {plan.buyButtonId ? (
-                    <div className="w-full flex flex-col items-center">
-                      {paidInfoShown === plan.name && (
-                        <div className="w-full mb-3 flex items-start justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                          <p className="text-sm text-amber-800">Les abonnements payants ne sont pas encore disponibles — contactez-nous pour plus de renseignements.</p>
-                          <button aria-label="Fermer" onClick={() => setPaidInfoShown(null)} className="text-amber-400 hover:text-amber-600 transition-colors flex-shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
-                          </button>
-                        </div>
-                      )}
-                      <button
-                        className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200"
-                        type="button"
-                        aria-disabled="true"
-                        title="Les abonnements payants ne sont pas encore disponibles."
-                        onClick={() => setPaidInfoShown(plan.name)}
-                      >
-                        {plan.cta}
-                      </button>
+                  <div className="w-full flex flex-col items-center" style={{ minHeight: '220px' }}>
+                    <div style={idx === 0 ? { marginBottom: '5px' } : undefined}>
+                      {/* @ts-expect-error stripe-buy-button is a custom HTML element */}
+                      <stripe-buy-button
+                        buy-button-id={plan.buyButtonId}
+                        publishable-key={import.meta.env.VITE_STRIPE_PUBLISHABLE}
+                      />
                     </div>
-                  ) : (
-                    <button
-                      className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all shadow-sm hover:shadow-md active:scale-[0.98] bg-brand-500 text-white hover:bg-brand-600"
-                      type="button"
-                      onClick={() => {
-                        if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
-                        if (plan.name === 'Découverte') {
-                          if (userRole) return setGlobalMessage({ type: 'info', text: 'Vous êtes déjà connecté.' });
-                          return navigate('/register');
-                        }
-                        if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
-                        return startDirect(plan.name.toLowerCase());
-                      }}
-                    >
-                      {plan.cta}
-                    </button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-14 text-center text-gray-400 text-sm space-y-1">
-              <p>Tarifs hors taxes. Sans engagement. Options sur devis : formation, migration de données, modules personnalisés.</p>
+              <p>Tarifs HT. 29,99 €/mois pour Essentiel, 59,99 €/mois pour Pro. 7 jours d'essai gratuit. Sans engagement, annulation à tout moment. Options sur devis : formation, migration de données, modules personnalisés.</p>
               <p>Pour les réseaux, fédérations ou structures multi-sites, contactez-nous pour une offre sur-mesure.</p>
             </div>
           </div>
@@ -244,7 +191,7 @@ export default function PricingPage() {
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-4">Besoin d'aide pour choisir ?</h2>
             <p className="text-gray-500 text-lg mb-8 max-w-xl mx-auto">Notre équipe est disponible pour vous guider vers l'offre la plus adaptée à votre structure.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <a href="/support" className="bg-brand-500 text-white px-8 py-3.5 rounded-2xl font-bold text-base shadow-sm hover:bg-brand-600 hover:shadow-md transition-all inline-flex items-center gap-2">
+              <a href="/support" className="bg-brand-500 text-white px-8 py-3.5 rounded-2xl font-bold text-base shadow-sm hover:bg-brand-600 hover:shadow-md transition-all inline-flex items-center gap-2" style={{ color: '#ffffff' }}>
                 Contacter le support
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
               </a>

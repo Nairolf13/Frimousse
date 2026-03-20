@@ -811,7 +811,7 @@ export default function RegisterPage() {
             <h3 className="text-lg font-bold text-brand-500 mb-2">Abonnement requis</h3>
             <p className="text-sm text-gray-700 mb-4">{upgradeMessage || 'Cette action nécessite un abonnement. Passez à un plan supérieur pour continuer.'}</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => { window.location.href = '/pricing'; }} className="px-4 py-2 bg-brand-500 text-white rounded-xl font-semibold hover:bg-brand-600 transition">Aller aux offres</button>
+              <button onClick={() => { window.location.href = '/tarifs'; }} className="px-4 py-2 bg-brand-500 text-white rounded-xl font-semibold hover:bg-brand-600 transition">Aller aux offres</button>
               <button onClick={() => setShowUpgradeModal(false)} className="px-4 py-2 border border-gray-200 rounded-xl font-medium hover:bg-gray-50 transition">Fermer</button>
             </div>
           </div>

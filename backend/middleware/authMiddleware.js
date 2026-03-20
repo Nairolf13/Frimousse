@@ -94,7 +94,7 @@ module.exports = async function (req, res, next) {
     const newAccessToken = generateAccessTokenForMiddleware(user);
     const newRefreshToken = generateRefreshTokenForMiddleware(user);
     await prisma.refreshToken.delete({ where: { token: refreshToken } }).catch(() => {});
-    await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } });
+    await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } }).catch(() => {});
     res.cookie('accessToken', newAccessToken, Object.assign({ maxAge: 15 * 60 * 1000 }, cookieOptions()));
     res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: 7 * 24 * 60 * 60 * 1000 }, cookieOptions()));
 

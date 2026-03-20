@@ -79,6 +79,9 @@ app.use(
   })
 );
 
+// Webhook Stripe doit recevoir le body RAW — monté avant express.json()
+const subscriptionsRoutes = require('./routes/subscriptions');
+app.use('/api/subscriptions/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -148,7 +151,6 @@ app.use('/api/assignments', assignmentsRoutes);
 const schedulesRoutes = require('./routes/schedules');
 app.use('/api', schedulesRoutes);
 
-const subscriptionsRoutes = require('./routes/subscriptions');
 app.use('/api/subscriptions', subscriptionsRoutes);
 
 const notificationPushRoutes = require('./routes/notificationPush');
