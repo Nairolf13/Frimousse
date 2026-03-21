@@ -5,6 +5,7 @@ function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
+const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -13,7 +14,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 
 
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, requireActiveSubscription, async (req, res) => {
   const where = {};
   // Si super-admin et centerId fourni dans la query, filtrer par ce centre
   if (isSuperAdmin(req.user) && req.query.centerId) {
@@ -123,11 +124,11 @@ router.post('/batch/details', auth, async (req, res) => {
   }
 });
 
-router.post('/', auth, discoveryLimit('nanny'), async (req, res) => {
+router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async (req, res) => {
   try {
     const userReq = req.user || {};
-    // Only admins or nannies themselves (or super-admin) can create nannies
-    if (!(userReq.role === 'admin' || userReq.nannyId || userReq.role === 'super-admin')) return res.status(403).json({ message: 'Forbidden' });
+    // Only admins or super-admin can create nannies
+    if (!(userReq.role === 'admin' || isSuperAdmin(userReq))) return res.status(403).json({ message: 'Forbidden: seuls les administrateurs peuvent créer des nounous' });
   const { name, availability, experience, contact, birthDate, password, address, postalCode, city, region, country } = req.body;
     const email = String(req.body.email || '').trim().toLowerCase();
     const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
@@ -227,7 +228,7 @@ router.post('/accept-invite', async (req, res) => {
   }
 });
 
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
   const { id } = req.params;
   const { name, availability, experience, contact, birthDate, newPassword, address, postalCode, city, region, country } = req.body;
   const email = req.body.email !== undefined ? String(req.body.email || '').trim().toLowerCase() : undefined;
@@ -283,7 +284,7 @@ router.put('/:id', auth, async (req, res) => {
   res.json(nanny);
 });
 
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
   const { id } = req.params;
   try {
     if (!isSuperAdmin(req.user)) {

@@ -3,19 +3,38 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-router.post('/register', authController.register);
-router.post('/register-subscribe/init', authController.registerSubscribeInit);
-router.post('/register-subscribe/complete', authController.registerSubscribeComplete);
-router.post('/login', authController.login);
+// Strict rate limiter for sensitive auth endpoints (5 attempts / 15 min per IP)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives. Veuillez réessayer dans 15 minutes.' },
+});
+
+// Slightly more lenient for registration / verification (20 / 15 min)
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives. Veuillez réessayer dans 15 minutes.' },
+});
+
+router.post('/register', registerLimiter, authController.register);
+router.post('/register-subscribe/init', registerLimiter, authController.registerSubscribeInit);
+router.post('/register-subscribe/complete', registerLimiter, authController.registerSubscribeComplete);
+router.post('/login', authLimiter, authController.login);
 router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
-router.post('/forgot', authController.forgotPassword);
-router.post('/reset', authController.resetPassword);
-router.post('/verify-email', authController.verifyEmail);
-router.post('/resend-verification', authController.resendVerification);
+router.post('/forgot', authLimiter, authController.forgotPassword);
+router.post('/reset', authLimiter, authController.resetPassword);
+router.post('/verify-email', registerLimiter, authController.verifyEmail);
+router.post('/resend-verification', registerLimiter, authController.resendVerification);
 
 // Universal accept-invite endpoint (works for both parent and nanny invitations)
 router.post('/accept-invite', async (req, res) => {

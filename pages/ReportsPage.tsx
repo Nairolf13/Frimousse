@@ -208,11 +208,11 @@ export default function ReportsPage() {
   useEffect(() => {
     fetchWithRefresh(`${API_URL}/children`)
       .then(res => res.json())
-      .then(data => setChildrenList(data))
+      .then(data => setChildrenList(Array.isArray(data) ? data : []))
       .catch(() => setChildrenList([]));
     fetchWithRefresh(`${API_URL}/nannies`)
       .then(res => res.json())
-      .then(data => setNanniesList(data))
+      .then(data => setNanniesList(Array.isArray(data) ? data : []))
       .catch(() => setNanniesList([]));
   }, []);
 

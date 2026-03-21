@@ -1,6 +1,7 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const rateLimit = require('express-rate-limit');
+const auth = require('../middleware/authMiddleware');
 require('dotenv').config();
 
 const router = express.Router();
@@ -18,7 +19,7 @@ function buildPrompt(question) {
   return `${system}\n\nParent: ${question}\nAssistant:`;
 }
 
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
     const { question } = req.body;
     if (!question || typeof question !== 'string' || question.trim().length === 0) return res.status(400).json({ error: 'question required' });

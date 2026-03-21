@@ -9,9 +9,10 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const JWT_SECRET = process.env.JWT_SECRET;
 const fs = require('fs');
 const path = require('path');
+const { sendPaymentFailedAlert, sendPaymentSucceededAlert } = require('../lib/subscriptionAlertCron');
 const GENERATED_DIR = path.join(__dirname, '..', 'generated');
 const GENERATED_PRICES_PATH = path.join(GENERATED_DIR, 'stripe_prices.json');
-const PROCESSED_EVENTS_PATH = path.join(GENERATED_DIR, 'processed_stripe_events.json');
+// PROCESSED_EVENTS_PATH removed: idempotency now uses DB (StripeEvent model)
 
 // Helper: resolve a plan name to a Stripe price ID.
 // If the corresponding env var is already a price_xxx, return it.
@@ -65,6 +66,10 @@ async function resolvePriceId(plan) {
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!endpointSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not set — rejecting webhook');
+    return res.status(500).send('Webhook secret not configured');
+  }
   let event;
   try {
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
@@ -72,20 +77,18 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     console.error('Webhook signature error', err && err.message ? err.message : err);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
-  // Idempotency: ensure we don't process the same Stripe event twice
+
+  // Idempotency via DB: ensure we don't process the same Stripe event twice
   try {
-    await fs.promises.mkdir(GENERATED_DIR, { recursive: true });
-  } catch (e) { /* ignore */ }
-  let processed = {};
-  try {
-    const raw = await fs.promises.readFile(PROCESSED_EVENTS_PATH, 'utf8').catch(() => '{}');
-    processed = JSON.parse(raw || '{}');
+    const existing = await prisma.stripeEvent.findUnique({ where: { id: event.id } });
+    if (existing) return res.json({ received: true, skipped: true });
+    // Mark as processed immediately (atomic upsert prevents race conditions)
+    await prisma.stripeEvent.create({ data: { id: event.id } });
   } catch (e) {
-    processed = {};
-  }
-  if (processed[event.id]) {
-    // already processed
-    return res.json({ received: true, skipped: true });
+    // If create fails with unique constraint, another request already processed it
+    if (e && e.code === 'P2002') return res.json({ received: true, skipped: true });
+    console.error('StripeEvent idempotency check failed', e);
+    return res.status(500).send('Internal error');
   }
 
   try {
@@ -124,25 +127,33 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
             user = await prisma.user.findFirst({ where: { email: { equals: sessEmail, mode: 'insensitive' } } });
           }
 
-          // Upsert subscription record
-          const existing = await prisma.subscription.findFirst({ where: { stripeSubscriptionId: stripeSubId } });
+          // Upsert subscription record — prefer matching by stripeSubscriptionId, fallback to userId (covers decouverte rows with null stripeSubscriptionId)
+          let existing = await prisma.subscription.findFirst({ where: { stripeSubscriptionId: stripeSubId } });
+          if (!existing && user) {
+            existing = await prisma.subscription.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+          }
           const status = subscriptionObj.status || 'active';
           const trialStart = subscriptionObj.trial_start ? new Date(subscriptionObj.trial_start * 1000) : null;
           const trialEnd = subscriptionObj.trial_end ? new Date(subscriptionObj.trial_end * 1000) : null;
 
+          const resolvedPlan = meta.plan || 'unknown';
           if (existing) {
-            await prisma.subscription.update({ where: { id: existing.id }, data: { status, currentPeriodStart: subscriptionObj.current_period_start ? new Date(subscriptionObj.current_period_start * 1000) : null, currentPeriodEnd: subscriptionObj.current_period_end ? new Date(subscriptionObj.current_period_end * 1000) : null } });
+            await prisma.subscription.update({ where: { id: existing.id }, data: { stripeSubscriptionId: stripeSubId, plan: resolvedPlan, status, trialStart, trialEnd, currentPeriodStart: subscriptionObj.current_period_start ? new Date(subscriptionObj.current_period_start * 1000) : null, currentPeriodEnd: subscriptionObj.current_period_end ? new Date(subscriptionObj.current_period_end * 1000) : null } });
           } else {
             await prisma.subscription.create({ data: {
               userId: user ? user.id : null,
               stripeSubscriptionId: stripeSubId,
-              plan: meta.plan || 'unknown',
-              status: status,
-              trialStart: trialStart,
-              trialEnd: trialEnd,
+              plan: resolvedPlan,
+              status,
+              trialStart,
+              trialEnd,
               currentPeriodStart: subscriptionObj.current_period_start ? new Date(subscriptionObj.current_period_start * 1000) : null,
               currentPeriodEnd: subscriptionObj.current_period_end ? new Date(subscriptionObj.current_period_end * 1000) : null,
             }});
+          }
+          // Sync user.plan in DB so JWT reflects the new plan on next refresh
+          if (user && resolvedPlan !== 'unknown') {
+            await prisma.user.update({ where: { id: user.id }, data: { plan: resolvedPlan } }).catch(() => {});
           }
 
           // If we found a user and they were not logged in, create session cookies (login)
@@ -169,18 +180,23 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object;
         const stripeSubId = invoice.subscription;
+        if (!stripeSubId) break;
         const sub = await prisma.subscription.findUnique({ where: { stripeSubscriptionId: stripeSubId } });
         if (sub) {
           await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'active', currentPeriodStart: new Date(invoice.period_start * 1000), currentPeriodEnd: new Date(invoice.period_end * 1000) } });
+          sendPaymentSucceededAlert(stripeSubId).catch(e => console.error('sendPaymentSucceededAlert error', e));
         }
         break;
       }
       case 'invoice.payment_failed': {
         const invoice = event.data.object;
         const stripeSubId = invoice.subscription;
+        if (!stripeSubId) break;
         const sub = await prisma.subscription.findUnique({ where: { stripeSubscriptionId: stripeSubId } });
         if (sub) {
           await prisma.subscription.update({ where: { id: sub.id }, data: { status: 'past_due' } });
+          // Notify admin by email (fire-and-forget)
+          sendPaymentFailedAlert(stripeSubId).catch(e => console.error('sendPaymentFailedAlert error', e));
         }
         break;
       }
@@ -205,14 +221,6 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     }
   } catch (e) {
     console.error('Error processing webhook event', e);
-  }
-
-  // mark event as processed
-  try {
-    processed[event.id] = { processedAt: new Date().toISOString() };
-    await fs.promises.writeFile(PROCESSED_EVENTS_PATH, JSON.stringify(processed, null, 2), 'utf8');
-  } catch (e) {
-    console.error('Failed to write processed events file', e && e.message ? e.message : e);
   }
 
   res.json({ received: true });
@@ -255,11 +263,18 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
     if (!selectedPlan || !['essentiel', 'pro'].includes(selectedPlan)) return res.status(400).json({ error: "Pour l'offre Découverte vous devez choisir 'essentiel' ou 'pro' via le champ selectedPlan." });
     effectivePlan = selectedPlan;
   }
+
+  // Block if user already has an active/trialing subscription on this exact plan
+  const existingSub = await prisma.subscription.findFirst({
+    where: { userId: user.id, status: { in: ['trialing', 'active'] } },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (existingSub && existingSub.plan === effectivePlan) {
+    return res.status(400).json({ error: `Vous avez déjà un abonnement ${effectivePlan} actif.` });
+  }
+
   const priceId = await resolvePriceId(effectivePlan);
   if (!priceId) return res.status(500).json({ error: 'Price id not configured' });
-
-    const trialDays = mode === 'discovery' ? 15 : 30;
-    const trialEnd = Math.floor(Date.now() / 1000) + trialDays * 24 * 3600;
 
     // ensure customer exists in Stripe
     let customerId = dbUser.stripeCustomerId;
@@ -269,14 +284,20 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
       await prisma.user.update({ where: { id: dbUser.id }, data: { stripeCustomerId: customerId } });
     }
 
+    const trialDays = mode === 'discovery' ? 15 : 7;
+    const subscriptionData = {
+      trial_end: Math.floor(Date.now() / 1000) + trialDays * 24 * 3600,
+      metadata: { plan: effectivePlan, selectedPlan: plan === 'decouverte' ? selectedPlan : effectivePlan },
+    };
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      subscription_data: { trial_end: trialEnd, metadata: { plan: effectivePlan, selectedPlan: plan === 'decouverte' ? selectedPlan : effectivePlan } },
+      subscription_data: subscriptionData,
       // include the Checkout session id in the redirect so the frontend can finalize the subscription if webhooks are not delivered in dev
-      success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/tarifs?checkout=canceled`,
+      success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/subscription?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/subscription?checkout=canceled`,
     });
 
     res.json({ url: session.url });
@@ -374,20 +395,25 @@ router.post('/complete-checkout-session', async (req, res) => {
     const trialStart = subscriptionObj.trial_start ? new Date(subscriptionObj.trial_start * 1000) : null;
     const trialEnd = subscriptionObj.trial_end ? new Date(subscriptionObj.trial_end * 1000) : null;
 
+    const resolvedPlan = meta.plan || 'unknown';
     let resultSub;
     if (existing) {
-      resultSub = await prisma.subscription.update({ where: { id: existing.id }, data: { status, currentPeriodStart: subscriptionObj.current_period_start ? new Date(subscriptionObj.current_period_start * 1000) : null, currentPeriodEnd: subscriptionObj.current_period_end ? new Date(subscriptionObj.current_period_end * 1000) : null } });
+      resultSub = await prisma.subscription.update({ where: { id: existing.id }, data: { plan: resolvedPlan, status, trialStart, trialEnd, currentPeriodStart: subscriptionObj.current_period_start ? new Date(subscriptionObj.current_period_start * 1000) : null, currentPeriodEnd: subscriptionObj.current_period_end ? new Date(subscriptionObj.current_period_end * 1000) : null } });
     } else {
       resultSub = await prisma.subscription.create({ data: {
         userId: user ? user.id : null,
         stripeSubscriptionId: stripeSubId,
-        plan: meta.plan || 'unknown',
-        status: status,
-        trialStart: trialStart,
-        trialEnd: trialEnd,
+        plan: resolvedPlan,
+        status,
+        trialStart,
+        trialEnd,
         currentPeriodStart: subscriptionObj.current_period_start ? new Date(subscriptionObj.current_period_start * 1000) : null,
         currentPeriodEnd: subscriptionObj.current_period_end ? new Date(subscriptionObj.current_period_end * 1000) : null,
       }});
+    }
+    // Sync user.plan in DB so JWT reflects the new plan on next refresh
+    if (user && resolvedPlan !== 'unknown') {
+      await prisma.user.update({ where: { id: user.id }, data: { plan: resolvedPlan } }).catch(() => {});
     }
 
     // If user exists, create refresh token row so frontend can call refresh to login
@@ -527,6 +553,112 @@ router.get('/', requireAuth, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Get full subscription details for the admin dashboard (including Stripe billing portal URL)
+// Restricted to admins and super-admins only.
+router.get('/my', requireAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user) return res.status(401).json({ error: 'Unauthorized' });
+    if (user.role !== 'admin' && user.role !== 'super-admin') {
+      return res.status(403).json({ error: 'Forbidden: réservé aux administrateurs' });
+    }
+
+    let sub = null;
+    let subUserId = user.id;
+    sub = await prisma.subscription.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+
+    if (!sub) return res.json({ subscription: null });
+
+    // Try to get billing portal URL from Stripe (so admin can manage payment method)
+    let portalUrl = null;
+    try {
+      const dbUser = await prisma.user.findUnique({ where: { id: subUserId } });
+      if (dbUser && dbUser.stripeCustomerId) {
+        const session = await stripe.billingPortal.sessions.create({
+          customer: dbUser.stripeCustomerId,
+          return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/subscription`,
+        });
+        portalUrl = session.url;
+      }
+    } catch (e) {
+      // Billing portal may not be configured yet — not a fatal error
+      console.warn('Could not create billing portal session:', e && e.message ? e.message : e);
+    }
+
+    res.json({ subscription: sub, portalUrl });
+  } catch (e) {
+    console.error('GET /subscriptions/my error', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Change subscription plan (upgrade or downgrade)
+router.post('/change-plan', requireAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
+      return res.status(403).json({ error: 'Forbidden: seuls les administrateurs peuvent changer de plan' });
+    }
+
+    const { plan } = req.body;
+    if (!plan || !['essentiel', 'pro'].includes(plan)) {
+      return res.status(400).json({ error: 'Plan invalide. Valeurs acceptées: essentiel, pro' });
+    }
+
+    const sub = await prisma.subscription.findFirst({ where: { userId: user.id }, orderBy: { createdAt: 'desc' } });
+    if (!sub) return res.status(404).json({ error: 'Aucun abonnement trouvé' });
+    if (!sub.stripeSubscriptionId) return res.status(400).json({ error: 'Pas de subscription Stripe associée' });
+
+    // Prevent switching to the same plan
+    if (sub.plan === plan) {
+      return res.status(400).json({ error: `Vous êtes déjà sur le plan ${plan}.` });
+    }
+
+    const priceId = await resolvePriceId(plan);
+    if (!priceId) return res.status(500).json({ error: 'Price ID non configuré pour ce plan' });
+
+    // Retrieve current Stripe subscription (used for checks + update)
+    const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId);
+
+    // For upgrades only: prevent re-subscribing to a plan already used this billing period
+    const PLAN_HIERARCHY = ['essentiel', 'pro'];
+    const currentIndex = PLAN_HIERARCHY.indexOf(sub.plan);
+    const targetIndex = PLAN_HIERARCHY.indexOf(plan);
+    const isUpgrade = targetIndex > currentIndex;
+
+    if (isUpgrade) {
+      const periodStart = stripeSub.current_period_start;
+      if (periodStart) {
+        const invoices = await stripe.invoices.list({ subscription: sub.stripeSubscriptionId, limit: 10 });
+        const alreadyUsedThisPeriod = invoices.data.some(inv =>
+          inv.period_start >= periodStart &&
+          inv.lines.data.some(line => line.price && line.price.id === priceId)
+        );
+        if (alreadyUsedThisPeriod) {
+          return res.status(400).json({ error: `Vous avez déjà souscrit au plan ${plan} durant cette période de facturation. Le changement sera possible à la prochaine période.` });
+        }
+      }
+    }
+
+    const itemId = stripeSub.items.data[0]?.id;
+    if (!itemId) return res.status(400).json({ error: 'Impossible de trouver l\'item de l\'abonnement Stripe' });
+
+    // Update the subscription in Stripe (prorate immediately)
+    await stripe.subscriptions.update(sub.stripeSubscriptionId, {
+      items: [{ id: itemId, price: priceId }],
+      proration_behavior: 'create_prorations',
+    });
+
+    // Update local DB
+    await prisma.subscription.update({ where: { id: sub.id }, data: { plan } });
+
+    res.json({ success: true, plan });
+  } catch (e) {
+    console.error('POST /subscriptions/change-plan error', e);
+    res.status(500).json({ error: 'Erreur lors du changement de plan' });
   }
 });
 

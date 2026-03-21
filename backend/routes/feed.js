@@ -19,6 +19,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const authMiddleware = require('../middleware/authMiddleware');
+const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const { sendFeedPostNotification, sendLikeNotification, sendCommentNotification } = require('../lib/pushNotifications');
 
 // Per-file upload limit increased to 1GB. Allow up to 6 files per post.
@@ -113,8 +114,11 @@ function validateMime(mimetype) {
   return ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'].includes(mimetype);
 }
 
+// All feed routes require an active subscription
+router.use(authMiddleware, requireActiveSubscription);
+
 // Create a feed post with optional images
-router.post('/', authMiddleware, checkContentLength, upload.array('images', 6), async (req, res) => {
+router.post('/', checkContentLength, upload.array('images', 6), async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
@@ -321,7 +325,7 @@ router.post('/', authMiddleware, checkContentLength, upload.array('images', 6), 
 });
 
 // Admin-only route: trigger a push notification for an existing post (useful for testing)
-router.post('/:postId/notify', authMiddleware, async (req, res) => {
+router.post('/:postId/notify', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   if (!['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
@@ -339,7 +343,7 @@ router.post('/:postId/notify', authMiddleware, async (req, res) => {
 });
 
 // Simple feed listing (paginated)
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
@@ -389,7 +393,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // Toggle like for a post
-router.post('/:id/like', authMiddleware, async (req, res) => {
+router.post('/:id/like', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
@@ -426,7 +430,7 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
 });
 
 // List users who liked a post
-router.get('/:id/likes', authMiddleware, async (req, res) => {
+router.get('/:id/likes', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
@@ -442,7 +446,7 @@ router.get('/:id/likes', authMiddleware, async (req, res) => {
 });
 
 // Add comment to a post
-router.post('/:id/comment', authMiddleware, async (req, res) => {
+router.post('/:id/comment', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
@@ -468,7 +472,7 @@ router.post('/:id/comment', authMiddleware, async (req, res) => {
 });
 
 // List all comments for a post
-router.get('/:id/comments', authMiddleware, async (req, res) => {
+router.get('/:id/comments', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
@@ -487,7 +491,7 @@ router.get('/:id/comments', authMiddleware, async (req, res) => {
 });
 
 // Edit a comment (only author or admin/super-admin)
-router.patch('/comments/:commentId', authMiddleware, async (req, res) => {
+router.patch('/comments/:commentId', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const { commentId } = req.params;
@@ -509,7 +513,7 @@ router.patch('/comments/:commentId', authMiddleware, async (req, res) => {
 });
 
 // Delete a comment (only author or admin/super-admin)
-router.delete('/comments/:commentId', authMiddleware, async (req, res) => {
+router.delete('/comments/:commentId', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const { commentId } = req.params;
@@ -528,7 +532,7 @@ router.delete('/comments/:commentId', authMiddleware, async (req, res) => {
 });
 
 // Edit a post (only author or admin/super-admin)
-router.patch('/:postId', authMiddleware, async (req, res) => {
+router.patch('/:postId', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const { postId } = req.params;
@@ -559,7 +563,7 @@ router.patch('/:postId', authMiddleware, async (req, res) => {
 });
 
 // Delete a post (only author or admin/super-admin)
-router.delete('/:postId', authMiddleware, async (req, res) => {
+router.delete('/:postId', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const { postId } = req.params;
@@ -593,7 +597,7 @@ router.delete('/:postId', authMiddleware, async (req, res) => {
 });
 
 // Add media to an existing post
-router.post('/:postId/media', authMiddleware, checkContentLength, upload.array('images', 6), async (req, res) => {
+router.post('/:postId/media', checkContentLength, upload.array('images', 6), async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const { postId } = req.params;
@@ -703,7 +707,7 @@ router.post('/:postId/media', authMiddleware, checkContentLength, upload.array('
 });
 
 // Delete a media entry from a post (does not remove files from Supabase)
-router.delete('/:postId/media/:mediaId', authMiddleware, async (req, res) => {
+router.delete('/:postId/media/:mediaId', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const { postId, mediaId } = req.params;

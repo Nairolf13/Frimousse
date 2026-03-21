@@ -98,6 +98,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'global.save': 'Enregistrer',
     'global.cancel': 'Annuler',
     'global.delete': 'Supprimer',
+    'global.error': 'Une erreur est survenue.',
     'page.dashboard': 'Tableau de bord',
   'dashboard.welcome': "Bienvenue ! Voici ce qui se passe aujourd'hui.",
   'dashboard.children_registered': 'Enfants inscrits',
@@ -490,6 +491,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'global.save': 'Save',
     'global.cancel': 'Cancel',
     'global.delete': 'Delete',
+    'global.error': 'An error occurred.',
     'page.dashboard': 'Dashboard',
   'dashboard.welcome': "Welcome! Here's what's happening today.",
   'dashboard.children_registered': 'Children registered',
@@ -1037,6 +1039,119 @@ translations.en['modal.delete.title'] = 'Confirm deletion';
 translations.en['modal.delete.body.generic'] = 'Are you sure you want to delete this item? This action is irreversible.';
 translations.en['modal.delete.confirm'] = 'Delete';
 translations.en['modal.cancel'] = 'Cancel';
+
+// Subscription Management page
+translations.fr['subscription.title'] = 'Mon abonnement';
+translations.fr['subscription.subtitle'] = 'Gérez votre plan, vos informations de facturation et suivez le statut de votre abonnement.';
+translations.fr['subscription.loading'] = 'Chargement…';
+translations.fr['subscription.error.load'] = 'Impossible de charger les informations d\'abonnement.';
+translations.fr['subscription.forbidden'] = 'Cette page est réservée aux administrateurs.';
+translations.fr['subscription.no_plan.title'] = 'Choisissez votre plan';
+translations.fr['subscription.no_plan.subtitle'] = 'Aucun abonnement actif. Sélectionnez un plan ci-dessous pour accéder à toutes les fonctionnalités.';
+translations.fr['subscription.current_plan'] = 'Plan actuel';
+translations.fr['subscription.trial_end'] = 'Fin de la période d\'essai';
+translations.fr['subscription.next_renewal'] = 'Prochain renouvellement';
+translations.fr['subscription.access_until'] = 'Accès jusqu\'au';
+translations.fr['subscription.cancel_warning'] = 'Résiliation programmée — votre accès reste actif jusqu\'à la fin de la période en cours.';
+translations.fr['subscription.past_due_warning'] = 'Paiement en échec — mettez à jour votre moyen de paiement pour éviter la suspension.';
+translations.fr['subscription.features_title'] = 'Inclus dans votre plan';
+translations.fr['subscription.billing.title'] = 'Facturation & moyen de paiement';
+translations.fr['subscription.billing.subtitle'] = 'Gérez votre carte, consultez vos factures Stripe et modifiez vos informations.';
+translations.fr['subscription.billing.portal_btn'] = 'Portail de facturation';
+translations.fr['subscription.upgrade.title'] = 'Passer à un plan payant';
+translations.fr['subscription.upgrade.subtitle'] = 'Choisissez un plan pour continuer après la période d\'essai. Vous serez redirigé vers Stripe pour saisir vos informations de paiement.';
+translations.fr['subscription.choose'] = 'Choisir';
+translations.fr['subscription.change.title'] = 'Changer de plan';
+translations.fr['subscription.change.how_title'] = 'Comment ça fonctionne ?';
+translations.fr['subscription.change.no_card'] = 'Aucune saisie de carte requise — votre moyen de paiement déjà enregistré est utilisé automatiquement.';
+translations.fr['subscription.change.immediate'] = 'Changement immédiat — les nouvelles fonctionnalités sont accessibles dès la confirmation.';
+translations.fr['subscription.change.proration'] = 'Facturation au prorata — vous ne payez que les jours restants du mois en cours au nouveau tarif.';
+translations.fr['subscription.change.cancel'] = 'Annulation à tout moment — sans engagement, vous gardez l\'accès jusqu\'à la fin de la période en cours.';
+translations.fr['subscription.change.confirm_msg'] = 'En confirmant, votre carte enregistrée sera débitée au prorata des jours restants ce mois-ci. Le changement est immédiat et sans interruption de service.';
+translations.fr['subscription.change.confirm_btn'] = 'Confirmer le changement';
+translations.fr['subscription.change.in_progress'] = 'En cours…';
+translations.fr['subscription.change.switch_to'] = 'Passer au plan';
+translations.fr['subscription.status.active'] = 'Actif';
+translations.fr['subscription.status.trialing'] = 'Essai';
+translations.fr['subscription.status.past_due'] = 'Paiement en retard';
+translations.fr['subscription.status.canceled'] = 'Annulé';
+translations.fr['subscription.status.unpaid'] = 'Impayé';
+
+translations.en['subscription.title'] = 'My subscription';
+translations.en['subscription.subtitle'] = 'Manage your plan, billing information and track your subscription status.';
+translations.en['subscription.loading'] = 'Loading…';
+translations.en['subscription.error.load'] = 'Unable to load subscription information.';
+translations.en['subscription.forbidden'] = 'This page is reserved for administrators.';
+translations.en['subscription.no_plan.title'] = 'Choose your plan';
+translations.en['subscription.no_plan.subtitle'] = 'No active subscription. Select a plan below to access all features.';
+translations.en['subscription.current_plan'] = 'Current plan';
+translations.en['subscription.trial_end'] = 'Trial end date';
+translations.en['subscription.next_renewal'] = 'Next renewal';
+translations.en['subscription.access_until'] = 'Access until';
+translations.en['subscription.cancel_warning'] = 'Cancellation scheduled — your access remains active until the end of the current period.';
+translations.en['subscription.past_due_warning'] = 'Payment failed — update your payment method to avoid suspension.';
+translations.en['subscription.features_title'] = 'Included in your plan';
+translations.en['subscription.billing.title'] = 'Billing & payment method';
+translations.en['subscription.billing.subtitle'] = 'Manage your card, view Stripe invoices and update your information.';
+translations.en['subscription.billing.portal_btn'] = 'Billing portal';
+translations.en['subscription.upgrade.title'] = 'Upgrade to a paid plan';
+translations.en['subscription.upgrade.subtitle'] = 'Choose a plan to continue after the trial period. You will be redirected to Stripe to enter your payment details.';
+translations.en['subscription.choose'] = 'Choose';
+translations.en['subscription.change.title'] = 'Change plan';
+translations.en['subscription.change.how_title'] = 'How does it work?';
+translations.en['subscription.change.no_card'] = 'No card entry required — your saved payment method is used automatically.';
+translations.en['subscription.change.immediate'] = 'Immediate change — new features are available as soon as confirmed.';
+translations.en['subscription.change.proration'] = 'Prorated billing — you only pay for the remaining days of the current month at the new rate.';
+translations.en['subscription.change.cancel'] = 'Cancel anytime — no commitment, you keep access until the end of the current period.';
+translations.en['subscription.change.confirm_msg'] = 'By confirming, your saved card will be charged for the remaining days this month. The change is immediate with no service interruption.';
+translations.en['subscription.change.confirm_btn'] = 'Confirm change';
+translations.en['subscription.change.in_progress'] = 'Processing…';
+translations.en['subscription.change.switch_to'] = 'Switch to plan';
+translations.en['subscription.status.active'] = 'Active';
+translations.en['subscription.status.trialing'] = 'Trial';
+translations.en['subscription.status.past_due'] = 'Past due';
+translations.en['subscription.status.canceled'] = 'Canceled';
+translations.en['subscription.status.unpaid'] = 'Unpaid';
+
+translations.fr['plan.decouverte'] = 'Découverte';
+translations.fr['plan.essentiel'] = 'Essentiel';
+translations.fr['plan.pro'] = 'Pro';
+translations.fr['plan.price.essentiel'] = '29,99 €/mois';
+translations.fr['plan.price.pro'] = '59,99 €/mois';
+translations.fr['plan.feature.decouverte.1'] = '2 enfants max';
+translations.fr['plan.feature.decouverte.2'] = '2 nounous max';
+translations.fr['plan.feature.decouverte.3'] = '2 parents max';
+translations.fr['plan.feature.decouverte.4'] = "Période d'essai 15 jours";
+translations.fr['plan.feature.essentiel.1'] = '10 enfants max';
+translations.fr['plan.feature.essentiel.2'] = '10 nounous max';
+translations.fr['plan.feature.essentiel.3'] = '10 parents max';
+translations.fr['plan.feature.essentiel.4'] = 'Facturation mensuelle';
+translations.fr['plan.feature.essentiel.5'] = 'Export PDF';
+translations.fr['plan.feature.pro.1'] = 'Illimité';
+translations.fr['plan.feature.pro.2'] = 'Assistant IA';
+translations.fr['plan.feature.pro.3'] = 'Facturation mensuelle';
+translations.fr['plan.feature.pro.4'] = 'Export PDF';
+translations.fr['plan.feature.pro.5'] = 'Support prioritaire';
+
+translations.en['plan.decouverte'] = 'Discovery';
+translations.en['plan.essentiel'] = 'Essential';
+translations.en['plan.pro'] = 'Pro';
+translations.en['plan.price.essentiel'] = '€29.99/month';
+translations.en['plan.price.pro'] = '€59.99/month';
+translations.en['plan.feature.decouverte.1'] = '2 children max';
+translations.en['plan.feature.decouverte.2'] = '2 nannies max';
+translations.en['plan.feature.decouverte.3'] = '2 parents max';
+translations.en['plan.feature.decouverte.4'] = '15-day free trial';
+translations.en['plan.feature.essentiel.1'] = '10 children max';
+translations.en['plan.feature.essentiel.2'] = '10 nannies max';
+translations.en['plan.feature.essentiel.3'] = '10 parents max';
+translations.en['plan.feature.essentiel.4'] = 'Monthly billing';
+translations.en['plan.feature.essentiel.5'] = 'PDF export';
+translations.en['plan.feature.pro.1'] = 'Unlimited';
+translations.en['plan.feature.pro.2'] = 'AI Assistant';
+translations.en['plan.feature.pro.3'] = 'Monthly billing';
+translations.en['plan.feature.pro.4'] = 'PDF export';
+translations.en['plan.feature.pro.5'] = 'Priority support';
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocale] = useState<Locale>(() => {

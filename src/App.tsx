@@ -16,7 +16,7 @@ function App() {
       return;
     }
 
-    fetchWithRefresh('/api/user/me', { headers: { 'x-skip-refresh': '1' } })
+    fetchWithRefresh('/api/user/me', { credentials: 'include' })
       .then(res => res && res.ok ? res.json() : null)
       .then(async data => {
         setUser(data);

@@ -38,6 +38,31 @@ router.get('/', requireAuth, async (req, res) => {
     });
     if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
 
+    // Attach subscription plan
+    let plan = null;
+    try {
+      if (user.role === 'super-admin') {
+        plan = 'pro';
+      } else if (user.role === 'admin') {
+        const sub = await prisma.subscription.findFirst({ where: { userId: user.id, status: { in: ['trialing', 'active'] } }, orderBy: { createdAt: 'desc' } });
+        if (sub) plan = sub.plan;
+      } else {
+        let centerId = user.centerId;
+        if (!centerId && user.parentId) {
+          const parent = await prisma.parent.findUnique({ where: { id: user.parentId } });
+          if (parent) centerId = parent.centerId;
+        }
+        if (centerId) {
+          const admins = await prisma.user.findMany({ where: { centerId }, select: { id: true, role: true } });
+          const adminIds = admins.filter(a => { const r = String(a.role || '').toLowerCase(); return r.includes('admin') || r.includes('super'); }).map(a => a.id);
+          if (adminIds.length > 0) {
+            const sub = await prisma.subscription.findFirst({ where: { userId: { in: adminIds }, status: { in: ['trialing', 'active'] } }, orderBy: { createdAt: 'desc' } });
+            if (sub) plan = sub.plan;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+
     // Normalize phone and birthDate into top-level fields so frontend can read u.phone and u.birthDate
     try {
       const out = Object.assign({}, user);
@@ -47,8 +72,7 @@ router.get('/', requireAuth, async (req, res) => {
       out.phone = parentPhone || nannyContact || null;
       // birthDate from nanny (nannies have birthDate in schema)
       out.birthDate = user.nanny && user.nanny.birthDate ? user.nanny.birthDate : null;
-      // remove nested objects if you prefer to keep response small
-      // delete out.parent; delete out.nanny;
+      out.plan = plan;
       res.json(out);
     } catch (e) {
       // fallback: return raw user record

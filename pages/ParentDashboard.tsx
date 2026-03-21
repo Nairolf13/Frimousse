@@ -238,6 +238,12 @@ const ParentDashboard: React.FC = () => {
           }
         }
       } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        // 402 is handled globally by UpgradeModalProvider — no need to show an inline error
+        if (msg.includes('402') || msg.toLowerCase().includes('essai') || msg.toLowerCase().includes('abonnement')) {
+          setLoading(false);
+          return;
+        }
         if (import.meta.env.DEV) console.error('ParentDashboard load error', err);
         else console.error('ParentDashboard load error', err instanceof Error ? err.message : String(err));
         if (err instanceof Error) setError(err.message);

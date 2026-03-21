@@ -381,15 +381,16 @@ model InvoiceAdjustment {
 }
 // Public reviews / testimonials left by parents or visitors (shown on Landing page)
 model Review {
-  id         String   @id @default(uuid())
-  authorName String?
-  content    String
-  rating     Int?     // optional 1-5 rating
-  approved   Boolean  @default(false)
-  center     Center?  @relation(fields: [centerId], references: [id])
-  centerId   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String   @id @default(uuid())
+  authorName  String?
+  authorEmail String?  @unique
+  content     String
+  rating      Int?     // optional 1-5 rating
+  approved    Boolean  @default(false)
+  center      Center?  @relation(fields: [centerId], references: [id])
+  centerId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model EmailLog {
@@ -434,4 +435,12 @@ model SupportReply {
   createdAt   DateTime @default(now())
 
   @@index([ticketId])
+}
+
+// Stripe webhook idempotency: tracks processed event IDs to prevent double-processing
+model StripeEvent {
+  id          String   @id // Stripe event id (e.g. evt_xxx)
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
 }

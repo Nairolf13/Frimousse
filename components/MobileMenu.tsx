@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { HiOutlineViewGrid, HiOutlineBell, HiOutlineChatAlt, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar, HiOutlineOfficeBuilding } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineBell, HiOutlineChatAlt, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar, HiOutlineOfficeBuilding, HiOutlineCreditCard } from 'react-icons/hi';
 import { FaRobot } from 'react-icons/fa';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useI18n } from '../src/lib/useI18n';
 import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
 
-function getNavLinks(user: { role?: string | null; nannyId?: string | null } | null, t: (k: string, p?: Record<string, string>) => string) {
+function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan?: string | null } | null, t: (k: string, p?: Record<string, string>) => string) {
   // Parents 
   if (user && user.role === 'parent') {
     return [
@@ -33,7 +33,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null } | n
       { to: '/nannies', label: t('nav.nannies'), icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
       { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
       { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      { to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> },
+      ...((user?.plan || '').toLowerCase() === 'pro' || user?.role === 'super-admin' ? [{ to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> }] : []),
       { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
       { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
@@ -52,9 +52,10 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null } | n
     { to: '/nannies', label: t('nav.nannies'), icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
     { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
     { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-    { to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> },
+    ...((user?.plan || '').toLowerCase() === 'pro' || (user && typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> }] : []),
     { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
     ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/reviews', label: t('nav.reviews'), icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }] : []),
+    ...(user && (typeof user.role === 'string' && (user.role === 'admin' || user.role.toLowerCase().includes('super'))) ? [{ to: '/subscription', label: 'Mon abonnement', icon: <HiOutlineCreditCard className="w-5 h-5 mr-3" /> }] : []),
     { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
   ];
 }

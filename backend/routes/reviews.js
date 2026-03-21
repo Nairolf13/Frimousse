@@ -30,13 +30,19 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/reviews - create a new review (anonymous allowed). Mark as not approved by default.
+// POST /api/reviews - create a new review. Email required and must match a registered user.
 router.post('/', async (req, res) => {
   try {
-    const { authorName = null, content, rating = null, centerId = null } = req.body || {};
+    const { authorName = null, content, rating = null, centerId = null, email } = req.body || {};
     if (!content || typeof content !== 'string' || content.trim().length < 5) return res.status(400).json({ message: 'Content too short' });
+    if (!email || typeof email !== 'string') return res.status(400).json({ message: 'Email requis' });
+    const userExists = await prisma.user.findFirst({ where: { email: email.trim().toLowerCase() } });
+    if (!userExists) return res.status(403).json({ message: 'Cet email ne correspond à aucun compte inscrit sur Frimousse.' });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingReview = await prisma.review.findFirst({ where: { authorEmail: normalizedEmail } });
+    if (existingReview) return res.status(409).json({ message: 'Vous avez déjà laissé un avis. Merci pour votre retour !' });
 
-    const created = await prisma.review.create({ data: { authorName: authorName ? String(authorName).slice(0, 120) : null, content: content.trim(), rating: rating ? Number(rating) : null, centerId } });
+    const created = await prisma.review.create({ data: { authorName: authorName ? String(authorName).slice(0, 120) : null, authorEmail: normalizedEmail, content: content.trim(), rating: rating ? Number(rating) : null, centerId } });
     // Do not expose unapproved reviews in the public list. Return created entity for administrative use.
     // Notify super-admins (in-app push + email) that a new review is awaiting moderation. Fire-and-forget.
     (async () => {

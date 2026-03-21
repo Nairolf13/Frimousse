@@ -69,6 +69,7 @@ const LegalNoticePage = lazyWithRetry(() => import('../pages/LegalNoticePage'));
 
 export default function AppRoutes() {
   const AssistantPage = lazyWithRetry(() => import('../pages/Assistant'));
+  const SubscriptionManagement = lazyWithRetry(() => import('../pages/SubscriptionManagement'));
   const AdminEmailLogs = lazyWithRetry(() => import('../pages/AdminEmailLogs'));
   const AdminCenters = lazyWithRetry(() => import('../pages/AdminCenters'));
 const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
@@ -130,6 +131,7 @@ const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
             <Route path="/admin/centers" element={<AdminCenters />} />
             <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/assistant" element={<AssistantPage />} />
+            <Route path="/subscription" element={<SubscriptionManagement />} />
           </Route>
         </Routes>
       </Suspense>

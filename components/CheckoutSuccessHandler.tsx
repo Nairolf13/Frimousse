@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../src/context/AuthContext';
+import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 export default function CheckoutSuccessHandler() {
   const [status, setStatus] = useState<'idle'|'loading'|'ok'|'error'>('idle');
   const [showModal, setShowModal] = useState(false);
+  const { setUser } = useAuth();
 
   useEffect(() => {
     const qs = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
@@ -17,10 +20,20 @@ export default function CheckoutSuccessHandler() {
         const sessionId = qs.get('session_id');
         if (sessionId) {
           try {
-            await fetch(`/subscriptions/complete-checkout-session`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) });
+            await fetch(`/api/subscriptions/complete-checkout-session`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) });
           } catch (e) {
             console.warn('complete-checkout-session failed', e);
           }
+        }
+        // Refresh user context so plan/features update immediately
+        try {
+          const res = await fetchWithRefresh('/api/user/me', { credentials: 'include' });
+          if (res && res.ok) {
+            const data = await res.json();
+            setUser(data);
+          }
+        } catch (e) {
+          console.warn('Failed to refresh user after checkout', e);
         }
         setStatus('ok');
       } catch (e) {
@@ -28,7 +41,7 @@ export default function CheckoutSuccessHandler() {
         setStatus('error');
       }
     })();
-  }, [status]);
+  }, [status, setUser]);
 
   function handleClose() {
     setShowModal(false);

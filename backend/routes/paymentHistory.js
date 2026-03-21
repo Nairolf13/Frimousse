@@ -3,12 +3,15 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const auth = require('../middleware/authMiddleware');
+const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
+
+router.use(auth, requireActiveSubscription);
 
 // Any change to RATE_PER_DAY should be mirrored in paymentCron.js
 const RATE_PER_DAY = 2;
 
 // Récupérer l’historique par mois/année
-router.get('/:year/:month', auth, async (req, res) => {
+router.get('/:year/:month', async (req, res) => {
   const { year, month } = req.params;
   const yearInt = parseInt(year, 10);
   const monthInt = parseInt(month, 10);
@@ -142,7 +145,7 @@ router.get('/:year/:month', auth, async (req, res) => {
 module.exports = router;
 
 // Group payments by nanny for a given month/year
-router.get('/:year/:month/group-by-nanny', auth, async (req, res) => {
+router.get('/:year/:month/group-by-nanny', async (req, res) => {
   const { year, month } = req.params;
   const yearInt = parseInt(year, 10);
   const monthInt = parseInt(month, 10);

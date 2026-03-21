@@ -1,10 +1,12 @@
 const express = require('express');
 const fetch = require('node-fetch');
 require('dotenv').config();
+const auth = require('../middleware/authMiddleware');
+const requirePlan = require('../middleware/requirePlan');
 
 const router = express.Router();
 
-router.post('/', async (req, res) => {
+router.post('/', auth, requirePlan('pro'), async (req, res) => {
   const userMessage = req.body.message || '';
   const context = req.body.context || null;
   const locale = (req.body.locale || 'fr').toString().slice(0,2).toLowerCase();

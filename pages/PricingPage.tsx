@@ -3,7 +3,7 @@ import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
 import { useEffect, useState} from 'react';
 import { useNavigate } from 'react-router-dom';
-// Stripe Checkout redirect only: no Elements or inline card collection
+
 
 
 const plans = [
@@ -12,9 +12,11 @@ const plans = [
     price: '0€',
     description: 'Pour tester Frimousse sans engagement (15 jours max)',
     features: [
-      'Limite sur la création de compte',
+      "Jusqu'à 2 enfants",
+      "Jusqu'à 2 nounous",
+      "Jusqu'à 2 parents",
+      "Jusqu'à 2 rapports",
       'Support par email',
-      'Accès web responsive',
     ],
     cta: 'Essai gratuit',
     highlight: false,
@@ -22,31 +24,38 @@ const plans = [
   },
   {
     name: 'Essentiel',
-    price: '29€ / mois',
+    price: '29,99€ / mois',
     description: 'Pour les MAM, micro-crèches et petites structures',
     features: [
-      'Jusqu’à 10 enfants',
-      'Notifications email',
+      "Jusqu'à 10 enfants",
+      "Jusqu'à 10 nounous",
+      "Jusqu'à 10 parents",
+      "Jusqu'à 10 rapports",
       'Support par email',
+      '7 jours d\'essai gratuit',
+      'Annulation à tout moment',
     ],
     cta: 'Choisir Essentiel',
     highlight: false,
-  buyButtonId: 'buy_btn_1Ru88bExeKKlzm3U232ITaMN', 
-  productId: 'prod_SpdCOBUbbne4oo',
+    buyButtonId: 'buy_btn_1TCnIxExeKKlzm3Usl5rSHd6',
+    productId: 'prod_SpdCOBUbbne4oo',
   },
   {
     name: 'Pro',
-    price: '59€ / mois',
+    price: '59,99€ / mois',
     description: 'Pour crèches, garderies, centres de loisirs',
     features: [
-      'Création de comptes illimités',
-      'facturations détaillées',
+      'Enfants, nounous et parents illimités',
+      'Rapports illimités',
+      'Facturations détaillées',
       'Assistant IA',
       'Support prioritaire',
+      '7 jours d\'essai gratuit',
+      'Annulation à tout moment',
     ],
     cta: 'Choisir Pro',
     highlight: true,
-    buyButtonId: 'buy_btn_1Ru84HExeKKlzm3UMPmR820n', 
+    buyButtonId: 'buy_btn_1TCnKPExeKKlzm3UzKRMp1NZ',
     productId: 'prod_SpdCOBUbbne4oo',
   },
 ];
@@ -56,42 +65,12 @@ export default function PricingPage() {
   const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams('');
   const subscribeTokenFromQs = search.get('subscribeToken');
   const prefillEmailFromQs = search.get('prefillEmail');
-  const [userRole, setUserRole] = useState<string | null>(null);
-  // removed pending discovery modal state (Découverte now redirects to /register)
   const [globalMessage, setGlobalMessage] = useState<null | { type: 'success' | 'error' | 'info'; text: string }>(null);
-  const [userRoleLoading, setUserRoleLoading] = useState(true);
-  const [paidInfoShown, setPaidInfoShown] = useState<string | null>(null);
 
   useEffect(() => {
-    setUserRoleLoading(true);
-    fetch('api/me', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => setUserRole(data?.role || null))
-      .catch(() => setUserRole(null))
-      .finally(() => setUserRoleLoading(false));
     if (prefillEmailFromQs) setGlobalMessage({ type: 'info', text: `Continuer l'abonnement pour ${prefillEmailFromQs}` });
   }, [prefillEmailFromQs, subscribeTokenFromQs]);
 
-  // startDiscovery removed: Découverte redirects to /register
-
-  async function startDirect(planKey: string, selPlan?: string) {
-    try {
-      const effectivePlan = planKey;
-      const endpoint = subscribeTokenFromQs ? '/subscriptions/create-checkout-with-token' : '/subscriptions/create-checkout';
-      const body: { plan: string; mode: 'direct' | 'discovery'; selectedPlan?: string; subscribeToken?: string } = { plan: effectivePlan, mode: 'direct' };
-      if (selPlan) body.selectedPlan = selPlan;
-      if (subscribeTokenFromQs) body.subscribeToken = subscribeTokenFromQs;
-      const res = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: subscribeTokenFromQs ? 'omit' : 'include', body: JSON.stringify(body) });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.url) throw new Error(data.error || 'Impossible de créer la session de paiement');
-      window.location.href = data.url;
-    } catch (err) {
-      const message = err && (err as Error).message ? (err as Error).message : String(err);
-      setGlobalMessage({ type: 'error', text: message || 'Erreur lors de la création de l’abonnement.' });
-    } finally {
-      // nothing to cleanup
-    }
-  }
 
   // No modal state to close; discovery chooser uses setPendingPlan(null)
 
@@ -154,7 +133,7 @@ export default function PricingPage() {
                   key={idx}
                   className={`relative rounded-3xl border-2 p-8 flex flex-col transition-all duration-300 ${
                     plan.highlight
-                      ? 'border-brand-500 bg-brand-50/40 shadow-xl shadow-brand-200/30 scale-[1.03] md:scale-105 z-10'
+                      ? 'border-brand-500 bg-brand-50/40 shadow-xl shadow-brand-200/30 z-10'
                       : 'border-gray-200 bg-white hover:border-brand-200 hover:shadow-lg hover:shadow-brand-100/30 hover:-translate-y-1'
                   }`}
                 >
@@ -164,12 +143,12 @@ export default function PricingPage() {
                     </div>
                   )}
 
-                  <div className="mb-6">
+                  <div className="mb-6 min-h-[64px]">
                     <h2 className={`text-lg font-bold mb-1 ${plan.highlight ? 'text-brand-600' : 'text-gray-900'}`}>{plan.name}</h2>
                     <p className="text-gray-500 text-sm">{plan.description}</p>
                   </div>
 
-                  <div className="mb-8">
+                  <div className="mb-8 min-h-[56px]">
                     <span className="text-4xl font-extrabold text-gray-900">{plan.price.split('/')[0]}</span>
                     {plan.price.includes('/') && <span className="text-gray-400 text-base font-medium ml-1">/ {plan.price.split('/ ')[1]}</span>}
                   </div>
@@ -185,49 +164,54 @@ export default function PricingPage() {
                     ))}
                   </ul>
 
-                  {plan.buyButtonId ? (
-                    <div className="w-full flex flex-col items-center">
-                      {paidInfoShown === plan.name && (
-                        <div className="w-full mb-3 flex items-start justify-between gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                          <p className="text-sm text-amber-800">Les abonnements payants ne sont pas encore disponibles — contactez-nous pour plus de renseignements.</p>
-                          <button aria-label="Fermer" onClick={() => setPaidInfoShown(null)} className="text-amber-400 hover:text-amber-600 transition-colors flex-shrink-0">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
-                          </button>
+                  <div className="w-full flex flex-col items-center" style={{ minHeight: '220px' }}>
+                    {plan.buyButtonId ? (
+                      <div style={{ marginBottom: '5px', position: 'relative' }}>
+                        {/* @ts-expect-error stripe-buy-button is a custom HTML element */}
+                        <stripe-buy-button
+                          buy-button-id={plan.buyButtonId}
+                          publishable-key={import.meta.env.VITE_STRIPE_PUBLISHABLE}
+                        />
+                        <div
+                          title="Paiement temporairement indisponible"
+                          style={{ position: 'absolute', inset: 0, borderRadius: '8px', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(2px)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <span style={{ fontSize: '11px', color: '#555', fontWeight: 600, textAlign: 'center', padding: '0 8px' }}>Bientôt disponible</span>
                         </div>
-                      )}
-                      <button
-                        className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200"
-                        type="button"
-                        aria-disabled="true"
-                        title="Les abonnements payants ne sont pas encore disponibles."
-                        onClick={() => setPaidInfoShown(plan.name)}
-                      >
-                        {plan.cta}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      className="w-full py-3.5 rounded-2xl font-semibold text-sm transition-all shadow-sm hover:shadow-md active:scale-[0.98] bg-brand-500 text-white hover:bg-brand-600"
-                      type="button"
-                      onClick={() => {
-                        if (userRoleLoading) return setGlobalMessage({ type: 'info', text: 'Chargement en cours…' });
-                        if (plan.name === 'Découverte') {
-                          if (userRole) return setGlobalMessage({ type: 'info', text: 'Vous êtes déjà connecté.' });
-                          return navigate('/register');
-                        }
-                        if (userRole === 'super-admin') return setGlobalMessage({ type: 'info', text: "Compte administrateur — l'abonnement n'est pas requis." });
-                        return startDirect(plan.name.toLowerCase());
-                      }}
-                    >
-                      {plan.cta}
-                    </button>
-                  )}
+                      </div>
+                    ) : (
+                      <div style={{ background: 'rgb(12, 85, 102)', borderRadius: '7px', width: '290px', padding: '24px 12px', boxSizing: 'border-box', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', marginBottom: '13px' }}>
+                        <div style={{ color: '#fff', textAlign: 'center', marginBottom: '38px' }}>
+                          <div style={{ fontSize: '16px', fontWeight: 500, marginBottom: '2px', marginTop: '-8px', color: '#ffffff', textAlign: 'center' }}>Frimousse - DÉCOUVERTE</div>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '28px', fontWeight: 700, lineHeight: 1, color: '#ffffff' }}>0 €</span>
+                            <span style={{ fontSize: '12px', paddingTop: '8px', color: '#ffffff' }}>gratuit</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/register')}
+                          style={{ width: '100%', padding: '11px 16px', borderRadius: '6px', background: 'hsl(195deg, 66.67%, 96.47%)', color: 'rgb(82, 89, 92)', border: 'none', fontSize: '15px', fontWeight: 500, cursor: 'pointer', marginBottom: '8px', letterSpacing: '0.01em' }}
+                        >
+                          {plan.cta}
+                        </button>
+                        <p style={{ color: '#ffffff', fontSize: '12px', textAlign: 'center', margin: 0 }}>Moyens de paiement pris en charge:</p>
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '5px', marginTop: '3px' }}>
+                          <img src="/imgs/card-amex.svg" alt="Amex" style={{ height: '16px', width: 'auto', objectFit: 'contain' }} />
+                          <svg height="16" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="3" fill="#252525"/><circle cx="15" cy="12" r="7" fill="#EB001B"/><circle cx="23" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.8a7 7 0 0 1 0 10.4A7 7 0 0 1 19 6.8z" fill="#FF5F00"/></svg>
+                          <svg height="16" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="3" fill="#fff"/><path d="M28.3 10.1H28c-.4 1-.7 1.5-1 3h1.9c-.3-1.5-.3-2.2-.6-3zm2.9 5.9h-1.7c-.1 0-.1 0-.2-.1l-.2-.9-.1-.2h-2.4c-.1 0-.2 0-.2.2l-.3.9c0 .1-.1.1-.1.1h-2.1l.2-.5L27 8.7c0-.5.3-.7.8-.7h1.5c.1 0 .2 0 .2.2l1.4 6.5c.1.4.2.7.2 1.1.1.1.1.1.1.2zm-13.4-.3l.4-1.8c.1 0 .2.1.2.1.7.3 1.4.5 2.1.4.2 0 .5-.1.7-.2.5-.2.5-.7.1-1.1-.2-.2-.5-.3-.8-.5-.4-.2-.8-.4-1.1-.7-1.2-1-.8-2.4-.1-3.1.6-.4.9-.8 1.7-.8 1.2 0 2.5 0 3.1.2h.1c-.1.6-.2 1.1-.4 1.7-.5-.2-1-.4-1.5-.4-.3 0-.6 0-.9.1-.2 0-.3.1-.4.2-.2.2-.2.5 0 .7l.5.4c.4.2.8.4 1.1.6.5.3 1 .8 1.1 1.4.2.9-.1 1.7-.9 2.3-.5.4-.7.6-1.4.6-1.4 0-2.5.1-3.4-.2-.1.2-.1.2-.2.1zm-3.1.3c.1-.7.1-.7.2-1 .5-2.2 1-4.5 1.4-6.7.1-.2.1-.3.3-.3H18c-.2 1.2-.4 2.1-.7 3.2-.3 1.5-.6 3-1 4.5 0 .2-.1.2-.3.2M5 8.2c0-.1.2-.2.3-.2h3.4c.5 0 .9.3 1 .8l.9 4.4c0 .1 0 .1.1.2 0-.1.1-.1.1-.1l2.1-5.1c-.1-.1 0-.2.1-.2h2.1c0 .1 0 .1-.1.2l-3.1 7.3c-.1.2-.1.3-.2.4-.1.1-.3 0-.5 0H9.7c-.1 0-.2 0-.2-.2L7.9 9.5c-.2-.2-.5-.5-.9-.6-.6-.3-1.7-.5-1.9-.5L5 8.2z" fill="#142688"/></svg>
+                          <svg height="16" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="3" fill="#fff"/><path d="M18.093 11.976v3.2h-1.018v-7.9h2.691a2.447 2.447 0 0 1 1.747.692 2.28 2.28 0 0 1 .725 1.714 2.28 2.28 0 0 1-.725 1.714 2.414 2.414 0 0 1-1.747.678l-1.673.002zm0-3.732v2.788h1.698c.414 0 .808-.166 1.09-.46a1.558 1.558 0 0 0-.012-2.186 1.52 1.52 0 0 0-1.078-.448l-1.698.306zm6.484 1.39c.755 0 1.35.202 1.784.605.435.404.652.955.652 1.654v3.344h-.97v-.753h-.045c-.42.62-1.1.93-1.85.93a2.38 2.38 0 0 1-1.638-.57 1.809 1.809 0 0 1-.666-1.422c0-.6.227-1.077.68-1.43.454-.352 1.06-.528 1.82-.528.647 0 1.18.118 1.598.355v-.25a1.23 1.23 0 0 0-.45-.966 1.624 1.624 0 0 0-1.092-.39c-.633 0-1.134.267-1.503.8l-.893-.562c.49-.706 1.22-1.06 2.173-1.06v.043zm-1.32 4.08c0 .28.128.54.35.706.22.166.495.256.776.256.42 0 .823-.167 1.12-.46.298-.294.467-.695.467-1.113-.294-.234-.705-.352-1.233-.352-.384 0-.705.094-.964.282a.856.856 0 0 0-.516.68zm8.376-3.92l-3.392 7.8h-1.05l1.257-2.72-2.228-5.08h1.11l1.603 3.873 1.59-3.873h1.11z" fill="#3C4043"/><path d="M13.8 11.02a5.538 5.538 0 0 0-.08-.92H9v1.74h2.7a2.4 2.4 0 0 1-1 1.58v1.3h1.62a5.01 5.01 0 0 0 1.48-3.7z" fill="#4285F4"/><path d="M9 15.8c1.35 0 2.49-.45 3.32-1.22l-1.62-1.26a3.15 3.15 0 0 1-1.7.48 3.13 3.13 0 0 1-2.94-2.16H4.4v1.3A5 5 0 0 0 9 15.8z" fill="#34A853"/><path d="M6.06 11.64A3.12 3.12 0 0 1 5.9 10.6c0-.36.06-.71.16-1.04V8.26H4.4A5.02 5.02 0 0 0 4 10.6c0 .81.19 1.57.4 2.34l1.66-1.3z" fill="#FBBC04"/><path d="M9 7.44a2.7 2.7 0 0 1 1.92.75l1.43-1.43A4.8 4.8 0 0 0 9 5.4a5 5 0 0 0-4.6 2.86l1.66 1.3A3.13 3.13 0 0 1 9 7.44z" fill="#EA4335"/></svg>
+                          <img src="/imgs/card-paypal.svg" alt="PayPal" style={{ height: '16px', width: 'auto', objectFit: 'contain' }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-14 text-center text-gray-400 text-sm space-y-1">
-              <p>Tarifs hors taxes. Sans engagement. Options sur devis : formation, migration de données, modules personnalisés.</p>
+              <p>Tarifs HT. 29,99 €/mois pour Essentiel, 59,99 €/mois pour Pro. 7 jours d'essai gratuit. Sans engagement, annulation à tout moment. Options sur devis : formation, migration de données, modules personnalisés.</p>
               <p>Pour les réseaux, fédérations ou structures multi-sites, contactez-nous pour une offre sur-mesure.</p>
             </div>
           </div>
@@ -240,7 +224,7 @@ export default function PricingPage() {
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-4">Besoin d'aide pour choisir ?</h2>
             <p className="text-gray-500 text-lg mb-8 max-w-xl mx-auto">Notre équipe est disponible pour vous guider vers l'offre la plus adaptée à votre structure.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <a href="/support" className="bg-brand-500 text-white px-8 py-3.5 rounded-2xl font-bold text-base shadow-sm hover:bg-brand-600 hover:shadow-md transition-all inline-flex items-center gap-2">
+              <a href="/support" className="bg-brand-500 text-white px-8 py-3.5 rounded-2xl font-bold text-base shadow-sm hover:bg-brand-600 hover:shadow-md transition-all inline-flex items-center gap-2" style={{ color: '#ffffff' }}>
                 Contacter le support
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
               </a>
