@@ -56,8 +56,6 @@ const allowedOrigins = isProd
   ? [
       'https://lesfrimousses.com',
       'https://www.lesfrimousses.com',
-      'https://frimousse-asso.fr',
-      'https://www.frimousse-asso.fr',
     ]
   : [
       'http://localhost:5173',
