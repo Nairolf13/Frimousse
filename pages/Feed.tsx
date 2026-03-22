@@ -15,7 +15,7 @@ import { publishRateLimit, subscribeRateLimit } from '../src/utils/rateLimitSync
 
 type Media = { id: string; url: string; thumbnailUrl?: string };
 type Comment = { id?: string; authorName: string; authorId?: string; timeAgo: string; text: string; parentId?: string | null };
-type Post = { id: string; text?: string; createdAt: string; author?: { name?: string }; authorId?: string; medias?: Media[]; likes?: number; commentsCount?: number; shares?: number; comments?: Comment[] };
+type Post = { id: string; text?: string; createdAt: string; author?: { name?: string }; authorId?: string; medias?: Media[]; likes?: number; hasLiked?: boolean; commentsCount?: number; shares?: number; comments?: Comment[] };
 
 import FeedImage from '../src/components/FeedImage';
 import ChildSelector from '../components/ChildSelector';
@@ -384,16 +384,38 @@ export default function Feed() {
 
   
 
+  const likingRef = React.useRef<Set<string>>(new Set());
   const toggleLike = useCallback(async (postId: string) => {
+    if (likingRef.current.has(postId)) return; // prevent spam
+    likingRef.current.add(postId);
+    // Optimistic update
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      const wasLiked = !!p.hasLiked;
+      return { ...p, hasLiked: !wasLiked, likes: (p.likes || 0) + (wasLiked ? -1 : 1) };
+    }));
     try {
       const res = await fetchWithRefresh(`api/feed/${postId}/like`, { method: 'POST' });
-      if (!res.ok) return;
-      const body = await res.json();
-      setPosts(prev => prev.map(p => p.id === postId ? { ...p, likes: (p.likes || 0) + (body.liked ? 1 : -1) } : p));
+      if (!res.ok) {
+        // Revert on error
+        setPosts(prev => prev.map(p => {
+          if (p.id !== postId) return p;
+          const wasLiked = !!p.hasLiked;
+          return { ...p, hasLiked: !wasLiked, likes: (p.likes || 0) + (wasLiked ? -1 : 1) };
+        }));
+      }
     } catch (e) {
+      // Revert on error
+      setPosts(prev => prev.map(p => {
+        if (p.id !== postId) return p;
+        const wasLiked = !!p.hasLiked;
+        return { ...p, hasLiked: !wasLiked, likes: (p.likes || 0) + (wasLiked ? -1 : 1) };
+      }));
       const err = e as unknown;
       if (import.meta.env.DEV) console.error('Like failed', err);
       else console.error('Like failed', err instanceof Error ? err.message : String(err));
+    } finally {
+      likingRef.current.delete(postId);
     }
   }, [setPosts]);
 
@@ -918,8 +940,8 @@ export default function Feed() {
                   onDeletePost={async (id) => setPosts(prev => prev.filter(p => p.id !== id))}
                   onMediasChange={(id, medias) => setPosts(prev => prev.map(p => p.id === id ? { ...p, medias } : p))} />
                 <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-4">
-                  <button data-post-id={post.id} onPointerDown={() => startPress(post.id)} onPointerUp={() => endPressShort(post.id)} onPointerLeave={() => cancelPress()} onContextMenu={e => e.preventDefault()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors select-none">
-                    <svg className="w-4 h-4" fill={post.likes && post.likes > 0 ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                  <button data-post-id={post.id} onPointerDown={() => startPress(post.id)} onPointerUp={() => endPressShort(post.id)} onPointerLeave={() => cancelPress()} onContextMenu={e => e.preventDefault()} className={`flex items-center gap-1.5 text-sm transition-colors select-none ${post.hasLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}>
+                    <svg className="w-4 h-4" fill={post.hasLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                     <span>{post.likes ?? 0}</span>
                   </button>
                   <button onClick={async () => { openCommentsModal(post.id); await loadComments(post.id); }} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#0b5566] transition-colors">
@@ -936,28 +958,56 @@ export default function Feed() {
           );
         })()}
 
-        {/* Likes modal */}
+        {/* Likes modal — bottom sheet */}
         {likesModalOpen && (
-            <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm p-4">
-              <div className="bg-white rounded-2xl shadow-xl max-h-[90vh] overflow-hidden"
-                style={likesModalPos ? { position: 'absolute', top: likesModalPos.top, left: likesModalPos.left, width: likesModalPos.width, transform: 'none' } : { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
-                <div className="flex items-center justify-between px-5 py-4 border-b">
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">Personnes qui ont aimé</h3>
-                    <div className="text-xs text-gray-400">{likers.length} personne{likers.length > 1 ? 's' : ''}</div>
+          <div className="fixed inset-0 z-60 flex items-end justify-center bg-black/40 backdrop-blur-sm" onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }}>
+            <div className="w-full max-w-lg bg-white rounded-t-3xl shadow-2xl max-h-[70vh] flex flex-col animate-slide-up" onClick={e => e.stopPropagation()}>
+              {/* Drag handle */}
+              <div className="flex justify-center pt-3 pb-1">
+                <div className="w-10 h-1 rounded-full bg-gray-300" />
+              </div>
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                   </div>
-                  <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 8.586L15.95 2.636a1 1 0 111.414 1.414L11.414 10l5.95 5.95a1 1 0 01-1.414 1.414L10 11.414l-5.95 5.95A1 1 0 012.636 15.95L8.586 10 2.636 4.05A1 1 0 014.05 2.636L10 8.586z" clipRule="evenodd" /></svg>
-                  </button>
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">J'aime</h3>
+                    <p className="text-xs text-gray-400">{likers.length} personne{likers.length > 1 ? 's' : ''}</p>
+                  </div>
                 </div>
-                <div className="p-4 overflow-auto max-h-[80vh]">
-                  {likers.length === 0 ? <div className="text-center text-gray-400 py-8 text-sm">Aucun like trouvé</div> : (
-                    <ul className="space-y-2">{likers.map(u => <li key={u.id} className="text-sm text-gray-700 px-2 py-1.5 rounded-lg hover:bg-gray-50">{u.name}</li>)}</ul>
-                  )}
-                </div>
+                <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              {/* List */}
+              <div className="flex-1 overflow-auto px-6 py-4">
+                {likers.length === 0 ? (
+                  <div className="text-center py-10">
+                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
+                    </div>
+                    <p className="text-sm text-gray-400">Aucun j'aime pour le moment</p>
+                  </div>
+                ) : (
+                  <ul className="space-y-1">
+                    {likers.map(u => (
+                      <li key={u.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                          {(u.name || '?').split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase()}
+                        </div>
+                        <span className="text-sm font-medium text-gray-800">{u.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
         {openCommentsFor && (
           <CommentsModal
