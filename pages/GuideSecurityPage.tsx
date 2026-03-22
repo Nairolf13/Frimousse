@@ -9,9 +9,12 @@ export default function GuideSecurityPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"Sécurité & RGPD | Guide Frimousse"}
-        description={"Bonnes pratiques de sécurité et conformité RGPD sur Frimousse : gestion des accès, confidentialité, droits des utilisateurs."}
+        title={"Securite et RGPD | Guide Frimousse - Protection des donnees creche"}
+        description={"Securite et conformite RGPD de Frimousse : chiffrement des donnees, gestion des acces, confidentialite des informations enfants et familles. Guide pour creches et MAM."}
         url={"https://lesfrimousses.com/guide-securite"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        type={"article"}
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Guide securite', url: 'https://lesfrimousses.com/guide-securite' }]}
       />
 
       <PublicNavbar variant="dark" />

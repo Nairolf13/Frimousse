@@ -450,10 +450,16 @@ router.post('/:id/comment', async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
-  const { text } = req.body;
+  const { text, parentId } = req.body;
   if (!text || text.trim().length === 0) return res.status(400).json({ message: 'Comment text required' });
   try {
-    const comment = await prisma.feedComment.create({ data: { postId, authorId: user.id, text } });
+    const data = { postId, authorId: user.id, text };
+    if (parentId) {
+      const parent = await prisma.feedComment.findUnique({ where: { id: parentId } });
+      if (!parent || parent.postId !== postId) return res.status(400).json({ message: 'Invalid parentId' });
+      data.parentId = parentId;
+    }
+    const comment = await prisma.feedComment.create({ data });
 
     // notify post owner in background
     (async () => {
@@ -464,7 +470,7 @@ router.post('/:id/comment', async (req, res) => {
       }
     })();
 
-    return res.status(201).json({ id: comment.id, text: comment.text, authorName: user.name, authorId: comment.authorId, createdAt: comment.createdAt });
+    return res.status(201).json({ id: comment.id, text: comment.text, authorName: user.name, authorId: comment.authorId, createdAt: comment.createdAt, parentId: comment.parentId || null });
   } catch (e) {
     console.error('Failed to add comment', e);
     return res.status(500).json({ message: 'Failed to add comment' });
@@ -482,7 +488,7 @@ router.get('/:id/comments', async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { author: true },
     });
-    const mapped = comments.map(c => ({ id: c.id, text: c.text, authorName: c.author?.name, authorId: c.authorId, createdAt: c.createdAt }));
+    const mapped = comments.map(c => ({ id: c.id, text: c.text, authorName: c.author?.name, authorId: c.authorId, createdAt: c.createdAt, parentId: c.parentId || null }));
     return res.json({ comments: mapped });
   } catch (e) {
     console.error('Failed to list comments', e);

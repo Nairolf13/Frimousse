@@ -123,10 +123,10 @@ const translations: Record<Locale, Record<string, string>> = {
   'children.sort.age': 'Âge croissant',
   'children.total': 'Total',
   'children.present': 'Présents',
-  'children.form.name': 'Nom',
+  'children.form.name': 'Prénom Nom',
   'children.form.age': 'Âge',
   'children.form.birthDate': 'Date de naissance',
-  'children.form.name_label': 'Nom',
+  'children.form.name_label': 'Prénom & Nom',
   'children.form.birthDate_label': 'Date de naissance',
   'children.form.sexe_label': 'Sexe',
   'children.form.group_label': 'Groupe',
@@ -516,10 +516,10 @@ const translations: Record<Locale, Record<string, string>> = {
   'children.sort.age': 'Age ascending',
   'children.total': 'Total',
   'children.present': 'Present',
-  'children.form.name': 'Name',
+  'children.form.name': 'First & Last name',
   'children.form.age': 'Age',
   'children.form.birthDate': 'Birth date',
-  'children.form.name_label': 'Name',
+  'children.form.name_label': 'First & Last name',
   'children.form.birthDate_label': 'Birth date',
   'children.form.sexe_label': 'Sex',
   'children.form.group_label': 'Group',
@@ -759,7 +759,7 @@ translations.fr['nanny.filter.en_conge'] = 'En congé';
 translations.fr['nanny.filter.experience_any'] = 'Toute expérience';
 translations.fr['nanny.filter.experience_junior'] = 'Junior (-3 ans)';
 translations.fr['nanny.filter.experience_senior'] = 'Senior (3+ ans)';
-translations.fr['nanny.form.name'] = 'Nom';
+translations.fr['nanny.form.name'] = 'Prénom & Nom';
 translations.fr['nanny.form.experience'] = 'Expérience (années)';
 translations.fr['nanny.form.birthDate'] = 'Date de naissance';
 translations.fr['nanny.form.specializations'] = 'Spécialisations (séparées par virgule)';
@@ -785,7 +785,7 @@ translations.en['nanny.filter.en_conge'] = 'On leave';
 translations.en['nanny.filter.experience_any'] = 'Any experience';
 translations.en['nanny.filter.experience_junior'] = 'Junior (-3 years)';
 translations.en['nanny.filter.experience_senior'] = 'Senior (3+ years)';
-translations.en['nanny.form.name'] = 'Name';
+translations.en['nanny.form.name'] = 'First & Last name';
 translations.en['nanny.form.experience'] = 'Experience (years)';
 translations.en['nanny.form.birthDate'] = 'Birth date';
 translations.en['nanny.form.specializations'] = 'Specializations (comma separated)';

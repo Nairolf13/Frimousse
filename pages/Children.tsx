@@ -741,7 +741,7 @@ export default function Children() {
         </div>
 
       {(showForm || editingId) && (
-        <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+        <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow-md border border-gray-100">
           {/* Form header */}
           <div className="px-6 py-4 bg-gradient-to-r from-[#0b5566] to-[#08323a] flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">

@@ -59,10 +59,12 @@ export default function FeaturesPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"Fonctionnalités | Frimousse Association"}
-        description={"Découvrez toutes les fonctionnalités de l'application Frimousse : gestion des enfants, familles, nounous, planning, rapports, sécurité, accessibilité et plus encore."}
+        title={"Fonctionnalites de Frimousse | Logiciel de gestion creche, micro-creche et MAM"}
+        description={"Decouvrez les fonctionnalites de Frimousse : gestion des enfants et familles, planning intervenants, rapports d'activite, communication parents, assistant IA, securite RGPD. Application complete pour creches et MAM."}
         url={"https://lesfrimousses.com/fonctionnalites"}
-        image={"/frimousse-cover.png"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Fonctionnalites', url: 'https://lesfrimousses.com/fonctionnalites' }]}
+        tags={["fonctionnalites creche", "logiciel gestion enfant", "planning creche", "application MAM", "gestion micro-creche"]}
       />
       <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
 

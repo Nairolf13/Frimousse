@@ -39,17 +39,17 @@ export default function LegalNoticePage() {
               <h2 className="text-2xl font-bold text-brand-700 mb-6 text-center">Mentions légales</h2>
               <p className="mb-4 text-gray-700 text-center">Dernière mise à jour : 7 août 2025</p>
               <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">1. Éditeur du site</h3>
-              <p className="mb-4 text-gray-700">Association Les petites Frimousse<br />12 rue de l’Enfance, 75000 Paris<br />SIREN : 123 456 789<br />Email : contact@frimousse-asso.fr</p>
+              <p className="mb-4 text-gray-700">Les petites Frimousse<br />19 chemin de la gélatine, 13400 Aubagne<br />Email : lespetitesfrimoussesdu13@gmail.com</p>
               <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">2. Directeur de la publication</h3>
-              <p className="mb-4 text-gray-700">Mme/M. Florian Bricchi, Président(e) de l’association</p>
+              <p className="mb-4 text-gray-700">M. Florian Bricchi, Président de l’association</p>
               <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">3. Hébergement</h3>
-              <p className="mb-4 text-gray-700">OVH SAS<br />2 rue Kellermann, 59100 Roubaix, France<br />www.ovh.com</p>
+              <p className="mb-4 text-gray-700">Hostinger<br /> 6 Avenue Pasteur, 2310 Luxembourg<br />www.https://www.hostinger.com/fr/vps</p>
               <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">4. Propriété intellectuelle</h3>
               <p className="mb-4 text-gray-700">L’ensemble du contenu du site et de l’application (textes, images, logos, code) est protégé par le droit d’auteur. Toute reproduction ou utilisation non autorisée est interdite.</p>
               <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">5. Données personnelles</h3>
               <p className="mb-4 text-gray-700">Les données sont traitées conformément à la politique de confidentialité et au RGPD.</p>
               <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">6. Contact</h3>
-              <p className="mb-4 text-gray-700">Pour toute question ou réclamation, contactez : contact@frimousse-asso.fr</p>
+              <p className="mb-4 text-gray-700">Pour toute question ou réclamation, contactez : lespetitesfrimoussesdu13@gmail.com</p>
               <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <button
                   onClick={() => navigate(-1)}
@@ -57,7 +57,7 @@ export default function LegalNoticePage() {
                   aria-label="Retour"
                 >
                   ← Retour
-                </button>
+                </button> 
                 <button
                   onClick={() => navigate('/')}
                   className="!text-[#ffffff] border-2 border-brand-500 hover:border-brand-600 px-8 py-4 rounded-2xl font-bold text-lg transition-all bg-brand-500 hover:bg-brand-600"

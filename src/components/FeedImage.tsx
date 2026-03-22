@@ -38,6 +38,7 @@ export default function FeedImage({ src, alt, thumb, className, onOpen }: Props)
         onClick={handleClick}
         className={`block w-full overflow-hidden rounded-lg focus:outline-none ${className || ''}`}
         aria-label="Voir l'image en plein écran"
+        style={{ touchAction: 'manipulation' }}
       >
         {/* Adjust aspect based on detected orientation: landscape -> wider (video-like), portrait/square -> square */}
         <div className={`w-full bg-gray-100 overflow-hidden ${orientation === 'landscape' ? 'aspect-video' : 'aspect-square'}`}>

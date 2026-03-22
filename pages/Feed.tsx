@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -14,7 +14,7 @@ import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
 import { publishRateLimit, subscribeRateLimit } from '../src/utils/rateLimitSync';
 
 type Media = { id: string; url: string; thumbnailUrl?: string };
-type Comment = { id?: string; authorName: string; authorId?: string; timeAgo: string; text: string };
+type Comment = { id?: string; authorName: string; authorId?: string; timeAgo: string; text: string; parentId?: string | null };
 type Post = { id: string; text?: string; createdAt: string; author?: { name?: string }; authorId?: string; medias?: Media[]; likes?: number; commentsCount?: number; shares?: number; comments?: Comment[] };
 
 import FeedImage from '../src/components/FeedImage';
@@ -47,14 +47,54 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(diff / 86400)}j`;
 }
 
-function CommentBox({ postId, onSubmit }: { postId: string; onSubmit: (postId: string, text: string) => Promise<void> }) {
+function CommentBox({ postId, onSubmit, authorName }: { postId: string; onSubmit: (postId: string, text: string) => Promise<void>; authorName?: string }) {
   const [val, setVal] = useState('');
+  const [focused, setFocused] = useState(false);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const { t } = useI18n();
 
+  function autoResize() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  const initial = authorName ? authorName.charAt(0).toUpperCase() : '?';
+
   return (
-    <form onSubmit={e => { e.preventDefault(); if (val.trim()) { onSubmit(postId, val.trim()); setVal(''); } }} className="flex items-center gap-2">
-      <input value={val} onChange={e => setVal(e.target.value)} placeholder={t('feed.write_comment', 'Écrire un commentaire...')} className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" />
-      <button type="submit" className="text-xs font-semibold text-[#0b5566] px-3 py-2 rounded-xl hover:bg-[#0b5566]/10 transition-colors whitespace-nowrap">{t('feed.send', 'Envoyer')}</button>
+    <form
+      onSubmit={e => { e.preventDefault(); if (val.trim()) { onSubmit(postId, val.trim()); setVal(''); if (textareaRef.current) { textareaRef.current.style.height = 'auto'; } setFocused(false); } }}
+      className="flex items-start gap-2.5 pt-3 border-t border-gray-100"
+    >
+      <div className="w-8 h-8 rounded-full bg-[#e6f4f7] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[#0b5566] mt-0.5">
+        {initial}
+      </div>
+      <div className="flex-1 min-w-0">
+        <textarea
+          ref={textareaRef}
+          value={val}
+          rows={1}
+          onChange={e => { setVal(e.target.value); autoResize(); }}
+          onFocus={() => setFocused(true)}
+          onBlur={() => { if (!val.trim()) setFocused(false); }}
+          placeholder={t('feed.write_comment', 'Écrire un commentaire...')}
+          className="w-full resize-none bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-400 leading-relaxed overflow-hidden"
+          style={{ fontSize: '16px', minHeight: '24px' }}
+        />
+        {focused && (
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+            <span className="text-xs text-gray-400">{val.length > 0 ? `${val.length} caractère${val.length > 1 ? 's' : ''}` : ''}</span>
+            <button
+              type="submit"
+              disabled={!val.trim()}
+              className="px-4 py-1.5 rounded-full bg-[#0b5566] text-white text-xs font-bold disabled:opacity-40 hover:bg-[#08323a] transition-colors"
+            >
+              {t('feed.send', 'Publier')}
+            </button>
+          </div>
+        )}
+      </div>
     </form>
   );
 }
@@ -90,6 +130,10 @@ export default function Feed() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
   const [centerFilter, setCenterFilter] = useState<string | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number }>(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
   const [loading, setLoading] = useState(false);
   const [likesModalOpen, setLikesModalOpen] = useState(false);
   const [likers, setLikers] = useState<{ id: string; name: string }[]>([]);
@@ -509,20 +553,23 @@ export default function Feed() {
     };
   }, [openCommentsFor, likesModalOpen, likesModalPos, startPress, endPressShort]);
 
-  async function addComment(postId: string, text: string) {
+  async function addComment(postId: string, text: string, parentId?: string) {
     try {
-      const res = await fetchWithRefresh(`api/feed/${postId}/comment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+      const body: Record<string, string> = { text };
+      if (parentId) body.parentId = parentId;
+      const res = await fetchWithRefresh(`api/feed/${postId}/comment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       if (!res.ok) {
-  const b = await res.json().catch(() => ({}));
-  const serverMsg = (b && b.message) ? String(b.message) : '';
-  showError('Impossible d\'envoyer le commentaire', mapServerMessage(serverMsg, 400));
+        const b = await res.json().catch(() => ({}));
+        const serverMsg = (b && b.message) ? String(b.message) : '';
+        showError('Impossible d\'envoyer le commentaire', mapServerMessage(serverMsg, 400));
         return;
       }
       const created = await res.json();
-  const newComment = { id: created.id, authorName: created.authorName, authorId: created.authorId, timeAgo: timeAgo(created.createdAt), text: created.text };
-  setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1, comments: p.comments ? [ newComment, ...p.comments ] : [newComment] } : p));
-  // also update commentsForPost if modal is open for this post
-  setCommentsForPost(prev => ({ ...prev, [postId]: prev[postId] ? [newComment, ...prev[postId]] : [newComment] }));
+      const newComment: Comment = { id: created.id, authorName: created.authorName, authorId: created.authorId, timeAgo: timeAgo(created.createdAt), text: created.text, parentId: created.parentId || null };
+      if (!parentId) {
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, commentsCount: (p.commentsCount || 0) + 1, comments: p.comments ? [newComment, ...p.comments] : [newComment] } : p));
+      }
+      setCommentsForPost(prev => ({ ...prev, [postId]: prev[postId] ? [...prev[postId], newComment] : [newComment] }));
     } catch (e) {
       console.error('Add comment failed', e);
     }
@@ -812,9 +859,58 @@ export default function Feed() {
           </div>
         )}
 
-        {/* Posts list */}
-        <div className="space-y-4">
-          {posts.map((post, idx) => (
+        {/* Month navigation */}
+        {(() => {
+          const allMonths = Array.from(new Set(posts.map(p => {
+            const d = new Date(p.createdAt);
+            return `${d.getFullYear()}-${d.getMonth()}`;
+          }))).sort((a, b) => b.localeCompare(a)).map(key => {
+            const [y, m] = key.split('-').map(Number);
+            return { year: y, month: m };
+          });
+          const filteredPosts = posts.filter(p => {
+            const d = new Date(p.createdAt);
+            return d.getFullYear() === selectedMonth.year && d.getMonth() === selectedMonth.month;
+          });
+          const currentIdx = allMonths.findIndex(m => m.year === selectedMonth.year && m.month === selectedMonth.month);
+          const hasPrev = currentIdx < allMonths.length - 1;
+          const hasNext = currentIdx > 0;
+          const monthLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(selectedMonth.year, selectedMonth.month, 1));
+
+          return (
+            <>
+              <div className="flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100">
+                <button
+                  onClick={() => hasPrev && setSelectedMonth(allMonths[currentIdx + 1])}
+                  disabled={!hasPrev}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <div className="text-center">
+                  <span className="text-sm font-bold text-gray-800 capitalize">{monthLabel}</span>
+                  <span className="ml-2 text-xs text-gray-400">{filteredPosts.length} publication{filteredPosts.length !== 1 ? 's' : ''}</span>
+                </div>
+                <button
+                  onClick={() => hasNext && setSelectedMonth(allMonths[currentIdx - 1])}
+                  disabled={!hasNext}
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+
+              {/* Posts list */}
+              <div className="space-y-4">
+                {filteredPosts.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-2xl border border-gray-100">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    </div>
+                    <p className="text-sm font-medium text-gray-500">Aucune publication ce mois-ci</p>
+                  </div>
+                )}
+                {filteredPosts.map((post, idx) => (
             <article id={`post-${post.id}`} key={post.id} className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
               <div className="p-4">
                 <PostItem post={post} bgClass={postBgPalette[idx % postBgPalette.length]} currentUser={currentUser}
@@ -830,16 +926,18 @@ export default function Feed() {
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                     <span>{post.commentsCount ?? 0}</span>
                   </button>
-                  <div className="flex-1 min-w-0">
-                    <CommentBox postId={post.id} onSubmit={addComment} />
-                  </div>
                 </div>
+                <CommentBox postId={post.id} onSubmit={addComment} authorName={currentUser?.name ?? currentUser?.email ?? undefined} />
               </div>
             </article>
-          ))}
+                ))}
+              </div>
+            </>
+          );
+        })()}
 
-          {/* Likes modal */}
-          {likesModalOpen && (
+        {/* Likes modal */}
+        {likesModalOpen && (
             <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm p-4">
               <div className="bg-white rounded-2xl shadow-xl max-h-[90vh] overflow-hidden"
                 style={likesModalPos ? { position: 'absolute', top: likesModalPos.top, left: likesModalPos.left, width: likesModalPos.width, transform: 'none' } : { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -860,7 +958,6 @@ export default function Feed() {
               </div>
             </div>
           )}
-        </div>
 
         {openCommentsFor && (
           <CommentsModal
@@ -868,7 +965,8 @@ export default function Feed() {
             onClose={() => { setOpenCommentsFor(null); setCommentsModalPosition(null); }}
             comments={commentsForPost[openCommentsFor] || []}
             loading={commentsLoading}
-            currentUser={currentUser}
+            currentUser={currentUser ? { ...currentUser, email: currentUser.email ?? undefined } : null}
+            onAddComment={async (text: string, parentId?: string) => { await addComment(openCommentsFor as string, text, parentId); }}
             onUpdateComment={async (commentId: string, newText: string) => {
               setCommentsForPost((prev: Record<string, Comment[]>) => ({ ...prev, [openCommentsFor as string]: prev[openCommentsFor as string]?.map(cm => cm.id === commentId ? { ...cm, text: newText } : cm) || [] }));
               setPosts((prev: Post[]) => prev.map(p => p.id === openCommentsFor ? { ...p, comments: p.comments ? p.comments.map(cm => cm.id === commentId ? { ...cm, text: newText } : cm) : p.comments } : p));
@@ -898,51 +996,151 @@ export default function Feed() {
   );
 }
 
-function CommentsModal({ onClose, comments, loading, currentUser, onUpdateComment, onDeleteComment, position }: { onClose: () => void; comments: Comment[]; loading?: boolean; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdateComment: (commentId: string, newText: string) => Promise<void>; onDeleteComment: (commentId: string) => Promise<void>; position?: { top: number; left: number; width: number } | null; }) {
+function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, onUpdateComment, onDeleteComment }: { onClose: () => void; comments: Comment[]; loading?: boolean; currentUser: (AuthUser & { id?: string; role?: string; name?: string; email?: string; centerId?: string }) | null; onAddComment: (text: string, parentId?: string) => Promise<void>; onUpdateComment: (commentId: string, newText: string) => Promise<void>; onDeleteComment: (commentId: string) => Promise<void>; position?: { top: number; left: number; width: number } | null; }) {
+  const [val, setVal] = useState('');
+  const [focused, setFocused] = useState(false);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  function autoResize() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  const authorInitial = currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : currentUser?.email ? currentUser.email.charAt(0).toUpperCase() : '?';
+
+  // Separate top-level comments from replies
+  const topLevel = comments.filter(c => !c.parentId);
+  const repliesMap = comments.reduce<Record<string, Comment[]>>((acc, c) => {
+    if (c.parentId) {
+      if (!acc[c.parentId]) acc[c.parentId] = [];
+      acc[c.parentId].push(c);
+    }
+    return acc;
+  }, {});
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-xl max-h-[90vh] overflow-hidden"
-        style={position ? { position: 'absolute', top: position.top, left: position.left, width: position.width, transform: 'none' } : { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[80vh]"
+        onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+        {/* Drag handle mobile */}
+        <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
+          <div className="w-10 h-1 rounded-full bg-gray-200" />
+        </div>
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 pt-3 pb-3 border-b border-gray-100 flex-shrink-0">
           <div>
             <h3 className="text-base font-bold text-gray-900">Commentaires</h3>
-            <div className="text-xs text-gray-400">{comments.length} commentaire{comments.length > 1 ? 's' : ''}</div>
+            <div className="text-xs text-gray-400">{comments.length} commentaire{comments.length !== 1 ? 's' : ''}</div>
           </div>
-          <button onClick={onClose} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 8.586L15.95 2.636a1 1 0 111.414 1.414L11.414 10l5.95 5.95a1 1 0 01-1.414 1.414L10 11.414l-5.95 5.95A1 1 0 012.636 15.95L8.586 10 2.636 4.05A1 1 0 014.05 2.636L10 8.586z" clipRule="evenodd" />
-            </svg>
+          <button onClick={onClose} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        {loading ? (
-          <div className="p-6 text-center text-sm text-gray-400">Chargement des commentaires…</div>
-        ) : (
-          <div className="p-4 overflow-auto max-h-[80vh]">
-            {comments.length === 0 ? (
-              <div className="text-center text-gray-400 py-8 text-sm">Aucun commentaire pour l'instant</div>
-            ) : (
-              <div className="space-y-3">
-                {comments.map(c => (
-                  <CommentItem key={c.id || (c.authorName + c.timeAgo + c.text)} comment={c} currentUser={currentUser} onUpdate={onUpdateComment} onDelete={onDeleteComment} />
-                ))}
+
+        {/* Comments list */}
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {loading ? (
+            <div className="flex items-center justify-center py-10 gap-2 text-sm text-gray-400">
+              <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity=".2"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4"/></svg>
+              Chargement…
+            </div>
+          ) : comments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
               </div>
-            )}
+              <p className="text-sm text-gray-500 font-medium">Aucun commentaire</p>
+              <p className="text-xs text-gray-400 mt-0.5">Soyez le premier à commenter</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {topLevel.map(c => (
+                <div key={c.id || (c.authorName + c.timeAgo + c.text)}>
+                  <CommentItem comment={c} currentUser={currentUser} onUpdate={onUpdateComment} onDelete={onDeleteComment} onReply={onAddComment} authorInitial={authorInitial} />
+                  {repliesMap[c.id!] && repliesMap[c.id!].length > 0 && (
+                    <div className="ml-10 mt-2 space-y-3 border-l-2 border-gray-100 pl-3">
+                      {repliesMap[c.id!].map(r => (
+                        <CommentItem key={r.id || (r.authorName + r.timeAgo + r.text)} comment={r} currentUser={currentUser} onUpdate={onUpdateComment} onDelete={onDeleteComment} isReply />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Reply box */}
+        <div className="border-t border-gray-100 px-4 py-3 flex-shrink-0">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-[#e6f4f7] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[#0b5566] mt-0.5">
+              {authorInitial}
+            </div>
+            <div className="flex-1 min-w-0">
+              <textarea
+                ref={textareaRef}
+                value={val}
+                rows={1}
+                onChange={e => { setVal(e.target.value); autoResize(); }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => { if (!val.trim()) setFocused(false); }}
+                placeholder="Ajouter un commentaire…"
+                className="w-full resize-none bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-400 leading-relaxed overflow-hidden"
+                style={{ fontSize: '16px', minHeight: '24px' }}
+              />
+              {focused && (
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
+                  <span className="text-xs text-gray-400">{val.length > 0 ? `${val.length} caractère${val.length > 1 ? 's' : ''}` : ''}</span>
+                  <button
+                    type="button"
+                    disabled={!val.trim()}
+                    onClick={async () => {
+                      if (!val.trim()) return;
+                      await onAddComment(val.trim());
+                      setVal('');
+                      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+                      setFocused(false);
+                    }}
+                    className="px-4 py-1.5 rounded-full bg-[#0b5566] text-white text-xs font-bold disabled:opacity-40 hover:bg-[#08323a] transition-colors"
+                  >
+                    Publier
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-        <div className="px-5 py-3 border-t text-right">
-          <button onClick={onClose} className="px-4 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">Fermer</button>
         </div>
       </div>
     </div>
   );
 }
 
-function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Comment; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdate: (commentId: string, newText: string) => Promise<void>; onDelete: (commentId: string) => Promise<void>; }) {
+function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, authorInitial, isReply }: { comment: Comment; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdate: (commentId: string, newText: string) => Promise<void>; onDelete: (commentId: string) => Promise<void>; onReply?: (text: string, parentId?: string) => Promise<void>; authorInitial?: string; isReply?: boolean; }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(comment.text);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyVal, setReplyVal] = useState('');
+  const replyRef = React.useRef<HTMLTextAreaElement>(null);
+
+  function autoResizeReply() {
+    const el = replyRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  async function submitReply() {
+    if (!replyVal.trim() || !onReply || !comment.id) return;
+    await onReply(replyVal.trim(), comment.id);
+    setReplyVal('');
+    setReplyOpen(false);
+  }
 
   async function save() {
     if (!comment.id) return;
@@ -986,9 +1184,11 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
     }
   }
 
+  const avatarSize = isReply ? 'w-6 h-6 text-[10px]' : 'w-7 h-7 text-xs';
+
   return (
-    <div className="flex items-start gap-2">
-      <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0 mt-0.5">
+    <div className={`flex items-start gap-2 ${isReply ? 'gap-1.5' : ''}`}>
+      <div className={`${avatarSize} rounded-full bg-[#e6f4f7] flex items-center justify-center font-bold text-[#0b5566] flex-shrink-0 mt-0.5`}>
         {(comment.authorName || 'U').slice(0,1).toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">
@@ -1020,14 +1220,55 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
             </div>
           )}
         </div>
+
         {!editing ? (
           <div className="mt-1 bg-gray-50 rounded-xl px-3 py-2 text-sm text-gray-700 break-words">{comment.text}</div>
         ) : (
           <div className="mt-1">
-            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2 text-sm min-h-[64px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" />
+            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2 text-sm min-h-[64px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" style={{ fontSize: '16px' }} />
             <div className="mt-2 flex gap-2 justify-end">
               <button type="button" onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1.5 rounded-xl bg-gray-100 text-xs font-medium">Annuler</button>
-              <button onClick={save} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs font-medium">Sauvegarder</button>
+              <button onClick={save} className="px-3 py-1.5 rounded-xl bg-[#0b5566] text-white text-xs font-medium">Sauvegarder</button>
+            </div>
+          </div>
+        )}
+
+        {/* Reply button — only on top-level comments */}
+        {!isReply && onReply && !editing && (
+          <button
+            onClick={() => { setReplyOpen(o => !o); setTimeout(() => replyRef.current?.focus(), 50); }}
+            className="mt-1.5 text-xs text-gray-400 hover:text-[#0b5566] font-medium transition-colors"
+          >
+            Répondre
+          </button>
+        )}
+
+        {/* Inline reply box */}
+        {replyOpen && (
+          <div className="mt-2 flex items-start gap-2">
+            <div className={`w-6 h-6 rounded-full bg-[#e6f4f7] flex items-center justify-center text-[10px] font-bold text-[#0b5566] flex-shrink-0 mt-0.5`}>
+              {authorInitial || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <textarea
+                ref={replyRef}
+                value={replyVal}
+                rows={1}
+                onChange={e => { setReplyVal(e.target.value); autoResizeReply(); }}
+                placeholder={`Répondre à ${comment.authorName}…`}
+                className="w-full resize-none bg-transparent border-none outline-none text-xs text-gray-800 placeholder-gray-400 leading-relaxed overflow-hidden"
+                style={{ fontSize: '16px', minHeight: '20px' }}
+              />
+              <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-gray-100">
+                <button onClick={() => { setReplyOpen(false); setReplyVal(''); }} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Annuler</button>
+                <button
+                  onClick={submitReply}
+                  disabled={!replyVal.trim()}
+                  className="px-3 py-1 rounded-full bg-[#0b5566] text-white text-xs font-bold disabled:opacity-40 hover:bg-[#08323a] transition-colors"
+                >
+                  Publier
+                </button>
+              </div>
             </div>
           </div>
         )}

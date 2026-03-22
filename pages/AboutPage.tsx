@@ -8,10 +8,11 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"À propos de Frimousse | Application de gestion de garde d'enfants"}
-        description={"Frimousse, la solution digitale complète pour la gestion des associations de garde d'enfants : sécurité, RGPD, communication, planning, témoignages, FAQ, et bien plus."}
-        url={"https://lesfrimousses.com/a-propos"}
+        title={"A propos de Frimousse | Application de gestion de garde d'enfants pour creches et MAM"}
+        description={"Decouvrez Frimousse, la solution digitale pour la gestion des creches, micro-creches et MAM. Securite, RGPD, communication parents, planning, temoignages et FAQ."}
+        url={"https://lesfrimousses.com/about"}
         image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'A propos', url: 'https://lesfrimousses.com/about' }]}
       />
       <script
         type="application/ld+json"

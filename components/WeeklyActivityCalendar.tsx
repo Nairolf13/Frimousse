@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -79,6 +80,22 @@ export default function WeeklyActivityCalendar() {
 
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const location = useLocation();
+  useEffect(() => {
+    setAdding(false);
+    setModalOpen(false);
+    setSelectedActivity(null);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (adding || modalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [adding, modalOpen]);
 
   const { user } = useAuth();
 
@@ -224,7 +241,7 @@ export default function WeeklyActivityCalendar() {
   const isParent = !!user && String(user.role || '').toLowerCase() === 'parent';
 
   return (
-    <div>
+    <div className="overflow-x-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
@@ -404,127 +421,246 @@ export default function WeeklyActivityCalendar() {
           </div>
         </div>
         {modalOpen && selectedActivity && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl relative border-4 border-pink-100 flex flex-col items-center gap-6 animate-fade-in">
-              <button onClick={() => setModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-              <div className="flex flex-col items-center gap-2 mb-4">
-                <span className="text-3xl">{getActivityVisuals(selectedActivity.name, 0).emoji}</span>
-                <span className="font-extrabold text-xl text-pink-700 mb-2">{selectedActivity.name}</span>
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+            <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[85vh]">
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{getActivityVisuals(selectedActivity.name, 0).emoji}</span>
+                  <div>
+                    <h2 className="text-lg font-extrabold text-[#0b5566] leading-tight">{selectedActivity.name}</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">{selectedActivity.date ? selectedActivity.date.split('T')[0] : ''}</p>
+                  </div>
+                </div>
+                <button onClick={() => setModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-xl leading-none">×</button>
               </div>
-              <div className="w-full flex flex-col gap-2 mb-2">
-                <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">{t('assignment.modal.date')}:</span> <span>{selectedActivity.date ? selectedActivity.date.split('T')[0] : ''}</span></div>
-                <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">{t('label.start')}:</span> <span>{selectedActivity.startTime}</span></div>
-                <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">{t('label.end')}:</span> <span>{selectedActivity.endTime}</span></div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+                {/* Horaires */}
+                <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <svg className="w-4 h-4 text-[#0b5566]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span className="font-semibold">{selectedActivity.startTime}</span>
+                    <span className="text-gray-400">→</span>
+                    <span className="font-semibold">{selectedActivity.endTime}</span>
+                  </div>
+                </div>
+
+                {/* Commentaire */}
                 {selectedActivity.comment && (
-                  <div className="flex gap-2 text-gray-700 text-base"><span className="font-semibold">{t('label.comment')}:</span> <span>{selectedActivity.comment}</span></div>
+                  <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                    <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">{t('label.comment')}</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-line">{selectedActivity.comment}</p>
+                  </div>
                 )}
-                {(selectedActivity.nannies && selectedActivity.nannies.length > 0) ? (
-                  <div className="flex flex-col gap-2 text-gray-700 text-base">
-                    <span className="font-semibold">{t('activities.modal.nannies_label')}:</span>
-                    <div className="flex flex-wrap gap-2 min-h-[40px]">
-                      {selectedActivity.nannies.map(nanny => (
-                        <span key={nanny.id} className="px-3 py-1 rounded-full font-semibold text-sm shadow flex items-center justify-center text-center min-w-[80px]" style={{ background: '#a9ddf2', color: '#08323a', border: '1px solid #cfeef9' }}>
-                          {nanny.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : (selectedActivity.nannyIds && selectedActivity.nannyIds.length > 0) ? (
-                  <div className="flex flex-col gap-2 text-gray-700 text-base">
-                    <span className="font-semibold">{t('activities.modal.nannies_label')}:</span>
-                    {nannies.length === 0 && (
-                      <span className="text-red-500">{t('activities.modal.no_nannies_loaded')}</span>
-                    )}
-                    <div className="flex flex-wrap gap-2 min-h-[40px]">
-                      {selectedActivity.nannyIds.map(id => {
-                        const nanny = nannies.find(n => String(n.id) === String(id));
-                        return (
-                          <span key={id} className="px-3 py-1 rounded-full font-semibold text-sm shadow flex items-center justify-center text-center min-w-[80px]" style={{ background: '#a9ddf2', color: '#08323a', border: '1px solid #cfeef9' }}>
-                            {nanny ? nanny.name : `ID: ${id}`}
+
+                {/* Nounous */}
+                {(() => {
+                  const resolvedNannies = selectedActivity.nannies && selectedActivity.nannies.length > 0
+                    ? selectedActivity.nannies
+                    : (selectedActivity.nannyIds || []).map(id => nannies.find(n => String(n.id) === String(id))).filter(Boolean) as Nanny[];
+                  if (resolvedNannies.length === 0) return null;
+                  return (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        {resolvedNannies.length > 1 ? `${resolvedNannies.length} Nounous assignées` : 'Nounou assignée'}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {resolvedNannies.map(nanny => (
+                          <span key={nanny.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold bg-[#e6f4f7] text-[#0b5566] border border-[#cfeef9]">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                            {nanny.name}
                           </span>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
+                  );
+                })()}
               </div>
-                <div className="flex flex-col gap-4 w-full mt-2">
-                <button
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-lg shadow transition-transform hover:scale-105 active:scale-95"
-                  onClick={() => handleEditActivity(selectedActivity)}
-                  style={{ background: '#a9ddf2', color: '#08323a', border: '1px solid #cfeef9' }}
-                >
-                  <span className="text-2xl">✏️</span> Modifier
-                </button>
-                <button
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-lg shadow transition-transform hover:scale-105 active:scale-95"
-                  onClick={() => handleDeleteActivity(selectedActivity.id)}
-                  style={{ background: '#fcdcdf', color: '#7a2a2a', border: '1px solid #fbd5d8' }}
-                >
-                  <span className="text-2xl">🗑️</span> Supprimer
-                </button>
-              </div>
+
+              {/* Footer actions */}
+              {!isParent && (
+                <div className="flex items-center gap-3 px-6 py-4 border-t border-gray-100 flex-shrink-0">
+                  <button
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                    onClick={() => handleEditActivity(selectedActivity)}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Modifier
+                  </button>
+                  <button
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 border border-red-100 text-sm font-semibold text-red-600 hover:bg-red-100 transition"
+                    onClick={() => handleDeleteActivity(selectedActivity.id)}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    Supprimer
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
       {adding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-    <div className="rounded-2xl shadow-2xl p-8 w-full max-w-md relative bg-white border border-gray-100">
-            <button onClick={() => setAdding(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-            <h2 className="text-2xl font-extrabold mb-4 text-center" style={{ color: '#0b5566' }}>{selectedActivity ? t('activities.modal.edit') : t('activities.modal.add')}</h2>
-            <form className="space-y-4 mb-2" onSubmit={e => { e.preventDefault(); handleAddActivity(); }}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+          <div className="bg-white w-full max-w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+
+            {/* Drag handle (mobile only) */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+            </div>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 sm:px-6 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow flex-shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Date</label>
+                  <h2 className="text-base sm:text-lg font-extrabold text-[#0b5566] leading-tight">{selectedActivity ? t('activities.modal.edit') : t('activities.modal.add')}</h2>
+                  <p className="text-xs text-gray-400 leading-none mt-0.5 hidden sm:block">Planifiez une activité pour la semaine</p>
+                </div>
+              </div>
+              <button onClick={() => { setAdding(false); setSelectedActivity(null); }} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-xl leading-none flex-shrink-0">×</button>
+            </div>
+
+            {/* Body scrollable */}
+            <form id="activity-form" className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5 space-y-4" onSubmit={e => { e.preventDefault(); handleAddActivity(); }}>
+
+              {/* Nom de l'activité */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  {t('label.activityName') || 'Nom de l\'activité'} <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex : Atelier peinture, Lecture, Jeux libres…"
+                  value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition"
+                  required
+                />
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Date <span className="text-red-400">*</span></label>
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
                   <input
                     type="date"
                     value={form.date}
                     onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                    className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]"
-                    style={{ borderColor: '#cfeef9' }}
+                    className="w-full px-3 py-2.5 text-sm text-gray-800 focus:outline-none bg-white"
                     required
                   />
                 </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">{t('label.start')}</label>
-          <input type="time" min="07:00" max="19:00" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
+              </div>
+
+              {/* Horaires — 2 colonnes égales */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{t('label.start')} <span className="text-red-400">*</span></label>
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <input type="time" min="07:00" max="19:00" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="w-full px-3 py-2.5 text-sm text-gray-800 focus:outline-none bg-white" required />
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">{t('label.end')}</label>
-          <input type="time" min="07:00" max="19:00" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{t('label.end')} <span className="text-red-400">*</span></label>
+                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <input type="time" min="07:00" max="19:00" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="w-full px-3 py-2.5 text-sm text-gray-800 focus:outline-none bg-white" required />
                   </div>
                 </div>
               </div>
+
+              {/* Commentaire */}
               <div>
-    <label className="block text-sm font-semibold text-gray-700 mb-1">{t('label.activityName') || 'Nom de l\'activité'}</label>
-  <input type="text" placeholder={t('label.activityName') || 'Nom de l\'activité'} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="border rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-[#a9ddf2]" style={{ borderColor: '#cfeef9' }} required />
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  {t('label.comment.optional') || 'Commentaire'} <span className="text-gray-400 font-normal normal-case text-xs">(optionnel)</span>
+                </label>
+                <textarea
+                  placeholder="Matériel nécessaire, consignes particulières…"
+                  value={form.comment}
+                  onChange={e => setForm(f => ({ ...f, comment: e.target.value }))}
+                  rows={2}
+                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition resize-none"
+                />
               </div>
+
+              {/* Nounous assignées */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">{t('label.comment.optional') || 'Commentaire (optionnel)'}</label>
-                <input type="text" placeholder={t('label.comment') || 'Commentaire'} value={form.comment} onChange={e => setForm(f => ({ ...f, comment: e.target.value }))} className="border border-blue-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Nannies assignées</label>
-                <select
-                  multiple
-                  value={form.nannyIds}
-                  onChange={e => {
-                    const sel = Array.from((e.target as HTMLSelectElement).selectedOptions).map(o => o.value);
-                    setForm(f => ({ ...f, nannyIds: sel }));
-                  }}
-                  className="border border-blue-200 rounded-lg px-3 py-2 w-full focus:ring-2 focus:ring-blue-400"
-                >
-                  {nannies.map(n => (
-                    <option key={n.id} value={n.id}>{n.name}</option>
-                  ))}
-                </select>
-              </div>
-                <div className="flex gap-2 mt-4">
-                <button type="submit" className="flex-1 bg-[#0b5566] text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition">{selectedActivity ? t('activities.modal.edit') ?? 'Modifier' : t('activities.modal.add') ?? 'Ajouter'}</button>
-                <button type="button" onClick={() => setAdding(false)} className="flex-1 bg-gray-300 px-4 py-2 rounded-lg font-bold">{t('global.cancel') ?? 'Annuler'}</button>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Nounous assignées <span className="text-red-400">*</span>
+                  </label>
+                  {form.nannyIds.length > 0 && (
+                    <span className="text-xs font-semibold text-[#0b5566] bg-[#e6f4f7] px-2 py-0.5 rounded-full">
+                      {form.nannyIds.length} sélectionnée{form.nannyIds.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                {nannies.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">Aucune nounou disponible.</p>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {nannies.map(n => {
+                      const selected = form.nannyIds.includes(n.id);
+                      return (
+                        <button
+                          key={n.id}
+                          type="button"
+                          onClick={() => setForm(f => ({
+                            ...f,
+                            nannyIds: selected
+                              ? f.nannyIds.filter(id => id !== n.id)
+                              : [...f.nannyIds, n.id]
+                          }))}
+                          className={`flex items-center justify-between gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${
+                            selected
+                              ? 'bg-[#0b5566] text-white border-[#0b5566] shadow-sm'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-[#0b5566] hover:text-[#0b5566]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                              {n.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="truncate">{n.name}</span>
+                          </div>
+                          {selected && (
+                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {form.nannyIds.length > 1 && (
+                  <div className="mt-2 flex items-center gap-1.5 bg-[#e6f4f7] rounded-xl px-3 py-2">
+                    <svg className="w-4 h-4 text-[#0b5566] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
+                    <p className="text-xs text-[#0b5566] font-medium">Activité de groupe — {form.nannyIds.length} nounous assignées</p>
+                  </div>
+                )}
               </div>
             </form>
+
+            {/* Footer */}
+            <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => { setAdding(false); setSelectedActivity(null); }}
+                className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+              >
+                {t('global.cancel') ?? 'Annuler'}
+              </button>
+              <button
+                type="submit"
+                form="activity-form"
+                disabled={!form.name || !form.date || !form.startTime || !form.endTime || form.nannyIds.length === 0}
+                className="flex-2 flex-grow-[2] py-3 rounded-xl bg-[#0b5566] text-white text-sm font-bold shadow hover:bg-[#08323a] transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {selectedActivity ? (t('activities.modal.edit') ?? 'Modifier') : (t('activities.modal.add') ?? 'Ajouter')}
+              </button>
+            </div>
           </div>
         </div>
       )}

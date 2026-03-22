@@ -7,10 +7,11 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"Support | Frimousse Association"}
-        description={"Besoin d'aide sur Frimousse? Contact, guides, assistance technique, documentation et ressources pour les associations, crèches, MAM, garderies."}
+        title={"Support et aide | Frimousse - Application de gestion creche"}
+        description={"Besoin d'aide sur Frimousse ? Guides, assistance technique, documentation et FAQ pour les creches, micro-creches, MAM et garderies. Support reactif par email."}
         url={"https://lesfrimousses.com/support"}
-        image={"/frimousse-cover.png"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Support', url: 'https://lesfrimousses.com/support' }]}
       />
 
       <PublicNavbar />

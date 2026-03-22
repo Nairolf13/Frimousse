@@ -7,9 +7,12 @@ export default function GuidePlanningPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"Gérer un planning | Guide Frimousse"}
-        description={"Tutoriel pour gérer le planning dans Frimousse : visualisation, modification, gestion des absences et présences."}
+        title={"Gerer le planning de garde | Guide Frimousse - Application creche"}
+        description={"Comment gerer le planning de garde dans Frimousse : visualisation calendrier, modification des presences, gestion des absences. Tutoriel pour creches et MAM."}
         url={"https://lesfrimousses.com/guide-planning"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        type={"article"}
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Guide planning', url: 'https://lesfrimousses.com/guide-planning' }]}
       />
       <PublicNavbar />
       <main className="flex-1 w-full">

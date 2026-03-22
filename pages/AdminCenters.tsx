@@ -76,6 +76,10 @@ export default function AdminCenters() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [centerToDelete, setCenterToDelete] = useState<Center | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [subForm, setSubForm] = useState({ plan: 'essentiel', status: 'active', currentPeriodEnd: '' });
+  const [subSaving, setSubSaving] = useState(false);
+  const [subSuccess, setSubSuccess] = useState<string | null>(null);
+  const [subError, setSubError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -129,6 +133,15 @@ export default function AdminCenters() {
       email: center.email || '',
       phone: center.phone || ''
     });
+    setSubForm({
+      plan: center.subscription?.plan || 'essentiel',
+      status: center.subscription?.status === 'trialing' ? 'trialing' : 'active',
+      currentPeriodEnd: center.subscription?.currentPeriodEnd
+        ? new Date(center.subscription.currentPeriodEnd).toISOString().slice(0, 10)
+        : ''
+    });
+    setSubSuccess(null);
+    setSubError(null);
     setShowEditModal(true);
   };
 
@@ -165,6 +178,44 @@ export default function AdminCenters() {
       closeEditModal();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleUpdateSubscription = async () => {
+    if (!editingCenter) return;
+    setSubSaving(true);
+    setSubSuccess(null);
+    setSubError(null);
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/centers/${editingCenter.id}/subscription`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: subForm.plan,
+          status: subForm.status,
+          currentPeriodEnd: subForm.currentPeriodEnd || null,
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setSubError(err.error || 'Erreur lors de la mise à jour');
+        return;
+      }
+      const updated = await res.json();
+      setCenters(prev => prev.map(c => c.id === editingCenter.id ? {
+        ...c,
+        subscription: {
+          plan: updated.plan,
+          status: updated.status,
+          currentPeriodEnd: updated.currentPeriodEnd,
+        }
+      } : c));
+      setSubSuccess('Abonnement mis à jour avec succès');
+    } catch {
+      setSubError('Erreur réseau');
+    } finally {
+      setSubSaving(false);
     }
   };
 
@@ -511,6 +562,43 @@ export default function AdminCenters() {
                     <input type="text" value={editForm.region} onChange={e => setEditForm({ ...editForm, region: e.target.value })} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566]" placeholder="Région" />
                     <input type="text" value={editForm.country} onChange={e => setEditForm({ ...editForm, country: e.target.value })} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566]" placeholder="Pays" />
                   </div>
+                </div>
+              </div>
+              {/* Abonnement */}
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>
+                  Abonnement
+                </h3>
+                <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Plan</label>
+                      <select value={subForm.plan} onChange={e => setSubForm(f => ({ ...f, plan: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566]">
+                        <option value="essentiel">Essentiel</option>
+                        <option value="pro">Pro</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Statut</label>
+                      <select value={subForm.status} onChange={e => setSubForm(f => ({ ...f, status: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566]">
+                        <option value="active">Actif</option>
+                        <option value="trialing">Essai</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Date de fin</label>
+                    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+                      <input type="date" value={subForm.currentPeriodEnd} onChange={e => setSubForm(f => ({ ...f, currentPeriodEnd: e.target.value }))} className="block w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" style={{ boxSizing: 'border-box' }} />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Laissez vide pour une durée indéterminée.</p>
+                  </div>
+                  {subSuccess && <p className="text-xs text-emerald-600 bg-emerald-50 rounded-lg px-3 py-2 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>{subSuccess}</p>}
+                  {subError && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">{subError}</p>}
+                  <button onClick={handleUpdateSubscription} disabled={subSaving} className="w-full py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-colors" style={{ background: 'linear-gradient(135deg,#0b5566,#1a8fa8)' }}>
+                    {subSaving ? 'Enregistrement…' : 'Appliquer l\'abonnement'}
+                  </button>
                 </div>
               </div>
             </div>

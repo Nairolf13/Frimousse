@@ -302,13 +302,16 @@ model FeedLike {
 }
 
 model FeedComment {
-  id        String   @id @default(uuid())
-  post      FeedPost @relation(fields: [postId], references: [id])
+  id        String        @id @default(uuid())
+  post      FeedPost      @relation(fields: [postId], references: [id])
   postId    String
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User          @relation(fields: [authorId], references: [id])
   authorId  String
   text      String
-  createdAt DateTime @default(now())
+  createdAt DateTime      @default(now())
+  parentId  String?
+  parent    FeedComment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   FeedComment[] @relation("CommentReplies")
 }
 
 model PhotoConsent {

@@ -82,10 +82,24 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"Tarifs | Frimousse Association"}
-        description={"Découvrez les tarifs de Frimousse pour crèches associatives, micro-crèches, garderies, centres de loisirs et MAM. Abonnement mensuel, offre gratuite, options modulaires."}
-        url={"https://frimousse-asso.fr/tarifs"}
-        image={"/frimousse-cover.png"}
+        title={"Tarifs Frimousse | Prix logiciel de gestion creche et micro-creche"}
+        description={"Tarifs Frimousse : essai gratuit 15 jours, plan Essentiel a 29,99 euros/mois, plan Pro a 59,99 euros/mois. Sans engagement. Application de gestion pour creches, micro-creches, MAM et garderies."}
+        url={"https://lesfrimousses.com/tarifs"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Tarifs', url: 'https://lesfrimousses.com/tarifs' }]}
+        tags={["tarif creche logiciel", "prix application garde enfant", "abonnement gestion micro-creche"]}
+        ldJson={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          "name": "Frimousse",
+          "description": "Application de gestion pour creches, micro-creches et MAM",
+          "brand": { "@type": "Brand", "name": "Frimousse" },
+          "offers": [
+            { "@type": "Offer", "name": "Decouverte", "price": "0", "priceCurrency": "EUR", "description": "Essai gratuit 15 jours" },
+            { "@type": "Offer", "name": "Essentiel", "price": "29.99", "priceCurrency": "EUR", "description": "Jusqu'a 10 enfants" },
+            { "@type": "Offer", "name": "Pro", "price": "59.99", "priceCurrency": "EUR", "description": "Enfants illimites" }
+          ]
+        }}
       />
       <script async src="https://js.stripe.com/v3/buy-button.js"></script>
 

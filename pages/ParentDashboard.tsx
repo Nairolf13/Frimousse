@@ -419,7 +419,7 @@ const ParentDashboard: React.FC = () => {
                 const msg = err instanceof Error ? err.message : 'Erreur';
                 setFormError(msg);
               }
-            }} className="mb-6 bg-white rounded-2xl shadow-sm overflow-hidden">
+            }} className="mb-6 bg-white rounded-2xl shadow-sm">
               <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <h2 className="text-base font-bold text-gray-900">{editingParent ? t('parent.form.submit.save') : t('parent.add')}</h2>
                 <button type="button" onClick={() => { setAdding(false); setEditingParent(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' }); setFormError(null); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
@@ -455,7 +455,16 @@ const ParentDashboard: React.FC = () => {
                 <div><label htmlFor="parent-city" className={labelCls}>{t('parent.form.city') || 'Ville'}</label><input id="parent-city" name="city" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="Paris" className={inputCls} /></div>
                 <div><label htmlFor="parent-region" className={labelCls}>{t('parent.form.region') || 'Région'}</label><input id="parent-region" name="region" value={form.region} onChange={e => setForm({ ...form, region: e.target.value })} placeholder="Île-de-France" className={inputCls} /></div>
                 <div><label htmlFor="parent-country" className={labelCls}>{t('parent.form.country') || 'Pays'}</label><input id="parent-country" name="country" value={form.country} onChange={e => setForm({ ...form, country: e.target.value })} placeholder="France" className={inputCls} /></div>
-                {/* Mot de passe */}
+                {/* Message si l'email saisi est celui du compte admin connecté */}
+                {form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase() && (
+                  <div className="sm:col-span-2 lg:col-span-3 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    <span>Vous utilisez votre propre email. <strong>Il n'est pas nécessaire de saisir un mot de passe</strong> — vous vous connecterez toujours avec votre compte administrateur.</span>
+                  </div>
+                )}
+
+                {/* Mot de passe — masqué si l'email correspond au compte admin connecté */}
+                {!(form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase()) && (<>
                 <div>
                   <label htmlFor="parent-password" className={labelCls}>{t('parent.form.password.placeholder')}</label>
                   <div className="relative"><input id="parent-password" name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={t('parent.form.password.placeholder')} className={inputCls + ' pr-10'} /><button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button></div>
@@ -464,8 +473,9 @@ const ParentDashboard: React.FC = () => {
                   <label htmlFor="parent-confirmPassword" className={labelCls}>{t('parent.form.confirmPassword.placeholder')}</label>
                   <div className="relative"><input id="parent-confirmPassword" name="confirmPassword" type={showPw ? 'text' : 'password'} value={form.confirmPassword} onChange={e => setForm({ ...form, confirmPassword: e.target.value })} placeholder={t('parent.form.confirmPassword.placeholder')} className={inputCls + ' pr-10'} /><button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button></div>
                 </div>
+                </>)}
                 {/* Règles mot de passe */}
-                {(adding || editingParent) && (
+                {(adding || editingParent) && !(form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase()) && (
                   <div className="md:col-span-2 lg:col-span-3">
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Le mot de passe doit contenir :</div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

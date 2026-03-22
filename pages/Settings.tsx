@@ -376,7 +376,10 @@ function ProfileButton() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button className="flex-1 bg-[#0b5566] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#08323a]" onClick={() => setOpen(true)}>{t('settings.profile.edit')}</button>
+      <button className="flex-1 flex items-center justify-center gap-2 border border-gray-200 bg-white text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition" onClick={() => setOpen(true)}>
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        {t('settings.profile.edit')}
+      </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/30 backdrop-blur-sm overflow-auto py-8">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
@@ -798,15 +801,12 @@ export default function Settings() {
             <div className="bg-white rounded-2xl shadow p-4 md:col-span-2">
               <div className="font-semibold text-gray-800 mb-4">{t('settings.account.title')}</div>
               <div className="flex flex-col sm:flex-row gap-3">
-                <button className="flex-1 bg-red-600 text-white font-semibold rounded-lg px-4 py-2 shadow hover:bg-red-700" onClick={() => setShowDeleteModal(true)}>{t('settings.account.delete')}</button>
+                <button className="flex-1 flex items-center justify-center gap-2 bg-red-50 border border-red-200 text-red-600 font-semibold rounded-lg px-4 py-2 hover:bg-red-100 transition" onClick={() => setShowDeleteModal(true)}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+                  {t('settings.account.delete')}
+                </button>
                 <ProfileButton />
-              </div>
-            </div>
-
-
-
-                <div className="md:col-span-2">
-              <button className="w-full bg-[#0b5566] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#08323a]" style={{marginTop: '8px'}} onClick={async () => {
+                <button className="flex-1 flex items-center justify-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 font-semibold rounded-lg px-4 py-2 hover:bg-amber-100 transition" onClick={async () => {
                 try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
                 try {
                   // Preserve cookie consent so the banner doesn't reappear after logout/login
@@ -838,11 +838,15 @@ export default function Settings() {
                   }
                 } catch { /* ignore */ }
                 window.location.href = '/login';
-               }}>{t('settings.logout')}</button>
+               }}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  {t('settings.logout')}
+                </button>
             </div>
           </div>
         </div>
-        
+      </div>
+
         {showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs flex flex-col items-center relative">

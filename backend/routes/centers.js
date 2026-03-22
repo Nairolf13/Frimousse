@@ -225,6 +225,73 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// PATCH /api/centers/:id/subscription - Override subscription plan for a center (super-admin only)
+router.patch('/:id/subscription', requireAuth, async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'super-admin') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { id } = req.params;
+    const { plan, status, currentPeriodEnd } = req.body;
+
+    if (!plan || !['essentiel', 'pro'].includes(plan)) {
+      return res.status(400).json({ error: 'Plan invalide. Valeurs acceptées : essentiel, pro' });
+    }
+    if (!status || !['active', 'trialing'].includes(status)) {
+      return res.status(400).json({ error: 'Statut invalide. Valeurs acceptées : active, trialing' });
+    }
+
+    // Find the admin user of this center
+    const center = await prisma.center.findUnique({
+      where: { id },
+      include: {
+        users: {
+          where: { OR: [{ role: 'admin' }, { role: 'super-admin' }] },
+          take: 1
+        }
+      }
+    });
+
+    if (!center) return res.status(404).json({ error: 'Centre non trouvé' });
+    if (!center.users[0]) return res.status(400).json({ error: 'Aucun admin trouvé pour ce centre' });
+
+    const adminId = center.users[0].id;
+    const periodEnd = currentPeriodEnd ? new Date(currentPeriodEnd) : null;
+
+    const existing = await prisma.subscription.findFirst({ where: { userId: adminId } });
+
+    if (existing) {
+      await prisma.subscription.update({
+        where: { id: existing.id },
+        data: {
+          plan,
+          status,
+          currentPeriodEnd: periodEnd,
+          cancelAtPeriodEnd: false,
+          canceledAt: null,
+          updatedAt: new Date(),
+        }
+      });
+    } else {
+      await prisma.subscription.create({
+        data: {
+          userId: adminId,
+          plan,
+          status,
+          currentPeriodEnd: periodEnd,
+          cancelAtPeriodEnd: false,
+        }
+      });
+    }
+
+    return res.json({ message: 'Abonnement mis à jour', plan, status, currentPeriodEnd: periodEnd });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 // DELETE /api/centers/:id - Delete center and all associated data (super-admin only)
 router.delete('/:id', requireAuth, async (req, res) => {
   try {

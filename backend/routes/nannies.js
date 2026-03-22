@@ -145,12 +145,12 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
 
   const existingUser = await tx.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
       if (existingUser) {
-        // Do not attach existing users who are not nounous. This prevents admins being assigned a nannyId.
-        if (existingUser.role !== 'nanny') {
-          // Signal conflict to outer scope by returning a marker
+        // Allow any existing user (admin, parent, etc.) to also be linked as a nanny.
+        // We only set nannyId without changing their role so they keep their existing permissions.
+        if (existingUser.nannyId) {
+          // Already linked to another nanny record — conflict
           return { nanny, user: null, existingUserConflict: true };
         }
-        // Attach existing user to this nanny and update address fields when provided
         const userUpdateData = { nannyId: nanny.id };
         if (address !== undefined) userUpdateData.address = address || null;
         if (postalCode !== undefined) userUpdateData.postalCode = postalCode || null;
@@ -175,9 +175,9 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
       return { nanny, user };
     });
 
-    // If the email belonged to a non-nanny existing user, return conflict
+    // If the existing user is already linked to another nanny record
     if (result && result.existingUserConflict) {
-      return res.status(409).json({ message: 'Un utilisateur avec cet email existe déjà et n\'est pas une nounou.' });
+      return res.status(409).json({ message: 'Cet utilisateur est déjà associé à une autre fiche nounou.' });
     }
 
       // Send invite email if we created a new user with email using templated mail (respects notifyByEmail)
