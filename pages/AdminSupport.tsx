@@ -522,7 +522,7 @@ export default function AdminSupportPage() {
 
   if (!user || user.role !== 'super-admin') {
     return (
-      <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
           <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4 text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Accès refusé</h1>
             <p className="text-gray-600">Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
@@ -532,12 +532,17 @@ export default function AdminSupportPage() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
         <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>Support</h1>
-              <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>Gestion des tickets de support par centre</div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+              </div>
+              <div className="pt-0.5">
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">Support</h1>
+                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Gestion des tickets de support par centre</p>
+              </div>
             </div>
           </div>
 

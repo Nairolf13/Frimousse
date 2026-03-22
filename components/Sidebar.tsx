@@ -186,13 +186,13 @@ export default function Sidebar() {
                   {link.icon}
                   <span className="flex-1">{link.label}</span>
                   {link.to === '/notifications' && unreadCount > 0 ? (
-                    <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-red-500 text-white">{unreadCount}</span>
+                    <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-[#0b5566] text-white">{unreadCount}</span>
                   ) : null}
                   {link.to === '/admin/support' && typeof supportCount === 'number' && supportCount > 0 ? (
-                    <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-indigo-500 text-white">{supportCount}</span>
+                    <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-[#0b5566] text-white">{supportCount}</span>
                   ) : null}
                   {link.to === '/admin/reviews' && typeof unreadReviews === 'number' && unreadReviews > 0 ? (
-                    <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-blue-500 text-white">{unreadReviews}</span>
+                    <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-[#0b5566] text-white">{unreadReviews}</span>
                   ) : null}
                 </Link>
               </li>

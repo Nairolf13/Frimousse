@@ -315,24 +315,25 @@ import ConfirmDialog from '../components/ConfirmDialog';
                   { !currentReview ? (
                     <div className="text-gray-400 text-center py-16 bg-white rounded-3xl border border-gray-100">Aucun avis pour le moment.</div>
                   ) : (
-                    <div className="relative">
+                    <div className="relative px-8 md:px-12">
+                      {/* Nav buttons — outside the card, in the px gutter */}
+                      <button
+                        aria-label="Précédent"
+                        onClick={() => setCurrentReviewIndex(i => (reviews.length === 0 ? 0 : (i - 1 + reviews.length) % reviews.length))}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white border border-gray-200 shadow-lg flex items-center justify-center text-gray-400 hover:text-brand-500 hover:border-brand-200 transition-all hover:shadow-xl"
+                      >
+                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
+                      </button>
+                      <button
+                        aria-label="Suivant"
+                        onClick={() => setCurrentReviewIndex(i => (reviews.length === 0 ? 0 : (i + 1) % reviews.length))}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-white border border-gray-200 shadow-lg flex items-center justify-center text-gray-400 hover:text-brand-500 hover:border-brand-200 transition-all hover:shadow-xl"
+                      >
+                        <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+                      </button>
+
                       <div key={currentReview!.id} className="transform transition duration-500 ease-in-out">
-                        <div className="bg-white rounded-3xl border border-gray-100 p-6 md:p-10 shadow-sm relative">
-                          {/* Nav buttons */}
-                          <button
-                            aria-label="Précédent"
-                            onClick={() => setCurrentReviewIndex(i => (reviews.length === 0 ? 0 : (i - 1 + reviews.length) % reviews.length))}
-                            className="absolute -left-5 md:-left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white border border-gray-200 shadow-lg flex items-center justify-center text-gray-400 hover:text-brand-500 hover:border-brand-200 transition-all hover:shadow-xl"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/></svg>
-                          </button>
-                          <button
-                            aria-label="Suivant"
-                            onClick={() => setCurrentReviewIndex(i => (reviews.length === 0 ? 0 : (i + 1) % reviews.length))}
-                            className="absolute -right-5 md:-right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full bg-white border border-gray-200 shadow-lg flex items-center justify-center text-gray-400 hover:text-brand-500 hover:border-brand-200 transition-all hover:shadow-xl"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
-                          </button>
+                        <div className="bg-white rounded-3xl border border-gray-100 p-6 md:p-10 shadow-sm">
 
                           {/* Stars */}
                           <div className="flex gap-1 mb-6">

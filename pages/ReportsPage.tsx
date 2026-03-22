@@ -49,11 +49,6 @@ interface Report {
 }
 
 
-const priorityStyles = {
-  haute: 'bg-[#ffeaea] border-[#ffdddd]',
-  moyenne: 'bg-[#fff7e6] border-[#fff1d6]',
-  basse: 'bg-[#a9ddf2] border-[#cfeef9]',
-};
 const priorityLabel = {
   haute: 'reports.priority.haute',
   moyenne: 'reports.priority.moyenne',
@@ -262,145 +257,146 @@ export default function ReportsPage() {
     });
   }
 
+  const inputCls = 'border border-gray-200 rounded-xl px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 bg-white';
+
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
-          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.reports')}</h1>
-          <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.reports.description')}</div>
-          <div className="flex flex-col md:flex-row flex-wrap gap-2 mb-4 md:mb-6 items-stretch md:items-center">
-            <div className="flex gap-2 flex-wrap">
-              <button
-                className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-lg border text-sm md:text-base font-medium ${filterLast30Days ? 'bg-[#a9ddf2] border-[#fcdcdf] text-[#0b5566]' : 'bg-white border-gray-100 text-gray-500'}`}
-                onClick={e => {e.preventDefault(); setFilterLast30Days(v => !v);}}
-              >
-                <span>📅</span> {t('reports.filter.last30')}
-              </button>
-              <select
-                value={filterType}
-                onChange={e => setFilterType(e.target.value)}
-                className="px-3 md:px-4 py-2 rounded-lg border border-gray-100 bg-white text-sm md:text-base font-medium"
-              >
-                <option value="">{t('reports.filter.allTypes')}</option>
-                <option value="incident">{t('reports.type.incident')}</option>
-                <option value="comportement">{t('reports.type.comportement')}</option>
-                <option value="soin">{t('reports.type.soin')}</option>
-              </select>
-              <input
-                type="text"
-                placeholder={t('reports.search.placeholder')}
-                value={searchText}
-                onChange={e => setSearchText(e.target.value)}
-                className="px-3 md:px-4 py-2 rounded-lg border border-gray-100 bg-white text-sm md:text-base w-full md:w-64"
-              />
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             </div>
-            {!(user && user.role === 'parent') && (
-              <button className="bg-[#0b5566] text-white px-4 md:px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-sm md:text-base mt-2 md:mt-0 md:ml-2 w-full md:w-auto" onClick={() => {
-                setEditingReport(null);
-                setForm({
-                  priority: 'moyenne',
-                  type: 'incident',
-                  status: 'en_attente',
-                  childId: '',
-                  childName: '',
-                  childAge: 3,
-                  childGroup: '',
-                  nannyId: '',
-                  nannyName: '',
-                  nannyRole: '',
-                  summary: '',
-                  details: '',
-                  date: new Date().toISOString().split('T')[0],
-                  time: '14:00',
-                  duration: '',
-                  childrenInvolved: '',
-                });
-                setModalOpen(true);
-              }}>{t('reports.new')}</button>
-            )}
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 mb-4 md:mb-6">
-            <div className="bg-white rounded-xl shadow border border-gray-100 p-3 md:p-4 flex flex-col items-center">
-              <div className="text-2xl md:text-3xl font-extrabold" style={{ color: '#0b5566' }}>{total}</div>
-              <div className="text-xs text-gray-500 mt-1">{t('reports.card.total')}</div>
-            </div>
-            <div className="bg-white rounded-xl shadow border border-gray-100 p-3 md:p-4 flex flex-col items-center">
-              <div className="text-xl md:text-2xl font-extrabold" style={{ color: '#08323a' }}>{week}</div>
-              <div className="text-xs text-gray-500 mt-1">{t('reports.card.week')}</div>
+            <div className="pt-0.5">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.reports')}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.reports.description')}</p>
             </div>
           </div>
-        <div className="flex flex-col gap-4 md:gap-6">
+          {!(user && user.role === 'parent') && (
+            <button className="flex items-center gap-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white px-4 py-2.5 rounded-xl font-semibold shadow-md hover:opacity-90 transition text-sm w-full sm:w-auto justify-center" onClick={() => {
+              setEditingReport(null);
+              setForm({ priority: 'moyenne', type: 'incident', status: 'en_attente', childId: '', childName: '', childAge: 3, childGroup: '', nannyId: '', nannyName: '', nannyRole: '', summary: '', details: '', date: new Date().toISOString().split('T')[0], time: '14:00', duration: '', childrenInvolved: '' });
+              setModalOpen(true);
+            }}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              {t('reports.new')}
+            </button>
+          )}
+        </div>
+
+        {/* KPI cards */}
+        <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-2 md:grid-cols-4">
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+            <div className="text-xs text-gray-400 font-medium mb-1">{t('reports.card.total')}</div>
+            <div className="text-2xl font-extrabold text-[#0b5566]">{total}</div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+            <div className="text-xs text-gray-400 font-medium mb-1">{t('reports.card.week')}</div>
+            <div className="text-2xl font-extrabold text-gray-900">{week}</div>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 mb-5 flex flex-col sm:flex-row gap-3 flex-wrap">
+          <button
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${filterLast30Days ? 'bg-[#0b5566]/10 border-[#0b5566]/30 text-[#0b5566]' : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'}`}
+            onClick={e => { e.preventDefault(); setFilterLast30Days(v => !v); }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            {t('reports.filter.last30')}
+          </button>
+          <select value={filterType} onChange={e => setFilterType(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
+            <option value="">{t('reports.filter.allTypes')}</option>
+            <option value="incident">{t('reports.type.incident')}</option>
+            <option value="comportement">{t('reports.type.comportement')}</option>
+            <option value="soin">{t('reports.type.soin')}</option>
+          </select>
+          <div className="relative flex-1 min-w-[180px]">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input type="text" placeholder={t('reports.search.placeholder')} value={searchText} onChange={e => setSearchText(e.target.value)} className="border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" />
+          </div>
+        </div>
+
+        {/* Report cards */}
+        <div className="flex flex-col gap-4">
           {filteredReports.map(report => {
             const childInitials = report.child?.initials || (report.child?.name ? report.child.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : '');
             const nannyInitials = report.nanny?.initials || (report.nanny?.name ? report.nanny.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : '');
-              return (
-              <div key={report.id} className={`rounded-xl shadow border-2 ${priorityStyles[report.priority as keyof typeof priorityStyles] || ''} p-0 overflow-hidden`} style={{ minWidth: 0 }}>
-                <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 md:px-6 py-2`}> 
-                  <div className="flex items-center gap-2 md:gap-3 mb-2 sm:mb-0">
-                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.type === 'incident' ? '#ffeaea' : report.type === 'comportement' ? '#fff7e6' : '#a9ddf2', color: report.type === 'incident' ? '#7a2a2a' : report.type === 'comportement' ? '#856400' : '#08323a' }}>{t(typeLabel[report.type as keyof typeof typeLabel] || report.type)}</span>
-                    <span className={`px-2 md:px-3 py-1 rounded-lg font-bold text-xs`} style={{ background: report.priority === 'haute' ? '#dc2626' : report.priority === 'moyenne' ? '#f59e0b' : '#0b5566', color: '#ffffff' }}>{t(priorityLabel[report.priority as keyof typeof priorityLabel] || report.priority)}</span>
+            const typeBg = report.type === 'incident' ? 'bg-red-100 text-red-700' : report.type === 'comportement' ? 'bg-amber-100 text-amber-700' : 'bg-sky-100 text-sky-700';
+            const priorityBg = report.priority === 'haute' ? 'bg-red-500 text-white' : report.priority === 'moyenne' ? 'bg-amber-400 text-white' : 'bg-[#0b5566] text-white';
+            const borderColor = report.priority === 'haute' ? 'border-l-red-400' : report.priority === 'moyenne' ? 'border-l-amber-400' : 'border-l-[#0b5566]';
+            return (
+              <div key={report.id} className={`bg-white rounded-2xl shadow-md border border-gray-100 border-l-4 ${borderColor} overflow-hidden`}>
+                {/* Card header */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-gray-50">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-2.5 py-1 rounded-lg font-semibold text-xs ${typeBg}`}>{t(typeLabel[report.type as keyof typeof typeLabel] || report.type)}</span>
+                    <span className={`px-2.5 py-1 rounded-lg font-semibold text-xs ${priorityBg}`}>{t(priorityLabel[report.priority as keyof typeof priorityLabel] || report.priority)}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold border" style={{ background: '#a9ddf2', color: '#08323a', borderColor: '#cfeef9' }}>{childInitials}</span>
-                    <span className="font-bold text-xs md:text-sm ml-1" style={{ color: '#08323a' }}>{report.child?.name}</span>
-                    <span className="w-8 h-8 rounded-full flex items-center justify-center text-xs md:text-sm font-bold border" style={{ background: '#fff7e6', color: '#856400', borderColor: '#fff1d6' }}>{nannyInitials}</span>
-                    <span className="font-bold text-xs md:text-sm ml-1" style={{ color: '#856400' }}>{report.nanny?.name}</span>
-                    {/* three-dot menu */}
-                    <div className="relative ml-2">
-                      <button aria-label="Actions" className="text-gray-500 hover:text-gray-800" onClick={() => {
-                        // prefill form with report values
-                        setEditingReport(report);
-                        setForm({
-                          priority: (report.priority as unknown as 'haute' | 'moyenne' | 'basse') || 'moyenne',
-                          type: (report.type as unknown as 'incident' | 'comportement' | 'soin') || 'incident',
-                          status: (report.status as unknown as 'en_attente' | 'traite' | 'resolu') || 'en_attente',
-                          childId: report.child?.id || report.child?.id || '',
-                          childName: report.child?.name || '',
-                          childAge: report.child?.age || 3,
-                          childGroup: report.child?.group || '',
-                          nannyId: report.nanny?.id || report.nanny?.id || '',
-                          nannyName: report.nanny?.name || '',
-                          nannyRole: report.nanny?.role || '',
-                          summary: report.summary || '',
-                          details: report.details || '',
-                          date: report.date ? new Date(report.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                          time: report.time || '14:00',
-                          duration: report.duration || '',
-                          childrenInvolved: report.childrenInvolved ? String(report.childrenInvolved) : '',
-                        });
-                        setModalOpen(true);
-                      }}>
-                        ⋮
-                      </button>
+                  <button aria-label="Modifier" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg" onClick={() => {
+                    setEditingReport(report);
+                    setForm({
+                      priority: (report.priority as 'haute' | 'moyenne' | 'basse') || 'moyenne',
+                      type: (report.type as 'incident' | 'comportement' | 'soin') || 'incident',
+                      status: (report.status as 'en_attente' | 'traite' | 'resolu') || 'en_attente',
+                      childId: report.child?.id || '', childName: report.child?.name || '', childAge: report.child?.age || 3, childGroup: report.child?.group || '',
+                      nannyId: report.nanny?.id || '', nannyName: report.nanny?.name || '', nannyRole: report.nanny?.role || '',
+                      summary: report.summary || '', details: report.details || '',
+                      date: report.date ? new Date(report.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                      time: report.time || '14:00', duration: report.duration || '',
+                      childrenInvolved: report.childrenInvolved ? String(report.childrenInvolved) : '',
+                    });
+                    setModalOpen(true);
+                  }}>⋮</button>
+                </div>
+
+                {/* Card body */}
+                <div className="px-5 py-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-sm flex-shrink-0">{childInitials}</div>
+                    <div>
+                      <div className="font-semibold text-gray-800 text-sm leading-tight">{report.child?.name}</div>
+                      <div className="text-xs text-gray-400">{report.child?.group}</div>
+                    </div>
+                    <div className="mx-2 text-gray-200">·</div>
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm flex-shrink-0">{nannyInitials}</div>
+                    <div>
+                      <div className="font-semibold text-gray-800 text-sm leading-tight">{report.nanny?.name}</div>
+                      <div className="text-xs text-gray-400">{report.nanny?.role}</div>
                     </div>
                   </div>
-                </div>
-                <div className="px-4 md:px-6 pb-4">
-                  <div className="font-bold text-gray-700 mb-1 text-sm md:text-base">{report.type === 'incident' ? t('reports.summary.incident') : report.type === 'comportement' ? t('reports.summary.comportement') : t('reports.summary.soin')}</div>
-                  <div className="text-gray-700 text-sm md:text-base mb-2">{report.summary}</div>
+
+                  <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-700 leading-relaxed mb-3">
+                    {report.summary}
+                  </div>
+
                   {report.type === 'comportement' && (
-                    <div className="flex gap-4 md:gap-6 items-center text-xs text-gray-500 mt-2 flex-wrap">
-                        <span className="flex items-center gap-1"><span>⏱️</span> {t('reports.card.duration')} : {report.duration}</span>
-                        <span className="flex items-center gap-1"><span>👧</span> {t('reports.card.childrenInvolved', { n: String(report.childrenInvolved ?? 0) })}</span>
+                    <div className="flex gap-4 text-xs text-gray-500 mb-3">
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        {t('reports.card.duration')} : {report.duration}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        {t('reports.card.childrenInvolved', { n: String(report.childrenInvolved ?? 0) })}
+                      </span>
                     </div>
                   )}
-                  <div className="flex flex-col items-end mt-4">
-                    <span className="text-xs italic" style={{ color: '#08323a' }}>
-                      Rapport établi par <span className="font-bold" style={{ color: '#856400' }}>{report.nanny?.name}</span> concernant <span className="font-bold" style={{ color: '#08323a' }}>{report.child?.name}</span>
-                    </span>
-                    <span className="text-xs text-gray-500">
+
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>Par <span className="font-semibold text-gray-600">{report.nanny?.name}</span></span>
+                    <span>
                       {(() => {
-                        let dateObj;
                         try {
-                          dateObj = new Date(report.date);
-                        } catch {
-                          dateObj = null;
-                        }
-                        if (dateObj && !isNaN(dateObj.getTime())) {
-                          const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'long', year: 'numeric' };
-                          const dateStr = dateObj.toLocaleDateString(locale || 'fr-FR', options);
-                          const heure = report.time ? report.time.slice(0,5).replace(':', 'h') : '';
-                          return `${dateStr}${heure ? ' ' + t('common.at') + ' ' + heure : ''}`;
-                        }
+                          const dateObj = new Date(report.date);
+                          if (!isNaN(dateObj.getTime())) {
+                            const dateStr = dateObj.toLocaleDateString(locale || 'fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+                            const heure = report.time ? report.time.slice(0,5).replace(':', 'h') : '';
+                            return `${dateStr}${heure ? ' ' + t('common.at') + ' ' + heure : ''}`;
+                          }
+                        } catch { /**/ }
                         return `${report.date}${report.time ? ' à ' + report.time : ''}`;
                       })()}
                     </span>
@@ -409,122 +405,91 @@ export default function ReportsPage() {
               </div>
             );
           })}
+          {filteredReports.length === 0 && (
+            <div className="text-center text-gray-400 py-16 text-sm">Aucun rapport trouvé.</div>
+          )}
         </div>
+
+        {/* Modal */}
         {modalOpen && (
-            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative flex flex-col gap-6 animate-fade-in" style={{ border: '4px solid #fcdcdf' }}>
-              <button onClick={() => setModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-              <h2 className="text-2xl font-extrabold mb-2 text-center" style={{ color: '#0b5566' }}>{editingReport ? t('reports.modal.title.edit') : t('reports.modal.title.new')}</h2>
-              <form className="space-y-3" onSubmit={async (e) => {
-                if (editingReport) {
-                  e.preventDefault();
-                  const payload = {
-                    priority: form.priority,
-                    type: form.type,
-                    status: form.status,
-                    childId: form.childId,
-                    nannyId: form.nannyId,
-                    summary: form.summary,
-                    details: form.details,
-                    date: form.date,
-                    time: form.time,
-                    duration: form.type === 'comportement' ? form.duration : undefined,
-                    childrenInvolved: form.type === 'comportement' ? Number(form.childrenInvolved) || undefined : undefined,
-                  };
-                  await fetchWithRefresh(`${API_URL}/reports/${editingReport.id}`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                  });
-                  fetchWithRefresh(`${API_URL}/reports`).then(res => res.json()).then(data => setReports(data)).catch(() => setReports([]));
-                  setModalOpen(false);
-                  setEditingReport(null);
-                } else {
-                  await handleAddReport(e);
-                }
-              }}>
-                <div className="flex gap-2">
-                  <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as 'haute' | 'moyenne' | 'basse' }))} className="border rounded px-3 py-2 w-1/2">
-                    <option value="haute">{t('reports.priority.haute')}</option>
-                    <option value="moyenne">{t('reports.priority.moyenne')}</option>
-                    <option value="basse">{t('reports.priority.basse')}</option>
-                  </select>
-                  <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as 'incident' | 'comportement' | 'soin' }))} className="border rounded px-3 py-2 w-1/2">
-                    <option value="incident">{t('reports.type.incident')}</option>
-                    <option value="comportement">{t('reports.type.comportement')}</option>
-                    <option value="soin">{t('reports.type.soin')}</option>
-                  </select>
-                </div>
-                  <select value={form.childId} onChange={e => {
-                  const selected = childrenList.find(c => c.id === e.target.value);
-                  setForm(f => ({
-                    ...f,
-                    childId: selected ? selected.id : '',
-                    childName: selected ? selected.name : '',
-                    childAge: selected ? Number(selected.age) : 3,
-                    childGroup: selected ? selected.group : '',
-                  }));
-                }} className="border rounded px-3 py-2 w-full" required>
-                  <option value="">{t('reports.field.child')}</option>
-                  {childrenList.map(child => (
-                    <option key={child.id} value={child.id}>{child.name}</option>
-                  ))}
-                </select>
-                <div className="flex gap-2">
-                  <input type="number" min={1} max={18} placeholder={t('label.age') || 'Âge'} value={form.childAge} onChange={e => setForm(f => ({ ...f, childAge: Number(e.target.value) }))} className="border rounded px-3 py-2 w-1/2" required />
-                  <select value={form.childGroup} onChange={e => setForm(f => ({ ...f, childGroup: e.target.value }))} className="border rounded px-3 py-2 w-1/2" required>
-                    <option value="">{t('reports.field.group')}</option>
-                    {childGroups.map(g => (
-                      <option key={g.key} value={g.key}>{t(g.label)}</option>
-                    ))}
-                  </select>
-                </div>
-                  <select value={form.nannyId} onChange={e => {
-                  const selected = nanniesList.find(n => n.id === e.target.value);
-                  setForm(f => ({
-                    ...f,
-                    nannyId: selected ? selected.id : '',
-                    nannyName: selected ? selected.name : '',
-                    nannyRole: selected ? selected.role : '',
-                  }));
-                }} className="border rounded px-3 py-2 w-full" required>
-                  <option value="">{t('reports.field.nanny')}</option>
-                  {visibleNannies.map(nanny => (
-                    <option key={nanny.id} value={nanny.id}>{nanny.name}</option>
-                  ))}
-                </select>
-                <select value={form.nannyRole} onChange={e => setForm(f => ({ ...f, nannyRole: e.target.value }))} className="border rounded px-3 py-2 w-full" required>
-                  <option value="">{t('reports.field.role')}</option>
-                  {nannyRoles.map(role => (
-                    <option key={role.key} value={role.key}>{t(role.label)}</option>
-                  ))}
-                </select>
-                <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
-                <input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
-                <textarea placeholder={t('reports.field.summary')} value={form.summary} onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} className="border rounded px-3 py-2 w-full" required />
-                {form.type === 'comportement' && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-[#0b5566] to-[#08323a] px-6 py-4 flex items-center justify-between">
+                <h2 className="text-base font-bold text-white">{editingReport ? t('reports.modal.title.edit') : t('reports.modal.title.new')}</h2>
+                <button onClick={() => { setModalOpen(false); setEditingReport(null); }} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/20 text-white hover:bg-white/30 transition text-lg leading-none">×</button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[80vh]">
+                <form className="space-y-3" onSubmit={async (e) => {
+                  if (editingReport) {
+                    e.preventDefault();
+                    const payload = { priority: form.priority, type: form.type, status: form.status, childId: form.childId, nannyId: form.nannyId, summary: form.summary, details: form.details, date: form.date, time: form.time, duration: form.type === 'comportement' ? form.duration : undefined, childrenInvolved: form.type === 'comportement' ? Number(form.childrenInvolved) || undefined : undefined };
+                    await fetchWithRefresh(`${API_URL}/reports/${editingReport.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                    fetchWithRefresh(`${API_URL}/reports`).then(res => res.json()).then(data => setReports(data)).catch(() => setReports([]));
+                    setModalOpen(false); setEditingReport(null);
+                  } else {
+                    await handleAddReport(e);
+                  }
+                }}>
                   <div className="flex gap-2">
-                    <input type="text" placeholder={t('reports.field.duration') || 'Durée'} value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} className="border rounded px-3 py-2 w-1/2" />
-                    <input type="number" min={1} placeholder={t('reports.field.childrenInvolved') || 'Nb enfants impliqués'} value={form.childrenInvolved} onChange={e => setForm(f => ({ ...f, childrenInvolved: e.target.value }))} className="border rounded px-3 py-2 w-1/2" />
+                    <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as 'haute' | 'moyenne' | 'basse' }))} className={inputCls}>
+                      <option value="haute">{t('reports.priority.haute')}</option>
+                      <option value="moyenne">{t('reports.priority.moyenne')}</option>
+                      <option value="basse">{t('reports.priority.basse')}</option>
+                    </select>
+                    <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as 'incident' | 'comportement' | 'soin' }))} className={inputCls}>
+                      <option value="incident">{t('reports.type.incident')}</option>
+                      <option value="comportement">{t('reports.type.comportement')}</option>
+                      <option value="soin">{t('reports.type.soin')}</option>
+                    </select>
                   </div>
-                )}
-                <div className="flex gap-2 mt-2">
-                  <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">{editingReport ? t('reports.save') : t('reports.create')}</button>
-                  {editingReport && (
-                    <button type="button" onClick={async () => {
-                      if (!editingReport) return; 
-                      await fetchWithRefresh(`${API_URL}/reports/${editingReport.id}`, { method: 'DELETE' });
-                      fetchWithRefresh(`${API_URL}/reports`).then(res => res.json()).then(data => setReports(data)).catch(() => setReports([]));
-                      setModalOpen(false); setEditingReport(null);
-                    }} className="bg-red-500 text-white px-4 py-2 rounded">{t('reports.delete')}</button>
+                  <select value={form.childId} onChange={e => { const selected = childrenList.find(c => c.id === e.target.value); setForm(f => ({ ...f, childId: selected ? selected.id : '', childName: selected ? selected.name : '', childAge: selected ? Number(selected.age) : 3, childGroup: selected ? selected.group : '' })); }} className={inputCls} required>
+                    <option value="">{t('reports.field.child')}</option>
+                    {childrenList.map(child => <option key={child.id} value={child.id}>{child.name}</option>)}
+                  </select>
+                  <div className="flex gap-2">
+                    <input type="number" min={1} max={18} placeholder={t('label.age') || 'Âge'} value={form.childAge} onChange={e => setForm(f => ({ ...f, childAge: Number(e.target.value) }))} className={inputCls} required />
+                    <select value={form.childGroup} onChange={e => setForm(f => ({ ...f, childGroup: e.target.value }))} className={inputCls} required>
+                      <option value="">{t('reports.field.group')}</option>
+                      {childGroups.map(g => <option key={g.key} value={g.key}>{t(g.label)}</option>)}
+                    </select>
+                  </div>
+                  <select value={form.nannyId} onChange={e => { const selected = nanniesList.find(n => n.id === e.target.value); setForm(f => ({ ...f, nannyId: selected ? selected.id : '', nannyName: selected ? selected.name : '', nannyRole: selected ? selected.role : '' })); }} className={inputCls} required>
+                    <option value="">{t('reports.field.nanny')}</option>
+                    {visibleNannies.map(nanny => <option key={nanny.id} value={nanny.id}>{nanny.name}</option>)}
+                  </select>
+                  <select value={form.nannyRole} onChange={e => setForm(f => ({ ...f, nannyRole: e.target.value }))} className={inputCls} required>
+                    <option value="">{t('reports.field.role')}</option>
+                    {nannyRoles.map(role => <option key={role.key} value={role.key}>{t(role.label)}</option>)}
+                  </select>
+                  <div className="flex gap-2">
+                    <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className={inputCls} required />
+                    <input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} className={inputCls} required />
+                  </div>
+                  <textarea placeholder={t('reports.field.summary')} value={form.summary} onChange={e => setForm(f => ({ ...f, summary: e.target.value }))} className={`${inputCls} min-h-[80px] resize-none`} required />
+                  {form.type === 'comportement' && (
+                    <div className="flex gap-2">
+                      <input type="text" placeholder={t('reports.field.duration') || 'Durée'} value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} className={inputCls} />
+                      <input type="number" min={1} placeholder={t('reports.field.childrenInvolved') || 'Nb enfants'} value={form.childrenInvolved} onChange={e => setForm(f => ({ ...f, childrenInvolved: e.target.value }))} className={inputCls} />
+                    </div>
                   )}
-                  <button type="button" onClick={() => { setModalOpen(false); setEditingReport(null); }} className="bg-gray-300 px-4 py-2 rounded">{t('reports.cancel')}</button>
-                </div>
-              </form>
+                  <div className="flex gap-2 pt-2">
+                    <button type="submit" className="flex-1 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white px-4 py-2.5 rounded-xl font-semibold text-sm hover:opacity-90 transition">{editingReport ? t('reports.save') : t('reports.create')}</button>
+                    {editingReport && (
+                      <button type="button" onClick={async () => {
+                        if (!editingReport) return;
+                        await fetchWithRefresh(`${API_URL}/reports/${editingReport.id}`, { method: 'DELETE' });
+                        fetchWithRefresh(`${API_URL}/reports`).then(res => res.json()).then(data => setReports(data)).catch(() => setReports([]));
+                        setModalOpen(false); setEditingReport(null);
+                      }} className="px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-200 text-sm font-semibold hover:bg-red-100 transition">{t('reports.delete')}</button>
+                    )}
+                    <button type="button" onClick={() => { setModalOpen(false); setEditingReport(null); }} className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition">{t('reports.cancel')}</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}
-        </div>
+      </div>
     </div>
   );
 }
