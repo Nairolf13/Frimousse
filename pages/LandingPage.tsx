@@ -662,7 +662,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                     },
                     {
                       q: "Combien coûte un logiciel de gestion de crèche ?",
-                      a: "Frimousse propose un essai gratuit de 15 jours, puis des formules à partir de 29,99 € par mois pour le plan Essentiel (jusqu'à 10 enfants) et 59,99 € par mois pour le plan Pro (jusqu'à 30 enfants). Sans engagement, résiliable à tout moment."
+                      a: "Frimousse propose un essai gratuit de 15 jours, puis des formules à partir de 29,99 € par mois pour le plan Essentiel (jusqu'à 10 enfants) et 59,99 € par mois pour le plan Pro (illimité). Sans engagement, résiliable à tout moment."
                     },
                     {
                       q: "Quelle application pour une MAM (Maison d'Assistantes Maternelles) ?",
