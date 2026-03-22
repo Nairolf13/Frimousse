@@ -167,11 +167,18 @@ export default function SubscriptionManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:pl-72 md:pr-8 md:py-8">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">{t('subscription.title', 'Mon abonnement')}</h1>
-          <p className="text-gray-500 mt-1 text-sm">{t('subscription.subtitle', 'Gérez votre plan, vos informations de facturation et suivez le statut de votre abonnement.')}</p>
+    <div className="min-h-screen bg-[#f4f7fa] p-2 sm:p-4 md:pl-64 w-full">
+      <div className="max-w-3xl mx-auto px-0 sm:px-2 md:px-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            </div>
+            <div className="pt-0.5">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('subscription.title', 'Mon abonnement')}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('subscription.subtitle', 'Gérez votre plan, vos informations de facturation et suivez le statut de votre abonnement.')}</p>
+            </div>
+          </div>
         </div>
 
         {loading && (

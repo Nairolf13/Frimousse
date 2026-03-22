@@ -52,9 +52,9 @@ function CommentBox({ postId, onSubmit }: { postId: string; onSubmit: (postId: s
   const { t } = useI18n();
 
   return (
-    <form onSubmit={e => { e.preventDefault(); if (val.trim()) { onSubmit(postId, val.trim()); setVal(''); } }} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-      <input value={val} onChange={e => setVal(e.target.value)} placeholder={t('feed.write_comment', 'Écrire un commentaire...')} className="flex-1 border rounded px-2 py-2 sm:px-3 sm:py-2 text-sm" />
-      <button type="submit" className="text-indigo-600 px-3 py-2 text-sm sm:text-base whitespace-nowrap w-full sm:w-auto">{t('feed.send', 'Envoyer')}</button>
+    <form onSubmit={e => { e.preventDefault(); if (val.trim()) { onSubmit(postId, val.trim()); setVal(''); } }} className="flex items-center gap-2">
+      <input value={val} onChange={e => setVal(e.target.value)} placeholder={t('feed.write_comment', 'Écrire un commentaire...')} className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" />
+      <button type="submit" className="text-xs font-semibold text-[#0b5566] px-3 py-2 rounded-xl hover:bg-[#0b5566]/10 transition-colors whitespace-nowrap">{t('feed.send', 'Envoyer')}</button>
     </form>
   );
 }
@@ -697,19 +697,26 @@ export default function Feed() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.feed')}</h1>
-            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{centerName ? `• ${centerName}` : t('feed.center_news')}</div>
+
+        {/* Page header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" /></svg>
+            </div>
+            <div className="pt-0.5">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.feed')}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{centerName ? centerName : t('feed.center_news')}</p>
+            </div>
           </div>
         </div>
 
+        {/* Super-admin center filter */}
         {currentUser && currentUser.role === 'super-admin' && (
           <div className="mb-4">
-            <label className="text-sm font-medium mr-2">Filtrer par centre:</label>
-            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border rounded px-2 py-1">
+            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 w-full sm:w-auto">
               <option value="">Tous les centres</option>
               {centers.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -719,245 +726,143 @@ export default function Feed() {
         )}
 
         {/* Composer */}
-  <form onSubmit={handleSubmit} className="bg-[#f0f9ff] rounded-2xl shadow p-3 md:p-6 mb-6 border border-gray-200">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 mb-5">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              {(currentUser?.name || 'U').slice(0,1).toUpperCase()}
+            </div>
             <div className="flex-1">
-              <div className="text-xs sm:text-sm font-semibold text-gray-700">{currentUser?.name || 'Utilisateur'}</div>
-              <div className="text-xs text-gray-400 mb-2">{centerName ? `• ${centerName}` : ''}</div>
-              <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t('feed.composer_placeholder')} className="w-full border rounded p-2 sm:p-3 bg-gray-50 min-h-[60px] sm:min-h-[80px] text-sm sm:text-base" />
-              <div className="flex flex-col sm:flex-row items-center justify-between mt-3 gap-2">
-                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500 w-full sm:w-auto">
-                  {/* Camera capture input (opens device camera on supported mobile) */}
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      capture="environment"
-                      className="hidden"
-                      onChange={e => {
-                        if (uploading) return;
-                        const input = e.currentTarget as HTMLInputElement;
-                        const newFiles = Array.from(input.files || []);
-                        if (newFiles.length === 0) return;
-                        setFiles(prev => [...prev, ...newFiles]);
-                        // reset so the same file can be selected/captured again
-                        input.value = '';
-                      }}
-                    />
-                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm">📷 {uploading ? <Spinner size={18} /> : t('feed.photo')}</span>
-                  </label>
-                  {/* Gallery input (choose existing images) */}
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      multiple
-                      className="hidden"
-                      onChange={e => {
-                        if (uploading) return;
-                        const input = e.currentTarget as HTMLInputElement;
-                        const newFiles = Array.from(input.files || []);
-                        if (newFiles.length === 0) return;
-                        setFiles(prev => [...prev, ...newFiles]);
-                        input.value = '';
-                      }}
-                    />
-                    <span className="inline-flex items-center gap-1 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1 rounded bg-gray-100 hover:bg-gray-200 text-xs sm:text-sm">🖼 {uploading ? <Spinner size={18} /> : t('feed.gallery')}</span>
-                  </label>
-                  <span className="text-xs text-gray-400">{files.length === 0 ? t('feed.no_images') : `${files.length} ${t('feed.images')}`}</span>
-                </div>
-                {/* Tagging UI: responsive — dropdown on desktop, full-screen modal on mobile */}
-                <div className="w-full sm:w-auto mt-2 flex justify-center sm:justify-start">
-                  {files.length > 0 && (
-                    <div className="relative w-full sm:w-auto">
-                      <div className="flex items-center gap-2 justify-center sm:justify-start">
-                        <button
-                          type="button"
-                          onClick={() => setShowTagMenu(prev => !prev)}
-                          aria-haspopup="true"
-                          aria-expanded={showTagMenu}
-                          aria-label={t('feed.identify')}
-                          className="inline-flex items-center justify-center gap-2 px-4 py-2 sm:px-3 sm:py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 text-sm w-full sm:w-auto shadow-sm"
-                        >
-                          {t('feed.identify')}
-                          {selectedChildIds.length > 0 && (
-                            <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700">{selectedChildIds.length}</span>
-                          )}
-                        </button>
-                      </div>
-
-                      {/* Reusable child selector (desktop dropdown + mobile modal) */}
-                      <ChildSelector
-                        open={showTagMenu}
-                        onClose={() => setShowTagMenu(false)}
-                        availableChildren={availableChildren}
-                        selectedChildIds={selectedChildIds}
-                        setSelectedChildIds={setSelectedChildIds}
-                        noChildSelected={noChildSelected}
-                        setNoChildSelected={setNoChildSelected}
-                        consentMap={consentMap}
-                        title={t('feed.tag_children')}
-                        confirmLabel={t('common.confirm')}
-                      />
-                    </div>
-                  )}
-                </div>
-                <button type="submit" disabled={loading || uploading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="bg-indigo-600 text-white px-4 py-2 rounded-full w-full sm:w-auto max-w-full flex items-center justify-center gap-2">{(loading || uploading) ? <><Spinner size={20} /> <span>Envoi...</span></> : 'Publier'}</button>
-              </div>
-              {/* If the user tried to publish without tagging children when required, show an inline warning */}
-              {showIdentifyWarning && (
-                <div className="mt-2 text-sm text-red-600 text-center sm:text-left" role="alert" aria-live="assertive">Veuillez identifier les enfants.</div>
-              )}
-              {/* If any selected child lacks consent, show an explanatory message and disable publish */}
-              {selectedChildIds.length > 0 && Object.keys(consentMap).length > 0 && (
-                (() => {
-                  const lacking = selectedChildIds.filter(id => !consentMap[id]);
-                  if (lacking.length === 0) return null;
-                  const names = availableChildren.filter(c => lacking.includes(c.id)).map(c => c.name).join(', ');
-                  return <div className="mt-2 text-sm text-red-600">Impossible de publier: autorisation photo manquante pour {names}.</div>;
-                })()
-              )}
-              {/* Consent modal */}
-              {showConsentModal && (
-                <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-                  <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 ring-1 ring-gray-100">
-                    <div className="flex items-start gap-4">
-                      <div className="text-3xl">🚫</div>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">Autorisation photo manquante</h3>
-                        <p className="mt-2 text-sm text-gray-600">Vous n'avez pas l'autorisation des parents pour publier des photos des enfants suivants :</p>
-                        <ul className="mt-3 list-disc list-inside text-sm text-gray-800">
-                          {lackingNames.map((n) => <li key={n}>{n}</li>)}
-                        </ul>
-                        <p className="mt-3 text-sm text-gray-600">Veuillez retirer ces enfants de la sélection ou contacter les parents pour obtenir leur autorisation.</p>
-                      </div>
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                      <button onClick={() => setShowConsentModal(false)} className="px-4 py-2 bg-gray-100 rounded-md mr-2">Fermer</button>
-                      <button onClick={() => { setShowConsentModal(false); }} className="px-4 py-2 bg-indigo-600 text-white rounded-md">Retour</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {previews.length > 0 && (
-                <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {previews.map((p, i) => (
-                        <div key={i} className="w-full h-16 sm:h-20 md:h-24 bg-gray-100 rounded overflow-hidden flex items-center justify-center relative">
-                          {/* determine if this preview is video by checking files[i].type */}
-                          {files[i] && files[i].type && files[i].type.startsWith('video/') ? (
-                            <video src={p} className="w-full h-full object-contain" controls />
-                          ) : (
-                            <img src={p} className="w-full h-full object-contain" />
-                          )}
-                          <button
-                            type="button"
-                            aria-label={`Retirer le fichier ${i + 1}`}
-                            onClick={() => {
-                              // remove file at index i
-                              setFiles(prev => {
-                                const next = prev.slice();
-                                next.splice(i, 1);
-                                return next;
-                              });
-                              setPreviews(prev => {
-                                const next = prev.slice();
-                                // revoke URL to free memory
-                                try { URL.revokeObjectURL(next[i]); } catch { /* ignore */ }
-                                next.splice(i, 1);
-                                return next;
-                              });
-                            }}
-                            className="absolute top-1 right-1 bg-white/90 text-red-600 rounded-full p-1 shadow hover:bg-white"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                </div>
-              )}
+              <div className="text-sm font-semibold text-gray-800">{currentUser?.name || 'Utilisateur'}</div>
+              {centerName && <div className="text-xs text-gray-400">{centerName}</div>}
             </div>
           </div>
+          <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t('feed.composer_placeholder')} className="w-full border border-gray-200 rounded-xl p-3 bg-gray-50 min-h-[80px] text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 resize-none" />
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {/* Camera */}
+            <label className="cursor-pointer">
+              <input type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={e => { if (uploading) return; const input = e.currentTarget as HTMLInputElement; const newFiles = Array.from(input.files || []); if (newFiles.length === 0) return; setFiles(prev => [...prev, ...newFiles]); input.value = ''; }} />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm text-gray-600 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                {uploading ? <Spinner size={16} /> : t('feed.photo')}
+              </span>
+            </label>
+            {/* Gallery */}
+            <label className="cursor-pointer">
+              <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={e => { if (uploading) return; const input = e.currentTarget as HTMLInputElement; const newFiles = Array.from(input.files || []); if (newFiles.length === 0) return; setFiles(prev => [...prev, ...newFiles]); input.value = ''; }} />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm text-gray-600 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                {uploading ? <Spinner size={16} /> : t('feed.gallery')}
+              </span>
+            </label>
+            {files.length > 0 && <span className="text-xs text-gray-400">{files.length} {t('feed.images')}</span>}
+            {/* Tagging button */}
+            {files.length > 0 && (
+              <div className="relative">
+                <button type="button" onClick={() => setShowTagMenu(prev => !prev)} aria-haspopup="true" aria-expanded={showTagMenu} aria-label={t('feed.identify')} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0b5566]/10 text-[#0b5566] hover:bg-[#0b5566]/20 text-sm font-medium transition-colors">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  {t('feed.identify')}
+                  {selectedChildIds.length > 0 && <span className="ml-1 inline-flex items-center justify-center w-5 h-5 text-xs rounded-full bg-[#0b5566] text-white">{selectedChildIds.length}</span>}
+                </button>
+                <ChildSelector open={showTagMenu} onClose={() => setShowTagMenu(false)} availableChildren={availableChildren} selectedChildIds={selectedChildIds} setSelectedChildIds={setSelectedChildIds} noChildSelected={noChildSelected} setNoChildSelected={setNoChildSelected} consentMap={consentMap} title={t('feed.tag_children')} confirmLabel={t('common.confirm')} />
+              </div>
+            )}
+            <button type="submit" disabled={loading || uploading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="ml-auto flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+              {(loading || uploading) ? <><Spinner size={16} /><span>Envoi...</span></> : 'Publier'}
+            </button>
+          </div>
+          {showIdentifyWarning && <div className="mt-2 text-xs text-red-500" role="alert">Veuillez identifier les enfants.</div>}
+          {selectedChildIds.length > 0 && Object.keys(consentMap).length > 0 && (() => {
+            const lacking = selectedChildIds.filter(id => !consentMap[id]);
+            if (lacking.length === 0) return null;
+            const names = availableChildren.filter(c => lacking.includes(c.id)).map(c => c.name).join(', ');
+            return <div className="mt-2 text-xs text-red-500">Impossible de publier: autorisation manquante pour {names}.</div>;
+          })()}
+          {previews.length > 0 && (
+            <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+              {previews.map((p, i) => (
+                <div key={i} className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden">
+                  {files[i]?.type?.startsWith('video/') ? <video src={p} className="w-full h-full object-cover" /> : <img src={p} className="w-full h-full object-cover" />}
+                  <button type="button" aria-label={`Retirer ${i + 1}`} onClick={() => { setFiles(prev => { const n = prev.slice(); n.splice(i,1); return n; }); setPreviews(prev => { const n = prev.slice(); try { URL.revokeObjectURL(n[i]); } catch { /**/ } n.splice(i,1); return n; }); }} className="absolute top-1 right-1 w-5 h-5 bg-white/90 text-red-600 rounded-full flex items-center justify-center text-xs shadow hover:bg-white">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
         </form>
 
+        {/* Consent modal */}
+        {showConsentModal && (
+          <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-gray-900">Autorisation photo manquante</h3>
+                  <p className="mt-1 text-sm text-gray-600">Vous n'avez pas l'autorisation des parents pour publier des photos des enfants suivants :</p>
+                  <ul className="mt-2 list-disc list-inside text-sm text-gray-800">{lackingNames.map(n => <li key={n}>{n}</li>)}</ul>
+                  <p className="mt-2 text-sm text-gray-500">Veuillez retirer ces enfants ou contacter les parents.</p>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowConsentModal(false)} className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-medium">Fermer</button>
+                <button onClick={() => setShowConsentModal(false)} className="px-4 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium">Retour</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Posts list */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           {posts.map((post, idx) => (
-            <article id={`post-${post.id}`} key={post.id} className={`${postBgPalette[idx % postBgPalette.length]} rounded-2xl border border-gray-100 shadow-sm p-3 md:p-6 w-full mx-auto`}>
-              <div className="flex flex-col sm:flex-row sm:items-start sm:gap-4 items-center text-center sm:text-left">
-                <div className="flex-1">
-                  <PostItem post={post} bgClass={postBgPalette[idx % postBgPalette.length]} currentUser={currentUser} onUpdatePost={async (id, newText) => {
-                      setPosts(prev => prev.map(p => p.id === id ? { ...p, text: newText } : p));
-                    }} onDeletePost={async (id) => {
-                      setPosts(prev => prev.filter(p => p.id !== id));
-                    }} onMediasChange={(id, medias) => {
-                      setPosts(prev => prev.map(p => p.id === id ? { ...p, medias } : p));
-                    }} />
-
-                  {/* media rendering moved inside PostItem to allow inline edit/delete */}
-
-                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center items-center justify-center text-sm text-gray-500 gap-2">
-                    <div className="flex items-center gap-4 sm:gap-6">
-                      <button
-                        data-post-id={post.id}
-                        onPointerDown={() => startPress(post.id)}
-                        onPointerUp={() => endPressShort(post.id)}
-                        onPointerLeave={() => cancelPress()}
-                        onContextMenu={(e) => { e.preventDefault(); }}
-                        className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base select-none"
-                      >
-                        ❤️ <span>{post.likes ?? 0}</span>
-                      </button>
-                      <button onClick={async () => { openCommentsModal(post.id); await loadComments(post.id); }} className="flex items-center gap-1 sm:gap-2 text-sm sm:text-base">💬 <span>{post.commentsCount ?? 0}</span></button>
-                    </div>
-                    <div className="w-full sm:w-auto mt-2 sm:mt-0">
-                      <CommentBox postId={post.id} onSubmit={addComment} />
-                    </div>
+            <article id={`post-${post.id}`} key={post.id} className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+              <div className="p-4">
+                <PostItem post={post} bgClass={postBgPalette[idx % postBgPalette.length]} currentUser={currentUser}
+                  onUpdatePost={async (id, newText) => setPosts(prev => prev.map(p => p.id === id ? { ...p, text: newText } : p))}
+                  onDeletePost={async (id) => setPosts(prev => prev.filter(p => p.id !== id))}
+                  onMediasChange={(id, medias) => setPosts(prev => prev.map(p => p.id === id ? { ...p, medias } : p))} />
+                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-4">
+                  <button data-post-id={post.id} onPointerDown={() => startPress(post.id)} onPointerUp={() => endPressShort(post.id)} onPointerLeave={() => cancelPress()} onContextMenu={e => e.preventDefault()} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors select-none">
+                    <svg className="w-4 h-4" fill={post.likes && post.likes > 0 ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                    <span>{post.likes ?? 0}</span>
+                  </button>
+                  <button onClick={async () => { openCommentsModal(post.id); await loadComments(post.id); }} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#0b5566] transition-colors">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                    <span>{post.commentsCount ?? 0}</span>
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <CommentBox postId={post.id} onSubmit={addComment} />
                   </div>
                 </div>
               </div>
             </article>
           ))}
+
+          {/* Likes modal */}
           {likesModalOpen && (
             <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm p-4">
-              {/* position the modal element absolutely at the computed coords; if no coords, center it */}
-              <div 
-                className="bg-white rounded-xl shadow-xl max-h-[90vh] overflow-hidden ring-1 ring-indigo-50"
-                style={likesModalPos ? { 
-                  position: 'absolute', 
-                  top: likesModalPos.top, 
-                  left: likesModalPos.left, 
-                  width: likesModalPos.width,
-                  transform: 'none'
-                } : { 
-                  position: 'absolute',
-                  left: '50%', 
-                  top: '50%', 
-                  transform: 'translate(-50%, -50%)' 
-                }}
-              >
+              <div className="bg-white rounded-2xl shadow-xl max-h-[90vh] overflow-hidden"
+                style={likesModalPos ? { position: 'absolute', top: likesModalPos.top, left: likesModalPos.left, width: likesModalPos.width, transform: 'none' } : { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
                 <div className="flex items-center justify-between px-5 py-4 border-b">
                   <div>
-                    <h3 className="text-lg font-semibold text-indigo-700">Personnes qui ont aimé</h3>
-                    <div className="text-sm text-indigo-600">{likers.length} personne{likers.length > 1 ? 's' : ''}</div>
+                    <h3 className="text-base font-bold text-gray-900">Personnes qui ont aimé</h3>
+                    <div className="text-xs text-gray-400">{likers.length} personne{likers.length > 1 ? 's' : ''}</div>
                   </div>
-                  <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} aria-label="Fermer" className="text-indigo-600 hover:text-indigo-800 rounded-md p-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 8.586L15.95 2.636a1 1 0 111.414 1.414L11.414 10l5.95 5.95a1 1 0 01-1.414 1.414L10 11.414l-5.95 5.95A1 1 0 012.636 15.95L8.586 10 2.636 4.05A1 1 0 014.05 2.636L10 8.586z" clipRule="evenodd" />
-                    </svg>
+                  <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 8.586L15.95 2.636a1 1 0 111.414 1.414L11.414 10l5.95 5.95a1 1 0 01-1.414 1.414L10 11.414l-5.95 5.95A1 1 0 012.636 15.95L8.586 10 2.636 4.05A1 1 0 014.05 2.636L10 8.586z" clipRule="evenodd" /></svg>
                   </button>
                 </div>
                 <div className="p-4 overflow-auto max-h-[80vh]">
-                  {likers.length === 0 ? <div className="text-center text-gray-500 py-8">Aucun like trouvé</div> : (
-                    <ul className="space-y-2">
-                      {likers.map(u => <li key={u.id} className="text-sm text-gray-800">{u.name}</li>)}
-                    </ul>
+                  {likers.length === 0 ? <div className="text-center text-gray-400 py-8 text-sm">Aucun like trouvé</div> : (
+                    <ul className="space-y-2">{likers.map(u => <li key={u.id} className="text-sm text-gray-700 px-2 py-1.5 rounded-lg hover:bg-gray-50">{u.name}</li>)}</ul>
                   )}
                 </div>
               </div>
             </div>
           )}
         </div>
-  {openCommentsFor && (
+
+        {openCommentsFor && (
           <CommentsModal
             position={commentsModalPosition}
             onClose={() => { setOpenCommentsFor(null); setCommentsModalPosition(null); }}
@@ -974,22 +879,21 @@ export default function Feed() {
             }}
           />
         )}
-        </div>
+      </div>
 
-          {/* Error modal (shows friendly messages for publish/upload failures) */}
-          {errorModalOpen && (
-            <div className="fixed inset-0 z-60 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/40" onClick={() => setErrorModalOpen(false)} />
-              <div role="dialog" aria-modal="true" className="bg-white rounded-lg shadow-xl p-6 z-70 max-w-lg w-full mx-4">
-                <h3 className="text-lg font-semibold text-gray-900">{errorModalTitle || 'Erreur'}</h3>
-                <div className="mt-3 text-sm text-gray-700 whitespace-pre-line">{errorModalMessage}</div>
-                <div className="mt-4 flex justify-end">
-                  <button onClick={() => setErrorModalOpen(false)} className="px-4 py-2 bg-indigo-600 text-white rounded">OK</button>
-                </div>
-              </div>
+      {/* Error modal */}
+      {errorModalOpen && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setErrorModalOpen(false)} />
+          <div role="dialog" aria-modal="true" className="relative bg-white rounded-2xl shadow-xl p-6 max-w-lg w-full mx-4">
+            <h3 className="text-base font-bold text-gray-900">{errorModalTitle || 'Erreur'}</h3>
+            <div className="mt-3 text-sm text-gray-600 whitespace-pre-line">{errorModalMessage}</div>
+            <div className="mt-5 flex justify-end">
+              <button onClick={() => setErrorModalOpen(false)} className="px-5 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">OK</button>
             </div>
-          )}
-
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -997,41 +901,29 @@ export default function Feed() {
 function CommentsModal({ onClose, comments, loading, currentUser, onUpdateComment, onDeleteComment, position }: { onClose: () => void; comments: Comment[]; loading?: boolean; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdateComment: (commentId: string, newText: string) => Promise<void>; onDeleteComment: (commentId: string) => Promise<void>; position?: { top: number; left: number; width: number } | null; }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm p-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-      <div 
-        className="bg-white rounded-xl shadow-xl max-h-[90vh] overflow-hidden ring-1 ring-indigo-50"
-        style={position ? { 
-          position: 'absolute', 
-          top: position.top, 
-          left: position.left, 
-          width: position.width,
-          transform: 'none'
-        } : { 
-          position: 'absolute',
-          left: '50%', 
-          top: '50%', 
-          transform: 'translate(-50%, -50%)' 
-        }}
+      <div
+        className="bg-white rounded-2xl shadow-xl max-h-[90vh] overflow-hidden"
+        style={position ? { position: 'absolute', top: position.top, left: position.left, width: position.width, transform: 'none' } : { position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
-            <h3 className="text-lg font-semibold text-indigo-700">Commentaires</h3>
-            <div className="text-sm text-indigo-600">{comments.length} commentaire{comments.length > 1 ? 's' : ''}</div>
+            <h3 className="text-base font-bold text-gray-900">Commentaires</h3>
+            <div className="text-xs text-gray-400">{comments.length} commentaire{comments.length > 1 ? 's' : ''}</div>
           </div>
-          <button onClick={onClose} aria-label="Fermer" className="text-indigo-600 hover:text-indigo-800 rounded-md p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <button onClick={onClose} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-500 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 8.586L15.95 2.636a1 1 0 111.414 1.414L11.414 10l5.95 5.95a1 1 0 01-1.414 1.414L10 11.414l-5.95 5.95A1 1 0 012.636 15.95L8.586 10 2.636 4.05A1 1 0 014.05 2.636L10 8.586z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
-
         {loading ? (
-          <div className="p-6 text-center text-sm text-gray-500">Chargement des commentaires…</div>
+          <div className="p-6 text-center text-sm text-gray-400">Chargement des commentaires…</div>
         ) : (
           <div className="p-4 overflow-auto max-h-[80vh]">
             {comments.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">Aucun commentaire pour l'instant</div>
+              <div className="text-center text-gray-400 py-8 text-sm">Aucun commentaire pour l'instant</div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {comments.map(c => (
                   <CommentItem key={c.id || (c.authorName + c.timeAgo + c.text)} comment={c} currentUser={currentUser} onUpdate={onUpdateComment} onDelete={onDeleteComment} />
                 ))}
@@ -1039,9 +931,8 @@ function CommentsModal({ onClose, comments, loading, currentUser, onUpdateCommen
             )}
           </div>
         )}
-        {/* Footer area - close button duplicated for easier UX on mobile */}
-        <div className="px-5 py-3 border-t text-right bg-white">
-          <button onClick={onClose} className="px-4 py-2 bg-indigo-600 text-white rounded-full shadow hover:bg-indigo-700">Fermer</button>
+        <div className="px-5 py-3 border-t text-right">
+          <button onClick={onClose} className="px-4 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">Fermer</button>
         </div>
       </div>
     </div>
@@ -1096,60 +987,52 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete }: { comment: Co
   }
 
   return (
-    <div className="flex items-start gap-3">
-      <div className="flex-1">
-        <div className="flex items-center justify-between">
+    <div className="flex items-start gap-2">
+      <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500 flex-shrink-0 mt-0.5">
+        {(comment.authorName || 'U').slice(0,1).toUpperCase()}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2">
           <div>
-            <div className="text-sm font-medium text-gray-900">{comment.authorName}</div>
-            <div className="text-xs text-gray-400">{comment.timeAgo}</div>
+            <span className="text-xs font-semibold text-gray-800">{comment.authorName}</span>
+            <span className="text-xs text-gray-400 ml-2">{comment.timeAgo}</span>
           </div>
-          <div className="relative">
-            <button onClick={() => setMenuOpen(s => !s)} className="text-gray-400 hover:text-gray-600 px-2">⋯</button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)}></div>
-                <div className="absolute right-0 top-full mt-1 z-50 bg-white w-48 rounded-lg shadow-lg ring-1 ring-gray-100" onClick={e => e.stopPropagation()}>
-                  <div className="px-2 py-1">
-                    {canEdit && (
-                      <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h6M11 12h6M11 19h6M5 5h.01M5 12h.01M5 19h.01"/></svg>
+          {canEdit && (
+            <div className="relative flex-shrink-0">
+              <button onClick={() => setMenuOpen(s => !s)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 text-base leading-none">⋯</button>
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)}></div>
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-white w-40 rounded-xl shadow-lg border border-gray-100" onClick={e => e.stopPropagation()}>
+                    <div className="p-1">
+                      <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-gray-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         Modifier
                       </button>
-                    )}
-                    {canEdit && (
-                      <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 rounded">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 9a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4 0a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zM4 6a1 1 0 011-1h10l-.6 9.6A2 2 0 0112.4 17H7.6a2 2 0 01-1.99-1.99L5 5zM9 3a1 1 0 00-1 1v1h4V4a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
+                      <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-red-500 rounded-lg hover:bg-gray-50">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 9a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4 0a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zM4 6a1 1 0 011-1h10l-.6 9.6A2 2 0 0112.4 17H7.6a2 2 0 01-1.99-1.99L5 5zM9 3a1 1 0 00-1 1v1h4V4a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
                         Supprimer
                       </button>
-                    )}
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
         {!editing ? (
-          <div className="mt-2 bg-gray-100 border border-gray-100 rounded-lg p-3 text-sm text-gray-800 shadow-sm break-words">
-              {comment.text}
-            </div>
+          <div className="mt-1 bg-gray-50 rounded-xl px-3 py-2 text-sm text-gray-700 break-words">{comment.text}</div>
         ) : (
-          <div className="mt-2">
-            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[64px]" />
+          <div className="mt-1">
+            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2 text-sm min-h-[64px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" />
             <div className="mt-2 flex gap-2 justify-end">
-              <button type="button" onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1 rounded bg-gray-100">Annuler</button>
-              <button onClick={save} className="px-3 py-1 rounded bg-indigo-600 text-white">Sauvegarder</button>
+              <button type="button" onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1.5 rounded-xl bg-gray-100 text-xs font-medium">Annuler</button>
+              <button onClick={save} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs font-medium">Sauvegarder</button>
             </div>
           </div>
         )}
       </div>
-      {showConfirm && (
-        <ConfirmationModal
-          title="Supprimer le commentaire"
-          description='Voulez-vous vraiment supprimer ce commentaire ?'
-          onCancel={() => setShowConfirm(false)}
-          onConfirm={doDelete}
-        />
-      )}
+      {showConfirm && <ConfirmationModal title="Supprimer le commentaire" description='Voulez-vous vraiment supprimer ce commentaire ?' onCancel={() => setShowConfirm(false)} onConfirm={doDelete} />}
     </div>
   );
 }
@@ -1158,25 +1041,19 @@ function ConfirmationModal({ title, description, onCancel, onConfirm }: { title:
   const [loading, setLoading] = useState(false);
   async function confirmHandler() {
     setLoading(true);
-    try {
-      await onConfirm();
-    } finally {
-      setLoading(false);
-    }
+    try { await onConfirm(); } finally { setLoading(false); }
   }
 
   const modal = (
     <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md ring-1 ring-indigo-50">
-        <div className="px-6 py-4">
-          <h3 className="text-lg font-semibold text-gray-800 text-center break-words">{title}</h3>
-          <p className="text-sm text-gray-600 mt-2 text-center break-words whitespace-normal">
-            {description}
-          </p>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="px-6 py-5">
+          <h3 className="text-base font-bold text-gray-900 text-center break-words">{title}</h3>
+          <p className="text-sm text-gray-500 mt-2 text-center break-words whitespace-normal">{description}</p>
         </div>
-        <div className="px-6 py-3 flex flex-col sm:flex-row justify-center gap-3 border-t">
-          <button type="button" onClick={onCancel} className="px-4 py-2 rounded bg-gray-100">Annuler</button>
-          <button onClick={confirmHandler} disabled={loading} className="px-4 py-2 rounded bg-red-600 text-white">{loading ? 'Suppression...' : 'Supprimer'}</button>
+        <div className="px-6 py-4 flex flex-col sm:flex-row justify-center gap-2 border-t">
+          <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl bg-gray-100 text-sm font-medium hover:bg-gray-200 transition-colors">Annuler</button>
+          <button onClick={confirmHandler} disabled={loading} className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50">{loading ? 'Suppression...' : 'Supprimer'}</button>
         </div>
       </div>
     </div>
@@ -1551,30 +1428,31 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="font-semibold text-gray-800 text-sm sm:text-base">{post.author?.name || 'Utilisateur'}</div>
-          <div className="text-xs text-gray-400">Il y a {timeAgo(post.createdAt)}</div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+            {(post.author?.name || 'U').slice(0,1).toUpperCase()}
+          </div>
+          <div>
+            <div className="font-semibold text-gray-800 text-sm leading-tight">{post.author?.name || 'Utilisateur'}</div>
+            <div className="text-xs text-gray-400">Il y a {timeAgo(post.createdAt)}</div>
+          </div>
         </div>
         <div className="relative">
           {canEdit && (
-            <button onClick={() => setMenuOpen(s => !s)} className="text-gray-400 hover:text-gray-600 px-2">⋯</button>
+            <button onClick={() => setMenuOpen(s => !s)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg leading-none">⋯</button>
           )}
           {menuOpen && canEdit && (
-            <div className="absolute right-0 mt-2 w-44 bg-white border rounded-lg shadow-lg z-10 overflow-hidden">
-              <div className="px-2 py-1">
-                {canEdit && (
-                  <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h6M11 12h6M11 19h6M5 5h.01M5 12h.01M5 19h.01"/></svg>
-                    Modifier
-                  </button>
-                )}
-                {canEdit && (
-                  <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 rounded">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-600" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 9a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4 0a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zM4 6a1 1 0 011-1h10l-.6 9.6A2 2 0 0112.4 17H7.6a2 2 0 01-1.99-1.99L5 5zM9 3a1 1 0 00-1 1v1h4V4a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
-                    Supprimer
-                  </button>
-                )}
+            <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-100 rounded-xl shadow-lg z-10 overflow-hidden">
+              <div className="p-1">
+                <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                  Modifier
+                </button>
+                <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-500 rounded-lg hover:bg-gray-50">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 9a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4 0a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zM4 6a1 1 0 011-1h10l-.6 9.6A2 2 0 0112.4 17H7.6a2 2 0 01-1.99-1.99L5 5zM9 3a1 1 0 00-1 1v1h4V4a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
+                  Supprimer
+                </button>
               </div>
             </div>
           )}
@@ -1641,7 +1519,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                 setStagedPreviewsLocal(prev => [...prev, ...newPreviews]);
                 input.value = '';
               }} />
-              <button type="button" onClick={() => { if (!uploadingLocal) fileInputRef.current?.click(); }} disabled={uploadingLocal} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-sm flex items-center gap-2">{uploadingLocal ? <Spinner size={20} /> : 'Ajouter des fichiers (images/vidéos, max 6)'}</button>
+              <button type="button" onClick={() => { if (!uploadingLocal) fileInputRef.current?.click(); }} disabled={uploadingLocal} className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-medium flex items-center gap-2 transition-colors">{uploadingLocal ? <Spinner size={16} /> : 'Ajouter des fichiers (images/vidéos, max 6)'}</button>
             </div>
             {/* Staged previews for files chosen during edit */}
             {stagedPreviewsLocal.length > 0 && (
@@ -1681,11 +1559,11 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                     aria-haspopup="true"
                     aria-expanded={showTagMenuLocal}
                     aria-label={t('feed.identify')}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 sm:px-3 sm:py-1 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 text-sm w-full sm:w-auto shadow-sm"
+                    className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-xl bg-[#0b5566]/10 text-[#0b5566] hover:bg-[#0b5566]/20 text-sm font-medium transition-colors w-full sm:w-auto"
                   >
                     {t('feed.identify')}
                     {selectedChildIdsLocal.length > 0 && (
-                      <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700">{selectedChildIdsLocal.length}</span>
+                      <span className="ml-1 inline-flex items-center justify-center w-5 h-5 text-xs rounded-full bg-[#0b5566] text-white">{selectedChildIdsLocal.length}</span>
                     )}
                   </button>
                 </div>
@@ -1709,14 +1587,12 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
       {/* post text (separate box so length doesn't affect images) */}
       {!editing ? (
         <div className="mt-3">
-          <div className={`border border-gray-200 rounded-lg p-3 ${bgClass || 'bg-white'} text-gray-800 break-words text-sm sm:text-base`}>
-            {post.text}
-          </div>
+          <div className="text-gray-800 break-words text-sm leading-relaxed">{post.text}</div>
         </div>
       ) : (
         <div className="mt-3">
-          <div className={`border border-gray-200 rounded-lg p-2 ${bgClass || 'bg-white'}`}>
-            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border rounded p-2 text-sm min-h-[80px]" />
+          <div className="border border-gray-200 rounded-xl p-3">
+            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" />
             <div className="mt-2 flex gap-2 justify-end">
               <button type="button" onClick={() => {
                 (async () => {
@@ -1747,7 +1623,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                   setEditing(false);
                   setVal(post.text || '');
                 })();
-              }} className="px-3 py-1 rounded bg-gray-100">Annuler</button>
+              }} className="px-3 py-1.5 rounded-xl bg-gray-100 text-xs font-medium hover:bg-gray-200 transition-colors">Annuler</button>
               <button type="button" onClick={async () => {
                 // If there are staged files, require identification before saving
                 if (stagedFilesLocal.length > 0) {
@@ -1776,7 +1652,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                   setStagedPreviewsLocal([]);
                   setStagedFilesLocal([]);
                 }
-              }} className="px-3 py-1 rounded bg-indigo-600 text-white">Sauvegarder</button>
+              }} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs font-medium hover:opacity-90 transition-opacity">Sauvegarder</button>
             </div>
             {showIdentifyWarningLocal && (
               <div className="mt-2 text-sm text-red-600">Veuillez identifier les enfants ou cocher "Pas d'enfant" avant de sauvegarder les images.</div>

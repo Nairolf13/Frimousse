@@ -102,7 +102,7 @@ export default function ProtectedLayout() {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-  <main className="flex-1 bg-gray-50 p-4 md:p-6 max-w-full overflow-x-hidden box-border">
+  <main className="flex-1 bg-[#f4f7fa] pt-12 md:pt-0 max-w-full overflow-x-hidden box-border">
   {/* Welcome/tutorial modal disabled */}
         {outlet}
       </main>

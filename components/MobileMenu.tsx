@@ -6,6 +6,7 @@ import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useI18n } from '../src/lib/useI18n';
 import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
+import { useNotificationsContext } from '../src/context/notificationsContext';
 
 function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan?: string | null } | null, t: (k: string, p?: Record<string, string>) => string) {
   // Parents 
@@ -102,11 +103,11 @@ function MobileMenuButton({ showOnMd = false, onOpen }: { showOnMd?: boolean; on
   if (!show) return null;
   return (
     <button
-      className="fixed top-4 right-4 z-60 bg-white rounded-full p-2 shadow-lg border border-gray-200"
+      className="fixed top-3 right-3 z-60 bg-white rounded-full p-1.5 shadow-md border border-gray-200"
       onClick={onOpen}
       aria-label={t('menu.open')}
     >
-      <HiOutlineMenu className="w-7 h-7 text-gray-700" />
+      <HiOutlineMenu className="w-5 h-5 text-gray-700" />
     </button>
   );
 }
@@ -118,6 +119,8 @@ export default function MobileMenu() {
   const { t } = useI18n();
   const [centerName, setCenterName] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const { unreadReviews } = useNotificationsContext();
+  const [supportCount, setSupportCount] = useState<number>(0);
   const centerRateLimitUntilRef = useRef<number>(0);
 
   useEffect(() => {
@@ -151,6 +154,23 @@ export default function MobileMenu() {
       window.addEventListener('notifications:changed', onChange as EventListener);
     }
     return () => { mounted = false; clearInterval(iv); if (typeof window !== 'undefined' && typeof window.removeEventListener === 'function') { window.removeEventListener('notifications:changed', onChange as EventListener); } };
+  }, [user]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadSupport() {
+      try {
+        if (!user || typeof (user as { role?: string }).role !== 'string' || !(user as { role?: string }).role!.toLowerCase().includes('super')) return;
+        const res = await fetchWithRefresh('/api/support/admin/tickets/unread-count', { credentials: 'include' });
+        if (!res || !res.ok || !mounted) return;
+        const data = await res.json();
+        if (data && typeof data.unread === 'number') setSupportCount(data.unread);
+      } catch { /* ignore */ }
+    }
+    loadSupport();
+    const handler = () => loadSupport();
+    window.addEventListener('notifications:changed', handler as EventListener);
+    return () => { mounted = false; window.removeEventListener('notifications:changed', handler as EventListener); };
   }, [user]);
 
   // lock page scroll when mobile menu is open so touch scroll targets the menu
@@ -252,7 +272,13 @@ export default function MobileMenu() {
                     {link.icon}
                     <span className="flex-1">{link.label}</span>
                     {link.to === '/notifications' && unreadCount > 0 ? (
-                      <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-red-500 text-white">{unreadCount}</span>
+                      <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-[#0b5566] text-white">{unreadCount}</span>
+                    ) : null}
+                    {link.to === '/admin/reviews' && (unreadReviews ?? 0) > 0 ? (
+                      <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-[#0b5566] text-white">{unreadReviews}</span>
+                    ) : null}
+                    {link.to === '/admin/support' && supportCount > 0 ? (
+                      <span className="ml-2 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold bg-[#0b5566] text-white">{supportCount}</span>
                     ) : null}
                   </Link>
                 </li>

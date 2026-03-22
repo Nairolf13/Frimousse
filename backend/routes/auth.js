@@ -7,12 +7,17 @@ const rateLimit = require('express-rate-limit');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Strict rate limiter for sensitive auth endpoints (5 attempts / 15 min per IP)
+// Strict rate limiter for login: 10 attempts / 15 min per IP+email combination
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const email = (req.body && req.body.email) ? String(req.body.email).toLowerCase().trim() : '';
+    return email ? `${ip}:${email}` : ip;
+  },
   message: { error: 'Trop de tentatives. Veuillez réessayer dans 15 minutes.' },
 });
 

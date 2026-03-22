@@ -28,11 +28,13 @@ router.get('/', requireAuth, async (req, res) => {
             id: true,
             name: true,
             email: true,
+            phone: true,
             address: true,
             city: true,
             postalCode: true,
             region: true,
-            country: true
+            country: true,
+            createdAt: true,
           },
           take: 1
         },
@@ -42,27 +44,52 @@ router.get('/', requireAuth, async (req, res) => {
             parents: true,
             children: true,
             nannies: true,
+            reports: true,
           }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
 
+    // Fetch subscriptions for all admin users
+    const adminIds = centers.map(c => c.users[0]?.id).filter(Boolean);
+    const subscriptions = adminIds.length
+      ? await prisma.subscription.findMany({
+          where: { userId: { in: adminIds } },
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
+    const subByUserId = {};
+    for (const s of subscriptions) {
+      if (!subByUserId[s.userId]) subByUserId[s.userId] = s;
+    }
+
     // Flatten admin info into center object
     const formattedCenters = centers.map(center => {
       const adminUser = center.users[0] || null;
+      const sub = adminUser ? subByUserId[adminUser.id] || null : null;
       return {
         id: center.id,
         name: center.name,
         createdAt: center.createdAt,
         _count: center._count,
+        adminName: adminUser?.name || null,
+        adminId: adminUser?.id || null,
+        adminCreatedAt: adminUser?.createdAt || null,
         address: adminUser?.address || null,
         city: adminUser?.city || null,
         postalCode: adminUser?.postalCode || null,
         region: adminUser?.region || null,
         country: adminUser?.country || null,
         email: adminUser?.email || null,
-        phone: null
+        phone: adminUser?.phone || null,
+        subscription: sub ? {
+          plan: sub.plan,
+          status: sub.status,
+          trialEnd: sub.trialEnd,
+          currentPeriodEnd: sub.currentPeriodEnd,
+          cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+        } : null,
       };
     });
 

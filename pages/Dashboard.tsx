@@ -414,19 +414,24 @@ export default function Dashboard() {
   const selectedAssignment = selectedId ? assignments.find(a => a.id === selectedId) : undefined;
 
   return (
-  <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+  <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       {successMessage && (
         <div className="fixed top-6 right-6 z-50 bg-green-50 border border-green-200 text-green-800 px-5 py-3 rounded-xl shadow-lg animate-slide-up flex items-center gap-2">
           <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
           {successMessage}
         </div>
       )}
-      
+
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight text-brand-500">{t('page.dashboard')}</h1>
-          <div className="text-sm md:text-base font-medium text-brand-700/60">{t('dashboard.welcome')}</div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          </div>
+          <div className="pt-0.5">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.dashboard')}</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('dashboard.welcome')}</p>
+          </div>
         </div>
           <div className="flex items-center gap-3 self-start md:self-end">
           <input type="date" value={currentDate.toISOString().split('T')[0]} onChange={e => setCurrentDate(new Date(e.target.value))}

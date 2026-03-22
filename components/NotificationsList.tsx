@@ -1,5 +1,5 @@
 // React import not required with new JSX runtime
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 
 export type NotificationItem = {
@@ -17,6 +17,83 @@ type Props = {
   onRefresh?: () => void;
   onDeleted?: () => void;
 };
+
+const SWIPE_THRESHOLD = 60; // px needed to reveal the delete button
+const DELETE_REVEAL = 72; // px width of the delete button
+
+function SwipeableItem({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+  const startXRef = useRef<number | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [swiped, setSwiped] = useState(false);
+
+  function onTouchStart(e: React.TouchEvent) {
+    startXRef.current = e.touches[0].clientX;
+  }
+
+  function onTouchMove(e: React.TouchEvent) {
+    if (startXRef.current === null) return;
+    const dx = e.touches[0].clientX - startXRef.current;
+    if (dx > 0 && !swiped) return; // ignore right swipe when closed
+    if (dx < 0) {
+      // swiping left: clamp between 0 and DELETE_REVEAL
+      const raw = swiped ? DELETE_REVEAL + (-dx) : -dx;
+      setOffset(Math.min(raw, DELETE_REVEAL));
+    } else if (swiped) {
+      // swiping back right when already open
+      const raw = DELETE_REVEAL - dx;
+      setOffset(Math.max(0, raw));
+    }
+  }
+
+  function onTouchEnd() {
+    startXRef.current = null;
+    if (offset >= SWIPE_THRESHOLD) {
+      setOffset(DELETE_REVEAL);
+      setSwiped(true);
+    } else {
+      setOffset(0);
+      setSwiped(false);
+    }
+  }
+
+  function close() {
+    setOffset(0);
+    setSwiped(false);
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl">
+      {/* Red delete button revealed behind */}
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-center bg-red-500 rounded-r-2xl"
+        style={{ width: DELETE_REVEAL }}
+      >
+        <button
+          onClick={() => { close(); onDelete(); }}
+          className="flex flex-col items-center justify-center w-full h-full text-white gap-1"
+          aria-label="Supprimer"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+            <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span className="text-[10px] font-semibold">Supprimer</span>
+        </button>
+      </div>
+      {/* Swipeable content */}
+      <div
+        style={{ transform: `translateX(-${offset}px)`, transition: offset === 0 || offset === DELETE_REVEAL ? 'transform 0.2s ease' : 'none' }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onClick={() => { if (swiped) close(); }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function NotificationsList({ items = [], loading = false, onRefresh = () => {}, onDeleted = () => {} }: Props) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -133,7 +210,9 @@ export default function NotificationsList({ items = [], loading = false, onRefre
         const iconCls = n.read ? 'bg-gray-100 text-gray-500' : `${bg} text-white`;
 
         return (
-          <li key={n.id} className={`rounded-lg p-4 pb-12 sm:pb-6 relative ${cardColors[idx % cardColors.length]} border border-blue-50 shadow-sm`}>
+          <li key={n.id}>
+          <SwipeableItem onDelete={() => del(n.id)}>
+          <div className={`rounded-2xl p-4 pb-12 sm:pb-6 relative ${cardColors[idx % cardColors.length]} border border-blue-50 shadow-sm`}>
             {/* mobile top: icon left, time right */}
             <div className="w-full flex items-center justify-between sm:hidden">
               <div className="flex items-center">
@@ -200,7 +279,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
               ) : null}
             </div>
 
-            {/* mobile actions bottom-right (timestamp shown on the icon line above) */}
+            {/* mobile: only mark read/unread button, delete is via swipe */}
             <div className="sm:hidden absolute right-4 bottom-4 flex items-center gap-2">
               {(() => {
                 const isRead = !!n.read;
@@ -215,14 +294,9 @@ export default function NotificationsList({ items = [], loading = false, onRefre
                   </button>
                 );
               })()}
-              <button onClick={() => del(n.id)} className="px-3 py-2 rounded-full bg-red-50 text-red-600 border border-red-100">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M3 6h18" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M8 6v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
             </div>
+          </div>
+          </SwipeableItem>
           </li>
         );
       })}

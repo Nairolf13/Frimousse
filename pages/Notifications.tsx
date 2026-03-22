@@ -54,6 +54,10 @@ export default function NotificationsPage() {
     (async () => {
       try {
         await fetchWithRefresh('/api/notifications/mark-all-read', { method: 'PUT', credentials: 'include' });
+        // notify other components (MobileMenu, Sidebar) to refresh their unread count
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('notifications:changed'));
+        }
       } catch (e) {
         // ignore errors — we still load stats which will reflect server state
         console.error('mark-all-read on mount failed', e);
@@ -72,60 +76,70 @@ export default function NotificationsPage() {
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.notifications.title')}</h1>
-          <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.notifications.desc')}</div>
-        </div>
 
-  {/* Stats chips + mark-all button (responsive) */}
-  <div className="flex flex-col items-start sm:items-start justify-start mb-6">
-          <div className="flex gap-2 items-center mb-3 overflow-x-auto no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-            <div className="flex-shrink-0 px-2 py-1 sm:px-4 sm:py-2 rounded-md sm:rounded-lg border border-red-200 bg-red-50 text-red-700 font-semibold text-sm sm:text-base">{stats.unread}<div className="text-[10px] sm:text-xs text-red-500">{t('notifications.stats.unread')}</div></div>
-            <div className="flex-shrink-0 px-2 py-1 sm:px-4 sm:py-2 rounded-md sm:rounded-lg border border-blue-200 bg-blue-50 text-blue-700 font-semibold text-sm sm:text-base">{stats.today}<div className="text-[10px] sm:text-xs text-blue-500">{t('notifications.stats.today')}</div></div>
-            <div className="flex-shrink-0 px-2 py-1 sm:px-4 sm:py-2 rounded-md sm:rounded-lg border border-green-200 bg-green-50 text-green-700 font-semibold text-sm sm:text-base">{stats.week}<div className="text-[10px] sm:text-xs text-green-500">{t('notifications.stats.week')}</div></div>
+        {/* Page header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+            </div>
+            <div className="pt-0.5">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.notifications.title')}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.notifications.desc')}</p>
+            </div>
           </div>
-          <div className="w-full sm:w-auto mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-start">
-            {/* Actions below badges: stacked on mobile, inline from sm+ */}
+          {/* Action buttons */}
+          <div className="flex items-center gap-2">
             <button
               onClick={async () => {
                 try {
                   await fetchWithRefresh('/api/notifications/mark-all-read', { method: 'PUT', credentials: 'include' });
                   loadStats();
                   load(1);
-                    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
-                      window.dispatchEvent(new CustomEvent('notifications:changed'));
-                      window.dispatchEvent(new CustomEvent('notifications:viewed'));
-                    }
+                  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                    window.dispatchEvent(new CustomEvent('notifications:changed'));
+                    window.dispatchEvent(new CustomEvent('notifications:viewed'));
+                  }
                 } catch (e) {
                   console.error('Failed to mark all read', e);
                 }
               }}
-              className="inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-full shadow-sm w-auto text-sm"
-              title={t('notifications.mark_all')}
-              style={{pointerEvents: 'auto'}}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
             >
-              <svg className="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <svg className="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="text-sm font-medium">{t('notifications.mark_all')}</span>
+              {t('notifications.mark_all')}
             </button>
             <button
               onClick={() => setConfirmOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-red-50 border border-red-200 text-red-700 rounded-full shadow-sm w-auto sm:ml-2 text-sm"
-              title={t('notifications.delete_all')}
-              style={{pointerEvents: 'auto'}}
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors shadow-sm"
             >
-              <svg className="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M8 6v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M10 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M9 6V4h6v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
-              <span className="text-sm font-medium">{t('notifications.delete_all')}</span>
+              {t('notifications.delete_all')}
             </button>
+          </div>
+        </div>
+
+        {/* KPI cards */}
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+            <div className="text-xs text-gray-400 font-medium mb-1">{t('notifications.stats.unread')}</div>
+            <div className={`text-2xl font-extrabold ${stats.unread > 0 ? 'text-red-500' : 'text-gray-900'}`}>{stats.unread}</div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+            <div className="text-xs text-gray-400 font-medium mb-1">{t('notifications.stats.today')}</div>
+            <div className="text-2xl font-extrabold text-[#0b5566]">{stats.today}</div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
+            <div className="text-xs text-gray-400 font-medium mb-1">{t('notifications.stats.week')}</div>
+            <div className="text-2xl font-extrabold text-gray-900">{stats.week}</div>
           </div>
         </div>
 

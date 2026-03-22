@@ -171,11 +171,6 @@ const groupLabels = [
   { key: 'G6', label: 'Groupe 6 (5-6 ans)', min: 5, max: 6 },
 ];
 
-const emojiBySexe = {
-  masculin: '👦',
-  feminin: '👧',
-};
-
 export default function Children() {
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   useEffect(() => {
@@ -677,104 +672,108 @@ export default function Children() {
   if (sort === 'name') filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
   if (sort === 'age') filtered = filtered.sort((a, b) => a.age - b.age);
 
-  const cardColors = [
-    'bg-blue-50',
-    'bg-yellow-50',
-    'bg-purple-50',
-    'bg-green-50',
-    'bg-pink-50',
-    'bg-orange-50',
-  ];
+  const inputCls = "border border-gray-200 rounded-xl px-3 py-2 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition w-full";
+  const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1";
 
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4 children-responsive-row">
-        {/* inline success banner is used instead of top-right toast */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full children-responsive-header">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.children.title')}</h1>
-            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.children.description')}</div>
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div className="pt-0.5">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.children.title')}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.children.description')}</p>
+            </div>
           </div>
-          <div className="flex gap-2 items-center">
-            {isAdminUser && (
-              <button
-                type="button"
-                onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
-                className={`bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] flex items-center ${isShortLandscape ? '-translate-x-3' : ''}`}
-                style={{transform: isShortLandscape ? 'translateX(-12px)' : undefined}}
-              >
-                {t('children.add')}
-              </button>
-            )}
+          {isAdminUser && (
+            <button
+              type="button"
+              onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
+              className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              {t('children.add')}
+            </button>
+          )}
+        </div>
+
+        {/* KPI badges */}
+        <div className="grid grid-cols-3 gap-3 mb-5 w-full sm:w-auto sm:flex sm:flex-row sm:gap-3">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('children.total')}</div>
+            <div className="text-lg font-extrabold text-[#0b5566]">{totalChildren}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('children.present')}</div>
+            <div className="text-lg font-extrabold text-emerald-600">{presentToday}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('children.new_badge')}</div>
+            <div className="text-lg font-extrabold text-amber-500">{children.filter(c => c.newThisMonth).length}</div>
           </div>
         </div>
 
-        <div className="flex flex-col md:items-start gap-3 mb-6 w-full">
-          <div className="w-full">
-            <div className="flex gap-2 items-center flex-wrap w-full">
-              <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
-                <div className="text-xs text-gray-400">{t('children.total')}</div>
-                <div className="text-lg font-bold text-gray-900">{totalChildren}</div>
-              </div>
-              <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
-                <div className="text-xs text-gray-400">{t('children.present')}</div>
-                <div className="text-lg font-bold text-gray-900">{presentToday}</div>
-              </div>
-              <div className="bg-white rounded-xl shadow px-3 py-2 md:px-4 md:py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-[60px] justify-center flex-shrink-0">
-                <div className="text-xs text-gray-400">{t('children.new_badge')}</div>
-                <div className="text-lg font-bold text-gray-900">{children.filter(c => c.newThisMonth).length}</div>
-              </div>
-            </div>
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 w-full">
+          <div className="relative flex-1 min-w-0">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-gray-700 bg-white shadow-sm text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566] transition" />
           </div>
-          <div className="w-full md:w-auto">
-            <div className="flex flex-col md:flex-row md:items-center gap-2">
-              {user && (user as { role?: string | null }).role === 'super-admin' && (
-                <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm md:text-base min-h-[44px] md:ml-0">
-                  <option value="">Tous les centres</option>
-                  {centers.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
-                </select>
-              )}
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-sm md:text-base w-full md:w-64 min-h-[44px]" />
-              <div className="flex gap-2 w-full md:w-auto">
-                <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm md:text-base min-h-[44px] flex-1 md:flex-none md:w-auto">
-                  <option value="">{t('children.group.all')}</option>
-                  {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
-                </select>
-                <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm md:text-base min-h-[44px] flex-1 md:flex-none md:w-auto">
-                  <option value="name">{t('children.sort.name')}</option>
-                  <option value="age">{t('children.sort.age')}</option>
-                </select>
-              </div>
-            </div>
-          </div>
+          {user && (user as { role?: string | null }).role === 'super-admin' && (
+            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
+              <option value="">Tous les centres</option>
+              {centers.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
+          )}
+          <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
+            <option value="">{t('children.group.all')}</option>
+            {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
+          </select>
+          <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
+            <option value="name">{t('children.sort.name')}</option>
+            <option value="age">{t('children.sort.age')}</option>
+          </select>
         </div>
 
       {(showForm || editingId) && (
-        <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+          {/* Form header */}
+          <div className="px-6 py-4 bg-gradient-to-r from-[#0b5566] to-[#08323a] flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+              <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+            <h2 className="text-white font-semibold text-base">{editingId ? t('children.form.edit') : t('children.add')}</h2>
+          </div>
+          <div className="p-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div className="flex flex-col">
-            <label htmlFor="child-name" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.name_label')} <span className="text-red-500">*</span></label>
-            <input id="child-name" name="name" value={form.name} onChange={handleChange} placeholder={t('children.form.name')} required className="border border-gray-200 rounded-lg px-3 py-2" />
+            <label htmlFor="child-name" className={labelCls}>{t('children.form.name_label')} <span className="text-red-500">*</span></label>
+            <input id="child-name" name="name" value={form.name} onChange={handleChange} placeholder={t('children.form.name')} required className={inputCls} />
           </div>
           <div className="flex flex-col">
-            <label htmlFor="child-birthDate" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.birthDate_label')} <span className="text-red-500">*</span></label>
-            <input id="child-birthDate" name="birthDate" type="date" value={form.birthDate || ''} onChange={handleChange} placeholder={t('children.form.birthDate')} required className="border border-gray-200 rounded-lg px-3 py-2" />
+            <label htmlFor="child-birthDate" className={labelCls}>{t('children.form.birthDate_label')} <span className="text-red-500">*</span></label>
+            <input id="child-birthDate" name="birthDate" type="date" value={form.birthDate || ''} onChange={handleChange} required className={inputCls} />
           </div>
           <div className="flex flex-col">
-            <label htmlFor="child-sexe" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.sexe_label')} <span className="text-red-500">*</span></label>
-            <select id="child-sexe" name="sexe" value={form.sexe} onChange={handleChange} required className="border border-gray-200 rounded-lg px-3 py-2">
+            <label htmlFor="child-sexe" className={labelCls}>{t('children.form.sexe_label')} <span className="text-red-500">*</span></label>
+            <select id="child-sexe" name="sexe" value={form.sexe} onChange={handleChange} required className={inputCls}>
               <option value="masculin">{t('children.form.sexe.m')}</option>
               <option value="feminin">{t('children.form.sexe.f')}</option>
             </select>
           </div>
           <div className="flex flex-col">
-            <label htmlFor="child-group" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.group_label')}</label>
-            <select id="child-group" name="group" value={form.group} onChange={handleChange} required className="border border-gray-200 rounded-lg px-3 py-2">
+            <label htmlFor="child-group" className={labelCls}>{t('children.form.group_label')}</label>
+            <select id="child-group" name="group" value={form.group} onChange={handleChange} required className={inputCls}>
               <option value="">{t('children.form.group_placeholder')}</option>
               {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
             </select>
           </div>
           <div className="relative w-full flex flex-col">
-            <label htmlFor="parent-name" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.parentName_label')}</label>
+            <label htmlFor="parent-name" className={labelCls}>{t('children.form.parentName_label')}</label>
             <input
               id="parent-name"
               name="parentName"
@@ -820,26 +819,26 @@ export default function Children() {
             })()}
           </div>
           <div className="flex flex-col">
-            <label htmlFor="parent-contact" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.parentPhone_label')}</label>
-            <input id="parent-contact" name="parentContact" value={form.parentContact} onChange={handleChange} placeholder={t('children.form.parentPhone_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 w-full" />
+            <label htmlFor="parent-contact" className={labelCls}>{t('children.form.parentPhone_label')}</label>
+            <input id="parent-contact" name="parentContact" value={form.parentContact} onChange={handleChange} placeholder={t('children.form.parentPhone_placeholder')} className={inputCls} />
           </div>
           <div className="flex flex-col">
-            <label htmlFor="parent-mail" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.parentEmail_label')}</label>
-            <input id="parent-mail" name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder={t('children.form.parentEmail_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 w-full" />
+            <label htmlFor="parent-mail" className={labelCls}>{t('children.form.parentEmail_label')}</label>
+            <input id="parent-mail" name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder={t('children.form.parentEmail_placeholder')} className={inputCls} />
           </div>
           <div className="flex flex-col">
-            <label htmlFor="child-allergies" className="block text-sm font-medium text-gray-700 mb-1">{t('children.form.allergies_label')}</label>
-            <input id="child-allergies" name="allergies" value={form.allergies} onChange={handleChange} placeholder={t('children.form.allergies_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 w-full" />
+            <label htmlFor="child-allergies" className={labelCls}>{t('children.form.allergies_label')}</label>
+            <input id="child-allergies" name="allergies" value={form.allergies} onChange={handleChange} placeholder={t('children.form.allergies_placeholder')} className={inputCls} />
           </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('children.nannies.label')} <span className="text-red-500">*</span></label>
-            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-auto border rounded p-2 bg-gray-50 mb-3">
+          <div className="md:col-span-2 lg:col-span-3">
+            <label className={labelCls}>{t('children.nannies.label')} <span className="text-red-500">*</span></label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-auto border border-gray-200 rounded-xl p-3 bg-gray-50">
               {nanniesList.length === 0 ? (
                 <div className="text-sm text-gray-500">{t('children.nannies.none')}</div>
                 ) : nanniesList.map(n => {
                 const checked = Array.isArray(form.nannyIds) && form.nannyIds.includes(n.id);
                 return (
-                  <label key={n.id} className="flex items-center gap-2 text-sm">
+                  <label key={n.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-white rounded-lg px-2 py-1 transition">
                     <input id={`nanny-${n.id}`} type="checkbox" value={n.id} checked={checked} onChange={(e) => {
                       const val = e.target.value;
                       setForm(prev => {
@@ -852,24 +851,25 @@ export default function Children() {
                         }
                         return { ...prev, nannyIds: prevIds } as typeof prev;
                       });
-                    }} />
-                    <span>{n.name}</span>
+                    }} className="accent-[#0b5566]" />
+                    <span className="text-gray-700">{n.name}</span>
                   </label>
                 );
               })}
             </div>
           </div>
-            <div className="md:col-span-2 flex gap-2">
-              <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">
+          </div>
+          {/* Form footer */}
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
+            <div className="text-xs text-gray-400">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(false); setError(''); }} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition text-sm font-medium">{t('global.cancel')}</button>
+              <button type="submit" className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white font-semibold hover:opacity-90 transition text-sm shadow">
                 {editingId ? t('children.form.edit') : t('children.add')}
               </button>
-              <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(false); setError(''); }} className="bg-gray-300 px-4 py-2 rounded">{t('global.cancel')}</button>
             </div>
-            {/* Required fields note on the same row as buttons (right side) */}
-            <div className="md:col-span-1 flex items-end justify-end">
-              <div className="text-sm text-gray-500 self-end">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
-            </div>
-          {error && <div className="text-red-600 md:col-span-2">{error}</div>}
+          </div>
+          {error && <div className="px-6 py-3 text-red-600 text-sm bg-red-50 border-t border-red-100">{error}</div>}
         </form>
       )}
       {successMsg && (
@@ -882,8 +882,6 @@ export default function Children() {
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full children-responsive-grid">
           {filtered.map((child, idx) => {
             const billing = billings[child.id];
-            const color = cardColors[idx % cardColors.length];
-            const emoji = emojiBySexe[child.sexe] || '👦';
             const isDeleting = deleteId === child.id;
             const now = new Date();
             const paidUntil = child.cotisationPaidUntil ? new Date(child.cotisationPaidUntil) : null;
@@ -931,199 +929,218 @@ export default function Children() {
                 setCotisationLoadingId(null);
               }
             };
+            const gradients = [
+              'from-[#0b5566] to-[#0a7c97]',
+              'from-violet-600 to-purple-500',
+              'from-rose-500 to-pink-400',
+              'from-emerald-600 to-teal-500',
+              'from-amber-500 to-orange-400',
+              'from-sky-600 to-blue-500',
+            ];
+            const gradient = gradients[idx % gradients.length];
+            const initials = child.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+
             return (
-              <div
-                key={child.id}
-                className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[520px] md:min-h-[540px] h-full transition-transform duration-500 perspective-1000 overflow-hidden`}
-                style={{height:'100%', perspective: '1000px'}}
-              >
-                <div
-                  className={`w-full h-full transition-transform duration-500 ${isDeleting ? 'rotate-y-180' : ''}`}
-                  style={{transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%'}}
-                >
-                  <div
-                    className={`absolute inset-0 w-full h-full p-5 pb-20 md:pb-28 flex flex-col ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent`}
-                    style={{backfaceVisibility: 'hidden'}}
-                  >
-                      <div className="flex items-center gap-3 mb-2 min-w-0">
-                      <div className="w-full min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-2xl shadow border border-gray-100">{emoji}</div>
-                          <span className="font-semibold text-lg text-gray-900 truncate" title={child.name}>{child.name}</span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-xs font-bold bg-white text-[#08323a] px-3 py-1 rounded-full shadow border border-[#a9ddf2] whitespace-nowrap">{child.age} ans</span>
-                          <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700 whitespace-nowrap" title="Sexe">{child.sexe === 'masculin' ? t('children.form.sexe.m') : t('children.form.sexe.f')}</span>
-                          {child.birthDate ? (
-                            <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap" title={t('label.birthDate')}>
-                              🎂 {new Date(child.birthDate).toLocaleDateString('fr-FR')}
-                            </span>
-                          ) : (
-                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap" title={t('label.birthDate')}>
-                              🎂 {t('children.birthDate.undefined')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+              <div key={child.id} className="relative bg-white rounded-2xl shadow-md border border-gray-100 flex flex-col overflow-hidden">
+                {/* Delete overlay */}
+                {isDeleting && (
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/95 rounded-2xl p-8">
+                    <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
+                      <svg width="28" height="28" fill="none" stroke="#ef4444" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </div>
-                    <span className="block text-xs text-yellow-700 flex items-center gap-1 mb-2">
-                      <span>⚠️ {t('children.allergies.label')}</span>
-                      <span className="font-medium">{child.allergies ? child.allergies : <span className="text-gray-400">{t('children.allergies.none')}</span>}</span>
-                    </span>
-                  
-                    <div className="flex flex-col gap-3 text-sm text-gray-700 mb-4">
-                      <span className="block">👤 {t('children.parent.label')} {child.parentName}</span>
-                      <span className="block">📞 <a href={`tel:${child.parentContact}`} className="text-blue-600 underline hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" title={t('children.call_parent_title')}>{child.parentContact}</a></span>
-                      <span className="block">✉️ <a href={`mailto:${child.parentMail}`} className="text-blue-600 underline hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition" title={t('children.email_parent_title')}>{child.parentMail}</a></span>
-                      <div className="flex flex-col gap-2 mt-2 mb-0" style={{marginBottom: 0}}>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-gray-700">{t('children.cotisation.label')}&nbsp;:</span>
-                          {daysRemaining > 0 ? (
-                            <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[child.id] ?? 15)}€</span>
-                          ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
-                            <input
-                              type="number"
-                              min={0}
-                              className="w-24 px-2 py-1 border rounded text-sm"
-                              value={cotisationAmounts[child.id] ?? ''}
-                              placeholder="€"
-                              onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [child.id]: e.target.value === '' ? undefined : Number(e.target.value) }))}
-                            />
-                          ) : (
-                            <span className="text-base font-bold text-green-700">{(cotisationAmounts[child.id] ?? 15)}€</span>
-                          )}
-                          {cotisationOk ? (
-                            <span className="text-[#0b5566] text-xl">✔️</span>
-                          ) : (
-                            cotisationLoadingId === child.id ? (
-                              <span className="text-gray-400 text-xs ml-2 animate-pulse">{t('children.loading')}</span>
-                            ) : (
-                              !isNannyUser ? (
-                                <button onClick={handleCotisation} className="text-[#0b5566] text-xs font-semibold px-2 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition" title={t('children.cotisation.pay')}>{t('children.cotisation.pay')}</button>
-                              ) : (
-                                <span className="text-xs text-gray-400 ml-2">—</span>
-                              )
-                            )
-                          )}
-                          <span className="text-xs text-gray-500 ml-2">{countdown}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-gray-700">{t('children.cotisation.this_month')}&nbsp;:</span>
-                          <span className="text-base font-bold text-[#08323a]">{billing ? `${billing.amount}€` : '...'}</span>
-                          <span className="text-xs text-gray-500">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
-                        </div>
-                      </div>
-                      {/* Photo consent toggle for parent and admin.  Admins receive their
-                          initial state from the batch map to avoid hitting rate‑limits
-                          on page load. */}
-                      {user && (
-                          (user.role === 'parent' && child.parentId === (user.parentId || undefined))
-                          || isAdminUser
-                        ) && (
-                        <div className="mt-3">
-                          <PhotoConsentToggle
-                            childId={child.id}
-                            initialConsent={photoConsentMap[child.id] ?? null}
-                            onChange={(val) => setPhotoConsentMap(prev => ({ ...prev, [child.id]: val }))}
-                          />
-                        </div>
-                      )}
-                      {/* Photo consent status badge (for admin/staff view) */}
-                      <div className="mt-2">
-                        {typeof photoConsentMap[child.id] === 'boolean' ? (
-                          photoConsentMap[child.id] ? (
-                            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">{t('children.photo_consent.yes')}</span>
-                          ) : (
-                            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full">{t('children.photo_consent.no')}</span>
-                          )
-                        ) : (
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{t('children.photo_consent.unknown')}</span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 justify-between mt-2">
-                      <div className="flex items-center gap-2">
-                        {child.present ? (
-                          <span className="text-[#08323a] text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#a9ddf2] inline-block"></span>{t('children.presence.present_today')}</span>
-                        ) : (
-                                        <span className="text-red-500 text-xs font-semibold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block"></span>{t('children.presence.absent_today')}</span>
-                        )}
-                                      {child.newThisMonth && (
-                                        <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">{t('children.new_badge')}</span>
-                                      )}
-                                      {/* Assigned nanny names (static badge) */}
-                                      {Array.isArray(child.nannyIds) && child.nannyIds.length > 0 ? (
-                                        <span className="ml-2 text-xs px-2 py-1 rounded-full flex items-center gap-2 bg-indigo-100 text-indigo-700 flex-shrink-0">
-                                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline-block"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                          <span className="font-medium truncate max-w-[160px]">{t('children.assigned', { names: child.nannyIds.map(id => nanniesList.find(n => n.id === id)?.name || '').filter(Boolean).join(', ') })}</span>
-                                        </span>
-                                      ) : (
-                                          <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{t('children.not_assigned')}</span>
-                                      )}
-                      </div>
-                      <div />
-                    </div>
-                      {/* admin select removed - keep badge/dropdown only */}
-                  </div>
-                  {/* Bottom centered action buttons */}
-                  <div className="absolute left-0 right-0 bottom-4 flex justify-center z-10">
-                    <div className="flex gap-2">
-                      {/* Voir ordonnance visible for everyone on the child card */}
-                      <button onClick={async () => {
-                        const known = getPrescriptionUrl(child);
-                        let url = known || null;
-                        if (!url) {
-                          try {
-                            const res = await fetchWithRefresh(`${API_URL}/children/${child.id}/prescription`, { credentials: 'include' });
-                            if (!res.ok) {
-                              // show a friendly modal instead of alert
-                              setEmptyPrescriptionModal({ open: true, childName: child.name });
-                              return;
-                            }
-                            const body = await res.json();
-                            url = body.url || null;
-                            if (!url) {
-                              setEmptyPrescriptionModal({ open: true, childName: child.name });
-                              return;
-                            }
-                          } catch (e) {
-                            console.error('Failed to fetch prescription', e);
-                            setEmptyPrescriptionModal({ open: true, childName: child.name });
-                            return;
-                          }
-                        }
-                        if (url) setPrescriptionModal({ open: true, url, childName: child.name });
-                        }} className="bg-white border border-gray-200 text-gray-500 hover:text-green-700 rounded-full p-2 shadow-sm" title={t('children.prescription.view_button')}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/></svg>
-                      </button>
-                      {(user && (user.role === 'admin' || user.role === 'super-admin' || user.nannyId)) ? (
-                        <>
-                          <button onClick={() => handleEdit(child)} className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm" title={t('children.action.edit')}><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg></button>
-                          <button onClick={() => setDeleteId(child.id)} className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm" title={t('children.action.delete')}><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div
-                    className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-8 ${isDeleting ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                    style={{backfaceVisibility: 'hidden', transform: 'rotateY(180deg)'}}
-                  >
-                    <div className="text-red-500 text-4xl mb-2">🗑️</div>
-                    <div className="text-lg font-semibold mb-2 text-gray-900 text-center">{t('children.delete.confirm_title')}</div>
-                    <div className="text-gray-500 mb-6 text-center">{t('children.delete.confirm_body')}</div>
+                    <div className="text-base font-semibold text-gray-900 text-center mb-1">{t('children.delete.confirm_title')}</div>
+                    <div className="text-sm text-gray-500 mb-6 text-center">{t('children.delete.confirm_body')}</div>
                     <div className="flex gap-3 w-full">
-                      <button
-                        onClick={() => setDeleteId(null)}
-                        className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 font-medium hover:bg-gray-200 transition"
-                        disabled={deleteLoading}
-                      >{t('modal.cancel')}</button>
-                      <button
-                        onClick={handleDelete}
-                        className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 font-medium hover:bg-red-600 transition shadow"
-                        disabled={deleteLoading}
-                      >{deleteLoading ? t('children.deleting') : t('children.action.delete')}</button>
+                      <button onClick={() => setDeleteId(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 font-medium hover:bg-gray-200 transition text-sm" disabled={deleteLoading}>{t('modal.cancel')}</button>
+                      <button onClick={handleDelete} className="flex-1 bg-red-500 text-white rounded-xl px-4 py-2 font-medium hover:bg-red-600 transition shadow text-sm" disabled={deleteLoading}>{deleteLoading ? t('children.deleting') : t('children.action.delete')}</button>
                     </div>
                   </div>
+                )}
+
+                {/* Card header with gradient avatar */}
+                <div className={`px-5 pt-5 pb-4 bg-gradient-to-r ${gradient} flex items-center gap-3`}>
+                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white font-bold text-lg">{initials}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-white text-base truncate">{child.name}</span>
+                      {child.present ? (
+                        <span className="text-[10px] font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">{t('children.presence.present_today')}</span>
+                      ) : (
+                        <span className="text-[10px] font-semibold bg-red-400/30 text-white px-2 py-0.5 rounded-full">{t('children.presence.absent_today')}</span>
+                      )}
+                      {child.newThisMonth && (
+                        <span className="text-[10px] font-semibold bg-amber-300/30 text-white px-2 py-0.5 rounded-full">{t('children.new_badge')}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs text-white/80 font-medium">{child.age} ans</span>
+                      <span className="text-white/40">·</span>
+                      <span className="text-xs text-white/80">{child.sexe === 'masculin' ? t('children.form.sexe.m') : t('children.form.sexe.f')}</span>
+                      {child.birthDate && (
+                        <>
+                          <span className="text-white/40">·</span>
+                          <span className="text-xs text-white/80">{new Date(child.birthDate).toLocaleDateString('fr-FR')}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card body */}
+                <div className="flex-1 flex flex-col p-5 gap-4">
+
+                  {/* Allergies */}
+                  {child.allergies ? (
+                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                      <svg className="text-amber-500 flex-shrink-0 mt-0.5" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                      <span className="text-xs text-amber-700 font-medium">{t('children.allergies.label')} {child.allergies}</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+                      {t('children.allergies.none')}
+                    </div>
+                  )}
+
+                  {/* Parent info */}
+                  <div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2 text-sm text-gray-700">
+                      <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      <span className="font-medium truncate">{child.parentName || <span className="text-gray-400 italic">—</span>}</span>
+                    </div>
+                    {child.parentContact && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        <a href={`tel:${child.parentContact}`} className="text-[#0b5566] hover:underline transition">{child.parentContact}</a>
+                      </div>
+                    )}
+                    {child.parentMail && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <a href={`mailto:${child.parentMail}`} className="text-[#0b5566] hover:underline transition truncate">{child.parentMail}</a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Cotisation */}
+                  <div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('children.cotisation.label')}</span>
+                      {cotisationOk ? (
+                        <span className="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                          {countdown}
+                        </span>
+                      ) : (
+                        <span className="ml-auto text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{countdown || t('children.cotisation.pay')}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {daysRemaining > 0 ? (
+                        <span className="text-xl font-extrabold text-[#0b5566]">{(cotisationAmounts[child.id] ?? 15)}€</span>
+                      ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
+                        <input
+                          type="number"
+                          min={0}
+                          className="w-24 px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20"
+                          value={cotisationAmounts[child.id] ?? ''}
+                          placeholder="€"
+                          onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [child.id]: e.target.value === '' ? undefined : Number(e.target.value) }))}
+                        />
+                      ) : (
+                        <span className="text-xl font-extrabold text-emerald-600">{(cotisationAmounts[child.id] ?? 15)}€</span>
+                      )}
+                      {!cotisationOk && (
+                        cotisationLoadingId === child.id ? (
+                          <span className="text-gray-400 text-xs animate-pulse ml-1">{t('children.loading')}</span>
+                        ) : !isNannyUser ? (
+                          <button onClick={handleCotisation} className="text-[#0b5566] text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0b5566]/10 hover:bg-[#0b5566]/20 transition" title={t('children.cotisation.pay')}>{t('children.cotisation.pay')}</button>
+                        ) : null
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <span>{t('children.cotisation.this_month')}</span>
+                      <span className="font-bold text-gray-700 ml-1">{billing ? `${billing.amount}€` : '...'}</span>
+                      <span className="text-gray-400">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
+                    </div>
+                  </div>
+
+                  {/* Photo consent */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {typeof photoConsentMap[child.id] === 'boolean' ? (
+                        photoConsentMap[child.id] ? (
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">{t('children.photo_consent.yes')}</span>
+                        ) : (
+                          <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">{t('children.photo_consent.no')}</span>
+                        )
+                      ) : (
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{t('children.photo_consent.unknown')}</span>
+                      )}
+                    </div>
+                    {Array.isArray(child.nannyIds) && child.nannyIds.length > 0 ? (
+                      <span className="text-xs px-2 py-1 rounded-full flex items-center gap-1 bg-indigo-50 text-indigo-600 flex-shrink-0">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span className="font-medium truncate max-w-[120px]">{child.nannyIds.map(id => nanniesList.find(n => n.id === id)?.name || '').filter(Boolean).join(', ')}</span>
+                      </span>
+                    ) : (
+                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{t('children.not_assigned')}</span>
+                    )}
+                  </div>
+
+                  {/* Photo consent toggle */}
+                  {user && (
+                    (user.role === 'parent' && child.parentId === (user.parentId || undefined))
+                    || isAdminUser
+                  ) && (
+                    <PhotoConsentToggle
+                      childId={child.id}
+                      initialConsent={photoConsentMap[child.id] ?? null}
+                      onChange={(val) => setPhotoConsentMap(prev => ({ ...prev, [child.id]: val }))}
+                    />
+                  )}
+                </div>
+
+                {/* Card footer actions */}
+                <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      const known = getPrescriptionUrl(child);
+                      let url = known || null;
+                      if (!url) {
+                        try {
+                          const res = await fetchWithRefresh(`${API_URL}/children/${child.id}/prescription`, { credentials: 'include' });
+                          if (!res.ok) { setEmptyPrescriptionModal({ open: true, childName: child.name }); return; }
+                          const body = await res.json();
+                          url = body.url || null;
+                          if (!url) { setEmptyPrescriptionModal({ open: true, childName: child.name }); return; }
+                        } catch (e) {
+                          console.error('Failed to fetch prescription', e);
+                          setEmptyPrescriptionModal({ open: true, childName: child.name }); return;
+                        }
+                      }
+                      if (url) setPrescriptionModal({ open: true, url, childName: child.name });
+                    }}
+                    className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white"
+                    title={t('children.prescription.view_button')}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/></svg>
+                    {t('children.prescription.view_button')}
+                  </button>
+                  {(user && (user.role === 'admin' || user.role === 'super-admin' || user.nannyId)) && (
+                    <div className="flex items-center gap-1 ml-auto">
+                      <button onClick={() => handleEdit(child)} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white" title={t('children.action.edit')}>
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
+                        {t('children.action.edit')}
+                      </button>
+                      <button onClick={() => setDeleteId(child.id)} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-500 transition px-2 py-1.5 rounded-lg hover:bg-red-50" title={t('children.action.delete')}>
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        {t('children.action.delete')}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );

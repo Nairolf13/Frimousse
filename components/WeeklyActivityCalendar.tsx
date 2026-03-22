@@ -225,10 +225,15 @@ export default function WeeklyActivityCalendar() {
 
   return (
     <div>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('activities.title')}</h1>
-            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{weekLabel}</div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div className="pt-0.5">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('activities.title')}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{weekLabel}</p>
+            </div>
           </div>
           <div className="flex flex-col md:flex-row items-center gap-2 mt-2 md:mt-0">
               {user && (user as { role?: string | null }).role === 'super-admin' && (

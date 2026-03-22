@@ -744,99 +744,117 @@ export default function Nannies() {
     (!experienceFilter || (experienceFilter === 'junior' ? n.experience < 3 : n.experience >= 3))
   );
 
+  const inputCls = "border border-gray-200 rounded-xl px-3 py-2 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition w-full";
+  const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1";
+
   // remove desktop left padding when device is short landscape so page occupies full width
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('page.nannies')}</h1>
-            <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('page.nannies.description')}</div>
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <div className="pt-0.5">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.nannies')}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.nannies.description')}</p>
+            </div>
           </div>
-          <div className="flex gap-2 items-center self-start md:ml-auto">
-            {(user && typeof user.role === 'string' && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'))) && (
-                <button
-                type="button"
-                onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
-                className={`bg-[#0b5566] text-white font-semibold rounded-lg px-5 py-2 text-base shadow hover:bg-[#08323a] transition min-h-[44px] md:h-[60px] ${isShortLandscape ? '-translate-x-3' : ''}`}
-                style={{transform: isShortLandscape ? 'translateX(-12px)' : undefined}}
-              >
-                {t('nanny.add')}
-              </button>
-            )}
+          {(user && typeof user.role === 'string' && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'))) && (
+            <button
+              type="button"
+              onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
+              className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              {t('nanny.add')}
+            </button>
+          )}
+        </div>
+
+        {/* KPI badges */}
+        <div className="grid grid-cols-3 gap-3 mb-5 w-full sm:w-auto sm:flex sm:flex-row sm:gap-3">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('stats.total')}</div>
+            <div className="text-lg font-extrabold text-[#0b5566]">{totalNannies}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('nanny.available_label')}</div>
+            <div className="text-lg font-extrabold text-emerald-600">{availableToday}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('nanny.on_leave_label')}</div>
+            <div className="text-lg font-extrabold text-amber-500">{onLeave}</div>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6 w-full lg:flex-row lg:items-center lg:gap-4 lg:mb-6 lg:w-full md:max-w-md md:w-full">
-          
-          <div className="flex gap-2 flex-wrap justify-start w-full">
-            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
-              <div className="text-xs text-gray-400">{t('stats.total')}</div>
-              <div className="text-base md:text-lg font-bold text-[#0b5566]">{totalNannies}</div>
-            </div>
-            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
-              <div className="text-xs text-gray-400">{t('nanny.available_label')}</div>
-              <div className="text-base md:text-lg font-bold text-[#0b5566]">{availableToday}</div>
-            </div>
-            <div className="bg-white rounded-xl shadow px-3 md:px-4 py-2 flex flex-col items-center min-w-[80px] md:min-w-[90px] min-h-[44px] md:h-auto">
-              <div className="text-xs text-gray-400">{t('nanny.on_leave_label')}</div>
-              <div className="text-base md:text-lg font-bold text-[#0b5566]">{onLeave}</div>
-            </div>
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 w-full">
+          <div className="relative flex-1 min-w-0">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('nanny.search_placeholder')} className="border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-gray-700 bg-white shadow-sm text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566] transition" />
           </div>
-        </div>
-
-        <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 mb-6 w-full filter-responsive">
           {user && typeof user.role === 'string' && user.role === 'super-admin' && (
-            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base w-full md:w-auto min-h-[44px]">
+            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
               <option value="">Tous les centres</option>
               {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('nanny.search_placeholder')} className="border border-gray-200 rounded-lg px-3 py-2 text-gray-700 bg-white shadow-sm text-base w-full md:w-64 min-h-[44px]" />
-          <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-base bg-white text-gray-700 shadow-sm w-full md:w-auto min-h-[44px]">
+          <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
             <option value="">{t('nanny.filter.any')}</option>
             <option value="Disponible">{t('nanny.filter.disponible')}</option>
             <option value="En congé">{t('nanny.filter.en_conge')}</option>
           </select>
-          <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-base w-full md:w-auto min-h-[44px]">
+          <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
             <option value="">{t('nanny.filter.experience_any')}</option>
             <option value="junior">{t('nanny.filter.experience_junior')}</option>
             <option value="senior">{t('nanny.filter.experience_senior')}</option>
           </select>
-          <div className="flex-1"></div>
         </div>
 
+        {/* Form */}
         {(adding || editingId) && (
-          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow p-4 md:p-6 grid gap-4 md:grid-cols-2">
+          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+            {/* Form header */}
+            <div className="px-6 py-4 bg-gradient-to-r from-[#0b5566] to-[#08323a] flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
+                <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <h2 className="text-white font-semibold text-base">{editingId ? t('global.save') : t('nanny.add')}</h2>
+            </div>
+            <div className="p-6 grid gap-4 md:grid-cols-2">
             {/* Name */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.name')} <span className="text-red-500">*</span></label>
-              <input name="name" value={form.name} onChange={handleChange} placeholder={t('nanny.form.name')} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <label className={labelCls}>{t('nanny.form.name')} <span className="text-red-500">*</span></label>
+              <input name="name" value={form.name} onChange={handleChange} placeholder={t('nanny.form.name')} required className={inputCls} />
             </div>
 
             {/* Availability */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.availability') || t('nanny.availability.available')} <span className="text-red-500">*</span></label>
-              <select name="availability" value={form.availability} onChange={handleChange} required className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]">
+              <label className={labelCls}>{t('nanny.form.availability') || t('nanny.availability.available')} <span className="text-red-500">*</span></label>
+              <select name="availability" value={form.availability} onChange={handleChange} required className={inputCls}>
                 <option value="Disponible">{t('nanny.availability.available')}</option>
                 <option value="En_congé">{t('nanny.availability.on_leave')}</option>
                 <option value="Maladie">{t('nanny.availability.sick')}</option>
               </select>
             </div>
 
-            {/* Address (with suggestions) */}
+            {/* Address */}
             <div id="nanny-form-address" className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.address')} <span className="text-red-500">*</span></label>
+              <label className={labelCls}>{t('parent.form.address')} <span className="text-red-500">*</span></label>
               <div className="relative">
-                <input name="address" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t('parent.form.address')} className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" onFocus={() => setOpenAddress(true)} />
+                <input name="address" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t('parent.form.address')} className={inputCls} onFocus={() => setOpenAddress(true)} />
                 {openAddress && placeSuggestions.length > 0 && (
-                  <ul className="absolute z-20 left-0 right-0 bg-white border mt-1 max-h-56 overflow-auto rounded shadow">
+                  <ul className="absolute z-20 left-0 right-0 bg-white border border-gray-200 mt-1 max-h-56 overflow-auto rounded-xl shadow-lg">
                     {placeSuggestions.map((p, idx) => {
                       const summary = [p.house_number && `${p.house_number} ${p.street}`, p.street || p.name, p.postcode, p.state, p.country].filter(Boolean).join(', ');
                       const label = p.name || (p.house_number ? `${p.house_number} ${p.street}` : p.street || '');
                       return (
-                        <li key={idx} role="button" tabIndex={0} onClick={() => { selectPlace(p); }} className="px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                          <div className="text-sm font-medium">{label}</div>
+                        <li key={idx} role="button" tabIndex={0} onClick={() => { selectPlace(p); }} className="px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                          <div className="text-sm font-medium text-gray-800">{label}</div>
                           <div className="text-xs text-gray-500">{summary}</div>
                         </li>
                       );
@@ -848,37 +866,37 @@ export default function Nannies() {
 
             {/* Postal code */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.postalCode')} <span className="text-red-500">*</span></label>
-              <input name="postalCode" value={form.postalCode || ''} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} placeholder={t('parent.form.postalCode')} className="mt-1 h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <label className={labelCls}>{t('parent.form.postalCode')} <span className="text-red-500">*</span></label>
+              <input name="postalCode" value={form.postalCode || ''} onChange={(e) => setForm({ ...form, postalCode: e.target.value })} placeholder={t('parent.form.postalCode')} className={inputCls} />
             </div>
 
             {/* City */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.city')} <span className="text-red-500">*</span></label>
-              <input name="city" value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder={t('parent.form.city')} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <label className={labelCls}>{t('parent.form.city')} <span className="text-red-500">*</span></label>
+              <input name="city" value={form.city || ''} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder={t('parent.form.city')} className={inputCls} />
             </div>
 
             {/* Region */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.region') || 'Région'} <span className="text-red-500">*</span></label>
-              <input name="region" value={form.region || ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder={t('parent.form.region') || 'Région'} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <label className={labelCls}>{t('parent.form.region') || 'Région'} <span className="text-red-500">*</span></label>
+              <input name="region" value={form.region || ''} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder={t('parent.form.region') || 'Région'} className={inputCls} />
             </div>
 
             {/* Country */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('parent.form.country') || 'Pays'} <span className="text-red-500">*</span></label>
-              <input name="country" value={form.country || ''} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder={t('parent.form.country') || 'Pays'} className="h-11 w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <label className={labelCls}>{t('parent.form.country') || 'Pays'} <span className="text-red-500">*</span></label>
+              <input name="country" value={form.country || ''} onChange={(e) => setForm({ ...form, country: e.target.value })} placeholder={t('parent.form.country') || 'Pays'} className={inputCls} />
             </div>
 
             {/* Experience */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.experience')} <span className="text-red-500">*</span></label>
-              <input name="experience" type="number" value={form.experience || ''} onChange={handleChange} placeholder={t('nanny.form.experience') || 'Expérience'} required className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <label className={labelCls}>{t('nanny.form.experience')} <span className="text-red-500">*</span></label>
+              <input name="experience" type="number" value={form.experience || ''} onChange={handleChange} placeholder={t('nanny.form.experience') || 'Expérience'} required className={inputCls} />
             </div>
 
             {/* Birth date */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.birthDate') || 'Date de naissance'} <span className="text-red-500">*</span></label>
+              <label className={labelCls}>{t('nanny.form.birthDate') || 'Date de naissance'} <span className="text-red-500">*</span></label>
               <input
                 name="birthDate"
                 type={birthInputType}
@@ -896,7 +914,7 @@ export default function Nannies() {
                 })() : '')}
                 onChange={handleChange}
                 placeholder={t('nanny.form.birthDate') || 'Date de naissance'}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]"
+                className={inputCls}
                 onFocus={() => setBirthInputType('date')}
                 onBlur={() => setBirthInputType('text')}
                 readOnly={birthInputType === 'text'}
@@ -905,305 +923,280 @@ export default function Nannies() {
 
             {/* Specializations */}
             <div className="md:col-span-2 flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.specializations')}</label>
-              <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder={t('nanny.form.specializations')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <label className={labelCls}>{t('nanny.form.specializations')}</label>
+              <input name="specializations" value={form.specializations?.join(', ')} onChange={e => setForm({ ...form, specializations: e.target.value.split(',').map(s => s.trim()) })} placeholder={t('nanny.form.specializations')} className={inputCls} />
             </div>
 
             {/* Contact */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.contact')} <span className="text-red-500">*</span></label>
-              <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder={t('nanny.form.contact')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <label className={labelCls}>{t('nanny.form.contact')} <span className="text-red-500">*</span></label>
+              <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder={t('nanny.form.contact')} className={inputCls} />
             </div>
 
             {/* Email */}
             <div className="flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.email')} <span className="text-red-500">*</span></label>
-              <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
+              <label className={labelCls}>{t('nanny.form.email')} <span className="text-red-500">*</span></label>
+              <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className={inputCls} />
             </div>
 
-            {/* Password (no asterisk) */}
-            <div className="relative md:col-span-1 flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.password')}</label>
-              <input name="password" autoComplete="new-password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base pr-10 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-              <button type="button" tabIndex={-1} className="absolute right-2 top-8 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
+            {/* Password */}
+            <div className="relative flex flex-col">
+              <label className={labelCls}>{t('nanny.form.password')}</label>
+              <input name="password" autoComplete="new-password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className={`${inputCls} pr-10`} />
+              <button type="button" tabIndex={-1} className="absolute right-3 bottom-2.5 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>
+                {showPw ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+              </button>
             </div>
 
-            {/* Confirm password (no asterisk) */}
-            <div className="relative md:col-span-1 flex flex-col">
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('nanny.form.confirmPassword')}</label>
-              <input name="confirmPassword" autoComplete="new-password" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('nanny.form.confirmPassword')} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs md:text-base pr-10 focus:outline-none focus:ring-2 focus:ring-[#a9ddf2]" />
-              <button type="button" tabIndex={-1} className="absolute right-2 top-8 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? "🙈" : "👁️"}</button>
+            {/* Confirm password */}
+            <div className="relative flex flex-col">
+              <label className={labelCls}>{t('nanny.form.confirmPassword')}</label>
+              <input name="confirmPassword" autoComplete="new-password" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('nanny.form.confirmPassword')} className={`${inputCls} pr-10`} />
+              <button type="button" tabIndex={-1} className="absolute right-3 bottom-2.5 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>
+                {showPw ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+              </button>
             </div>
 
-            {/* Password rules live feedback for admins creating/editing nannies */}
+            {/* Password rules */}
             {(adding || editingId) && (
-              <div className="md:col-span-2 w-full mb-2">
-                <div className="text-sm font-medium text-[#08323a] mb-2">Le mot de passe doit contenir :</div>
-                <ul className="text-sm space-y-1">
-                  <li className={`flex items-center gap-2 ${hasUpper ? 'text-green-600' : 'text-red-600'}`}>
-                    <svg className={`w-4 h-4 ${hasUpper ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>Une lettre majuscule (A-Z)</span>
-                  </li>
-                  <li className={`flex items-center gap-2 ${hasDigit ? 'text-green-600' : 'text-red-600'}`}>
-                    <svg className={`w-4 h-4 ${hasDigit ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>Un chiffre (0-9)</span>
-                  </li>
-                  <li className={`flex items-center gap-2 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`}>
-                    <svg className={`w-4 h-4 ${hasSpecial ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>Un caractère spécial (ex. !@#$%)</span>
-                  </li>
-                  <li className={`flex items-center gap-2 ${hasLength ? 'text-green-600' : 'text-red-600'}`}>
-                    <svg className={`w-4 h-4 ${hasLength ? 'text-green-600' : 'text-red-600'}`} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span>Au moins {minLength} caractères</span>
-                  </li>
-                </ul>
-                {!passwordValid && <div className="text-xs text-red-600 mt-2">Le mot de passe doit respecter toutes les règles ci-dessus.</div>}
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { ok: hasUpper, label: 'Une majuscule (A-Z)' },
+                    { ok: hasDigit, label: 'Un chiffre (0-9)' },
+                    { ok: hasSpecial, label: 'Un caractère spécial' },
+                    { ok: hasLength, label: `${minLength} caractères min.` },
+                  ].map(({ ok, label }) => (
+                    <div key={label} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg font-medium ${ok ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                      <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points={ok ? "20 6 9 17 4 12" : "18 6 6 18M6 6l12 12"}/></svg>
+                      {label}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+            </div>
 
-            <div className="md:col-span-1 flex gap-2">
-              <button type="submit" className="bg-[#0b5566] text-white px-4 py-2 rounded hover:bg-[#08323a] transition">
-                {editingId ? t('global.save') : t('global.add')}
-              </button>
-              <button type="button" onClick={() => { setForm(emptyForm); setConfirmPassword(''); setEditingId(null); setAdding(false); }} className="bg-gray-300 px-4 py-2 rounded">{t('global.cancel')}</button>
+            {/* Form footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
+              <div className="text-xs text-gray-400">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { setForm(emptyForm); setConfirmPassword(''); setEditingId(null); setAdding(false); }} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition text-sm font-medium">{t('global.cancel')}</button>
+                <button type="submit" className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white font-semibold hover:opacity-90 transition text-sm shadow">
+                  {editingId ? t('global.save') : t('global.add')}
+                </button>
+              </div>
             </div>
-            <div className="md:col-span-1 flex items-end justify-end">
-              <div className="text-sm text-gray-500">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
-            </div>
-            {error && <div className="text-red-600 md:col-span-2">{error}</div>}
+            {error && <div className="px-6 py-3 text-red-600 text-sm bg-red-50 border-t border-red-100">{error}</div>}
           </form>
         )}
 
-        {/* Inline success banner for nanny actions (add/delete/update) */}
+        {/* Success banner */}
         {successMessage && (
-          <div className="mb-4 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMessage}</div>
+          <div className="mb-5 flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3">
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            <span className="font-medium text-sm">{successMessage}</span>
+          </div>
         )}
 
         {loading ? (
-          <div>Chargement...</div>
+          <div className="text-gray-500 text-sm py-8 text-center">Chargement...</div>
         ) : (
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full children-responsive-grid">
+          <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full">
             {filtered
               .filter(n => visibleNannies.some(v => String(v.id) === String(n.id)))
               .map((nanny, idx) => {
               const cotisation = cotisationStatus[nanny.id];
               const daysRemaining = cotisation && cotisation.paidUntil ? Math.max(0, Math.ceil((new Date(cotisation.paidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
-              const cardColors = [
-                'bg-blue-50',
-                'bg-yellow-50',
-                'bg-purple-50',
-                'bg-green-50',
-                'bg-pink-50',
-                'bg-orange-50',
-              ];
-              const color = cardColors[idx % cardColors.length];
               const isDeleting = deleteId === nanny.id;
               const todayStr = new Date().toISOString().split('T')[0];
               const assignedTodayCount = assignments.filter(a => a.nanny && a.nanny.id === nanny.id && a.date.split('T')[0] === todayStr).length;
               const isPaymentModalOpen = confirmPayment?.nannyId === nanny.id;
-              // Normalize availability and compute label + classes for colored pill
               const _availRaw = String(nanny.availability || '').toLowerCase();
               const availabilityLabel = (nanny.availability === 'En_congé' || nanny.availability === 'En congé')
                 ? t('nanny.availability.on_leave')
                 : (nanny.availability === 'Disponible' ? t('nanny.availability.available') : t('nanny.availability.sick'));
-              let availabilityClasses = 'px-2 py-1 rounded-full text-xs font-medium ';
-              if (_availRaw.includes('dispon')) {
-                availabilityClasses += 'bg-green-100 text-green-800 border border-green-200';
-              } else if (_availRaw.includes('malad') || _availRaw.includes('cong')) {
-                availabilityClasses += 'bg-red-100 text-red-700 border border-red-200';
-              } else {
-                availabilityClasses += 'bg-white border border-gray-200 text-gray-600';
-              }
+              const availabilityClasses = _availRaw.includes('dispon')
+                ? 'bg-emerald-100 text-emerald-700'
+                : (_availRaw.includes('malad') || _availRaw.includes('cong'))
+                  ? 'bg-red-100 text-red-600'
+                  : 'bg-gray-100 text-gray-600';
+
+              const gradients = [
+                'from-[#0b5566] to-[#0a7c97]',
+                'from-violet-600 to-purple-500',
+                'from-rose-500 to-pink-400',
+                'from-emerald-600 to-teal-500',
+                'from-amber-500 to-orange-400',
+                'from-sky-600 to-blue-500',
+              ];
+              const gradient = gradients[idx % gradients.length];
+              const initials = nanny.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+
               return (
-                <div
-                  key={nanny.id}
-                  className={`rounded-2xl shadow ${color} relative flex flex-col min-h-[440px] h-full transition-transform duration-500 perspective-1000 overflow-hidden`}
-                  style={{ height: '100%', perspective: '1000px' }}
-                >
-                  {/* availability badge moved into header below name */}
-                  <div
-                    className={`w-full h-full transition-transform duration-500 ${isDeleting ? 'rotate-y-180' : ''}`}
-                    style={{ transformStyle: 'preserve-3d', position: 'relative', width: '100%', height: '100%' }}
-                  >
-                    <div
-                      className={`absolute inset-0 w-full h-full p-3 sm:p-4 md:p-6 flex flex-col items-center ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'} bg-transparent cursor-pointer hover:opacity-95 transition-opacity`}
-                      style={{ backfaceVisibility: 'hidden' }}
-                      onClick={() => setPlanningNanny(nanny)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPlanningNanny(nanny); } }}
-                      aria-label={`Voir le planning de ${nanny.name}`}
-                    >
-                        <div className="w-full pt-2 sm:pt-3 text-center">
-                          <div className="flex items-center justify-center">
-                            <h3 className="font-semibold text-lg sm:text-xl text-[#08323a] truncate max-w-[220px] -mt-1 -translate-y-0.5" title={nanny.name} style={{transform: 'translateY(-2px)'}}>{nanny.name}</h3>
-                          </div>
-                          <div className="mt-2 flex items-center justify-center gap-4 text-sm text-gray-600">
-                            <span className={availabilityClasses}>
-                              {availabilityLabel}
-                            </span>
-                            <span className="px-2 py-1 rounded-full bg-white border border-gray-200 text-xs font-medium">{`${nanny.experience} ${nanny.experience === 1 ? 'an' : 'ans'} exp`}</span>
-                            {nanny.birthDate ? (
-                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700 whitespace-nowrap" title={t('label.birthDate')}>
-                                🎂 {new Date(nanny.birthDate).toLocaleDateString('fr-FR')}
-                              </span>
-                            ) : (
-                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap" title={t('label.birthDate')}>
-                                🎂 {t('children.birthDate.undefined')}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      {/* birthday now shown in header pill; detailed date removed to avoid duplication */}
-                      <div className="mt-4 flex flex-col gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4">
-                        <span className="flex items-start gap-2 w-full justify-start">
-                          <span aria-hidden className={`inline-block ${nanny.address ? '' : 'text-gray-300'}`}>📍</span>
-                          <div className="leading-snug">
-                            {nanny.address ? <div className="truncate">{nanny.address}</div> : <div className="text-gray-300">—</div>}
-                            {(nanny.postalCode || nanny.city) ? <div className="truncate">{[nanny.postalCode, nanny.city].filter(Boolean).join(' ')}</div> : <div className="text-gray-300">—</div>}
-                          </div>
-                        </span>
-                        <span className="flex items-center gap-2 w-full justify-start">
-                          <span className="w-5 text-center text-sm sm:text-base" role="img" aria-label="Email">✉️</span>
-                          {nanny.email ? (
-                            <a href={`mailto:${nanny.email}`} onClick={(e) => e.stopPropagation()} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Envoyer un mail à ${nanny.name}`}>{nanny.email}</a>
-                          ) : (
-                            <span className="text-gray-400 text-xs sm:text-sm">—</span>
-                          )}
-                        </span>
-                        <span className="flex items-center gap-2 w-full justify-start">
-                          <span aria-hidden className={`inline-block ${nanny.contact ? '' : 'text-gray-300'}`}>📞</span>
-                          {nanny.contact ? (
-                            <a href={`tel:${nanny.contact}`} onClick={(e) => e.stopPropagation()} className="text-blue-700 underline text-xs sm:text-sm break-words max-w-full sm:max-w-none" aria-label={`Appeler ${nanny.name}`}>{nanny.contact}</a>
-                          ) : (
-                            <span className="text-gray-400 text-xs sm:text-sm">—</span>
-                          )}
-                        </span>
+                <div key={nanny.id} className="relative bg-white rounded-2xl shadow-md border border-gray-100 flex flex-col overflow-hidden">
+                  {/* Delete overlay */}
+                  {isDeleting && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/95 rounded-2xl p-8">
+                      <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
+                        <svg width="28" height="28" fill="none" stroke="#ef4444" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                       </div>
-                      {nanny.specializations && nanny.specializations.length > 0 && (
-                        <div className="flex flex-wrap justify-center gap-1 sm:gap-2 mb-2 w-full px-2 sm:px-4">
-                          {nanny.specializations.map((spec, i) => (
-                            <span key={i} className="bg-purple-100 text-purple-700 px-1 sm:px-2 py-1 rounded-full text-xs font-semibold border border-purple-200 truncate max-w-[80px] sm:max-w-none">{spec}</span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="text-xs sm:text-sm text-gray-700 mb-2 w-full flex flex-col items-center">
-                        <span className="block font-medium mb-1 text-center">
-                          {t('nanny.assignments_today')}
-                          <span className="inline-block bg-white text-gray-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 ml-1">
-                            {assignedTodayCount}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="flex flex-col gap-2 mt-auto mb-4 w-full min-w-0 items-center">
-                        <div className="flex flex-col items-center">
-                          <span className="text-xs font-semibold text-gray-700">{t('nanny.cotisation.label')}</span>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="flex items-center gap-2">
-                              {cotisation?.loading ? (
-                                <span className="text-sm text-gray-500">{t('loading')}</span>
-                              ) : daysRemaining > 0 ? (
-                                <span className="text-base font-bold text-[#08323a]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
-                              ) : isAdmin ? (
-                                <input
-                                  type="number"
-                                  className="w-20 px-2 py-1 border rounded text-sm"
-                                  value={cotisationAmounts[nanny.id] ?? 10}
-                                  onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
-                              ) : (
-                                <span className="text-base font-bold text-[#08323a]">10€</span>
-                              )}
-
-                              {cotisation?.loading ? (
-                                <span className="text-gray-400 text-xl">…</span>
-                              ) : daysRemaining > 0 ? (
-                                <span className="text-[#0b5566] text-xl">✔️</span>
-                              ) : (
-                                <span className="text-red-500 text-xl">❌</span>
-                              )}
-                            </div>
-
-                            {/* Pay button placed to the right of the amount/input and status icon */}
-                            {daysRemaining <= 0 && isAdmin && (
-                              <button
-                                className="ml-2 text-[#0b5566] text-xs font-semibold px-3 py-1 rounded bg-[#a9ddf2] hover:bg-[#f7f4d7] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={cotisation?.loading || isPaymentModalOpen}
-                                onClick={(e) => { e.stopPropagation(); requestPay(nanny.id); }}
-                              >
-                                {cotisation?.loading ? t('nanny.payment.loading') : isPaymentModalOpen ? t('nanny.payment.confirming') : t('nanny.payment.pay')}
-                              </button>
-                            )}
-                          </div>
-
-                          <span className="text-xs text-gray-500 text-center mt-1">
-                            {cotisation ? (
-                              cotisation.loading ? t('loading') : (
-                                cotisation.paidUntil ? (daysRemaining > 0 ? t('nanny.cotisation.days_remaining', { n: String(daysRemaining) }) : t('nanny.cotisation.renew')) : t('nanny.cotisation.renew')
-                              )
-                            ) : '—'}
-                          </span>
-
-                          {/* Total monthly contributions from assigned parents */}
-                          <div className="text-xs text-gray-600 text-center mt-2">
-                            <span className="block font-medium">{t('nanny.cotisation.total_parents') || 'Cotisation totale mensuelle des parents'}&nbsp;</span>
-                            <span className="text-base font-bold text-[#08323a]">{(cotisationParentsTotals[nanny.id] ?? 0)}€</span>
-                          </div>
-
-                          {daysRemaining <= 0 && messages[nanny.id] && (
-                            <div className={`mt-1 text-xs ${messages[nanny.id]?.type === 'success' ? 'text-[#0b5566]' : 'text-red-600'}`}>
-                              {messages[nanny.id]?.text}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="flex gap-1">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setPlanningNanny(nanny); }}
-                              className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
-                              title={t('nanny.planning.button')}
-                              aria-label={t('nanny.planning.button') as string}
-                            >
-                              {/* Calendar icon */}
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-current"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleEdit(nanny); }}
-                              className="bg-white border border-gray-200 text-gray-500 hover:text-[#08323a] rounded-full p-2 shadow-sm"
-                              title={t('children.action.edit')}
-                            >
-                              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setDeleteId(nanny.id); }}
-                                className="bg-white border border-gray-200 text-gray-500 hover:text-red-500 rounded-full p-2 shadow-sm"
-                                title={t('children.action.delete')}
-                              >
-                              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            </button>
-                          </div>
-                        </div>
+                      <div className="text-base font-semibold text-gray-900 text-center mb-1">{t('modal.delete.title')}</div>
+                      <div className="text-sm text-gray-500 mb-6 text-center">{t('nanny.delete.confirm_body')}</div>
+                      <div className="flex gap-3 w-full">
+                        <button onClick={() => setDeleteId(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 font-medium hover:bg-gray-200 transition text-sm">{t('modal.cancel')}</button>
+                        <button onClick={handleDelete} className="flex-1 bg-red-500 text-white rounded-xl px-4 py-2 font-medium hover:bg-red-600 transition shadow text-sm">{t('children.action.delete')}</button>
                       </div>
                     </div>
-                    <div
-                      className={`absolute inset-0 w-full h-full flex flex-col items-center justify-center bg-white rounded-2xl shadow-xl p-8 ${isDeleting ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-                      style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
-                    >
-                      <div className="text-red-500 text-4xl mb-2">🗑️</div>
-                      <div className="text-lg font-semibold mb-2 text-gray-900 text-center">{t('modal.delete.title')}</div>
-                      <div className="text-gray-500 mb-6 text-center">{t('nanny.delete.confirm_body')}</div>
-                      <div className="flex gap-3 w-full">
-                        <button
-                          onClick={() => setDeleteId(null)}
-                          className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 font-medium hover:bg-gray-200 transition"
-                        >{t('modal.cancel')}</button>
-                        <button
-                          onClick={handleDelete}
-                          className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 font-medium hover:bg-red-600 transition shadow"
-                        >{t('children.action.delete')}</button>
+                  )}
+
+                  {/* Card header */}
+                  <div
+                    className={`px-5 pt-5 pb-4 bg-gradient-to-r ${gradient} flex items-center gap-3 cursor-pointer`}
+                    onClick={() => setPlanningNanny(nanny)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPlanningNanny(nanny); } }}
+                    aria-label={`Voir le planning de ${nanny.name}`}
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                      <span className="text-white font-bold text-lg">{initials}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-white text-base truncate">{nanny.name}</span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white`}>{availabilityLabel}</span>
                       </div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-xs text-white/80">{nanny.experience} {nanny.experience === 1 ? 'an' : 'ans'} exp.</span>
+                        {nanny.birthDate && (
+                          <>
+                            <span className="text-white/40">·</span>
+                            <span className="text-xs text-white/80">{new Date(nanny.birthDate).toLocaleDateString('fr-FR')}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-white/60 flex-shrink-0">
+                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </div>
+                  </div>
+
+                  {/* Card body */}
+                  <div className="flex-1 flex flex-col p-5 gap-4">
+
+                    {/* Contact info */}
+                    <div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-1.5">
+                      {(nanny.address || nanny.city) && (
+                        <div className="flex items-start gap-2 text-sm text-gray-700">
+                          <svg className="text-gray-400 flex-shrink-0 mt-0.5" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                          <div className="leading-snug">
+                            {nanny.address && <div className="truncate">{nanny.address}</div>}
+                            {(nanny.postalCode || nanny.city) && <div className="text-gray-500 text-xs">{[nanny.postalCode, nanny.city].filter(Boolean).join(' ')}</div>}
+                          </div>
+                        </div>
+                      )}
+                      {nanny.email && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                          <a href={`mailto:${nanny.email}`} onClick={(e) => e.stopPropagation()} className="text-[#0b5566] hover:underline truncate">{nanny.email}</a>
+                        </div>
+                      )}
+                      {nanny.contact && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                          <a href={`tel:${nanny.contact}`} onClick={(e) => e.stopPropagation()} className="text-[#0b5566] hover:underline">{nanny.contact}</a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Specializations */}
+                    {nanny.specializations && nanny.specializations.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {nanny.specializations.map((spec, i) => (
+                          <span key={i} className="bg-violet-50 text-violet-700 px-2 py-1 rounded-lg text-xs font-medium border border-violet-100">{spec}</span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Today assignments + availability */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${availabilityClasses}`}>{availabilityLabel}</span>
+                      <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
+                        {t('nanny.assignments_today')} <span className="font-bold text-gray-700">{assignedTodayCount}</span>
+                      </span>
+                    </div>
+
+                    {/* Cotisation */}
+                    <div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('nanny.cotisation.label')}</span>
+                        {cotisation && !cotisation.loading && (
+                          daysRemaining > 0 ? (
+                            <span className="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center justify-center gap-1">
+                              <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                              {t('nanny.cotisation.days_remaining', { n: String(daysRemaining) })}
+                            </span>
+                          ) : (
+                            <span className="ml-auto text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full flex items-center justify-center">{t('nanny.cotisation.renew')}</span>
+                          )
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {cotisation?.loading ? (
+                          <span className="text-sm text-gray-400 animate-pulse">{t('loading')}</span>
+                        ) : daysRemaining > 0 ? (
+                          <span className="text-xl font-extrabold text-[#0b5566]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
+                        ) : isAdmin ? (
+                          <input
+                            type="number"
+                            className="w-20 px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20"
+                            value={cotisationAmounts[nanny.id] ?? 10}
+                            onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        ) : (
+                          <span className="text-xl font-extrabold text-gray-700">10€</span>
+                        )}
+                        {daysRemaining <= 0 && isAdmin && (
+                          <button
+                            className="text-[#0b5566] text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0b5566]/10 hover:bg-[#0b5566]/20 transition disabled:opacity-50"
+                            disabled={cotisation?.loading || isPaymentModalOpen}
+                            onClick={(e) => { e.stopPropagation(); requestPay(nanny.id); }}
+                          >
+                            {cotisation?.loading ? t('nanny.payment.loading') : isPaymentModalOpen ? t('nanny.payment.confirming') : t('nanny.payment.pay')}
+                          </button>
+                        )}
+                        {messages[nanny.id] && (
+                          <span className={`text-xs ml-1 ${messages[nanny.id]?.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>{messages[nanny.id]?.text}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <span>{t('nanny.cotisation.total_parents') || 'Total parents mensuel'}</span>
+                        <span className="font-bold text-gray-700 ml-1">{(cotisationParentsTotals[nanny.id] ?? 0)}€</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card footer */}
+                  <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPlanningNanny(nanny); }}
+                      className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white"
+                      title={t('nanny.planning.button')}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                      {t('nanny.planning.button')}
+                    </button>
+                    <div className="flex items-center gap-1 ml-auto">
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(nanny); }} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white" title={t('children.action.edit')}>
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
+                        {t('children.action.edit')}
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setDeleteId(nanny.id); }} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-500 transition px-2 py-1.5 rounded-lg hover:bg-red-50" title={t('children.action.delete')}>
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        {t('children.action.delete')}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1212,20 +1205,19 @@ export default function Nannies() {
           </div>
         )}
       </div>
+
+      {/* Payment confirm modal */}
       {confirmPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-2">{t('nanny.payment.confirm_title')}</h3>
-            <p className="mb-4">{t('nanny.payment.confirm_body', { amount: String(confirmPayment.amount) })}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-gray-100">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4 mx-auto">
+              <svg width="24" height="24" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+            </div>
+            <h3 className="text-base font-bold mb-1 text-center text-gray-900">{t('nanny.payment.confirm_title')}</h3>
+            <p className="mb-5 text-sm text-gray-500 text-center">{t('nanny.payment.confirm_body', { amount: String(confirmPayment.amount) })}</p>
             <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmPayment(null)}
-                className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2"
-              >{t('modal.cancel')}</button>
-              <button
-                onClick={confirmPay}
-                className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2"
-              >{t('common.confirm')}</button>
+              <button onClick={() => setConfirmPayment(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 text-sm font-medium hover:bg-gray-200 transition">{t('modal.cancel')}</button>
+              <button onClick={confirmPay} className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 text-white rounded-xl px-4 py-2 text-sm font-semibold hover:opacity-90 transition shadow">{t('common.confirm')}</button>
             </div>
           </div>
         </div>
@@ -1234,15 +1226,16 @@ export default function Nannies() {
       {planningNanny && (
         <PlanningModal nanny={planningNanny} onClose={() => setPlanningNanny(null)} centerId={centerFilter} />
       )}
-      {/* Admin password reset confirmation modal */}
+
+      {/* Admin password reset modal */}
       {adminResetModal && adminResetModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-2">{t('parent.reset.confirm_title')}</h3>
-            <p className="mb-4">{t('parent.reset.confirm_body')}</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-gray-100">
+            <h3 className="text-base font-bold mb-2 text-gray-900">{t('parent.reset.confirm_title')}</h3>
+            <p className="mb-5 text-sm text-gray-500">{t('parent.reset.confirm_body')}</p>
             <div className="flex gap-3">
-              <button onClick={cancelAdminReset} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2">{t('modal.cancel')}</button>
-              <button onClick={confirmAdminReset} className="flex-1 bg-blue-600 text-white rounded-lg px-4 py-2">{t('parent.reset.confirm')}</button>
+              <button onClick={cancelAdminReset} className="flex-1 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 text-sm font-medium hover:bg-gray-200 transition">{t('modal.cancel')}</button>
+              <button onClick={confirmAdminReset} className="flex-1 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl px-4 py-2 text-sm font-semibold hover:opacity-90 transition shadow">{t('parent.reset.confirm')}</button>
             </div>
           </div>
         </div>
