@@ -369,344 +369,248 @@ export default function AdminEmailLogs() {
   // expanded state removed — mobile cards now show full info with actions
 
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
-        <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight" style={{ color: '#0b5566' }}>{t('admin.emaillogs.title')}</h1>
-              <div className="text-base md:text-lg font-medium mb-4 md:mb-6" style={{ color: '#08323a' }}>{t('admin.emaillogs.description')}</div>
+    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
+
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-6">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
+            <HiOutlineDocumentText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+          </div>
+          <div className="pt-0.5">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('admin.emaillogs.title')}</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('admin.emaillogs.description')}</p>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>
+        )}
+        {loading && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
+            <HiOutlineRefresh className="w-4 h-4 animate-spin" />
+            {t('admin.emaillogs.loading')}
+          </div>
+        )}
+
+        {/* Filtres */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Recherche */}
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 flex-1">
+              <HiOutlineSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <input aria-label="search" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none w-full" placeholder={t('admin.emaillogs.search_placeholder')} />
+            </div>
+            {/* Mois / Année */}
+            <div className="flex gap-2">
+              <select value={month} onChange={e => setMonth(Number(e.target.value))} className="flex-1 sm:flex-none border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
+                {monthNames.map((mName, idx) => <option key={mName} value={idx + 1}>{mName}</option>)}
+              </select>
+              <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
+                {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            {/* Destinataire */}
+            <select value={recipientFilter} onChange={e => setRecipientFilter(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
+              <option value="">{t('admin.emaillogs.all_recipients')}</option>
+              {Array.from(new Set(logs.flatMap(l => {
+                try { const p = JSON.parse(l.recipients || '[]'); return Array.isArray(p) ? p.map(String) : [String(p)]; } catch { return (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
+              }))).map((r, idx) => <option key={idx} value={r}>{r}</option>)}
+            </select>
+            {/* Actions */}
+            <div className="flex gap-2">
+              <button onClick={() => exportCsv()} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2 text-sm font-medium transition">
+                <HiOutlineDocumentText className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('admin.emaillogs.export')}</span>
+              </button>
+              <button onClick={() => { setPage(1); setQuery(''); setSelectedMonth(defaultMonth); }} className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition" title="Rafraîchir">
+                <HiOutlineRefresh className="w-4 h-4 text-gray-500" />
+              </button>
             </div>
           </div>
+        </div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-700 rounded">{error}</div>
-          )}
-
-          <>
-          {loading && <div className="mb-4">{t('admin.emaillogs.loading')}</div>}
-              {/* Mobile filters: show search, month/year and recipient selects in a column */}
-              <div className="md:hidden bg-white rounded-lg p-3 mb-4 shadow">
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2 bg-gray-50 rounded-md px-3 py-2">
-                    <HiOutlineSearch className="w-4 h-4 text-gray-400" />
-                    <input aria-label="search-mobile" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-gray-600 placeholder-gray-400 outline-none w-full" placeholder={t('admin.emaillogs.search_placeholder')} />
+        {/* Mobile: cards */}
+        <div className="md:hidden space-y-3">
+          {(() => {
+            const v = logs.filter(l => {
+              let recips: string[] = [];
+              try { const parsed = JSON.parse(l.recipients || '[]'); recips = Array.isArray(parsed) ? parsed.map(String) : [String(parsed)]; }
+              catch { recips = (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
+              if (recipientFilter && !recips.includes(recipientFilter)) return false;
+              if (query) { const q = query.toLowerCase(); if (!(String(l.subject || '').toLowerCase().includes(q) || recips.join(' ').toLowerCase().includes(q))) return false; }
+              return true;
+            });
+            if (v.length === 0) return <div className="text-center py-12 text-gray-400 text-sm">Aucun email trouvé</div>;
+            return v.map(l => {
+              let recips: string[] = [];
+              try { const parsed = JSON.parse(l.recipients || '[]'); recips = Array.isArray(parsed) ? parsed.map(String) : [String(parsed)]; }
+              catch { recips = (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
+              const s = getStatusInfo(l.status);
+              const statusIsSent = l.status === 'sent';
+              return (
+                <div key={l.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-[#e6f4f7] flex items-center justify-center flex-shrink-0">
+                        <HiOutlineDocumentText className="w-5 h-5 text-[#0b5566]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{l.subject || t('payments.download_invoice')}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{localTimeAgo(l.createdAt)}</p>
+                      </div>
+                    </div>
+                    <div className={`flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${s.badge}`}>{s.icon}<span>{s.label}</span></div>
                   </div>
-                  <div className="flex gap-2">
-                    <select value={month} onChange={e => setMonth(Number(e.target.value))} className="flex-1 border rounded px-2 py-1 text-sm">
-                      {monthNames.map((mName, idx) => <option key={mName} value={idx + 1}>{mName}</option>)}
-                    </select>
-                    <select value={year} onChange={e => setYear(Number(e.target.value))} className="flex-1 border rounded px-2 py-1 text-sm">
-                      {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                    </select>
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      {new Date(l.createdAt).toLocaleDateString()} à {new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    {recips.map((r, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusIsSent ? 'bg-green-500' : 'bg-red-400'}`} />
+                        <span className="truncate">{r}</span>
+                      </div>
+                    ))}
+                    {l.paymentHistory && (() => {
+                      const ph = l.paymentHistory;
+                      const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : new Date();
+                      return <p className="text-xs text-[#0b5566] font-medium">FA-{invoiceDate.getFullYear()}-{String(ph.id).slice(0,6)}</p>;
+                    })()}
+                    {l.errorText && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-1.5">{l.errorText}</p>}
                   </div>
-                  <div>
-                    <select value={recipientFilter} onChange={e => setRecipientFilter(e.target.value)} className="w-full border rounded px-2 py-1 text-sm">
-                      <option value="">{t('admin.emaillogs.all_recipients')}</option>
-                      {Array.from(new Set(logs.flatMap(l => {
-                        try { const p = JSON.parse(l.recipients || '[]'); return Array.isArray(p) ? p.map(String) : [String(p)]; } catch { return (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
-                      }))).map((r, idx) => <option key={idx} value={r}>{r}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => exportCsv()} className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white rounded px-3 py-2 text-sm">
-                      <HiOutlineDocumentText className="w-4 h-4" />
-                      {t('admin.emaillogs.export')}
-                    </button>
-                    <button onClick={() => { setPage(1); setQuery(''); setSelectedMonth(''); }} className="p-2 border rounded">
-                      <HiOutlineRefresh className="w-4 h-4 text-gray-600" />
-                    </button>
+                  <div className="flex gap-2 pt-2 border-t border-gray-100">
+                    {statusIsSent ? (
+                      <>
+                        <button onClick={() => l.paymentHistory && openInvoice(l.paymentHistory!.id)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                          <HiOutlineEye className="w-4 h-4" /> Voir
+                        </button>
+                        <button onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory!.id, `facture-${l.paymentHistory!.id}.pdf`)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                          <HiOutlineDownload className="w-4 h-4" /> Télécharger
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => resendEmail(l.id)} disabled={!!resending[l.id] || !!(l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id)))} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700 hover:bg-amber-100 transition ${resending[l.id] ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                        <HiOutlineRefresh className={`w-4 h-4 ${resending[l.id] ? 'animate-spin' : ''}`} /> Renvoyer
+                      </button>
+                    )}
                   </div>
                 </div>
-              </div>
-              {/* Mobile: stacked cards */}
-              <div className="md:hidden space-y-4">
-                {/** compute visible logs applying recipient and query filters */}
+              );
+            });
+          })()}
+        </div>
+
+        {/* Desktop: table */}
+        <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.subject')}</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.date')}</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.recipients')}</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.invoice_number')}</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.status')}</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.error')}</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.actions')}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
                 {(() => {
                   const v = logs.filter(l => {
-                    // recipients
                     let recips: string[] = [];
-                    try {
-                      const parsed = JSON.parse(l.recipients || '[]');
-                      if (Array.isArray(parsed)) recips = parsed.map(String);
-                      else recips = [String(parsed)];
-                    } catch {
-                      recips = (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-                    }
+                    try { const parsed = JSON.parse(l.recipients || '[]'); recips = Array.isArray(parsed) ? parsed.map(String) : [String(parsed)]; }
+                    catch { recips = (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
                     if (recipientFilter && !recips.includes(recipientFilter)) return false;
-                    if (query) {
-                      const q = query.toLowerCase();
-                      if (!(String(l.subject || '').toLowerCase().includes(q) || recips.join(' ').toLowerCase().includes(q))) return false;
-                    }
+                    if (query) { const q = query.toLowerCase(); if (!(String(l.subject || '').toLowerCase().includes(q) || recips.join(' ').toLowerCase().includes(q))) return false; }
                     return true;
                   });
-                  return v.map(l => {
-                  let recips: string[] = [];
-                  try {
-                    const parsed = JSON.parse(l.recipients || '[]');
-                    if (Array.isArray(parsed)) recips = parsed.map(String);
-                    else recips = [String(parsed)];
-                  } catch {
-                    recips = (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-                  }
-                  const primaryDot = l.status === 'sent' ? 'bg-green-500' : 'bg-red-500';
-                          return (
-                            <div key={l.id} className="bg-white rounded-xl shadow-sm p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[#eef9ff] flex items-center justify-center text-[#0b5566] font-semibold"><HiOutlineDocumentText className="w-5 h-5" /></div>
-                          <div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-lg font-bold text-gray-900">{l.subject || t('payments.download_invoice')}</div>
-                              {(() => {
-                                const s = getStatusInfo(l.status);
-                                return (
-                                  <div className={`ml-2 text-sm font-medium px-2 py-1 rounded-full ${s.badge} flex items-center`}>{s.icon}<span>{s.label}</span></div>
-                                );
-                              })()}
-                            </div>
-                            {/* redundant subject line removed — title already shows the subject */}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="text-xs text-gray-400">{t('admin.emaillogs.date_sent')}</div>
-                        <div className="text-sm text-gray-800 font-medium">{new Date(l.createdAt).toLocaleString()}</div>
-                      </div>
-
-                      <div className="mt-4">
-                        <div className="text-xs text-gray-400">{t('admin.emaillogs.recipients')}</div>
-                        <div className="mt-2 flex flex-col gap-2">
-                          {recips.length ? recips.map((r, i) => (
-                            <div key={i} className="flex items-center gap-3 bg-gray-50 rounded-md px-3 py-2">
-                              <span className={`${primaryDot} w-2 h-2 rounded-full block`} />
-                              <span className="text-sm text-gray-800 break-words">{r}</span>
-                            </div>
-                          )) : (
-                            <div className="text-sm text-gray-600">—</div>
-                          )}
-                        </div>
-                      </div>
-
-                      {l.errorText ? (
-                        <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-md text-red-700">
-                          <div className="flex items-start gap-3">
-                            <div className="text-xl">⚠️</div>
-                            <div>
-                              <div className="font-semibold">{t('admin.emaillogs.send_error')}</div>
-                              <div className="text-sm mt-1">{l.errorText}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div className="mt-4 flex items-center justify-center gap-3">
-                        {l.status === 'sent' ? (
-                          <>
-                            <button
-                              onClick={() => l.paymentHistory && openInvoice(l.paymentHistory.id)}
-                              disabled={!l.paymentHistory}
-                              aria-label={t('admin.emaillogs.view_invoice')}
-                              className={`w-10 h-10 flex items-center justify-center rounded-full border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                              <HiOutlineEye className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory.id, `facture-${l.paymentHistory ? l.paymentHistory.id : l.id}.pdf`)}
-                              disabled={!l.paymentHistory}
-                              title={t('admin.emaillogs.download')}
-                              className={`w-10 h-10 flex items-center justify-center rounded-full border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                              <HiOutlineDownload className="w-5 h-5" />
-                            </button>
-                          </>
-                          ) : (
-                          <button
-                            title={t('admin.emaillogs.resend')}
-                            onClick={() => resendEmail(l.id)}
-                            disabled={!!resending[l.id] || !!(l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id)))}
-                            className={`w-10 h-10 flex items-center justify-center rounded-full bg-red-500 text-white ${resending[l.id] || (l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id))) ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                            <HiOutlineRefresh className="w-5 h-5" />
-                          </button>
-                        )}
-                        {/* more/actions button removed per UX request */}
-                      </div>
-
-                      <div className="mt-3 text-xs text-gray-400 text-center">{localTimeAgo(l.createdAt)}</div>
-                    </div>
+                  if (v.length === 0) return (
+                    <tr><td colSpan={7} className="py-16 text-center text-gray-400 text-sm">Aucun email trouvé</td></tr>
                   );
+                  return v.map(l => {
+                    let recips: string[] = [];
+                    try { const parsed = JSON.parse(l.recipients || '[]'); recips = Array.isArray(parsed) ? parsed.map(String) : [String(parsed)]; }
+                    catch { recips = (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
+                    const firstRecip = recips[0] || '';
+                    const statusIsSent = l.status === 'sent';
+                    const s = getStatusInfo(l.status);
+                    return (
+                      <tr key={l.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[#e6f4f7] flex items-center justify-center flex-shrink-0">
+                              <HiOutlineDocumentText className="w-4 h-4 text-[#0b5566]" />
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">{l.subject || t('payments.download_invoice')}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-5">
+                          <div className="text-sm text-gray-700">{new Date(l.createdAt).toLocaleDateString()}</div>
+                          <div className="text-xs text-gray-400">{new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        </td>
+                        <td className="py-3.5 px-5 max-w-[200px]">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusIsSent ? 'bg-green-500' : 'bg-red-400'}`} />
+                            <span className="text-sm text-gray-700 truncate">{firstRecip}</span>
+                          </div>
+                          {recips[1] && <div className="text-xs text-gray-400 ml-3.5 truncate">{recips.slice(1).join(', ')}</div>}
+                        </td>
+                        <td className="py-3.5 px-5">
+                          {l.paymentHistory ? (() => {
+                            const ph = l.paymentHistory;
+                            const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : new Date();
+                            return <span className="text-sm font-medium text-[#0b5566]">FA-{invoiceDate.getFullYear()}-{String(ph.id).slice(0,6)}</span>;
+                          })() : <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="py-3.5 px-5">
+                          <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${s.badge}`}>{s.icon}<span>{s.label}</span></div>
+                        </td>
+                        <td className="py-3.5 px-5 max-w-[160px]">
+                          {l.errorText ? <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-lg">{l.errorText}</span> : <span className="text-gray-300">—</span>}
+                        </td>
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-1.5">
+                            {statusIsSent ? (
+                              <>
+                                <button title={t('admin.emaillogs.view_invoice')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && openInvoice(l.paymentHistory.id)} className={`p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}><HiOutlineEye className="w-4 h-4" /></button>
+                                <button title={t('admin.emaillogs.download')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory.id, `facture-${l.paymentHistory.id}.pdf`)} className={`p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}><HiOutlineDownload className="w-4 h-4" /></button>
+                              </>
+                            ) : (
+                              <button title={t('admin.emaillogs.resend')} onClick={() => resendEmail(l.id)} disabled={!!resending[l.id] || !!(l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id)))} className={`p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition ${resending[l.id] ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                <HiOutlineRefresh className={`w-4 h-4 ${resending[l.id] ? 'animate-spin' : ''}`} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
                   });
                 })()}
-              </div>
+              </tbody>
+            </table>
+          </div>
 
-              {/* Desktop/tablet: gestion des factures layout */}
-              <div className="hidden md:block">
-                <div className="bg-white rounded-2xl shadow p-6">
-                  <div className="flex items-center justify-between gap-4 mb-6">
-                    <div className="flex-1 flex items-center gap-4">
-                      <h2 className="text-xl font-semibold">Gestion des Factures</h2>
-                      <div className="flex items-center bg-gray-50 rounded-md px-3 py-2 gap-3">
-                        <HiOutlineSearch className="w-4 h-4 text-gray-400" />
-                        <input aria-label="search" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-gray-600 placeholder-gray-400 outline-none" placeholder={t('admin.emaillogs.search_placeholder')} />
-                      </div>
-                      <div className="ml-2 flex items-center gap-2">
-                        <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border rounded px-2 py-1 text-sm">
-                          {monthNames.map((mName, idx) => <option key={mName} value={idx + 1}>{mName}</option>)}
-                        </select>
-                        <select value={year} onChange={e => setYear(Number(e.target.value))} className="border rounded px-2 py-1 text-sm">
-                          {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-                        </select>
-                        <div className="ml-2">
-                          <select value={recipientFilter} onChange={e => setRecipientFilter(e.target.value)} className="border rounded px-2 py-1 text-sm">
-                            <option value="">{t('admin.emaillogs.all_recipients')}</option>
-                            {Array.from(new Set(logs.flatMap(l => {
-                              try { const p = JSON.parse(l.recipients || '[]'); return Array.isArray(p) ? p.map(String) : [String(p)]; } catch { return (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
-                            }))).map((r, idx) => <option key={idx} value={r}>{r}</option>)}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="ml-auto flex items-center gap-3">
-                        <button onClick={() => exportCsv()} className="flex items-center gap-2 bg-green-500 text-white rounded px-3 py-2 text-sm" aria-label="export">
-                          <HiOutlineDocumentText className="w-4 h-4" />
-                          {t('admin.emaillogs.export')}
-                        </button>
-                        <button className="p-2 border rounded" aria-label="refresh" onClick={() => { setPage(1); setQuery(''); setSelectedMonth(''); }}>
-                          <HiOutlineRefresh className="w-4 h-4 text-gray-600" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead className="text-left text-sm text-gray-500 border-b">
-                        <tr>
-                          <th className="py-3 px-4">{t('emaillogs.table.subject')}</th>
-                          <th className="py-3 px-4">{t('emaillogs.table.date')}</th>
-                          <th className="py-3 px-4">{t('emaillogs.table.recipients')}</th>
-                          <th className="py-3 px-4">{t('emaillogs.table.invoice_number')}</th>
-                          <th className="py-3 px-4">{t('emaillogs.table.status')}</th>
-                          <th className="py-3 px-4">{t('emaillogs.table.error')}</th>
-                          <th className="py-3 px-4">{t('emaillogs.table.actions')}</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {(() => {
-                          const v = logs.filter(l => {
-                            let recips: string[] = [];
-                            try {
-                              const parsed = JSON.parse(l.recipients || '[]');
-                              if (Array.isArray(parsed)) recips = parsed.map(String);
-                              else recips = [String(parsed)];
-                            } catch {
-                              recips = (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-                            }
-                            if (recipientFilter && !recips.includes(recipientFilter)) return false;
-                            if (query) {
-                              const q = query.toLowerCase();
-                              if (!(String(l.subject || '').toLowerCase().includes(q) || recips.join(' ').toLowerCase().includes(q))) return false;
-                            }
-                            return true;
-                          });
-                          return v.map(l => {
-                          // recipients first line
-                          let recips: string[] = [];
-                          try {
-                            const parsed = JSON.parse(l.recipients || '[]');
-                            if (Array.isArray(parsed)) recips = parsed.map(String);
-                            else recips = [String(parsed)];
-                          } catch {
-                            recips = (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
-                          }
-                          const firstRecip = recips[0] || '';
-                          const statusIsSent = l.status === 'sent';
-                          return (
-                            <tr key={l.id} className="hover:bg-gray-50 align-top">
-                              <td className="py-4 px-4 w-1/3">
-                                <div className="text-sm font-medium text-gray-900">{l.subject || t('payments.download_invoice')}</div>
-                              </td>
-                              <td className="py-4 px-4 text-sm text-gray-700">
-                                <div>{new Date(l.createdAt).toLocaleDateString()}</div>
-                                <div className="text-xs text-gray-400">{new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-                              </td>
-                              <td className="py-4 px-4 text-sm text-gray-700 max-w-xs">
-                                <div className="flex items-center gap-3">
-                                  <span className={`w-2 h-2 rounded-full ${statusIsSent ? 'bg-green-500' : 'bg-red-500'}`} />
-                                  <div className="flex flex-col">
-                                    <div className="text-sm text-gray-800">{firstRecip}</div>
-                                    {recips[1] && <div className="text-xs text-gray-400">{recips.slice(1, 2).join(', ')}</div>}
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-4 px-4 text-sm text-blue-600">
-                                {l.paymentHistory ? (
-                                  <div>
-                                    {(() => {
-                                      const ph = l.paymentHistory;
-                                      if (!ph) return null;
-                                      const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : new Date();
-                                      const invoiceNumber = `FA-${invoiceDate.getFullYear()}-${String(ph.id).slice(0,6)}`;
-                                      return (
-                                        <>
-                                          <div className="font-medium">{invoiceNumber}</div>
-                                        </>
-                                      );
-                                    })()}
-                                  </div>
-                                ) : '—'}
-                              </td>
-                              <td className="py-4 px-4">
-                                {(() => {
-                                  const s = getStatusInfo(l.status);
-                                  return <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${s.badge}`}>{s.icon}<span>{s.label}</span></div>;
-                                })()}
-                              </td>
-                              <td className="py-4 px-4 text-sm text-red-600 max-w-xs">{l.errorText ? <div className="font-medium">{l.errorText}</div> : '-'}</td>
-                              <td className="py-4 px-4 text-sm">
-                                <div className="flex items-center gap-2">
-                                  {statusIsSent ? (
-                                    <>
-                                      <button title={t('admin.emaillogs.view_invoice')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && openInvoice(l.paymentHistory.id)} className={`p-2 rounded border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}><HiOutlineEye className="w-4 h-4" /></button>
-                                      <button title={t('admin.emaillogs.download')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory.id, `facture-${l.paymentHistory ? l.paymentHistory.id : l.id}.pdf`)} className={`p-2 rounded border text-gray-600 ${!l.paymentHistory ? 'opacity-50 cursor-not-allowed' : ''}`}><HiOutlineDownload className="w-4 h-4" /></button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      title={t('admin.emaillogs.resend')}
-                                      onClick={() => resendEmail(l.id)}
-                                      disabled={!!resending[l.id] || !!(l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id)))}
-                                      className={`p-2 rounded bg-red-500 text-white ${resending[l.id] || (l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id))) ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                      <HiOutlineRefresh className="w-4 h-4" />
-                                    </button>
-                                  )}
-                                  {/* more/actions button removed per UX request */}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                          });
-                        })()}
-                      </tbody>
-                    </table>
-                  </div>
-
-                    <div className="mt-6 bg-gray-50 rounded p-6 text-center">
-                    <div className="text-sm text-gray-600">
-                      {t('admin.emaillogs.displaying', {
-                        from: total ? `${(page - 1) * limit + 1}` : (logs.length ? '1' : '—'),
-                        to: total ? `${Math.min(page * limit, total)}` : (logs.length ? `${logs.length}` : '—'),
-                        total: String(total ?? '—')
-                      })}
-                    </div>
-                    <div className="mt-3 flex items-center justify-center gap-3">
-                      <button className="px-3 py-1 border rounded" onClick={() => setPage(Math.max(1, page - 1))} disabled={!hasPrev}>{t('emaillogs.pagination.prev')}</button>
-                      <div className="inline-flex items-center justify-center w-10 h-10 bg-white rounded-full border">{page}</div>
-                      <button className="px-3 py-1 border rounded" onClick={() => hasNext && setPage(page + 1)} disabled={!hasNext}>{t('emaillogs.pagination.next')}</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </>
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-gray-50">
+            <p className="text-sm text-gray-500">
+              {t('admin.emaillogs.displaying', {
+                from: total ? `${(page - 1) * limit + 1}` : (logs.length ? '1' : '—'),
+                to: total ? `${Math.min(page * limit, total)}` : (logs.length ? `${logs.length}` : '—'),
+                total: String(total ?? '—')
+              })}
+            </p>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={!hasPrev} className="px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-white transition disabled:opacity-40">{t('emaillogs.pagination.prev')}</button>
+              <span className="w-8 h-8 flex items-center justify-center bg-[#0b5566] text-white text-sm font-bold rounded-lg">{page}</span>
+              <button onClick={() => hasNext && setPage(page + 1)} disabled={!hasNext} className="px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-white transition disabled:opacity-40">{t('emaillogs.pagination.next')}</button>
+            </div>
+          </div>
         </div>
+
+      </div>
 
       {showCalendarModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

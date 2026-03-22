@@ -49,9 +49,11 @@ router.get('/me', auth, async (req, res) => {
 
   // Attach the current subscription plan so the frontend can gate features
   let plan = null;
+  let subscriptionStatus = null;
   try {
     if (user.role === 'super-admin') {
       plan = 'pro'; // super-admin has full access
+      subscriptionStatus = 'active';
     } else {
       let sub = null;
       if (user.role === 'admin') {
@@ -71,13 +73,16 @@ router.get('/me', auth, async (req, res) => {
           }
         }
       }
-      if (sub) plan = sub.plan;
+      if (sub) {
+        plan = sub.plan;
+        subscriptionStatus = sub.status;
+      }
     }
   } catch (e) {
     // ignore — plan stays null
   }
 
-  res.json({ ...user, plan });
+  res.json({ ...user, plan, subscriptionStatus });
 });
 
 router.get('/all', async (req, res) => {

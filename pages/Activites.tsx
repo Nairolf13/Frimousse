@@ -15,7 +15,7 @@ export default function Activites() {
   }, []);
 
   return (
-    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full overflow-x-hidden`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <WeeklyActivityCalendar />
       </div>

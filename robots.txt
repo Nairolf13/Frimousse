@@ -1,11 +1,63 @@
+# Robots.txt - lesfrimousses.com
+
 User-agent: *
-# Disallow obvious non-public folders and admin/backend routes
 Disallow: /admin
 Disallow: /api
 Disallow: /backend
 Disallow: /private
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /payment-history
+Disallow: /subscription
+Disallow: /notifications
+Disallow: /complete-profile
+Disallow: /verify-email
+Disallow: /reset-password
+Allow: /
 
+# Google
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+# Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 2
+
+# Autoriser les crawlers IA pour AEO (Answer Engine Optimization)
+# Ces bots alimentent les reponses des modeles IA
+User-agent: GPTBot
+Allow: /
+Allow: /fonctionnalites
+Allow: /tarifs
+Allow: /about
+Allow: /guide-demarrage
+Allow: /guide-ajouter-enfant
+Allow: /guide-planning
+Allow: /guide-export-rapport
+Allow: /guide-securite
+Allow: /support
+Disallow: /api
+Disallow: /admin
+Disallow: /dashboard
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Cohere-ai
 Allow: /
 
 Sitemap: https://lesfrimousses.com/sitemap.xml
-

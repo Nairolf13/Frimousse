@@ -7,9 +7,12 @@ export default function GuideAddChildPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"Ajouter un enfant | Guide Frimousse"}
-        description={"Tutoriel pour ajouter un enfant dans Frimousse : formulaire, champs obligatoires, gestion des groupes et informations parentales."}
+        title={"Ajouter un enfant dans le logiciel | Guide Frimousse - Gestion creche"}
+        description={"Comment ajouter un enfant dans Frimousse : formulaire d'inscription, informations medicales, contacts d'urgence, autorisations parentales. Guide pour creches et MAM."}
         url={"https://lesfrimousses.com/guide-ajouter-enfant"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        type={"article"}
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Guide ajout enfant', url: 'https://lesfrimousses.com/guide-ajouter-enfant' }]}
       />
       <PublicNavbar />
       <main className="flex-1 w-full">

@@ -1,11 +1,14 @@
 {
-  "name": "Les Frimousses",
+  "name": "Frimousse — Application de gestion de garde d'enfants",
   "short_name": "Frimousse",
-  "description": "Gestion d'accueil de jeunes enfants",
+  "description": "Application de gestion pour creches, micro-creches, MAM et garderies. Planning, fiches enfants, communication parents, rapports et facturation.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0b5566",
+  "lang": "fr-FR",
+  "dir": "ltr",
+  "categories": ["business", "education", "productivity"],
   "icons": [
     {
       "src": "/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp",

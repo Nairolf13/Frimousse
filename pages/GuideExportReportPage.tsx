@@ -7,9 +7,12 @@ export default function GuideExportReportPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"Rapport | Guide Frimousse"}
-        description={"Tutoriel pour exporter un rapport dans Frimousse : consultation, filtrage, export PDF ou Excel des rapports d'activité."}
+        title={"Exporter un rapport d'activite | Guide Frimousse - Logiciel creche"}
+        description={"Comment exporter un rapport d'activite dans Frimousse : consultation, filtrage, export PDF ou Excel. Guide pour creches, micro-creches et MAM."}
         url={"https://lesfrimousses.com/guide-export-rapport"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        type={"article"}
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Export rapport', url: 'https://lesfrimousses.com/guide-export-rapport' }]}
       />
       <PublicNavbar />
       <main className="flex-1 w-full">

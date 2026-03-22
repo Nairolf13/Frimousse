@@ -181,7 +181,6 @@ export default function Nannies() {
   const hasSpecial = specialRe.test(String(form.password || ''));
   const hasLength = String(form.password || '').length >= minLength;
   const passwordValid = hasUpper && hasDigit && hasSpecial && hasLength;
-  const [birthInputType, setBirthInputType] = useState<'text' | 'date'>('text');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -817,7 +816,7 @@ export default function Nannies() {
 
         {/* Form */}
         {(adding || editingId) && (
-          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow-md border border-gray-100">
             {/* Form header */}
             <div className="px-6 py-4 bg-gradient-to-r from-[#0b5566] to-[#08323a] flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
@@ -899,25 +898,10 @@ export default function Nannies() {
               <label className={labelCls}>{t('nanny.form.birthDate') || 'Date de naissance'} <span className="text-red-500">*</span></label>
               <input
                 name="birthDate"
-                type={birthInputType}
-                value={birthInputType === 'date' ? (form.birthDate || '') : (form.birthDate ? ((): string => {
-                  try {
-                    const d = new Date(String(form.birthDate));
-                    if (!isNaN(d.getTime())) {
-                      const dd = String(d.getDate()).padStart(2, '0');
-                      const mm = String(d.getMonth() + 1).padStart(2, '0');
-                      const yyyy = String(d.getFullYear());
-                      return `${dd}/${mm}/${yyyy}`;
-                    }
-                  } catch (e) { void e; }
-                  return String(form.birthDate);
-                })() : '')}
+                type="date"
+                value={form.birthDate || ''}
                 onChange={handleChange}
-                placeholder={t('nanny.form.birthDate') || 'Date de naissance'}
                 className={inputCls}
-                onFocus={() => setBirthInputType('date')}
-                onBlur={() => setBirthInputType('text')}
-                readOnly={birthInputType === 'text'}
               />
             </div>
 
@@ -935,11 +919,21 @@ export default function Nannies() {
 
             {/* Email */}
             <div className="flex flex-col">
-              <label className={labelCls}>{t('nanny.form.email')} <span className="text-red-500">*</span></label>
+              <label className={labelCls}>{t('nanny.form.email')} <span className="text-gray-400 font-normal text-xs ml-1">(optionnel)</span></label>
               <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className={inputCls} />
+              <p className="text-xs text-gray-400 mt-1">Vous pouvez utiliser votre propre email. Laissez vide pour créer sans compte de connexion.</p>
             </div>
 
-            {/* Password */}
+            {/* Message si l'email saisi est celui du compte admin connecté */}
+            {form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase() && (
+              <div className="md:col-span-2 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>Vous utilisez votre propre email. <strong>Il n'est pas nécessaire de saisir un mot de passe</strong> — vous vous connecterez toujours avec votre compte administrateur.</span>
+              </div>
+            )}
+
+            {/* Password — masqué si l'email correspond au compte admin connecté */}
+            {!(form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase()) && (<>
             <div className="relative flex flex-col">
               <label className={labelCls}>{t('nanny.form.password')}</label>
               <input name="password" autoComplete="new-password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className={`${inputCls} pr-10`} />
@@ -956,9 +950,10 @@ export default function Nannies() {
                 {showPw ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
               </button>
             </div>
+            </>)}
 
             {/* Password rules */}
-            {(adding || editingId) && (
+            {(adding || editingId) && !(form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase()) && (
               <div className="md:col-span-2">
                 <div className="grid grid-cols-2 gap-2">
                   {[

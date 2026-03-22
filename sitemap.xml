@@ -1,81 +1,98 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Pages principales -->
   <url>
     <loc>https://lesfrimousses.com/</loc>
-    <lastmod>2025-10-14</lastmod>
-    <changefreq>daily</changefreq>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
     <loc>https://lesfrimousses.com/fonctionnalites</loc>
+    <lastmod>2026-03-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://lesfrimousses.com/tarifs</loc>
+    <lastmod>2026-03-22</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://lesfrimousses.com/about</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/cgu</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/confidentialite</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/mentions-legales</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/guide-demarrage</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/guide-ajouter-enfant</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/guide-planning</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/guide-export-rapport</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/guide-securite</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/support</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://lesfrimousses.com/centers/cd4c0eb8-599e-4a5f-9549-12e4b57ffd1d</loc>
-    <lastmod>2025-09-30</lastmod>
+    <lastmod>2026-03-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://lesfrimousses.com/reviews/44df4117-bb4a-48ab-b48b-f802d4a5f02b</loc>
-    <lastmod>2025-10-07</lastmod>
+    <loc>https://lesfrimousses.com/register</loc>
+    <lastmod>2026-03-22</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/login</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/support</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Guides (contenu riche pour SEO) -->
+  <url>
+    <loc>https://lesfrimousses.com/guide-demarrage</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/guide-ajouter-enfant</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/guide-planning</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/guide-export-rapport</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/guide-securite</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Pages legales -->
+  <url>
+    <loc>https://lesfrimousses.com/cgu</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/confidentialite</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://lesfrimousses.com/mentions-legales</loc>
+    <lastmod>2026-03-22</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
   </url>
 </urlset>

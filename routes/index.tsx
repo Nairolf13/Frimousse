@@ -1,4 +1,5 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import GuideStartPage from '../pages/GuideStartPage';
 import GuideAddChildPage from '../pages/GuideAddChildPage';
 import GuidePlanningPage from '../pages/GuidePlanningPage';
@@ -67,6 +68,12 @@ const LegalNoticePage = lazyWithRetry(() => import('../pages/LegalNoticePage'));
 
 
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
 export default function AppRoutes() {
   const AssistantPage = lazyWithRetry(() => import('../pages/Assistant'));
   const SubscriptionManagement = lazyWithRetry(() => import('../pages/SubscriptionManagement'));
@@ -91,6 +98,7 @@ const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />

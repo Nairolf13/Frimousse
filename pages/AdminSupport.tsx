@@ -556,7 +556,7 @@ export default function AdminSupportPage() {
             <>
               {centers.length === 0 ? (
                 <div className="text-center py-12">
-                  <div className="text-gray-400 text-6xl mb-4">🎫</div>
+                  <div className="text-gray-400 text-6xl mb-4">💬</div>
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">Aucun ticket en cours</h2>
                   <p className="text-gray-600">Tous les centres sont à jour avec leur support.</p>
                 </div>

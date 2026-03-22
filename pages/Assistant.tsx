@@ -44,10 +44,11 @@ export default function Assistant() {
     return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
   }, []);
 
-  // Gate: only Pro plan (or super-admin) can access the assistant
+  // Gate: Pro plan OR active trial can access the assistant
   const userPlan = (user?.plan || '').toLowerCase();
   const isSuperAdmin = user?.role === 'super-admin';
-  const hasPro = isSuperAdmin || userPlan === 'pro';
+  const isTrialing = user?.subscriptionStatus === 'trialing';
+  const hasPro = isSuperAdmin || userPlan === 'pro' || isTrialing;
 
   if (!hasPro) {
     return (

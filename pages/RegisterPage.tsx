@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import OAuthButtons from '../components/OAuthButtons';
+import SEO from '../components/SEO';
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -531,6 +532,13 @@ export default function RegisterPage() {
 
   return (
     <div ref={containerRef} className="min-h-dvh w-full bg-white md:flex md:flex-row">
+      <SEO
+        title={"Inscription gratuite | Frimousse - Application de gestion creche et MAM"}
+        description={"Creez votre compte Frimousse gratuitement. Application de gestion pour creches, micro-creches et MAM. Essai gratuit 15 jours, sans carte bancaire."}
+        url={"https://lesfrimousses.com/register"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        noindex={false}
+      />
       {/* Desktop left branding panel — sticky */}
       <div className="hidden md:flex md:w-[38%] lg:w-[35%] xl:w-[30%] bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 flex-col items-center justify-center p-10 relative overflow-hidden md:sticky md:top-0 md:h-screen md:flex-shrink-0">
         {/* Decorative circles */}

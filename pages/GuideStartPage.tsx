@@ -7,9 +7,12 @@ export default function GuideStartPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"Guide de démarrage rapide | Frimousse"}
-        description={"Premiers pas sur Frimousse : connexion, navigation, ajout d'enfants, gestion du planning, accès aux rapports."}
+        title={"Guide de demarrage rapide | Frimousse - Logiciel de gestion creche"}
+        description={"Premiers pas sur Frimousse : connexion, navigation, ajout d'enfants, gestion du planning, acces aux rapports. Tutoriel complet pour creches, micro-creches et MAM."}
         url={"https://lesfrimousses.com/guide-demarrage"}
+        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        type={"article"}
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Guide demarrage', url: 'https://lesfrimousses.com/guide-demarrage' }]}
       />
       <PublicNavbar />
       <main className="flex-1 w-full">

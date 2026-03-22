@@ -107,10 +107,11 @@ import ConfirmDialog from '../components/ConfirmDialog';
           return (
           <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
             <SEO
-              title={"Frimousse — Logiciel de gestion pour crèches et MAM"}
-              description={"Frimousse aide les crèches, micro-crèches et MAM à gérer inscriptions, plannings, fiches enfants et communication parent-crèche. Essai gratuit et conformité RGPD."}
+              title={"Frimousse — Application de gestion de garde d'enfants | Creche, micro-creche, MAM"}
+              description={"Frimousse : logiciel de gestion pour creches, micro-creches, MAM et garderies. Planning, fiches enfants, communication parents, rapports d'activite, facturation. Essai gratuit 15 jours, conforme RGPD."}
               url={"https://lesfrimousses.com/"}
-              image={"https://lesfrimousses.com/frimousse-cover.png"}
+              image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+              tags={["application garde enfant", "logiciel creche", "gestion micro-creche", "application MAM", "planning creche", "communication parents creche", "logiciel petite enfance", "gestion assistante maternelle"]}
             />
 
             <PublicNavbar variant="dark" />
@@ -632,6 +633,62 @@ import ConfirmDialog from '../components/ConfirmDialog';
                     onCancel={() => setSentModalOpen(false)}
                     onConfirm={async () => { setSentModalOpen(false); }}
                   />
+                </div>
+              </div>
+            </section>
+
+            {/* ── FAQ (AEO - Answer Engine Optimization) ── */}
+            <section id="faq" className="py-24 px-6 bg-white">
+              <div className="max-w-4xl mx-auto">
+                <div className="text-center mb-16">
+                  <span className="inline-block text-xs font-bold uppercase tracking-widest text-brand-500 bg-brand-50 px-4 py-1.5 rounded-full mb-4">FAQ</span>
+                  <h2 className="text-3xl md:text-5xl font-extrabold text-gray-900 tracking-tight">Questions fréquentes</h2>
+                  <p className="mt-4 text-gray-500 text-lg max-w-xl mx-auto">Tout ce que vous devez savoir sur Frimousse, l'application de gestion pour crèches et MAM.</p>
+                </div>
+
+                <div className="space-y-4">
+                  {[
+                    {
+                      q: "Quelle est la meilleure application de gestion pour crèche ?",
+                      a: "Frimousse est une application complète de gestion pour crèches, micro-crèches et MAM. Elle permet de gérer les plannings, les fiches enfants avec informations médicales, la communication avec les parents, les rapports d'activité et la facturation. Essai gratuit de 15 jours sans engagement."
+                    },
+                    {
+                      q: "Comment gérer une micro-crèche avec un logiciel ?",
+                      a: "Avec Frimousse, vous pouvez gérer votre micro-crèche de A à Z : inscriptions des enfants, plannings des intervenants, suivi des présences, communication avec les familles, génération de rapports et facturation automatisée. L'interface est simple et intuitive, conçue pour le terrain."
+                    },
+                    {
+                      q: "Frimousse est-il conforme au RGPD ?",
+                      a: "Oui, Frimousse est entièrement conforme au RGPD. Les données sont chiffrées, les accès sont sécurisés par authentification JWT, et toutes les informations personnelles des enfants et des familles sont protégées conformément à la réglementation européenne."
+                    },
+                    {
+                      q: "Combien coûte un logiciel de gestion de crèche ?",
+                      a: "Frimousse propose un essai gratuit de 15 jours, puis des formules à partir de 29,99 € par mois pour le plan Essentiel (jusqu'à 10 enfants) et 59,99 € par mois pour le plan Pro (jusqu'à 30 enfants). Sans engagement, résiliable à tout moment."
+                    },
+                    {
+                      q: "Quelle application pour une MAM (Maison d'Assistantes Maternelles) ?",
+                      a: "Frimousse est spécialement conçu pour les MAM. L'application permet de gérer les plannings de chaque assistante maternelle, suivre les enfants, communiquer avec les parents et générer les rapports nécessaires. Interface mobile-first pour une utilisation au quotidien."
+                    },
+                    {
+                      q: "Comment faciliter la communication entre parents et crèche ?",
+                      a: "Frimousse intègre un fil d'actualité avec photos, des notifications push, un système de rapports quotidiens et une messagerie intégrée. Les parents peuvent suivre les activités de leur enfant en temps réel depuis l'application."
+                    },
+                    {
+                      q: "Peut-on essayer Frimousse gratuitement ?",
+                      a: "Oui ! Frimousse offre un essai gratuit de 15 jours avec accès à toutes les fonctionnalités. Aucune carte bancaire n'est requise. Vous pouvez créer votre compte et commencer à utiliser l'application immédiatement."
+                    },
+                    {
+                      q: "Frimousse fonctionne-t-il sur mobile ?",
+                      a: "Oui, Frimousse est une application web progressive (PWA) qui fonctionne sur tous les appareils : smartphone, tablette et ordinateur. Vous pouvez l'installer sur votre écran d'accueil comme une application native, sans passer par les stores."
+                    },
+                  ].map((item, i) => (
+                    <details key={i} className="group bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden">
+                      <summary className="flex items-center justify-between cursor-pointer px-6 py-5 text-left font-semibold text-gray-900 hover:bg-gray-100 transition-colors">
+                        <span>{item.q}</span>
+                        <svg className="w-5 h-5 text-gray-400 group-open:rotate-180 transition-transform flex-shrink-0 ml-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/></svg>
+                      </summary>
+                      <div className="px-6 pb-5 text-gray-600 leading-relaxed">{item.a}</div>
+                    </details>
+                  ))}
                 </div>
               </div>
             </section>

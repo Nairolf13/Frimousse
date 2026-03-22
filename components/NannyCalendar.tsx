@@ -213,160 +213,232 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
         </div>
       </div>
     {showForm && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-        <form
-          className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs flex flex-col items-center relative"
-          onSubmit={async e => {
-            e.preventDefault();
-            setError('');
-            setSuccess('');
-            if (!selectedChild) { setError('Sélectionnez un enfant'); return; }
-            const assignsForDay = assignments.filter(a => a.date.split('T')[0] === showForm.date && a.nanny.id === nannyId);
-            if (assignsForDay.some(a => a.child.id === selectedChild)) {
-              setError('Cet enfant est déjà assigné ce jour-là');
-              return;
-            }
-            const [year, month, day] = showForm.date.split('-');
-            const isoDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toISOString();
-            const res = await fetch(`${API_URL}/assignments`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({ date: isoDate, childId: selectedChild, nannyId }),
-            });
-            if (!res.ok) {
-              setError('Erreur lors de l\'ajout');
-              return;
-            }
-            setSuccess('Enfant ajouté au planning !');
-            setTimeout(() => {
-              setShowForm(null);
-              setSelectedChild('');
-              setSuccess('');
-            }, 1200);
-            const yearNow = currentDate.getFullYear();
-            const monthNow = currentDate.getMonth();
-            const first = new Date(yearNow, monthNow, 1);
-            const last = new Date(yearNow, monthNow + 1, 0);
-            fetch(`${API_URL}/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`,
-              { credentials: 'include' })
-              .then(res => res.json())
-              .then(setAssignments);
-            notifyPaymentHistory();
-          }}
-        >
-          <button type="button" onClick={() => setShowForm(null)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-          <h2 className="text-lg font-bold mb-4 text-center">Ajouter une affectation</h2>
-          <select
-            value={selectedChild}
-            onChange={e => setSelectedChild(e.target.value)}
-            className="border rounded px-2 py-1 mb-2 w-full"
-            required
-          >
-            <option value="">Sélectionner un enfant</option>
-            {children.map(child => (
-              <option key={child.id} value={child.id}>{child.name}</option>
-            ))}
-          </select>
-          <div className="flex gap-2 w-full">
-            <button type="submit" className="bg-green-500 text-white px-3 py-1 rounded w-full">Ajouter</button>
-            <button type="button" className="bg-gray-300 px-3 py-1 rounded w-full" onClick={() => setShowForm(null)}>Annuler</button>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+        <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col">
+          {/* Drag handle */}
+          <div className="flex justify-center pt-3 pb-1 sm:hidden">
+            <div className="w-10 h-1 bg-gray-300 rounded-full" />
           </div>
-          {error && <div className="text-red-600 text-xs mt-2 text-center w-full">{error}</div>}
-          {success && <div className="text-green-600 text-xs mt-2 text-center w-full">{success}</div>}
-        </form>
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-4 pb-4 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <div>
+                <h2 className="text-base font-extrabold text-[#0b5566]">Ajouter une affectation</h2>
+                <p className="text-xs text-gray-400 leading-none mt-0.5">
+                  {new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(new Date(showForm.date))}
+                </p>
+              </div>
+            </div>
+            <button type="button" onClick={() => setShowForm(null)} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-xl leading-none">×</button>
+          </div>
+          {/* Body */}
+          <form
+            className="px-5 py-5 space-y-4"
+            onSubmit={async e => {
+              e.preventDefault();
+              setError('');
+              setSuccess('');
+              if (!selectedChild) { setError('Sélectionnez un enfant'); return; }
+              const assignsForDay = assignments.filter(a => a.date.split('T')[0] === showForm.date && a.nanny.id === nannyId);
+              if (assignsForDay.some(a => a.child.id === selectedChild)) {
+                setError('Cet enfant est déjà assigné ce jour-là');
+                return;
+              }
+              const [year, month, day] = showForm.date.split('-');
+              const isoDate = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).toISOString();
+              const res = await fetch(`${API_URL}/assignments`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ date: isoDate, childId: selectedChild, nannyId }),
+              });
+              if (!res.ok) { setError("Erreur lors de l'ajout"); return; }
+              setSuccess('Enfant ajouté au planning !');
+              setTimeout(() => { setShowForm(null); setSelectedChild(''); setSuccess(''); }, 1200);
+              const yearNow = currentDate.getFullYear();
+              const monthNow = currentDate.getMonth();
+              const first = new Date(yearNow, monthNow, 1);
+              const last = new Date(yearNow, monthNow + 1, 0);
+              fetch(`${API_URL}/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
+                .then(res => res.json()).then(setAssignments);
+              notifyPaymentHistory();
+            }}
+          >
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Enfant <span className="text-red-400">*</span></label>
+              {children.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">Aucun enfant disponible.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {children.map(child => {
+                    const selected = selectedChild === child.id;
+                    return (
+                      <button
+                        key={child.id}
+                        type="button"
+                        onClick={() => setSelectedChild(child.id)}
+                        className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${
+                          selected ? 'bg-[#0b5566] text-white border-[#0b5566] shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0b5566] hover:text-[#0b5566]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                            {child.name.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="truncate">{child.name}</span>
+                        </div>
+                        {selected && <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {error && <p className="text-xs text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+            {success && <p className="text-xs text-emerald-600 bg-emerald-50 rounded-xl px-3 py-2 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>{success}</p>}
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={() => setShowForm(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">Annuler</button>
+              <button type="submit" disabled={!selectedChild} className="flex-[2] py-2.5 rounded-xl bg-[#0b5566] text-white text-sm font-bold shadow hover:bg-[#08323a] transition disabled:opacity-40 disabled:cursor-not-allowed">Ajouter</button>
+            </div>
+          </form>
+        </div>
       </div>
     )}
 
     {dayModal && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg relative overflow-hidden">
-          {/* header bar */}
-          <div className="bg-brand-500 text-white py-3 px-6 flex justify-between items-center">
-            <h2 className="text-xl font-semibold">
-              {t('children.present_on', {
-                date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(dayModal.date))
-              })}
-            </h2>
-            <button onClick={() => setDayModal(null)} className="text-white hover:opacity-80 text-2xl leading-none">×</button>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => { setDayModal(null); setSelectedIds([]); }}>
+        <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+          {/* Drag handle (mobile only) */}
+          <div className="flex justify-center pt-3 pb-1 sm:hidden">
+            <div className="w-10 h-1 rounded-full bg-gray-200" />
           </div>
-          {!(user && user.role === 'nanny') ? (
-            <>
-              <div className="p-6 max-h-80 overflow-auto">
+          {/* Header */}
+          <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-gray-100">
+            <div className="w-10 h-10 rounded-xl bg-[#e6f4f7] flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-[#0b5566]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-bold text-gray-900 leading-tight">
+                {t('children.present_on', {
+                  date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(dayModal.date))
+                })}
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">{dayModal.assigns.length} enfant{dayModal.assigns.length !== 1 ? 's' : ''}</p>
+            </div>
+            <button onClick={() => { setDayModal(null); setSelectedIds([]); }} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition flex-shrink-0">
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-3">
+            {!(user && user.role === 'nanny') ? (
+              <>
                 {dayModal.assigns.length === 0 ? (
-                  <div className="text-gray-500 text-center">{t('children.none_on_date', { date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(dayModal.date)) })}</div>
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                    <p className="text-sm text-gray-500">{t('children.none_on_date', { date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(dayModal.date)) })}</p>
+                  </div>
                 ) : (
-                  <div className="space-y-3">
-                    {dayModal.assigns.map(a => (
-                      <div key={a.id} className="flex items-center justify-between p-3 border rounded-lg shadow-sm hover:shadow-md transition">
-                        <div>
-                          <div className="font-medium text-gray-800">{a.child.name}</div>
-                          <div className="text-xs text-gray-500">{a.nanny.name}</div>
-                        </div>
-                        <input
-                          type="checkbox"
-                          value={a.id}
-                          checked={selectedIds.includes(a.id)}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setSelectedIds(prev => {
-                              if (e.target.checked) return [...prev, val];
-                              return prev.filter(id => id !== val);
-                            });
+                  <div className="space-y-2">
+                    {dayModal.assigns.map(a => {
+                      const isSelected = selectedIds.includes(a.id);
+                      return (
+                        <button
+                          key={a.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedIds(prev =>
+                              isSelected ? prev.filter(id => id !== a.id) : [...prev, a.id]
+                            );
                           }}
-                        />
-                      </div>
-                    ))}
+                          className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-all text-left ${
+                            isSelected ? 'bg-red-50 border-red-300' : 'bg-white border-gray-200 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm font-bold ${isSelected ? 'bg-red-100 text-red-600' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                              {a.child.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <div className={`font-semibold text-sm truncate ${isSelected ? 'text-red-700' : 'text-gray-800'}`}>{a.child.name}</div>
+                              <div className="text-xs text-gray-400 truncate">{a.nanny.name}</div>
+                            </div>
+                          </div>
+                          <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSelected ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}>
+                            {isSelected && <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
-                {(error || success) && (
-                  <div className="w-full text-center mt-4">
-                    {error && <div className="text-red-600 text-xs">{error}</div>}
-                    {success && <div className="text-green-600 text-xs">{success}</div>}
+                {error && <p className="text-xs text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+                {success && <p className="text-xs text-emerald-600 bg-emerald-50 rounded-xl px-3 py-2 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>{success}</p>}
+              </>
+            ) : (
+              <div className="space-y-2">
+                {dayModal.assigns.map(a => (
+                  <div key={a.id} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white">
+                    <div className="w-9 h-9 rounded-xl bg-[#e6f4f7] flex items-center justify-center flex-shrink-0 text-sm font-bold text-[#0b5566]">
+                      {a.child.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-sm font-medium text-gray-800">{a.child.name}</span>
                   </div>
-                )}
-                {dayModal.assigns.length > 0 && (
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      disabled={selectedIds.length === 0}
-                      className="flex-1 bg-red-500 text-white px-3 py-2 rounded disabled:opacity-50"
-                      onClick={async () => {
-                        if (selectedIds.length === 0) return;
-                        try {
-                          const res = await fetchWithRefresh(`${API_URL}/assignments`, {
-                            method: 'DELETE',
-                            credentials: 'include',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ ids: selectedIds }),
-                          });
-                          if (res.ok) {
-                            const count = selectedIds.length;
-                            setAssignments(prev => prev.filter(a => !selectedIds.includes(a.id)));
-                            setDayModal(null);
-                            setSelectedIds([]);
-                            setSuccess(t('children.delete_selected_success', { n: count.toString() }) as unknown as string);
-                            notifyPaymentHistory();
-                          } else {
-                            setError('Erreur lors de la suppression');
-                          }
-                        } catch (err) {
-                          console.error(err);
-                          setError('Erreur lors de la suppression');
-                        }
-                      }}
-                    >{t('children.delete_selected')}</button>
-                    <button className="flex-1 bg-gray-300 px-3 py-2 rounded" onClick={() => setDayModal(null)}>Annuler</button>
-                  </div>
-                )}
+                ))}
               </div>
-            </>
-          ) : (
-            <div className="p-6 max-h-80 overflow-auto space-y-2">
-              {dayModal.assigns.map(a => (
-                <div key={a.id} className="p-2 border rounded-lg bg-gray-50">
-                  {a.child.name}
-                </div>
-              ))}
+            )}
+          </div>
+
+          {/* Footer */}
+          {!(user && user.role === 'nanny') && dayModal.assigns.length > 0 && (
+            <div className="flex gap-3 px-5 py-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => { setDayModal(null); setSelectedIds([]); }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+              >
+                Fermer
+              </button>
+              <button
+                type="button"
+                disabled={selectedIds.length === 0}
+                className="flex-[2] py-2.5 rounded-xl bg-red-500 text-white text-sm font-bold shadow hover:bg-red-600 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                onClick={async () => {
+                  if (selectedIds.length === 0) return;
+                  try {
+                    const res = await fetchWithRefresh(`${API_URL}/assignments`, {
+                      method: 'DELETE',
+                      credentials: 'include',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ ids: selectedIds }),
+                    });
+                    if (res.ok) {
+                      const count = selectedIds.length;
+                      setAssignments(prev => prev.filter(a => !selectedIds.includes(a.id)));
+                      setDayModal(null);
+                      setSelectedIds([]);
+                      setSuccess(t('children.delete_selected_success', { n: count.toString() }) as unknown as string);
+                      notifyPaymentHistory();
+                    } else {
+                      setError('Erreur lors de la suppression');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    setError('Erreur lors de la suppression');
+                  }
+                }}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                {t('children.delete_selected')}{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}
+              </button>
             </div>
           )}
         </div>
