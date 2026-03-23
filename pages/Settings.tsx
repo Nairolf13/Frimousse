@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '../src/context/AuthContext';
 import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { useTutorial } from '../src/context/useTutorial';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -395,6 +396,7 @@ function ProfileButton() {
 }
 
 export default function Settings() {
+  const { user: authUser } = useAuth();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -433,8 +435,8 @@ export default function Settings() {
   useEffect(() => {
     try { setCompletedTours(JSON.parse(localStorage.getItem('tutorial_completed') || '[]')); } catch { /* ignore */ }
   }, []);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const isAdmin = !!(authUser && typeof authUser.role === 'string' && (authUser.role === 'admin' || authUser.role.toLowerCase().includes('super')));
+  const isSuperAdmin = !!(authUser && typeof authUser.role === 'string' && authUser.role.toLowerCase().includes('super'));
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [supportTickets, setSupportTickets] = useState<Ticket[]>([]);
   const [supportLoading, setSupportLoading] = useState(false);
@@ -447,21 +449,6 @@ export default function Settings() {
   const [replyMessage, setReplyMessage] = useState('');
   const supportModalContainerRef = useRef<HTMLDivElement | null>(null);
   const replyInputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    // detect if current user is admin to show admin-only settings
-    (async () => {
-      try {
-        const res = await fetchWithRefresh(`${API_URL}/user/me`, { credentials: 'include' });
-        if (!res.ok) return;
-        const u = await res.json();
-        if (u && (u.role === 'admin' || (typeof u.role === 'string' && u.role.toLowerCase().includes('super')))) setIsAdmin(true);
-        if (u && typeof u.role === 'string' && u.role.toLowerCase().includes('super')) setIsSuperAdmin(true);
-      } catch {
-        // ignore
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     // load current user's notifyByEmail preference
