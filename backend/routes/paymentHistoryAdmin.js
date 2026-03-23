@@ -41,36 +41,13 @@ router.patch('/:id/paid', auth, async (req, res) => {
     const payment = await prisma.paymentHistory.findUnique({ where: { id }, include: { parent: true } });
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
 
-    // Admins / super-admins can toggle any
-    if (isAdmin) {
-      const updated = await prisma.paymentHistory.update({ where: { id }, data: { paid }, include: { parent: true } });
-      return res.json({ success: true, record: updated });
+    // Only admins / super-admins can toggle paid status
+    if (!isAdmin) {
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
-    // Nanny: only if the parent has at least one child assigned to this nanny
-    if (user && user.nannyId) {
-      const assigned = await prisma.parent.findFirst({
-        where: {
-          id: payment.parentId,
-          children: {
-            some: {
-              child: {
-                assignments: {
-                  some: { nannyId: user.nannyId }
-                }
-              }
-            }
-          }
-        },
-        select: { id: true }
-      });
-      if (assigned) {
-        const updated = await prisma.paymentHistory.update({ where: { id }, data: { paid }, include: { parent: true } });
-        return res.json({ success: true, record: updated });
-      }
-    }
-
-    return res.status(403).json({ message: 'Forbidden' });
+    const updated = await prisma.paymentHistory.update({ where: { id }, data: { paid }, include: { parent: true } });
+    return res.json({ success: true, record: updated });
   } catch (err) {
     console.error('Failed to update paid status', err);
     res.status(500).json({ message: 'Erreur serveur' });

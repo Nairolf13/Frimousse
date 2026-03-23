@@ -89,7 +89,8 @@ export async function fetchWithRefresh(input: RequestInfo, init?: RequestInit): 
       credentials: 'include',
     });
     if (!refreshRes.ok) {
-      // refresh failed (401 or other). Return the original 401 to caller for graceful handling.
+      // refresh failed — session truly expired, notify the app to redirect to login
+      try { window.dispatchEvent(new CustomEvent('auth:session-expired')); } catch { /* non-browser env */ }
       return res;
     }
     // retry original request after successful refresh

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
-import { useTutorial } from '../src/context/TutorialContext';
+import { useTutorial } from '../src/context/useTutorial';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe';
 import { useI18n } from '../src/lib/useI18n';

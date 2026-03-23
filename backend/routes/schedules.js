@@ -134,7 +134,7 @@ router.post('/schedules', auth, async (req, res) => {
       })();
   } catch (err) {
     console.error('Erreur POST /schedules:', err);
-    res.status(500).json({ error: err.message || 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

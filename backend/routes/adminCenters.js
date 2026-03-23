@@ -51,7 +51,6 @@ router.get('/centers', requireAuth, async (req, res) => {
     // Flatten admin info into center object
     const formattedCenters = centers.map(center => {
       const adminUser = center.users[0] || null;
-      console.log('Center:', center.name, '- Admin User:', adminUser);
       return {
         id: center.id,
         name: center.name,
@@ -67,7 +66,6 @@ router.get('/centers', requireAuth, async (req, res) => {
       };
     });
 
-    console.log('Formatted centers:', JSON.stringify(formattedCenters, null, 2));
     res.json({ data: formattedCenters });
   } catch (e) {
     console.error(e);

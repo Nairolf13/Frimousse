@@ -75,7 +75,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
   } catch (err) {
     console.error('Webhook signature error', err && err.message ? err.message : err);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
+    return res.status(400).send('Webhook signature verification failed');
   }
 
   // Idempotency via DB: ensure we don't process the same Stripe event twice
@@ -499,9 +499,7 @@ router.post('/create-with-token', async (req, res) => {
     } catch (stripeErr) {
       console.error('Stripe subscriptions.create failed (create-with-token)', stripeErr && stripeErr.message ? stripeErr.message : stripeErr);
       console.error(stripeErr && stripeErr.stack ? stripeErr.stack : stripeErr);
-      const message = (process.env.NODE_ENV === 'production') ? 'Erreur lors de la création de l\'abonnement' : (stripeErr && stripeErr.message ? stripeErr.message : 'Stripe error');
-      // Return Stripe error message in non-production for debugging
-      return res.status(500).json({ error: message, stripeError: (stripeErr && stripeErr.raw && stripeErr.raw.message) ? stripeErr.raw.message : (stripeErr && stripeErr.message ? stripeErr.message : String(stripeErr)) });
+      return res.status(500).json({ error: 'Erreur lors de la création de l\'abonnement' });
     }
 
     const sub = await prisma.subscription.create({ data: { userId: user.id, stripeSubscriptionId: subscription.id, plan, status: 'trialing', trialStart: new Date(), trialEnd: new Date(trialEnd * 1000) } });

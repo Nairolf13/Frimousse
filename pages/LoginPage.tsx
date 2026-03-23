@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../src/context/AuthContext';
+import { useLocation } from 'react-router-dom';
 import OAuthButtons from '../components/OAuthButtons';
 
 
@@ -18,9 +19,14 @@ export default function LoginPage() {
   const [subscribeToken, setSubscribeToken] = useState<string | null>(null);
 
   const { setUser } = useAuth();
+  const location = useLocation();
 
-  // Show a message if redirected from a failed OAuth attempt
+  // Show a message if redirected from a failed OAuth attempt or expired session
   useEffect(() => {
+    if ((location.state as { sessionExpired?: boolean } | null)?.sessionExpired) {
+      setError('Votre session a expiré. Veuillez vous reconnecter.');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     const params = new URLSearchParams(window.location.search);
     const oauthErr = params.get('error');
     if (oauthErr) {
@@ -31,10 +37,9 @@ export default function LoginPage() {
         oauth_no_account: 'Aucun compte trouvé. Veuillez d\'abord vous inscrire.',
       };
       setError(messages[oauthErr] || 'Erreur de connexion.');
-      // clean up URL
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, []);
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

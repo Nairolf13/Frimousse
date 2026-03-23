@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useTutorial } from '../src/context/TutorialContext';
+import { useTutorial } from '../src/context/useTutorial';
 
 /* ───── Tooltip position calculator ───── */
 function getTooltipStyle(rect: DOMRect, placement: string, tooltipW: number, tooltipH: number) {
@@ -122,7 +122,7 @@ export default function TutorialOverlay() {
   if (isModal) {
     return (
       <div className="fixed inset-0 z-[10000] flex items-end md:items-center justify-center" onClick={stopTour}>
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm tutorial-backdrop-in" />
+        <div className="absolute inset-0 bg-black/40 tutorial-backdrop-in" />
         <div
           className="relative z-10 bg-white md:rounded-3xl rounded-t-3xl shadow-2xl max-w-md w-full mx-0 md:mx-4 p-6 md:p-8 tutorial-card-in"
           onClick={e => e.stopPropagation()}

@@ -89,7 +89,7 @@ router.post('/', auth, async (req, res) => {
     if (!r.ok) {
       const text = await r.text();
       console.error('HF error', r.status, text);
-      return res.status(502).json({ error: 'model error', details: text });
+      return res.status(502).json({ error: 'Erreur du service IA' });
     }
 
     const json = await r.json();

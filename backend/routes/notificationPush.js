@@ -24,10 +24,14 @@ router.post('/save', requireAuth, async (req, res) => {
     const { subscription } = req.body;
     if (!subscription) return res.status(400).json({ error: 'Missing subscription' });
 
+    // Validate that endpoint is a valid HTTPS URL
+    const endpoint = subscription && subscription.endpoint ? subscription.endpoint : null;
+    if (!endpoint || typeof endpoint !== 'string' || !/^https:\/\/.{4,}/.test(endpoint) || endpoint.length > 2048) {
+      return res.status(400).json({ error: 'Invalid subscription endpoint' });
+    }
+
     const user = req.user;
     const userId = user && user.id ? user.id : null;
-
-    const endpoint = subscription && subscription.endpoint ? subscription.endpoint : null;
     if (endpoint) {
       // Try to find any existing row for this endpoint (regardless of userId)
       const existing = await prisma.pushSubscription.findFirst({ where: { subscription: { path: ['endpoint'], equals: endpoint } } });
@@ -79,6 +83,10 @@ router.post('/associate', requireAuth, async (req, res) => {
     if (!subscription) return res.status(400).json({ error: 'Missing subscription' });
 
     const endpoint = subscription.endpoint;
+    if (!endpoint || typeof endpoint !== 'string' || !/^https:\/\/.{4,}/.test(endpoint) || endpoint.length > 2048) {
+      return res.status(400).json({ error: 'Invalid subscription endpoint' });
+    }
+
     const userId = req.user && req.user.id ? req.user.id : null;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 

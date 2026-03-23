@@ -72,6 +72,11 @@ router.post('/supabase/sign', authMiddleware, async (req, res) => {
   const { filename, contentType, prefix = 'feed' } = req.body || {};
   if (!filename || !contentType) return res.status(400).json({ message: 'filename and contentType required' });
 
+  const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
+  if (!ALLOWED_CONTENT_TYPES.includes(String(contentType).toLowerCase())) {
+    return res.status(400).json({ message: 'Type de fichier non autorisé. Seules les images sont acceptées.' });
+  }
+
   if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ message: 'Storage not configured' });
 
   try {

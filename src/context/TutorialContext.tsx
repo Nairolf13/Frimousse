@@ -1,57 +1,10 @@
-import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-
-/* ───── Types ───── */
-
-export interface TutorialStep {
-  /** data-tour attribute value to highlight */
-  target: string;
-  /** Title shown in the tooltip */
-  title: string;
-  /** Description text */
-  content: string;
-  /** Route where this step lives — tutorial navigates there automatically */
-  route?: string;
-  /** Where to position the tooltip relative to the target */
-  placement?: 'top' | 'bottom' | 'left' | 'right';
-  /** If true, just show a centered modal (no target highlight) */
-  modal?: boolean;
-  /** If true, only show this step to admin/super-admin users */
-  adminOnly?: boolean;
-}
-
-export interface Tour {
-  id: string;
-  name: string;
-  description: string;
-  icon: ReactNode;
-  steps: TutorialStep[];
-}
-
-interface TutorialContextValue {
-  tours: Tour[];
-  activeTour: Tour | null;
-  currentStep: number;
-  isActive: boolean;
-  showMenu: boolean;
-  startTour: (tourId: string) => void;
-  nextStep: () => void;
-  prevStep: () => void;
-  stopTour: () => void;
-  toggleMenu: () => void;
-  closeMenu: () => void;
-}
-
-const TutorialContext = createContext<TutorialContextValue | null>(null);
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function useTutorial() {
-  const ctx = useContext(TutorialContext);
-  if (!ctx) throw new Error('useTutorial must be used within TutorialProvider');
-  return ctx;
-}
+import { TutorialContext } from './TutorialTypes';
+import type { Tour } from './TutorialTypes';
+export type { TutorialStep, Tour, TutorialContextValue } from './TutorialTypes';
 
 /* ───── Tour definitions ───── */
 

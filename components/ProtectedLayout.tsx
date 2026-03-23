@@ -73,6 +73,15 @@ export default function ProtectedLayout() {
   }, []);
 
   useEffect(() => {
+    const handler = () => {
+      setAuthenticated(false);
+      navigate('/login', { replace: true, state: { sessionExpired: true } });
+    };
+    window.addEventListener('auth:session-expired', handler);
+    return () => window.removeEventListener('auth:session-expired', handler);
+  }, [navigate]);
+
+  useEffect(() => {
     if (!loading && !authenticated) {
       navigate('/login', { replace: true });
     }

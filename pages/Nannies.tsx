@@ -92,7 +92,12 @@ export default function Nannies() {
     child: Child;
   }
   
-    const [assignments, setAssignments] = useState<Assignment[]>([]); 
+    const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [exportMonth, setExportMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [exportingId, setExportingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
     const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
     const [centerFilter, setCenterFilter] = useState<string | null>(null);
@@ -1175,7 +1180,7 @@ export default function Nannies() {
                   </div>
 
                   {/* Card footer */}
-                  <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-1">
+                  <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-1 flex-wrap">
                     <button
                       onClick={(e) => { e.stopPropagation(); setPlanningNanny(nanny); }}
                       className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white"
@@ -1184,6 +1189,39 @@ export default function Nannies() {
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                       {t('nanny.planning.button')}
                     </button>
+                    <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="month"
+                        value={exportMonth}
+                        onChange={e => setExportMonth(e.target.value)}
+                        className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-[#0b5566]/30"
+                      />
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (exportingId === nanny.id) return;
+                          setExportingId(nanny.id);
+                          try {
+                            const res = await fetch(`${API_URL}/nannies/${nanny.id}/export-planning?month=${exportMonth}`, { credentials: 'include' });
+                            if (!res.ok) { const err = await res.json().catch(() => ({})); alert(err.error || 'Erreur export PDF'); return; }
+                            const blob = await res.blob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `planning_${nanny.name.replace(/\s+/g, '_')}_${exportMonth}.pdf`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          } catch { alert('Erreur lors de la génération du PDF'); }
+                          finally { setExportingId(null); }
+                        }}
+                        disabled={exportingId === nanny.id}
+                        className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white disabled:opacity-50"
+                        title="Exporter le planning en PDF"
+                      >
+                        <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a1 1 0 001 1h16a1 1 0 001-1v-3"/><path d="M8 6H6a2 2 0 00-2 2v4"/><path d="M16 6h2a2 2 0 012 2v4"/><rect x="8" y="2" width="8" height="8" rx="1"/></svg>
+                        {exportingId === nanny.id ? 'Export...' : 'PDF'}
+                      </button>
+                    </div>
                     <div className="flex items-center gap-1 ml-auto">
                       <button onClick={(e) => { e.stopPropagation(); handleEdit(nanny); }} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white" title={t('children.action.edit')}>
                         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>

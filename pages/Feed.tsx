@@ -128,6 +128,9 @@ export default function Feed() {
   const [noChildSelected, setNoChildSelected] = useState(false);
   const [previews, setPreviews] = useState<string[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
   const [centerFilter, setCenterFilter] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<{ year: number; month: number }>(() => {
@@ -214,9 +217,11 @@ export default function Feed() {
   useEffect(() => {
     async function loadPostsWithCache() {
       const cacheKey = `/api/feed${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
-      const cached = getCached<{ posts: Post[] }>(cacheKey);
+      const cached = getCached<{ posts: Post[]; nextCursor: string | null; hasMore: boolean }>(cacheKey);
       if (cached) {
         setPosts(cached.posts || []);
+        setNextCursor(cached.nextCursor ?? null);
+        setHasMore(cached.hasMore ?? false);
         return;
       }
       try {
@@ -225,31 +230,14 @@ export default function Feed() {
         if (!res || !res.ok) return;
         const body = await res.json();
         setPosts(body.posts || []);
-        setCached(cacheKey, { posts: body.posts || [] }, DEFAULT_TTL);
+        setNextCursor(body.nextCursor ?? null);
+        setHasMore(body.hasMore ?? false);
+        setCached(cacheKey, { posts: body.posts || [], nextCursor: body.nextCursor ?? null, hasMore: body.hasMore ?? false }, DEFAULT_TTL);
       } catch (e) {
         if (import.meta.env.DEV) console.error('Failed to load feed (cached)', e);
       }
     }
-
     loadPostsWithCache();
-  }, [centerFilter]);
-
-  // Reload when center filter changes
-  useEffect(() => {
-    const load = async () => {
-      const cacheKey = `/api/feed${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
-      try {
-        const url = `/api/feed${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
-        const res = await fetchWithRefresh(url);
-        if (!res || !res.ok) return;
-        const body = await res.json();
-        setPosts(body.posts || []);
-        setCached(cacheKey, { posts: body.posts || [] }, DEFAULT_TTL);
-      } catch (e) {
-        if (import.meta.env.DEV) console.error('Failed to load feed for center filter', e);
-      }
-    };
-    load();
   }, [centerFilter]);
 
   // load center name when AuthContext user is available ( mirrors Sidebar behaviour )
@@ -953,6 +941,34 @@ export default function Feed() {
               </div>
             </article>
                 ))}
+              {hasMore && (
+                <div className="flex justify-center pt-2 pb-4">
+                  <button
+                    onClick={async () => {
+                      if (loadingMore || !nextCursor) return;
+                      setLoadingMore(true);
+                      try {
+                        const params = new URLSearchParams({ cursor: nextCursor });
+                        if (centerFilter) params.set('centerId', centerFilter);
+                        const res = await fetchWithRefresh(`/api/feed?${params.toString()}`);
+                        if (!res || !res.ok) return;
+                        const body = await res.json();
+                        setPosts(prev => [...prev, ...(body.posts || [])]);
+                        setNextCursor(body.nextCursor ?? null);
+                        setHasMore(body.hasMore ?? false);
+                      } catch (e) {
+                        if (import.meta.env.DEV) console.error('Failed to load more posts', e);
+                      } finally {
+                        setLoadingMore(false);
+                      }
+                    }}
+                    disabled={loadingMore}
+                    className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition disabled:opacity-50 shadow-sm"
+                  >
+                    {loadingMore ? 'Chargement...' : 'Charger plus'}
+                  </button>
+                </div>
+              )}
               </div>
             </>
           );
