@@ -6,34 +6,62 @@ import { useNavigate } from 'react-router-dom';
 
 
 
-const plans = [
+type Feature = { text: string; included: boolean; highlight?: boolean };
+type Plan = {
+  name: string;
+  badge?: string;
+  price: string;
+  priceNote?: string;
+  description: string;
+  features: Feature[];
+  cta: string;
+  highlight: boolean;
+  buyButtonId: string | null;
+  productId?: string;
+  accentColor: string;
+  iconBg: string;
+};
+
+const plans: Plan[] = [
   {
     name: 'Découverte',
-    price: '0€',
-    description: 'Pour tester Frimousse sans engagement (15 jours max)',
+    price: '0 €',
+    priceNote: 'pendant 7 jours',
+    description: 'Testez toutes les fonctionnalités sans engagement ni carte bancaire.',
+    accentColor: 'text-gray-700',
+    iconBg: 'bg-gray-100',
     features: [
-      "Jusqu'à 2 enfants",
-      "Jusqu'à 2 nounous",
-      "Jusqu'à 2 parents",
-      "Jusqu'à 2 rapports",
-      'Support par email',
+      { text: "Tableau de bord & planning", included: true },
+      { text: "Jusqu'à 2 enfants", included: true },
+      { text: "Jusqu'à 2 nounous & parents", included: true },
+      { text: "Rapports journaliers (2 max)", included: true },
+      { text: "Fil d'actualité & photos", included: true },
+      { text: "Notifications en temps réel", included: true },
+      { text: "Feuilles de présence", included: true },
+      { text: "Messagerie instantanée", included: true },
+      { text: "Assistant IA", included: true },
     ],
-    cta: 'Essai gratuit',
+    cta: 'Démarrer gratuitement',
     highlight: false,
     buyButtonId: null,
   },
   {
     name: 'Essentiel',
-    price: '29,99€ / mois',
-    description: 'Pour les MAM, micro-crèches et petites structures',
+    price: '29,99 €',
+    priceNote: '/ mois · sans engagement',
+    description: "Tout ce qu'il faut pour gérer votre MAM ou micro-crèche au quotidien.",
+    accentColor: 'text-brand-600',
+    iconBg: 'bg-brand-50',
     features: [
-      "Jusqu'à 10 enfants",
-      "Jusqu'à 10 nounous",
-      "Jusqu'à 10 parents",
-      "Jusqu'à 10 rapports",
-      'Support par email',
-      '7 jours d\'essai gratuit',
-      'Annulation à tout moment',
+      { text: "Tableau de bord & planning", included: true },
+      { text: "Jusqu'à 10 enfants", included: true },
+      { text: "Jusqu'à 10 nounous & parents", included: true },
+      { text: "Rapports journaliers illimités", included: true },
+      { text: "Fil d'actualité & photos", included: true },
+      { text: "Notifications en temps réel", included: true },
+      { text: "Feuilles de présence numériques", included: true, highlight: true },
+      { text: "Messagerie instantanée", included: false },
+      { text: "Assistant IA", included: false },
     ],
     cta: 'Choisir Essentiel',
     highlight: false,
@@ -42,16 +70,21 @@ const plans = [
   },
   {
     name: 'Pro',
-    price: '59,99€ / mois',
-    description: 'Pour crèches, garderies, centres de loisirs',
+    badge: 'Le plus populaire',
+    price: '59,99 €',
+    priceNote: '/ mois · sans engagement',
+    description: 'La solution complète pour les crèches, garderies et centres multi-sites.',
+    accentColor: 'text-white',
+    iconBg: 'bg-white/20',
     features: [
-      'Enfants, nounous et parents illimités',
-      'Rapports illimités',
-      'Facturations détaillées',
-      'Assistant IA',
-      'Support prioritaire',
-      '7 jours d\'essai gratuit',
-      'Annulation à tout moment',
+      { text: "Tout le plan Essentiel inclus", included: true },
+      { text: "Enfants, nounous & parents illimités", included: true },
+      { text: "Facturations & historique des paiements", included: true },
+      { text: "Feuilles de présence + signature numérique", included: true, highlight: true },
+      { text: "Messagerie instantanée en temps réel", included: true, highlight: true },
+      { text: "Assistant IA (rédaction, comptes-rendus)", included: true, highlight: true },
+      { text: "Support prioritaire 7j/7", included: true },
+      { text: "Mises à jour en continu", included: true },
     ],
     cta: 'Choisir Pro',
     highlight: true,
@@ -83,7 +116,7 @@ export default function PricingPage() {
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
         title={"Tarifs Frimousse | Prix logiciel de gestion creche et micro-creche"}
-        description={"Tarifs Frimousse : essai gratuit 15 jours, plan Essentiel a 29,99 euros/mois, plan Pro a 59,99 euros/mois. Sans engagement. Application de gestion pour creches, micro-creches, MAM et garderies."}
+        description={"Tarifs Frimousse : essai gratuit 7 jours, plan Essentiel a 29,99 euros/mois, plan Pro a 59,99 euros/mois. Sans engagement. Application de gestion pour creches, micro-creches, MAM et garderies."}
         url={"https://lesfrimousses.com/tarifs"}
         image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Tarifs', url: 'https://lesfrimousses.com/tarifs' }]}
@@ -95,7 +128,7 @@ export default function PricingPage() {
           "description": "Application de gestion pour creches, micro-creches et MAM",
           "brand": { "@type": "Brand", "name": "Frimousse" },
           "offers": [
-            { "@type": "Offer", "name": "Decouverte", "price": "0", "priceCurrency": "EUR", "description": "Essai gratuit 15 jours" },
+            { "@type": "Offer", "name": "Decouverte", "price": "0", "priceCurrency": "EUR", "description": "Essai gratuit 7 jours" },
             { "@type": "Offer", "name": "Essentiel", "price": "29.99", "priceCurrency": "EUR", "description": "Jusqu'a 10 enfants" },
             { "@type": "Offer", "name": "Pro", "price": "59.99", "priceCurrency": "EUR", "description": "Enfants illimites" }
           ]
@@ -151,9 +184,9 @@ export default function PricingPage() {
                       : 'border-gray-200 bg-white hover:border-brand-200 hover:shadow-lg hover:shadow-brand-100/30 hover:-translate-y-1'
                   }`}
                 >
-                  {plan.highlight && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                      <span className="bg-brand-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-md">Populaire</span>
+                  {plan.badge && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <span className="bg-brand-500 text-white text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-md">{plan.badge}</span>
                     </div>
                   )}
 
@@ -163,17 +196,21 @@ export default function PricingPage() {
                   </div>
 
                   <div className="mb-8 min-h-[56px]">
-                    <span className="text-4xl font-extrabold text-gray-900">{plan.price.split('/')[0]}</span>
-                    {plan.price.includes('/') && <span className="text-gray-400 text-base font-medium ml-1">/ {plan.price.split('/ ')[1]}</span>}
+                    <span className={`text-4xl font-extrabold ${plan.highlight ? 'text-gray-900' : 'text-gray-900'}`}>{plan.price}</span>
+                    {plan.priceNote && <div className="text-gray-400 text-sm font-medium mt-1">{plan.priceNote}</div>}
                   </div>
 
                   <ul className="space-y-3 mb-8 flex-1">
                     {plan.features.map((f, i) => (
-                      <li key={i} className="flex items-start gap-3 text-sm text-gray-700">
-                        <div className="w-5 h-5 rounded-full bg-brand-50 text-brand-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                      <li key={i} className={`flex items-start gap-3 text-sm ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-gray-100 text-gray-300'}`}>
+                          {f.included ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                          ) : (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                          )}
                         </div>
-                        <span>{f}</span>
+                        <span>{f.text}</span>
                       </li>
                     ))}
                   </ul>
@@ -225,7 +262,7 @@ export default function PricingPage() {
             </div>
 
             <div className="mt-14 text-center text-gray-400 text-sm space-y-1">
-              <p>Tarifs HT. 29,99 €/mois pour Essentiel, 59,99 €/mois pour Pro. 7 jours d'essai gratuit. Sans engagement, annulation à tout moment. Options sur devis : formation, migration de données, modules personnalisés.</p>
+              <p>Tarifs HT. 29,99 €/mois pour Essentiel, 59,99 €/mois pour Pro. 7 jours d'essai gratuit sans carte bancaire. Sans engagement, annulation à tout moment. Options sur devis : formation, migration de données, modules personnalisés.</p>
               <p>Pour les réseaux, fédérations ou structures multi-sites, contactez-nous pour une offre sur-mesure.</p>
             </div>
           </div>

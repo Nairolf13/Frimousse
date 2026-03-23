@@ -284,7 +284,7 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
       await prisma.user.update({ where: { id: dbUser.id }, data: { stripeCustomerId: customerId } });
     }
 
-    const trialDays = mode === 'discovery' ? 15 : 7;
+    const trialDays = mode === 'discovery' ? 7 : 7;
     const subscriptionData = {
       trial_end: Math.floor(Date.now() / 1000) + trialDays * 24 * 3600,
       metadata: { plan: effectivePlan, selectedPlan: plan === 'decouverte' ? selectedPlan : effectivePlan },
@@ -328,7 +328,7 @@ router.post('/create-checkout-with-token', async (req, res) => {
     const priceId = await resolvePriceId(effectivePlan);
     if (!priceId) return res.status(500).json({ error: 'Price id not configured' });
 
-    const trialDays = mode === 'discovery' ? 15 : 30;
+    const trialDays = mode === 'discovery' ? 7 : 30;
     const trialEnd = Math.floor(Date.now() / 1000) + trialDays * 24 * 3600;
 
     // ensure customer exists in Stripe
@@ -458,7 +458,7 @@ router.post('/create-with-token', async (req, res) => {
     await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
     await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } });
 
-    const trialDays = mode === 'discovery' ? 15 : 30;
+    const trialDays = mode === 'discovery' ? 7 : 30;
     const trialEnd = Math.floor(Date.now() / 1000) + trialDays * 24 * 3600;
   let effectivePlan = plan;
   const selectedPlan = req.body.selectedPlan;

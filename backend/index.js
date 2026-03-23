@@ -183,6 +183,9 @@ try {
 const presenceSheetsRoutes = require('./routes/presenceSheets');
 app.use('/api/presence-sheets', presenceSheetsRoutes);
 
+const messagingRoutes = require('./routes/messaging');
+app.use('/api/messaging', messagingRoutes);
+
 const adminEmailLogsRoutes = require('./routes/adminEmailLogs');
 const supportRoutes = require('./routes/support');
 app.use('/api/admin', adminEmailLogsRoutes);

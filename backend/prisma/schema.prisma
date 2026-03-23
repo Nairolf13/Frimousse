@@ -99,6 +99,8 @@ model User {
   feedComments     FeedComment[]
   notifyByEmail    Boolean        @default(true)
   tutorialSeen     Boolean        @default(false)
+  conversationParticipants ConversationParticipant[]
+  sentMessages     Message[]
 }
 
 model RefreshToken {
@@ -230,6 +232,7 @@ model Center {
   feedPosts   FeedPost[]
   reviews        Review[]
   presenceSheets PresenceSheet[]
+  conversations  Conversation[]
   createdAt      DateTime     @default(now())
   notifyByEmail  Boolean      @default(true)
 }
@@ -442,6 +445,48 @@ model SupportReply {
   createdAt   DateTime @default(now())
 
   @@index([ticketId])
+}
+
+// Messaging system
+model Conversation {
+  id          String    @id @default(uuid())
+  center      Center?   @relation(fields: [centerId], references: [id])
+  centerId    String?
+  participants ConversationParticipant[]
+  messages    Message[]
+  lastMessageAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([centerId])
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  lastReadAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId       String
+  content        String
+  mediaUrl       String?
+  mediaType      String?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
 }
 
 // Feuille de relevé de présences mensuelle

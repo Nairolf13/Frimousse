@@ -97,7 +97,7 @@ exports.register = async (req, res) => {
   // If client asked for a 'decouverte' free trial, create a trialing subscription record
   try {
     if (plan && String(plan).toLowerCase() === 'decouverte') {
-      const trialDays = 15;
+      const trialDays = 7;
       const trialEnd = new Date(Date.now() + trialDays * 24 * 3600 * 1000);
       await prisma.subscription.create({ data: {
         userId: user.id,
@@ -240,7 +240,7 @@ exports.registerSubscribeComplete = async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de la finalisation de l\'inscription' });
     }
 
-    const trialDays = mode === 'discovery' || plan === 'decouverte' ? 15 : 30;
+    const trialDays = mode === 'discovery' || plan === 'decouverte' ? 7 : 30;
     const trialEnd = Math.floor(Date.now() / 1000) + trialDays * 24 * 3600;
 
     const priceMap = {

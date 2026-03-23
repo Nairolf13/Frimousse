@@ -534,7 +534,7 @@ export default function RegisterPage() {
     <div ref={containerRef} className="min-h-dvh w-full bg-white md:flex md:flex-row">
       <SEO
         title={"Inscription gratuite | Frimousse - Application de gestion creche et MAM"}
-        description={"Creez votre compte Frimousse gratuitement. Application de gestion pour creches, micro-creches et MAM. Essai gratuit 15 jours, sans carte bancaire."}
+        description={"Creez votre compte Frimousse gratuitement. Application de gestion pour creches, micro-creches et MAM. Essai gratuit 7 jours, sans carte bancaire."}
         url={"https://lesfrimousses.com/register"}
         image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
         noindex={false}
@@ -776,7 +776,7 @@ export default function RegisterPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <button type="button" onClick={() => setInitialPlan('decouverte')} className={`group p-5 rounded-2xl border-2 focus:outline-none flex flex-col items-center text-center transition-all ${initialPlan === 'decouverte' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
             <div className="text-base font-extrabold text-brand-600 tracking-tight">Découverte</div>
-            <div className="text-[11px] font-medium text-gray-400 mt-0.5">Essai 15 jours</div>
+            <div className="text-[11px] font-medium text-gray-400 mt-0.5">Essai 7 jours</div>
             <div className="mt-2 text-xs text-gray-500 leading-relaxed">Tester Frimousse sans engagement</div>
             <div className="mt-auto pt-3 text-2xl font-black text-brand-500">0€</div>
           </button>

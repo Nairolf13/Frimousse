@@ -108,7 +108,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
           <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
             <SEO
               title={"Frimousse — Application de gestion de garde d'enfants | Creche, micro-creche, MAM"}
-              description={"Frimousse : logiciel de gestion pour creches, micro-creches, MAM et garderies. Planning, fiches enfants, communication parents, rapports d'activite, facturation. Essai gratuit 15 jours, conforme RGPD."}
+              description={"Frimousse : logiciel de gestion pour creches, micro-creches, MAM et garderies. Planning, fiches enfants, communication parents, rapports d'activite, facturation. Essai gratuit 7 jours, conforme RGPD."}
               url={"https://lesfrimousses.com/"}
               image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
               tags={["application garde enfant", "logiciel creche", "gestion micro-creche", "application MAM", "planning creche", "communication parents creche", "logiciel petite enfance", "gestion assistante maternelle"]}
@@ -127,9 +127,14 @@ import ConfirmDialog from '../components/ConfirmDialog';
 
               <div className="relative z-10 max-w-5xl mx-auto text-center px-6 pt-32 pb-24 md:pt-40 md:pb-32">
                 {/* Trust badge */}
-                <div className="inline-flex items-center gap-2.5 bg-white/10 backdrop-blur-sm rounded-full px-5 py-2 mb-8 border border-white/20 animate-fade-in">
-                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-sm font-medium text-white">Plateforme de confiance pour {childrenCount !== null ? `+ de ${childrenCount}` : 'des dizaines de'} familles</span>
+                <div className="flex justify-center mb-8 animate-fade-in">
+                  <div className="inline-flex items-center gap-2.5 bg-white/10 backdrop-blur-sm rounded-full px-4 sm:px-5 py-2 border border-white/20 max-w-[90vw]">
+                    <div className="w-2 h-2 flex-shrink-0 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-xs sm:text-sm font-medium text-white text-center leading-snug">
+                      Plateforme de confiance pour{' '}
+                      <span className="font-bold">{childrenCount !== null ? `+ de ${childrenCount}` : 'des dizaines de'} familles</span>
+                    </span>
+                  </div>
                 </div>
 
                 <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-white leading-[1.08] tracking-tight mb-6 animate-scale-in">
@@ -193,9 +198,11 @@ import ConfirmDialog from '../components/ConfirmDialog';
                     { icon: (<svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"/></svg>), title: 'Sécurité & RGPD', desc: 'Données protégées, accès sécurisés, conformité RGPD et confidentialité garantie pour tous.', color: 'bg-rose-50 text-rose-500' },
                     { icon: (<svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"/></svg>), title: 'Support humain', desc: "Une équipe réactive pour vous accompagner, former et répondre à toutes vos questions.", color: 'bg-cyan-50 text-cyan-500' },
                   ].map((f, i) => (
-                    <div key={i} className="group p-8 rounded-3xl border border-gray-100 hover:border-brand-200 bg-white hover:shadow-xl hover:shadow-brand-100/50 transition-all duration-300 hover:-translate-y-1">
-                      <div className={`w-14 h-14 rounded-2xl ${f.color} flex items-center justify-center mb-5`}>{f.icon}</div>
-                      <h3 className="text-lg font-bold text-gray-900 mb-2">{f.title}</h3>
+                    <div key={i} className="group p-6 md:p-8 rounded-3xl border border-gray-100 hover:border-brand-200 bg-white hover:shadow-xl hover:shadow-brand-100/50 transition-all duration-300 hover:-translate-y-1">
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className={`w-12 h-12 flex-shrink-0 rounded-2xl ${f.color} flex items-center justify-center`}>{f.icon}</div>
+                        <h3 className="text-base md:text-lg font-bold text-gray-900">{f.title}</h3>
+                      </div>
                       <p className="text-gray-500 leading-relaxed text-[15px]">{f.desc}</p>
                     </div>
                   ))}
@@ -261,9 +268,11 @@ import ConfirmDialog from '../components/ConfirmDialog';
                     { title: 'Innovation', desc: "Des outils simples, intuitifs et adaptés aux besoins réels du terrain. Notre équipe est à l'écoute de vos retours pour faire évoluer la plateforme.", iconColor: 'bg-violet-50 text-violet-500', icon: (<svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.59 14.37a6 6 0 0 1-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 0 0 6.16-12.12A14.98 14.98 0 0 0 9.631 8.41m5.96 5.96a14.926 14.926 0 0 1-5.841 2.58m-.119-8.54a6 6 0 0 0-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 0 0-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 0 1-2.448-2.448 14.9 14.9 0 0 1 .06-.312m-2.24 2.39a4.493 4.493 0 0 0-1.757 4.306 4.493 4.493 0 0 0 4.306-1.758M16.5 9a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"/></svg>) },
                     { title: 'Confiance', desc: "Plus qu'un logiciel, Frimousse c'est aussi un accompagnement humain, une équipe disponible et des ressources pour vous aider à chaque étape.", iconColor: 'bg-amber-50 text-amber-500', icon: (<svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>) },
                   ].map((v, i) => (
-                    <div key={i} className="bg-gray-50 rounded-3xl p-8 border border-gray-100 hover:bg-white hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
-                      <div className={`w-12 h-12 rounded-2xl ${v.iconColor} flex items-center justify-center mb-5`}>{v.icon}</div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-3">{v.title}</h3>
+                    <div key={i} className="bg-gray-50 rounded-3xl p-6 md:p-8 border border-gray-100 hover:bg-white hover:shadow-lg hover:shadow-gray-100/50 transition-all duration-300">
+                      <div className="flex items-center gap-4 mb-3">
+                        <div className={`w-12 h-12 flex-shrink-0 rounded-2xl ${v.iconColor} flex items-center justify-center`}>{v.icon}</div>
+                        <h3 className="text-base md:text-xl font-bold text-gray-900">{v.title}</h3>
+                      </div>
                       <p className="text-gray-500 leading-relaxed">{v.desc}</p>
                     </div>
                   ))}
@@ -650,7 +659,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                   {[
                     {
                       q: "Quelle est la meilleure application de gestion pour crèche ?",
-                      a: "Frimousse est une application complète de gestion pour crèches, micro-crèches et MAM. Elle permet de gérer les plannings, les fiches enfants avec informations médicales, la communication avec les parents, les rapports d'activité et la facturation. Essai gratuit de 15 jours sans engagement."
+                      a: "Frimousse est une application complète de gestion pour crèches, micro-crèches et MAM. Elle permet de gérer les plannings, les fiches enfants avec informations médicales, la communication avec les parents, les rapports d'activité et la facturation. Essai gratuit de 7 jours sans engagement."
                     },
                     {
                       q: "Comment gérer une micro-crèche avec un logiciel ?",

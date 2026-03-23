@@ -117,9 +117,22 @@ export default function PublicNavbar({ variant = "dark" }: PublicNavbarProps) {
               })}
             </div>
             <hr className="my-4 border-gray-100" />
-            <div className="flex flex-col gap-2">
-              <Link to="/login" onClick={() => setMobileOpen(false)} className="text-center text-base font-semibold text-gray-700 px-4 py-3 rounded-xl hover:bg-gray-50 transition-all">Connexion</Link>
-              <Link to="/register" onClick={() => setMobileOpen(false)} className="text-center text-base font-bold bg-brand-500 text-white px-4 py-3 rounded-xl hover:bg-brand-600 transition-all" style={{ color: '#ffffff' }}>Essai gratuit</Link>
+            <div className="flex flex-col gap-3">
+              <Link
+                to="/login"
+                onClick={() => setMobileOpen(false)}
+                className="text-center text-base font-bold text-brand-600 px-4 py-3 rounded-xl border-2 border-brand-200 bg-brand-50 hover:bg-brand-100 hover:border-brand-300 transition-all"
+              >
+                Connexion
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMobileOpen(false)}
+                className="text-center text-base font-bold bg-brand-500 text-white px-4 py-3.5 rounded-xl hover:bg-brand-600 transition-all shadow-sm"
+                style={{ color: '#ffffff' }}
+              >
+                Essai gratuit — 7 jours offerts
+              </Link>
             </div>
           </div>
         </div>

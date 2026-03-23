@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { HiOutlineViewGrid, HiOutlineBell, HiOutlineChatAlt, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar, HiOutlineOfficeBuilding, HiOutlineCreditCard } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineBell, HiOutlineChatAlt, HiOutlineChatAlt2, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar, HiOutlineOfficeBuilding, HiOutlineCreditCard } from 'react-icons/hi';
 import { FaRobot } from 'react-icons/fa';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -19,6 +19,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan
       { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
       { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
+      ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || (user && typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/messages', label: 'Messages', icon: <HiOutlineChatAlt2 className="w-5 h-5 mr-3" /> }] : []),
       { to: '/presence-sheets', label: 'Feuilles de présence', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
       { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
@@ -36,6 +37,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan
       { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
       { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || user?.role === 'super-admin' ? [{ to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> }] : []),
+      ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || user?.role === 'super-admin' ? [{ to: '/messages', label: 'Messages', icon: <HiOutlineChatAlt2 className="w-5 h-5 mr-3" /> }] : []),
       { to: '/presence-sheets', label: 'Feuilles de présence', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
       { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
@@ -56,6 +58,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan
     { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
     { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
     ...((user?.plan || '').toLowerCase() === 'pro' || (user && typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> }] : []),
+    ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || (user && typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/messages', label: 'Messages', icon: <HiOutlineChatAlt2 className="w-5 h-5 mr-3" /> }] : []),
     { to: '/presence-sheets', label: 'Feuilles de présence', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
     { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
     ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/reviews', label: t('nav.reviews'), icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }] : []),

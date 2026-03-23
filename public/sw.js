@@ -61,13 +61,26 @@ self.addEventListener('push', function(event) {
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  const url = event.notification.data && event.notification.data.url ? event.notification.data.url : '/';
+  const data = event.notification.data || {};
+  const conversationId = data.conversationId || null;
+  const basePath = data.url || '/';
+  const targetPath = conversationId ? `${basePath}?convId=${conversationId}` : basePath;
+  const targetUrl = self.location.origin + targetPath;
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+      // Find any open tab on this origin
       for (let client of windowClients) {
-        if (client.url === url && 'focus' in client) return client.focus();
+        try {
+          if (new URL(client.url).origin === self.location.origin) {
+            // postMessage is the most reliable way to trigger navigation in a SPA
+            client.postMessage({ type: 'NAVIGATE', url: targetPath });
+            return client.focus();
+          }
+        } catch (e) { /* ignore */ }
       }
-      if (clients.openWindow) return clients.openWindow(url);
+      // No existing window — open a new one directly at the target URL
+      if (clients.openWindow) return clients.openWindow(targetUrl);
     })
   );
 });
