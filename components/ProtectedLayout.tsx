@@ -1,35 +1,23 @@
 import { useEffect, useState } from 'react';
 import Sidebar from './Sidebar';
 import { useNavigate, useOutlet } from 'react-router-dom';
-import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import useBirthdayCheck from '../src/hooks/useBirthdayCheck';
 import BirthdayModal from './BirthdayModal';
 import { TutorialProvider } from '../src/context/TutorialContext';
 import TutorialOverlay from './TutorialOverlay';
 import TutorialMenu from './TutorialMenu';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function ProtectedLayout() {
-  const [loading, setLoading] = useState(true);
-  const [authenticated, setAuthenticated] = useState(false);
-  const [profileCompleted, setProfileCompleted] = useState(true);
+  const { user, setUser } = useAuth();
   const navigate = useNavigate();
   const outlet = useOutlet();
-  // tutorial/welcome modal disabled by default
-  // Keep a stateful centerId (initialize from localStorage) so we can update it
-  // after we fetch /api/user/me. This ensures the birthday check runs for any
-  // authenticated user that belongs to the same center as the child.
-  const [centerId, setCenterId] = useState<string | undefined>(() => {
-    try {
-      const raw = localStorage.getItem('currentCenterId');
-      return raw ?? undefined;
-    } catch {
-      return undefined;
-    }
-  });
 
-  // Only check birthdays after we've confirmed the user is authenticated and we have a centerId
-  const { birthdays } = useBirthdayCheck(authenticated ? centerId : undefined);
+  const centerId = user?.centerId ?? (() => {
+    try { return localStorage.getItem('currentCenterId') ?? undefined; } catch { return undefined; }
+  })();
 
+  const { birthdays } = useBirthdayCheck(user ? centerId : undefined);
   const [showBirthday, setShowBirthday] = useState(false);
 
   useEffect(() => {
@@ -38,63 +26,36 @@ export default function ProtectedLayout() {
     let seen = false;
     try { seen = !!localStorage.getItem(key); } catch { seen = false; }
     if (!seen) setShowBirthday(true);
-  }, [birthdays, centerId, setShowBirthday]);
+  }, [birthdays, centerId]);
 
   useEffect(() => {
-    // Use relative path so cookies are sent correctly in dev (Vite proxy) and in prod the same origin is used
-    let mounted = true;
-    (async () => {
-      try {
-        const res = await fetchWithRefresh('/api/user/me', { credentials: 'include' });
-        if (!mounted) return;
-        if (!res.ok) {
-          setAuthenticated(false);
-          return;
-        }
-        const data = await res.json();
-        setAuthenticated(true);
-        // Check if user needs to complete their profile (OAuth users)
-        if (data && data.profileCompleted === false) {
-          setProfileCompleted(false);
-        }
-        try {
-          if (data && data.centerId) {
-            try { localStorage.setItem('currentCenterId', String(data.centerId)); } catch { /* ignore */ }
-            setCenterId(String(data.centerId));
-          }
-        } catch { /* ignore parse errors */ }
-      } catch {
-        setAuthenticated(false);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+    if (user?.centerId) {
+      try { localStorage.setItem('currentCenterId', String(user.centerId)); } catch { /* ignore */ }
+    }
+  }, [user?.centerId]);
 
   useEffect(() => {
     const handler = () => {
-      setAuthenticated(false);
+      setUser(null);
       navigate('/login', { replace: true, state: { sessionExpired: true } });
     };
     window.addEventListener('auth:session-expired', handler);
     return () => window.removeEventListener('auth:session-expired', handler);
-  }, [navigate]);
+  }, [navigate, setUser]);
 
   useEffect(() => {
-    if (!loading && !authenticated) {
+    if (user === null) return; // still loading in App.tsx
+    if (!user) {
       navigate('/login', { replace: true });
-    }
-    if (!loading && authenticated && !profileCompleted) {
+    } else if (user.profileCompleted === false) {
       navigate('/complete-profile', { replace: true });
-    }
-    if (!loading && authenticated) {
-      // mark welcome as shown to prevent tutorial modal from appearing
+    } else {
       try { localStorage.setItem('welcomeShown', '1'); } catch { /* ignore */ }
     }
-  }, [loading, authenticated, profileCompleted, navigate]);
+  }, [user, navigate]);
 
-  if (loading) return (
+  // Still loading — App.tsx hasn't resolved /api/user/me yet
+  if (user === null) return (
     <div className="flex items-center justify-center h-screen bg-gray-50">
       <div className="flex flex-col items-center gap-4 animate-fade-in">
         <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
@@ -108,7 +69,7 @@ export default function ProtectedLayout() {
       </div>
     </div>
   );
-  if (!authenticated) return null;
+  if (!user) return null;
 
 
   return (

@@ -11,6 +11,7 @@ export interface User {
   plan?: string | null;
   subscriptionStatus?: string | null;
   tutorialSeen?: boolean;
+  profileCompleted?: boolean;
 }
 
 export const AuthContext = createContext<{ user: User | null; setUser: (user: User | null) => void }>({ user: null, setUser: () => {} });

@@ -118,9 +118,10 @@ export default function MobileMenu() {
   const navigate = useNavigate();
 
   // Ferme le menu dès que la navigation est effective (nouvelle page chargée)
+  // ou quand on reclique sur la page courante (pathname inchangé mais on veut fermer quand même)
   useEffect(() => {
     setOpen(false);
-  }, [location.pathname]);
+  }, [location]);
   const { user } = useAuth();
   const { t } = useI18n();
 
@@ -284,7 +285,7 @@ export default function MobileMenu() {
                   <Link
                     to={link.to}
                     className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-150 text-base ${location.pathname === link.to ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
-                    onClick={(e) => { e.preventDefault(); navigate(link.to); }}
+                    onClick={(e) => { e.preventDefault(); setOpen(false); navigate(link.to); }}
                   >
                     {link.icon}
                     <span className="flex-1">{link.label}</span>
