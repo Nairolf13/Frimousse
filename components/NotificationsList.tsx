@@ -98,12 +98,15 @@ function SwipeableItem({ onDelete, children }: { onDelete: () => void; children:
 
 function getNotificationLink(data: Record<string, unknown> | null): string | null {
   if (!data) return null;
+  // data stored in DB has shape: { type, title, body, data: { url, conversationId, ... } }
   const type = data.type as string | undefined;
+  const inner = data.data && typeof data.data === 'object' ? data.data as Record<string, unknown> : null;
+  const convId = inner?.conversationId as string | undefined;
   switch (type) {
     case 'presence_sheet': return '/presence-sheets';
     case 'report': return '/reports';
     case 'activity': return '/activites';
-    case 'message':
+    case 'message': return convId ? `/messages?convId=${convId}` : '/messages';
     case 'support': return '/settings';
     case 'payment': return '/payment-history';
     default: return null;

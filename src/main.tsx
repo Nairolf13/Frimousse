@@ -67,8 +67,12 @@ if ('serviceWorker' in navigator) {
     if (data.type === 'RELOAD_FOR_UPDATE') {
       if (refreshing) return
       refreshing = true
-      // Optionally we could inspect data.version here before reloading
       window.location.reload()
+    }
+    // Navigate to a specific URL (e.g. from a push notification click)
+    // Dispatch a custom event so React Router can handle it without full page reload
+    if (data.type === 'NAVIGATE' && data.url) {
+      window.dispatchEvent(new CustomEvent('sw:navigate', { detail: { url: data.url } }))
     }
   })
 }

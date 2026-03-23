@@ -1,11 +1,25 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import GuideStartPage from '../pages/GuideStartPage';
 import GuideAddChildPage from '../pages/GuideAddChildPage';
 import GuidePlanningPage from '../pages/GuidePlanningPage';
 import GuideExportReportPage from '../pages/GuideExportReportPage';
 import GuideSecurityPage from '../pages/GuideSecurityPage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+// Listens for sw:navigate events dispatched when a push notification is clicked
+function SWNavigationHandler() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const url = (e as CustomEvent<{ url: string }>).detail?.url;
+      if (url) navigate(url);
+    };
+    window.addEventListener('sw:navigate', handler);
+    return () => window.removeEventListener('sw:navigate', handler);
+  }, [navigate]);
+  return null;
+}
 
 /**
  * Wrapper around React.lazy that auto-reloads the page when a dynamic
@@ -71,6 +85,7 @@ const AdminEmailLogs = lazyWithRetry(() => import('../pages/AdminEmailLogs'));
 const AdminCenters = lazyWithRetry(() => import('../pages/AdminCenters'));
 const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
 const PresenceSheets = lazyWithRetry(() => import('../pages/PresenceSheets'));
+const Messaging = lazyWithRetry(() => import('../pages/Messaging'));
 
 const LoadingFallback = () => (
   <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
@@ -98,6 +113,7 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <SWNavigationHandler />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -140,6 +156,7 @@ export default function AppRoutes() {
             <Route path="/assistant" element={<AssistantPage />} />
             <Route path="/subscription" element={<SubscriptionManagement />} />
             <Route path="/presence-sheets" element={<PresenceSheets />} />
+            <Route path="/messages" element={<Messaging />} />
           </Route>
         </Routes>
       </Suspense>

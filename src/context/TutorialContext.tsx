@@ -29,6 +29,7 @@ const TOURS: Tour[] = [
       { target: 'nav-reports', title: 'Rapports', content: 'La section Rapports permet à la nounou de rédiger un compte-rendu pour les parents : refus de manger, colère, fatigue, chute ou tout autre événement survenu dans la journée.', placement: 'right', route: '/reports' },
       { target: 'nav-assistant', title: 'Assistant IA', content: 'L\'assistant IA vous aide à rédiger des messages, générer des comptes-rendus et gagner du temps au quotidien. Cette section est disponible uniquement avec un abonnement Pro.', placement: 'right', route: '/assistant' },
       { target: 'nav-presence-sheets', title: 'Feuilles de présence', content: 'Les feuilles de présence permettent de suivre les heures d\'arrivée et de départ de chaque enfant jour par jour. La nounou remplit les horaires, envoie la feuille au parent concerné, puis chacun la signe numériquement. Les signatures se mettent à jour en temps réel.', placement: 'right', route: '/presence-sheets' },
+      { target: 'nav-messages', title: 'Messages', content: 'La messagerie instantanée permet d\'échanger en direct entre l\'admin, les nounous et les parents. Indicateur de frappe en temps réel, statut en ligne, modification et suppression des messages.', placement: 'right', route: '/messages' },
       { target: 'nav-payment-history', title: 'Paiements', content: 'L\'historique des paiements et des cotisations. Consultez les règlements effectués et suivez la facturation de votre structure.', placement: 'right', route: '/payment-history' },
       { target: 'nav-subscription', title: 'Mon abonnement', content: 'Gérez votre abonnement, consultez votre plan actuel et passez en Pro pour débloquer l\'assistant IA et toutes les fonctionnalités avancées.', placement: 'right', route: '/subscription', adminOnly: true },
       { target: 'nav-settings', title: 'Paramètres', content: 'Configurez votre profil, votre mot de passe, les notifications et retrouvez tous les tutoriels de l\'application.', placement: 'right', route: '/settings' },
@@ -114,6 +115,25 @@ const TOURS: Tour[] = [
       { target: '_modal_', title: 'Signature numérique', content: 'Chaque jour peut être signé indépendamment. La nounou signe de son côté, le parent signe du sien. Les signatures apparaissent en temps réel grâce à la synchronisation instantanée.', modal: true },
       { target: '_modal_', title: 'Sécurité des signatures', content: 'Une fois qu\'un jour est signé, les horaires ne peuvent plus être modifiés par la nounou ou le parent. Seul un administrateur peut corriger une entrée déjà signée.', modal: true },
       { target: '_modal_', title: 'Export PDF', content: 'À tout moment vous pouvez exporter la feuille en PDF pour l\'archiver ou l\'imprimer. Elle récapitule toutes les présences du mois ainsi que les signatures.', modal: true },
+    ],
+  },
+  {
+    id: 'messaging',
+    name: 'Messagerie instantanée',
+    description: 'Échangez en direct avec les nounous et les parents de votre centre.',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>
+    ),
+    steps: [
+      { target: '_modal_', title: 'Messagerie instantanée', content: 'La messagerie vous permet d\'échanger en temps réel avec toutes les personnes de votre centre : nounous et parents. Les messages sont délivrés instantanément grâce aux WebSockets.', modal: true },
+      { target: 'nav-messages', title: 'Accéder aux messages', content: 'Cliquez sur "Messages" dans le menu pour ouvrir la messagerie.', placement: 'right', route: '/messages' },
+      { target: '_modal_', title: 'Liste des conversations', content: 'La page affiche la liste de vos conversations existantes. Chaque ligne montre le nom de votre interlocuteur, un aperçu du dernier message et un badge rouge si vous avez des messages non lus.', modal: true },
+      { target: '_modal_', title: 'Statut en ligne', content: 'Un point vert à côté de l\'avatar indique que la personne est connectée en ce moment. Un point gris signifie qu\'elle est hors ligne.', modal: true },
+      { target: '_modal_', title: 'Nouvelle conversation', content: 'Cliquez sur le crayon en haut à droite pour démarrer une nouvelle conversation. Seules les personnes autorisées apparaissent : l\'admin voit tout le centre, un parent voit l\'admin et la nounou de son enfant, une nounou voit l\'admin et les parents de ses enfants.', modal: true },
+      { target: '_modal_', title: 'Envoyer un message', content: 'Tapez votre message dans la zone de saisie et appuyez sur Entrée pour envoyer. Utilisez Maj+Entrée pour un saut de ligne. Le destinataire reçoit une notification push même s\'il n\'a pas l\'application ouverte.', modal: true },
+      { target: '_modal_', title: 'Indicateur de frappe', content: 'Lorsque votre interlocuteur est en train d\'écrire, trois points animés apparaissent dans la conversation. C\'est la même expérience que les grandes messageries modernes.', modal: true },
+      { target: '_modal_', title: 'Modifier ou supprimer un message', content: 'Restez appuyé sur une de vos bulles pour faire apparaître un menu contextuel. Vous pouvez modifier le texte ou supprimer le message. La modification est visible en temps réel par votre interlocuteur.', modal: true },
+      { target: '_modal_', title: 'Supprimer une conversation', content: 'Sur mobile, faites glisser une conversation vers la gauche pour révéler le bouton de suppression rouge. La conversation est retirée de votre liste instantanément.', modal: true },
     ],
   },
   {

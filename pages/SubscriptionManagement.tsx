@@ -27,7 +27,7 @@ function usePlanData(t: (k: string, fallback?: string) => string) {
     pro: t('plan.price.pro', '59,99 €/mois'),
   };
   const PLAN_FEATURES: Record<string, string[]> = {
-    decouverte: [t('plan.feature.decouverte.1', '2 enfants max'), t('plan.feature.decouverte.2', '2 nounous max'), t('plan.feature.decouverte.3', '2 parents max'), t('plan.feature.decouverte.4', "Période d'essai 15 jours")],
+    decouverte: [t('plan.feature.decouverte.1', '2 enfants max'), t('plan.feature.decouverte.2', '2 nounous max'), t('plan.feature.decouverte.3', '2 parents max'), t('plan.feature.decouverte.4', "Période d'essai 7 jours")],
     essentiel: [t('plan.feature.essentiel.1', '10 enfants max'), t('plan.feature.essentiel.2', '10 nounous max'), t('plan.feature.essentiel.3', '10 parents max'), t('plan.feature.essentiel.4', 'Facturation mensuelle')],
     pro: [t('plan.feature.pro.1', 'Illimité'), t('plan.feature.pro.2', 'Assistant IA'), t('plan.feature.pro.3', 'Facturation mensuelle'), t('plan.feature.pro.5', 'Support prioritaire')],
   };
