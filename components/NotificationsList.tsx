@@ -98,10 +98,12 @@ function SwipeableItem({ onDelete, children }: { onDelete: () => void; children:
 
 function getNotificationLink(data: Record<string, unknown> | null): string | null {
   if (!data) return null;
-  // data stored in DB has shape: { type, title, body, data: { url, conversationId, ... } }
-  const type = data.type as string | undefined;
+  // Two possible shapes depending on how the notification was created:
+  // 1. Direct: { type: 'presence_sheet', ... }  (e.g. presenceSheets route)
+  // 2. Wrapped: { title, body, data: { type: 'message', conversationId, url } }  (e.g. pushNotifications.notifyUsers)
   const inner = data.data && typeof data.data === 'object' ? data.data as Record<string, unknown> : null;
-  const convId = inner?.conversationId as string | undefined;
+  const type = (data.type as string | undefined) ?? (inner?.type as string | undefined);
+  const convId = (inner?.conversationId as string | undefined) ?? (data.conversationId as string | undefined);
   switch (type) {
     case 'presence_sheet': return '/presence-sheets';
     case 'report': return '/reports';
