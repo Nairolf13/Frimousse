@@ -350,4 +350,16 @@ router.put('/:id/password', auth, async (req, res) => {
   }
 });
 
+router.put('/tutorial-seen', auth, async (req, res) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { tutorialSeen: true },
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

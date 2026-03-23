@@ -8,7 +8,7 @@ import { useI18n } from '../src/lib/useI18n';
 import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
 import { useNotificationsContext } from '../src/context/notificationsContext';
 
-function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan?: string | null } | null, t: (k: string, p?: Record<string, string>) => string) {
+function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan?: string | null; subscriptionStatus?: string | null } | null, t: (k: string, p?: Record<string, string>) => string) {
   // Parents 
   if (user && user.role === 'parent') {
     return [
@@ -34,7 +34,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan
       { to: '/nannies', label: t('nav.nannies'), icon: <HiOutlineHeart className="w-5 h-5 mr-3" /> },
       { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
       { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
-      ...((user?.plan || '').toLowerCase() === 'pro' || user?.role === 'super-admin' ? [{ to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> }] : []),
+      ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || user?.role === 'super-admin' ? [{ to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> }] : []),
       { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
       { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
@@ -117,6 +117,18 @@ export default function MobileMenu() {
   const location = useLocation();
   const { user } = useAuth();
   const { t } = useI18n();
+
+  // Ouvre le menu quand le tutoriel en a besoin sur mobile
+  useEffect(() => {
+    const handler = () => setOpen(true);
+    const closeHandler = () => setOpen(false);
+    window.addEventListener('tutorial:open-mobile-menu', handler);
+    window.addEventListener('tutorial:close-mobile-menu', closeHandler);
+    return () => {
+      window.removeEventListener('tutorial:open-mobile-menu', handler);
+      window.removeEventListener('tutorial:close-mobile-menu', closeHandler);
+    };
+  }, []);
   const [centerName, setCenterName] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const { unreadReviews } = useNotificationsContext();
@@ -250,7 +262,7 @@ export default function MobileMenu() {
             <div className="w-12 h-12 rounded-2xl overflow-hidden bg-brand-50 flex items-center justify-center ring-1 ring-brand-100 shadow-sm">
               <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-8 h-8 object-contain" />
             </div>
-            <span className="font-extrabold text-lg text-gray-900">{displayCenterName(centerName)}</span>
+            <span data-tour="sidebar-logo" className="font-extrabold text-lg text-gray-900">{displayCenterName(centerName)}</span>
             <button
               className="ml-auto bg-gray-100 rounded-xl p-2.5 border border-gray-200 hover:bg-gray-200 transition-colors"
               onClick={() => setOpen(false)}

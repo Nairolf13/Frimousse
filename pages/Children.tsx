@@ -693,6 +693,7 @@ export default function Children() {
           {isAdminUser && (
             <button
               type="button"
+              data-tour="btn-add-child"
               onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
               className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
             >
