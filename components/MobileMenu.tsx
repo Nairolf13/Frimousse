@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { HiOutlineViewGrid, HiOutlineBell, HiOutlineChatAlt, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar, HiOutlineOfficeBuilding, HiOutlineCreditCard } from 'react-icons/hi';
 import { FaRobot } from 'react-icons/fa';
 import { useAuth } from '../src/context/AuthContext';
@@ -115,6 +115,12 @@ function MobileMenuButton({ showOnMd = false, onOpen }: { showOnMd?: boolean; on
 export default function MobileMenu() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Ferme le menu dès que la navigation est effective (nouvelle page chargée)
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
   const { user } = useAuth();
   const { t } = useI18n();
 
@@ -256,8 +262,7 @@ export default function MobileMenu() {
       {/* show button on small screens, and also on short landscape (e.g. mobile landscape)
           but hide the floating burger when the overlay menu is open (so it doesn't remain fixed) */}
       {!open && <MobileMenuButton showOnMd={true} onOpen={() => setOpen(true)} />}
-      {open && (
-        <div className="fixed inset-0 z-[9999] bg-white flex flex-col" style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div className="fixed inset-0 z-[9999] bg-white flex flex-col" style={{ WebkitOverflowScrolling: 'touch', visibility: open ? 'visible' : 'hidden', pointerEvents: open ? 'auto' : 'none', opacity: open ? 1 : 0 }}>
           <div className="flex items-center gap-3 px-6 pt-7 pb-5">
             <div className="w-12 h-12 rounded-2xl overflow-hidden bg-brand-50 flex items-center justify-center ring-1 ring-brand-100 shadow-sm">
               <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-8 h-8 object-contain" />
@@ -279,7 +284,7 @@ export default function MobileMenu() {
                   <Link
                     to={link.to}
                     className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-150 text-base ${location.pathname === link.to ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
-                    onClick={() => setOpen(false)}
+                    onClick={(e) => { e.preventDefault(); navigate(link.to); }}
                   >
                     {link.icon}
                     <span className="flex-1">{link.label}</span>
@@ -305,7 +310,6 @@ export default function MobileMenu() {
             </div>
           </div>
         </div>
-      )}
     </>
   );
 }
