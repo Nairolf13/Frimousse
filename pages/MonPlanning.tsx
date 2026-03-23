@@ -7,7 +7,6 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export default function MonPlanning() {
   const [nannyId, setNannyId] = useState<string | null>(null);
-  const [nannyName, setNannyName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [nannies, setNannies] = useState<Array<{ id: string; name: string }>>([]);
@@ -34,7 +33,6 @@ export default function MonPlanning() {
       .then(async (user) => {
         if (user.role === 'nanny' && user.nannyId) {
           setNannyId(user.nannyId);
-          setNannyName(user.name || '');
           return;
         }
 
@@ -49,7 +47,7 @@ export default function MonPlanning() {
                 ? (list as NannyFromApi[]).map((n: NannyFromApi) => ({ id: String(n.id ?? ''), name: String(n.name ?? '') }))
                 : [];
               setNannies(simplified);
-              if (simplified.length > 0) { setNannyId(simplified[0].id); setNannyName(simplified[0].name); }
+              if (simplified.length > 0) { setNannyId(simplified[0].id); }
             }
           } catch (e) {
             console.error('Failed to load nannies for admin', e);
@@ -77,7 +75,7 @@ export default function MonPlanning() {
               {isAdmin && nannies.length > 0 && (
                 <>
                   <label className="text-sm text-gray-600 font-medium">Voir le planning de :</label>
-                  <select value={nannyId || ''} onChange={e => { const n = nannies.find(x => x.id === e.target.value); setNannyId(e.target.value); setNannyName(n?.name || ''); }} className="border border-gray-200 rounded-xl px-3 py-2.5 text-gray-700 bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300">
+                  <select value={nannyId || ''} onChange={e => { setNannyId(e.target.value); }} className="border border-gray-200 rounded-xl px-3 py-2.5 text-gray-700 bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300">
                     {nannies.map(n => (
                       <option key={n.id} value={n.id}>{n.name}</option>
                     ))}

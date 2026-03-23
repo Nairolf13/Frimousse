@@ -1,5 +1,6 @@
 // React import not required with new JSX runtime
 import { useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../src/lib/useI18n';
 
 export type NotificationItem = {
@@ -95,10 +96,25 @@ function SwipeableItem({ onDelete, children }: { onDelete: () => void; children:
   );
 }
 
+function getNotificationLink(data: Record<string, unknown> | null): string | null {
+  if (!data) return null;
+  const type = data.type as string | undefined;
+  switch (type) {
+    case 'presence_sheet': return '/presence-sheets';
+    case 'report': return '/reports';
+    case 'activity': return '/activites';
+    case 'message':
+    case 'support': return '/settings';
+    case 'payment': return '/payment-history';
+    default: return null;
+  }
+}
+
 export default function NotificationsList({ items = [], loading = false, onRefresh = () => {}, onDeleted = () => {} }: Props) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { t } = useI18n();
+  const navigate = useNavigate();
 
   function relativeTime(dateLike: string | Date) {
     const d = new Date(String(dateLike));
@@ -209,10 +225,15 @@ export default function NotificationsList({ items = [], loading = false, onRefre
 
         const iconCls = n.read ? 'bg-gray-100 text-gray-500' : `${bg} text-white`;
 
+        const notifLink = getNotificationLink(maybeData);
+
         return (
           <li key={n.id}>
           <SwipeableItem onDelete={() => del(n.id)}>
-          <div className={`rounded-2xl p-4 pb-12 sm:pb-6 relative ${cardColors[idx % cardColors.length]} border border-blue-50 shadow-sm`}>
+          <div
+            className={`rounded-2xl p-4 pb-12 sm:pb-6 relative ${cardColors[idx % cardColors.length]} border border-blue-50 shadow-sm ${notifLink ? 'cursor-pointer' : ''}`}
+            onClick={notifLink ? () => { if (!n.read) markRead(n.id); navigate(notifLink); } : undefined}
+          >
             {/* mobile top: icon left, time right */}
             <div className="w-full flex items-center justify-between sm:hidden">
               <div className="flex items-center">

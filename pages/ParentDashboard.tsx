@@ -408,14 +408,28 @@ const ParentDashboard: React.FC = () => {
                   setSuccessMessage(smsg);
                   if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
                   successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
-                  const reload = await fetchWithRefresh(`api/parent/admin`, { credentials: 'include' });
-                  const reloadText = await reload.text();
-                  let json: unknown = null;
-                  try { json = reloadText ? JSON.parse(reloadText) : null; } catch { json = reloadText; }
-                  setAdminData(json as AdminData);
+                  // Optimistic update: insert/update parent immediately in local state
+                  if (editingParent) {
+                    setAdminData(prev => prev ? {
+                      ...prev,
+                      parents: prev.parents.map(p => p.id === editingParent.id ? { ...p, name: `${form.firstName} ${form.lastName}`, email: form.email, phone: form.phone || p.phone } : p)
+                    } : prev);
+                  } else if (resBody && typeof resBody === 'object' && resBody !== null && 'id' in (resBody as Record<string, unknown>)) {
+                    const created = resBody as Parent;
+                    setAdminData(prev => prev ? {
+                      ...prev,
+                      parents: [created, ...prev.parents],
+                      stats: { ...prev.stats, parentsCount: prev.stats.parentsCount + 1 }
+                    } : prev);
+                  }
                   setAdding(false);
                   setEditingParent(null);
                   setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' });
+                  // Reload in background to sync with server
+                  fetchWithRefresh(`api/parent/admin`, { credentials: 'include' })
+                    .then(r => r.text())
+                    .then(text => { try { const j = text ? JSON.parse(text) : null; if (j) setAdminData(j as AdminData); } catch { /* ignore */ } })
+                    .catch(() => { /* ignore */ });
               } catch (err: unknown) {
                 console.error('Add parent failed', err);
                 const msg = err instanceof Error ? err.message : 'Erreur';

@@ -588,8 +588,6 @@ export default function Children() {
         // fallback: refetch
         fetchChildren();
       }
-      // regardless of path above, ensure the list matches server state
-      fetchChildren();
       setForm(emptyForm);
       setEditingId(null);
       setShowForm(false);

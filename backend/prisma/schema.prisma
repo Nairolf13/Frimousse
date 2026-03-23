@@ -128,6 +128,7 @@ model Nanny {
   centerId             String?
   cotisationPaidUntil  DateTime?
   lastCotisationAmount Float?
+  presenceSheets       PresenceSheet[]
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 }
@@ -154,6 +155,7 @@ model Child {
   updatedAt           DateTime       @updatedAt
   feedPosts           FeedPost[]
   photoConsents       PhotoConsent[] @relation("ChildPhotoConsents")
+  presenceSheets      PresenceSheet[]
 }
 
 model ChildNanny {
@@ -226,9 +228,10 @@ model Center {
   schedules   Schedule[]
   reports     Report[]
   feedPosts   FeedPost[]
-  reviews     Review[]
-  createdAt   DateTime     @default(now())
-  notifyByEmail    Boolean   @default(true)
+  reviews        Review[]
+  presenceSheets PresenceSheet[]
+  createdAt      DateTime     @default(now())
+  notifyByEmail  Boolean      @default(true)
 }
 
 model Subscription {
@@ -439,6 +442,47 @@ model SupportReply {
   createdAt   DateTime @default(now())
 
   @@index([ticketId])
+}
+
+// Feuille de relevé de présences mensuelle
+model PresenceSheet {
+  id          String              @id @default(uuid())
+  child       Child               @relation(fields: [childId], references: [id])
+  childId     String
+  nanny       Nanny               @relation(fields: [nannyId], references: [id])
+  nannyId     String
+  center      Center?             @relation(fields: [centerId], references: [id])
+  centerId    String?
+  month       Int                 // 1-12
+  year        Int
+  status      String              @default("draft") // draft | sent | signed
+  entries     PresenceEntry[]
+  sentAt      DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([childId, nannyId, month, year])
+  @@index([nannyId])
+  @@index([childId])
+}
+
+model PresenceEntry {
+  id              String        @id @default(uuid())
+  sheet           PresenceSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
+  sheetId         String
+  date            DateTime
+  arrivalTime     String?       // ex: "08h30"
+  departureTime   String?       // ex: "17h30"
+  absent          Boolean       @default(false)
+  comment         String?
+  nannySignature  String?       // base64
+  nannySignedAt   DateTime?
+  parentSignature String?       // base64
+  parentSignedAt  DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([sheetId])
 }
 
 // Stripe webhook idempotency: tracks processed event IDs to prevent double-processing
