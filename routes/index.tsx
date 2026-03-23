@@ -70,6 +70,7 @@ const SubscriptionManagement = lazyWithRetry(() => import('../pages/Subscription
 const AdminEmailLogs = lazyWithRetry(() => import('../pages/AdminEmailLogs'));
 const AdminCenters = lazyWithRetry(() => import('../pages/AdminCenters'));
 const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
+const PresenceSheets = lazyWithRetry(() => import('../pages/PresenceSheets'));
 
 const LoadingFallback = () => (
   <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
@@ -138,6 +139,7 @@ export default function AppRoutes() {
             <Route path="/admin/support" element={<AdminSupport />} />
             <Route path="/assistant" element={<AssistantPage />} />
             <Route path="/subscription" element={<SubscriptionManagement />} />
+            <Route path="/presence-sheets" element={<PresenceSheets />} />
           </Route>
         </Routes>
       </Suspense>

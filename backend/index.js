@@ -180,6 +180,9 @@ try {
 
 // paymentHistoryRoutes mounted later after invoice and admin routes
 
+const presenceSheetsRoutes = require('./routes/presenceSheets');
+app.use('/api/presence-sheets', presenceSheetsRoutes);
+
 const adminEmailLogsRoutes = require('./routes/adminEmailLogs');
 const supportRoutes = require('./routes/support');
 app.use('/api/admin', adminEmailLogsRoutes);
@@ -214,8 +217,12 @@ if (isProd) {
 // /create-payment-intent removed: was unauthenticated and unused.
 
 
+const http = require('http');
+const wsServer = require('./lib/wsServer');
+const server = http.createServer(app);
+wsServer.init(server);
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, '0.0.0.0');
+server.listen(PORT, '0.0.0.0');
 
 // Start monthly payment cron (calculates previous month on 1st of month)
 try {
