@@ -1,6 +1,18 @@
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 const API_URL = import.meta.env.VITE_API_URL;
 
+function computeAge(birthDate?: string, fallbackAge?: number): number {
+  if (birthDate) {
+    try {
+      const bd = new Date(birthDate);
+      if (!Number.isNaN(bd.getTime())) {
+        return Math.floor((Date.now() - bd.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+      }
+    } catch { /* fallthrough */ }
+  }
+  return fallbackAge ?? 0;
+}
+
 function getCurrentMonth() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -670,7 +682,7 @@ export default function Children() {
     return matchSearch && matchGroup;
   });
   if (sort === 'name') filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
-  if (sort === 'age') filtered = filtered.sort((a, b) => a.age - b.age);
+  if (sort === 'age') filtered = filtered.sort((a, b) => computeAge(a.birthDate, a.age) - computeAge(b.birthDate, b.age));
 
   const inputCls = "border border-gray-200 rounded-xl px-3 py-2 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition w-full";
   const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1";
@@ -976,7 +988,7 @@ export default function Children() {
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="text-xs text-white/80 font-medium">{child.age} ans</span>
+                      <span className="text-xs text-white/80 font-medium">{computeAge(child.birthDate, child.age)} ans</span>
                       <span className="text-white/40">·</span>
                       <span className="text-xs text-white/80">{child.sexe === 'masculin' ? t('children.form.sexe.m') : t('children.form.sexe.f')}</span>
                       {child.birthDate && (

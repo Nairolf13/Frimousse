@@ -271,7 +271,7 @@ router.post('/', auth, async (req, res) => {
 
   } catch (err) {
   logger.error('POST /assignments error', err);
-    res.status(500).json({ error: err.message || 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

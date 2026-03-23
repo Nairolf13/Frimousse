@@ -80,7 +80,7 @@ app.use(
 // Webhook Stripe doit recevoir le body RAW — monté avant express.json()
 const subscriptionsRoutes = require('./routes/subscriptions');
 app.use('/api/subscriptions/webhook', express.raw({ type: 'application/json' }));
-app.use(express.json());
+app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
 
 // Serve frontend static files in production with appropriate Cache-Control headers.

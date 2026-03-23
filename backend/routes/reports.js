@@ -35,6 +35,8 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('report'), asyn
       return res.status(403).json({ message: 'Forbidden: parents cannot create reports' });
     }
     const { priority, type, status, childId, nannyId, summary, details, date, time, duration, childrenInvolved } = req.body;
+    if (summary && String(summary).length > 500) return res.status(400).json({ message: 'Résumé trop long (max 500 caractères).' });
+    if (details && String(details).length > 5000) return res.status(400).json({ message: 'Détails trop longs (max 5000 caractères).' });
     let isoDate = date;
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
       isoDate = new Date(date + 'T' + (time || '00:00') + ':00.000Z').toISOString();
@@ -110,7 +112,7 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('report'), asyn
     res.status(201).json(report);
   } catch (err) {
     logger.error('Report creation error:', err && err.message ? err.message : err);
-    res.status(500).json({ error: 'Erreur lors de la création du rapport.', details: err.message });
+    res.status(500).json({ error: 'Erreur lors de la création du rapport.' });
   }
 });
 
@@ -128,6 +130,8 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
     }
 
     const { priority, type, status, childId, nannyId, summary, details, date, time, duration, childrenInvolved } = req.body;
+    if (summary && String(summary).length > 500) return res.status(400).json({ message: 'Résumé trop long (max 500 caractères).' });
+    if (details && String(details).length > 5000) return res.status(400).json({ message: 'Détails trop longs (max 5000 caractères).' });
     let isoDate = date;
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
       isoDate = new Date(date + 'T' + (time || '00:00') + ':00.000Z').toISOString();
@@ -138,7 +142,7 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
     res.json(updated);
   } catch (err) {
     logger.error('Report update error:', err && err.message ? err.message : err);
-    res.status(500).json({ error: 'Erreur lors de la mise à jour du rapport.', details: err.message });
+    res.status(500).json({ error: 'Erreur lors de la mise à jour du rapport.' });
   }
 });
 
@@ -158,7 +162,7 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
     res.status(204).end();
   } catch (err) {
     logger.error('Report delete error:', err && err.message ? err.message : err);
-    res.status(500).json({ error: 'Erreur lors de la suppression du rapport.', details: err.message });
+    res.status(500).json({ error: 'Erreur lors de la suppression du rapport.' });
   }
 });
 

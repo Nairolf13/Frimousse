@@ -210,7 +210,7 @@ export default function SubscriptionManagement() {
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(['essentiel', 'pro'] as const).map(plan => (
-                  <div key={plan} className="border border-gray-200 rounded-xl p-5 flex flex-col gap-3">
+                  <div key={plan} className="relative border border-gray-200 rounded-xl p-5 flex flex-col gap-3">
                     <div>
                       <div className="font-bold text-gray-900 text-base">{PLAN_LABELS[plan]}</div>
                       <div className="text-sm text-brand-600 font-semibold mt-0.5">{PLAN_PRICES[plan]}</div>
@@ -229,6 +229,10 @@ export default function SubscriptionManagement() {
                       <HiOutlineArrowUp className="w-4 h-4" />
                       {t('subscription.choose', 'Choisir')} {PLAN_LABELS[plan]}
                     </button>
+                    {/* Coming soon overlay */}
+                    <div style={{ position: 'absolute', inset: 0, borderRadius: '12px', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(2px)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontSize: '12px', color: '#555', fontWeight: 600, textAlign: 'center', padding: '0 12px' }}>Bientôt disponible</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -330,7 +334,7 @@ export default function SubscriptionManagement() {
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(['essentiel', 'pro'] as const).map(plan => (
-                    <div key={plan} className="border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+                    <div key={plan} className="relative border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
                       <div>
                         <div className="font-semibold text-gray-900">{PLAN_LABELS[plan]}</div>
                         <div className="text-sm text-gray-500">{PLAN_PRICES[plan]}</div>
@@ -349,6 +353,10 @@ export default function SubscriptionManagement() {
                         <HiOutlineArrowUp className="w-3.5 h-3.5" />
                         {t('subscription.choose', 'Choisir')} {PLAN_LABELS[plan]}
                       </button>
+                      {/* Coming soon overlay */}
+                      <div style={{ position: 'absolute', inset: 0, borderRadius: '12px', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(2px)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '12px', color: '#555', fontWeight: 600, textAlign: 'center', padding: '0 12px' }}>Bientôt disponible</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -395,7 +403,7 @@ export default function SubscriptionManagement() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(['essentiel', 'pro'] as const).filter(p => p !== sub.plan).map(plan => (
-                    <div key={plan} className="border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+                    <div key={plan} className="relative border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
                       <div>
                         <div className="font-semibold text-gray-900">{PLAN_LABELS[plan]}</div>
                         <div className="text-sm text-gray-500">{PLAN_PRICES[plan]}</div>
@@ -437,6 +445,10 @@ export default function SubscriptionManagement() {
                           {t('subscription.change.switch_to', 'Passer au plan')} {PLAN_LABELS[plan]}
                         </button>
                       )}
+                      {/* Coming soon overlay */}
+                      <div style={{ position: 'absolute', inset: 0, borderRadius: '12px', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(2px)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '12px', color: '#555', fontWeight: 600, textAlign: 'center', padding: '0 12px' }}>Bientôt disponible</span>
+                      </div>
                     </div>
                   ))}
                 </div>

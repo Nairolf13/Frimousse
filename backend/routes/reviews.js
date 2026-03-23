@@ -35,6 +35,7 @@ router.post('/', async (req, res) => {
   try {
     const { authorName = null, content, rating = null, centerId = null, email } = req.body || {};
     if (!content || typeof content !== 'string' || content.trim().length < 5) return res.status(400).json({ message: 'Content too short' });
+    if (content.length > 2000) return res.status(400).json({ message: 'Avis trop long (max 2000 caractères).' });
     if (!email || typeof email !== 'string') return res.status(400).json({ message: 'Email requis' });
     const userExists = await prisma.user.findFirst({ where: { email: email.trim().toLowerCase() } });
     if (!userExists) return res.status(403).json({ message: 'Cet email ne correspond à aucun compte inscrit sur Frimousse.' });

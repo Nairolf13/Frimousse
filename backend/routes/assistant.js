@@ -11,13 +11,9 @@ router.post('/', auth, requirePlan('pro'), async (req, res) => {
   const context = req.body.context || null;
   const locale = (req.body.locale || 'fr').toString().slice(0,2).toLowerCase();
   if (!userMessage || typeof userMessage !== 'string') return res.status(400).json({ error: 'message required' });
+  if (userMessage.length > 2000) return res.status(400).json({ error: 'Message trop long (max 2000 caractères).' });
 
   try {
-    try {
-      console.log('[assistant] received body:');
-    } catch (e) {
-      console.log('[assistant] received body (non-serializable)');
-    }
     // Build the system content (directive + optional UI context)
     const systemContent = (() => {
       // choose the base directive text according to locale
@@ -43,17 +39,16 @@ router.post('/', auth, requirePlan('pro'), async (req, res) => {
         }
       }
       base += "\n\nImportant: utilise les informations fournies dans 'Dernier résumé enfant' (lastChildSummary) si elles existent — mentionne le prénom de l'enfant et propose des actions adaptées. Ne PAS inventer d'informations non présentes dans le résumé; si une information manque, demande une précision. Si le résumé n'est pas pertinent, répond de façon générale mais claire.";
-      console.log('[assistant] system prompt:');
       return base;
     })();
 
     // Build messages array including optional history so the model sees prior turns
     const messagesForModel = [{ role: 'system', content: systemContent }];
     if (Array.isArray(req.body.history)) {
-      // expect history elements like { role: 'user'|'assistant', content: '...' }
-      for (const h of req.body.history) {
+      const history = req.body.history.slice(0, 20); // max 20 turns
+      for (const h of history) {
         if (h && (h.role === 'user' || h.role === 'assistant') && typeof h.content === 'string') {
-          messagesForModel.push({ role: h.role, content: h.content });
+          messagesForModel.push({ role: h.role, content: String(h.content).slice(0, 2000) });
         }
       }
     }
@@ -64,12 +59,6 @@ router.post('/', auth, requirePlan('pro'), async (req, res) => {
       model: 'mistral-small-latest',
       messages: messagesForModel,
     };
-    try {
-      console.log('[assistant] sending payload to Mistral:');
-    } catch (e) {
-      console.log('[assistant] sending payload to Mistral (non-serializable)');
-    }
-
     const response = await fetch('https://api.mistral.ai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -82,7 +71,7 @@ router.post('/', auth, requirePlan('pro'), async (req, res) => {
     if (!response.ok) {
       const t = await response.text();
       console.error('Mistral returned error', response.status, t);
-      return res.status(502).json({ error: 'Mistral error', details: t });
+      return res.status(502).json({ error: 'Erreur du service IA' });
     }
 
     const data = await response.json();

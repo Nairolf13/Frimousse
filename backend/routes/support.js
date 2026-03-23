@@ -35,6 +35,8 @@ router.post('/tickets', requireAuth, async (req, res) => {
     if (!subject || !message) {
       return res.status(400).json({ error: 'Subject and message required' });
     }
+    if (String(subject).length > 200) return res.status(400).json({ error: 'Sujet trop long (max 200 caractères).' });
+    if (String(message).length > 5000) return res.status(400).json({ error: 'Message trop long (max 5000 caractères).' });
 
     const ticket = await prisma.supportTicket.create({
       data: {
@@ -83,6 +85,7 @@ router.post('/tickets/:id/reply', requireAuth, async (req, res) => {
     if (!message) {
       return res.status(400).json({ error: 'Message required' });
     }
+    if (String(message).length > 5000) return res.status(400).json({ error: 'Message trop long (max 5000 caractères).' });
 
     // Check if ticket exists and belongs to user
     const ticket = await prisma.supportTicket.findFirst({
@@ -270,6 +273,7 @@ router.post('/admin/tickets/:id/reply', requireAuth, async (req, res) => {
     if (!message) {
       return res.status(400).json({ error: 'Message required' });
     }
+    if (String(message).length > 5000) return res.status(400).json({ error: 'Message trop long (max 5000 caractères).' });
 
     // Check if ticket exists
     const ticket = await prisma.supportTicket.findUnique({

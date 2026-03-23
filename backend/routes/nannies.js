@@ -45,7 +45,11 @@ router.post('/batch/details', auth, async (req, res) => {
     const ids = Array.isArray(req.body && req.body.ids) ? req.body.ids : undefined;
     const month = (req.body && req.body.month) || String(req.query.month || '').trim();
     const where = {};
-    if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+    if (isSuperAdmin(req.user) && req.query.centerId) {
+      where.centerId = req.query.centerId;
+    } else if (!isSuperAdmin(req.user)) {
+      where.centerId = req.user.centerId;
+    }
     if (ids && ids.length > 0) where.id = { in: ids };
 
     // include linked user so we can return address fields stored on User
@@ -120,7 +124,7 @@ router.post('/batch/details', auth, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('POST /api/nannies/batch/details error', err);
-    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -130,6 +134,7 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
     // Only admins or super-admin can create nannies
     if (!(userReq.role === 'admin' || isSuperAdmin(userReq))) return res.status(403).json({ message: 'Forbidden: seuls les administrateurs peuvent créer des nounous' });
   const { name, availability, experience, contact, birthDate, password, address, postalCode, city, region, country } = req.body;
+    if (name && String(name).length > 100) return res.status(400).json({ error: 'Nom trop long (max 100 caractères).' });
     const email = String(req.body.email || '').trim().toLowerCase();
     const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
     if (isNaN(parsedExperience)) {
@@ -185,7 +190,7 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
         (async () => {
           try {
             const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-            const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
+            const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
             const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
             const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
             const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
@@ -202,7 +207,7 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
   } catch (e) {
     console.error('POST /api/nannies error', e);
     if (e && e.code === 'P2002') return res.status(409).json({ message: 'Nanny or user with this email already exists' });
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -211,7 +216,7 @@ router.post('/accept-invite', async (req, res) => {
   try {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ message: 'Missing token or password' });
-    const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
+    const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
     let payload;
     try {
       payload = jwt.verify(token, inviteSecret);
@@ -224,7 +229,7 @@ router.post('/accept-invite', async (req, res) => {
     res.json({ message: 'Password set successfully' });
   } catch (err) {
     console.error('POST /api/nannies/accept-invite error', err);
-    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -395,7 +400,7 @@ router.get('/:id/cotisation-total', auth, async (req, res) => {
     res.json({ totalMonthly });
   } catch (err) {
     console.error('GET /api/nannies/:id/cotisation-total error', err);
-    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -434,6 +439,200 @@ router.put('/:id/cotisation', auth, async (req, res) => {
     });
     res.json({ cotisationPaidUntil: newDate, lastCotisationAmount: updateData.lastCotisationAmount || null });
   } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Export PDF planning mensuel pour une nounou
+router.get('/:id/export-planning', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const month = String(req.query.month || '').trim();
+    if (!month || !/^[0-9]{4}-[0-9]{2}$/.test(month)) {
+      return res.status(400).json({ error: 'Paramètre month requis au format YYYY-MM' });
+    }
+
+    // Vérifier accès
+    const nanny = await prisma.nanny.findUnique({ where: { id }, include: { user: true } });
+    if (!nanny) return res.status(404).json({ error: 'Nounou introuvable' });
+    if (!isSuperAdmin(req.user)) {
+      const isOwnNanny = req.user.nannyId && String(req.user.nannyId) === String(id);
+      const isAdminOfCenter = (req.user.role === 'admin') && nanny.centerId === req.user.centerId;
+      if (!isOwnNanny && !isAdminOfCenter) return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    const [year, mon] = month.split('-').map(Number);
+    const startDate = new Date(year, mon - 1, 1);
+    const endDate = new Date(year, mon, 1);
+
+    // Récupérer les assignments du mois pour cette nounou
+    const assignments = await prisma.assignment.findMany({
+      where: { nannyId: id, date: { gte: startDate, lt: endDate } },
+      include: { child: true },
+      orderBy: { date: 'asc' },
+    });
+
+    // Récupérer le nom du centre
+    let centerName = 'Frimousse';
+    if (nanny.centerId) {
+      try {
+        const center = await prisma.center.findUnique({ where: { id: nanny.centerId } });
+        if (center) centerName = center.name;
+      } catch { /* ignore */ }
+    }
+
+    // Construire un map jour → enfants présents
+    const daysInMonth = new Date(year, mon, 0).getDate();
+    const dayMap = {};
+    for (let d = 1; d <= daysInMonth; d++) dayMap[d] = [];
+    for (const a of assignments) {
+      const day = new Date(a.date).getDate();
+      if (!dayMap[day]) dayMap[day] = [];
+      if (a.child && !dayMap[day].find(c => c.id === a.child.id)) {
+        dayMap[day].push({ id: a.child.id, name: a.child.name });
+      }
+    }
+
+    // Récupérer tous les enfants uniques du mois
+    const childrenSet = {};
+    for (const a of assignments) {
+      if (a.child) childrenSet[a.child.id] = a.child.name;
+    }
+    const childrenList = Object.entries(childrenSet).map(([cid, name]) => ({ id: cid, name }));
+
+    // Compter jours par enfant
+    const childDayCounts = {};
+    for (const [, children] of Object.entries(dayMap)) {
+      for (const c of children) {
+        childDayCounts[c.id] = (childDayCounts[c.id] || 0) + 1;
+      }
+    }
+
+    const monthNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    const dayNames = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+    const monthLabel = `${monthNames[mon - 1]} ${year}`;
+
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+
+    await new Promise((resolve, reject) => {
+      doc.on('end', resolve);
+      doc.on('error', reject);
+
+      // En-tête
+      doc.font('Helvetica-Bold').fontSize(18).fillColor('#0b5566').text(centerName, { align: 'left' });
+      doc.moveDown(0.3);
+      doc.font('Helvetica').fontSize(11).fillColor('#374151').text(`Planning de présences — ${nanny.name}`, { align: 'left' });
+      doc.fontSize(10).fillColor('#6b7280').text(`Mois : ${monthLabel}`, { align: 'left' });
+      doc.moveDown(0.8);
+
+      // Ligne séparatrice
+      const pageW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+      doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageW, doc.y).strokeColor('#e5e7eb').lineWidth(1).stroke();
+      doc.moveDown(0.8);
+
+      // Tableau des jours
+      const colDay = 50;
+      const colDayName = 60;
+      const colChildren = pageW - colDay - colDayName;
+      const rowH = 20;
+      const tableX = doc.page.margins.left;
+
+      // En-tête tableau
+      doc.rect(tableX, doc.y, pageW, rowH).fill('#f1f5f9');
+      const headerY = doc.y + 5;
+      doc.font('Helvetica-Bold').fontSize(9).fillColor('#374151');
+      doc.text('Jour', tableX + 4, headerY, { width: colDay });
+      doc.text('', tableX + colDay, headerY, { width: colDayName });
+      doc.text('Enfants présents', tableX + colDay + colDayName, headerY, { width: colChildren });
+      doc.moveDown(1.4);
+
+      // Lignes
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateObj = new Date(year, mon - 1, d);
+        const dayName = dayNames[dateObj.getDay()];
+        const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+        const children = dayMap[d] || [];
+        const childrenText = children.length > 0 ? children.map(c => c.name).join(', ') : '—';
+
+        const rowY = doc.y;
+        // Fond alternance / weekend
+        if (isWeekend) {
+          doc.rect(tableX, rowY, pageW, rowH).fill('#fafafa');
+        } else if (d % 2 === 0) {
+          doc.rect(tableX, rowY, pageW, rowH).fill('#f8fafc');
+        }
+
+        const textY = rowY + 5;
+        doc.font(isWeekend ? 'Helvetica' : 'Helvetica').fontSize(9)
+          .fillColor(isWeekend ? '#9ca3af' : '#111827')
+          .text(String(d).padStart(2, '0'), tableX + 4, textY, { width: colDay });
+        doc.fillColor(isWeekend ? '#9ca3af' : '#6b7280')
+          .text(dayName, tableX + colDay, textY, { width: colDayName });
+        doc.fillColor(isWeekend ? '#9ca3af' : (children.length > 0 ? '#0b5566' : '#d1d5db'))
+          .text(childrenText, tableX + colDay + colDayName, textY, { width: colChildren - 4 });
+
+        doc.moveDown(1.1);
+
+        // Nouvelle page si nécessaire
+        if (doc.y > doc.page.height - doc.page.margins.bottom - 80 && d < daysInMonth) {
+          doc.addPage();
+        }
+      }
+
+      doc.moveDown(1);
+      // Séparateur
+      doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.margins.left + pageW, doc.y).strokeColor('#e5e7eb').lineWidth(1).stroke();
+      doc.moveDown(0.8);
+
+      // Récapitulatif
+      doc.font('Helvetica-Bold').fontSize(11).fillColor('#0b5566').text('Récapitulatif du mois');
+      doc.moveDown(0.5);
+
+      if (childrenList.length === 0) {
+        doc.font('Helvetica').fontSize(10).fillColor('#6b7280').text('Aucune présence enregistrée ce mois-ci.');
+      } else {
+        // En-tête récap
+        doc.rect(tableX, doc.y, pageW, rowH).fill('#f1f5f9');
+        const recapHeaderY = doc.y + 5;
+        doc.font('Helvetica-Bold').fontSize(9).fillColor('#374151');
+        doc.text('Enfant', tableX + 4, recapHeaderY, { width: pageW * 0.7 });
+        doc.text('Jours gardés', tableX + pageW * 0.7, recapHeaderY, { width: pageW * 0.3, align: 'right' });
+        doc.moveDown(1.4);
+
+        let totalDays = 0;
+        childrenList.forEach((c, i) => {
+          const days = childDayCounts[c.id] || 0;
+          totalDays += days;
+          const rowY2 = doc.y;
+          if (i % 2 === 0) doc.rect(tableX, rowY2, pageW, rowH).fill('#f8fafc');
+          const textY2 = rowY2 + 5;
+          doc.font('Helvetica').fontSize(9).fillColor('#111827').text(c.name, tableX + 4, textY2, { width: pageW * 0.7 });
+          doc.font('Helvetica-Bold').fillColor('#0b5566').text(String(days), tableX + pageW * 0.7, textY2, { width: pageW * 0.3, align: 'right' });
+          doc.moveDown(1.1);
+        });
+
+        doc.moveDown(0.3);
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#111827').text(`Total : ${totalDays} jours de garde`, { align: 'right' });
+      }
+
+      // Pied de page
+      doc.moveDown(1.5);
+      doc.font('Helvetica').fontSize(8).fillColor('#9ca3af').text(`Document généré le ${new Date().toLocaleDateString('fr-FR')} — ${centerName}`, { align: 'center' });
+
+      doc.end();
+    });
+
+    const pdfBuffer = Buffer.concat(chunks);
+    const filename = `planning_${nanny.name.replace(/\s+/g, '_')}_${month}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.status(200).send(pdfBuffer);
+  } catch (err) {
+    console.error('GET /api/nannies/:id/export-planning error', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

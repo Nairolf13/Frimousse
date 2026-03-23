@@ -1,6 +1,16 @@
 const express = require('express');
 const fetch = require('node-fetch');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
+
+const geodataLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes. Veuillez réessayer dans une minute.' },
+});
+router.use(geodataLimiter);
 
 // PositionStack API Key
 const POSITIONSTACK_KEY = process.env.POSITIONSTACK_KEY || '';

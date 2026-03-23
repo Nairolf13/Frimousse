@@ -35,7 +35,7 @@ router.get('/emaillogs', requireAuth, async (req, res) => {
     // to avoid a runtime 500. If you need recipients search, we can implement it via
     // a dedicated text column (recipients_text) or a raw SQL query using $queryRaw.
     if (req.query.q && typeof req.query.q === 'string' && req.query.q.trim() !== '') {
-      const q = req.query.q.trim();
+      const q = req.query.q.trim().slice(0, 200);
       // search subject and denormalized recipientsText
       where.OR = [ { subject: { contains: q, mode: 'insensitive' } }, { recipientsText: { contains: q, mode: 'insensitive' } } ];
     }

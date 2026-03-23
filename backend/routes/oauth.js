@@ -9,6 +9,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { google, handleOAuthUser } = require('../lib/oauth');
@@ -82,7 +83,11 @@ async function loginAndRespond(res, user, isNew) {
 // Step 1: redirect user to Google
 router.get('/google', (req, res) => {
   try {
-    const state = Buffer.from(JSON.stringify({ from: req.query.from || 'login' })).toString('base64url');
+    const csrfToken = crypto.randomBytes(16).toString('hex');
+    const state = Buffer.from(JSON.stringify({ from: req.query.from || 'login', csrf: csrfToken })).toString('base64url');
+    // Store the csrf token in a short-lived httpOnly cookie to verify at callback
+    const cookieOpts = { httpOnly: true, path: '/', maxAge: 10 * 60 * 1000, secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax' };
+    res.cookie('oauth_csrf', csrfToken, cookieOpts);
     const url = google.getAuthUrl({ state });
     res.redirect(url);
   } catch (err) {
@@ -97,8 +102,17 @@ router.get('/google/callback', async (req, res) => {
     const { code, state } = req.query;
     if (!code) return res.redirect(`${FRONTEND_URL}/login?error=oauth_no_code`);
 
-    let mode = 'register';
-    try { mode = JSON.parse(Buffer.from(state, 'base64url').toString()).from || 'register'; } catch {}
+    // Verify CSRF token
+    let parsedState = {};
+    try { parsedState = JSON.parse(Buffer.from(String(state || ''), 'base64url').toString()); } catch {}
+    const expectedCsrf = req.cookies && req.cookies.oauth_csrf;
+    if (!expectedCsrf || !parsedState.csrf || parsedState.csrf !== expectedCsrf) {
+      return res.redirect(`${FRONTEND_URL}/login?error=oauth_csrf`);
+    }
+    // Clear the csrf cookie
+    res.clearCookie('oauth_csrf', { path: '/' });
+
+    const mode = parsedState.from || 'register';
 
     const profile = await google.exchangeCode(code);
     const { user, isNew } = await handleOAuthUser(prisma, {

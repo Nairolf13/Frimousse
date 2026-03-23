@@ -1,4 +1,4 @@
-import { useTutorial } from '../src/context/TutorialContext';
+import { useTutorial } from '../src/context/useTutorial';
 import { useEffect, useState } from 'react';
 
 export default function TutorialMenu() {

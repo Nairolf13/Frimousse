@@ -15,7 +15,7 @@ router.get('/:year/:month', async (req, res) => {
   const { year, month } = req.params;
   const yearInt = parseInt(year, 10);
   const monthInt = parseInt(month, 10);
-  if (!Number.isFinite(yearInt) || !Number.isFinite(monthInt)) {
+  if (!Number.isFinite(yearInt) || !Number.isFinite(monthInt) || yearInt < 2000 || yearInt > 2100 || monthInt < 1 || monthInt > 12) {
     return res.status(400).json({ message: 'Paramètres year et month invalides' });
   }
   try {
@@ -149,7 +149,7 @@ router.get('/:year/:month/group-by-nanny', async (req, res) => {
   const { year, month } = req.params;
   const yearInt = parseInt(year, 10);
   const monthInt = parseInt(month, 10);
-  if (!Number.isFinite(yearInt) || !Number.isFinite(monthInt)) {
+  if (!Number.isFinite(yearInt) || !Number.isFinite(monthInt) || yearInt < 2000 || yearInt > 2100 || monthInt < 1 || monthInt > 12) {
     return res.status(400).json({ message: 'Paramètres year et month invalides' });
   }
 

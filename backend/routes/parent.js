@@ -36,7 +36,7 @@ router.get('/children', requireAuth, async (req, res) => {
     });
     res.json(children.map(pc => pc.child));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -132,7 +132,7 @@ router.get('/admin', requireAuth, requireActiveSubscription, async (req, res) =>
       parents: normalizedParents
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -257,7 +257,7 @@ router.get('/billing', requireAuth, async (req, res) => {
     return res.json(result);
   } catch (err) {
     console.error('GET /api/parent/billing error', err);
-    return res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -279,7 +279,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     res.json(parent);
   } catch (err) {
     console.error('GET /api/parent/:id error', err);
-    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -355,7 +355,7 @@ router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'
             auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
           });
           const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-          const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
+          const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
           const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
           const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
           const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
@@ -383,7 +383,7 @@ router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'
   } catch (err) {
     if (err && err.code === 'P2002') return res.status(409).json({ message: 'Parent or user with this email already exists' });
     console.error('POST /api/parent error', err);
-    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -459,7 +459,7 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
   } catch (err) {
     console.error('PUT /api/parent/:id error', err);
     if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent not found' });
-    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -480,7 +480,7 @@ router.get('/by-email', requireAuth, async (req, res) => {
     res.json(parent);
   } catch (err) {
     console.error('GET /api/parent/by-email error', err);
-    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -509,7 +509,7 @@ router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) =
   } catch (err) {
     console.error('DELETE /api/parent/:id error', err);
     if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent not found' });
-    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -517,7 +517,7 @@ router.post('/accept-invite', async (req, res) => {
   try {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ message: 'Missing token or password' });
-    const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET || 'invite_secret_default';
+    const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
     let payload;
     try {
       payload = jwt.verify(token, inviteSecret);
@@ -533,7 +533,7 @@ router.post('/accept-invite', async (req, res) => {
   res.json({ message: 'Password set successfully' });
   } catch (err) {
     console.error('POST /api/parent/accept-invite error', err);
-    res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -556,7 +556,7 @@ router.get('/child/:childId/schedule', requireAuth, async (req, res) => {
     });
     res.json(schedules);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -576,7 +576,7 @@ router.get('/child/:childId/reports', requireAuth, async (req, res) => {
     });
     res.json(reports);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

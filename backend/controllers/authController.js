@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const { validatePassword } = require('../lib/validatePassword');
 
 function generateAccessToken(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
@@ -28,10 +29,17 @@ exports.register = async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const { password, name, role, nannyId, centerId, centerName, plan, address, city, postalCode, region, country } = req.body;
   if (!email || !password || !name || !role) return res.status(400).json({ message: 'Missing fields' });
+  const pwErr = validatePassword(password);
+  if (pwErr) return res.status(400).json({ message: pwErr });
+  // Whitelist allowed roles — never trust the client for privileged roles
+  const ALLOWED_ROLES = ['admin', 'nanny', 'parent'];
+  if (!ALLOWED_ROLES.includes(String(role).toLowerCase())) {
+    return res.status(400).json({ message: 'Rôle invalide.' });
+  }
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
   const hash = await bcrypt.hash(password, 10);
-  const userData = { email, password: hash, name, role };
+  const userData = { email, password: hash, name, role: String(role).toLowerCase() };
   // optional address fields
   if (address) userData.address = address;
   if (city) userData.city = city;
@@ -222,15 +230,14 @@ exports.registerSubscribeComplete = async (req, res) => {
           await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
         } catch (attachErr) {
           console.error('[auth.registerSubscribeComplete] second attach attempt failed', attachErr && attachErr.message ? attachErr.message : attachErr);
-          return res.status(500).json({ error: 'Erreur lors de la finalisation de l\'inscription', stripeError: (attachErr && attachErr.raw && attachErr.raw.message) ? attachErr.raw.message : (attachErr && attachErr.message ? attachErr.message : String(attachErr)) });
+          return res.status(500).json({ error: 'Erreur lors de la finalisation de l\'inscription' });
         }
       }
       await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } });
     } catch (pmErr) {
       console.error('[auth.registerSubscribeComplete] paymentMethods.attach/update failed', pmErr && pmErr.message ? pmErr.message : pmErr);
       console.error(pmErr && pmErr.stack ? pmErr.stack : pmErr);
-      const msg = (process.env.NODE_ENV === 'production') ? 'Erreur lors de la finalisation de l\'inscription' : (pmErr && pmErr.message ? pmErr.message : 'Stripe payment method error');
-      return res.status(500).json({ error: msg, stripeError: (pmErr && pmErr.raw && pmErr.raw.message) ? pmErr.raw.message : (pmErr && pmErr.message ? pmErr.message : String(pmErr)) });
+      return res.status(500).json({ error: 'Erreur lors de la finalisation de l\'inscription' });
     }
 
     const trialDays = mode === 'discovery' || plan === 'decouverte' ? 15 : 30;
@@ -283,8 +290,7 @@ exports.registerSubscribeComplete = async (req, res) => {
     } catch (stripeErr) {
       console.error('[auth.registerSubscribeComplete] Stripe subscription creation failed', stripeErr && stripeErr.message ? stripeErr.message : stripeErr);
       console.error(stripeErr && stripeErr.stack ? stripeErr.stack : stripeErr);
-      const message = (process.env.NODE_ENV === 'production') ? 'Erreur lors de la création de l\'abonnement' : (stripeErr && stripeErr.message ? stripeErr.message : 'Stripe error');
-      return res.status(500).json({ error: message, stripeError: (stripeErr && stripeErr.raw && stripeErr.raw.message) ? stripeErr.raw.message : (stripeErr && stripeErr.message ? stripeErr.message : String(stripeErr)) });
+      return res.status(500).json({ error: 'Erreur lors de la création de l\'abonnement' });
     }
 
     const subRecord = await prisma.subscription.create({ data: {
@@ -511,6 +517,8 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
   const { token, password } = req.body;
   if (!token || !password) return res.status(400).json({ error: 'Token et mot de passe requis' });
+  const pwErr = validatePassword(password);
+  if (pwErr) return res.status(400).json({ error: pwErr });
   try {
     const payload = jwt.verify(token, REFRESH_TOKEN_SECRET || JWT_SECRET);
     if (!payload || payload.type !== 'reset' || !payload.id) return res.status(400).json({ error: 'Token invalide' });

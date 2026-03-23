@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
 
     res.json({ items, total, page, pageSize });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -36,7 +36,7 @@ router.get('/unread-count', async (req, res) => {
     const unread = await prisma.notification.count({ where: { userId, read: false } });
     res.json({ unread });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -56,7 +56,7 @@ router.get('/stats', async (req, res) => {
 
     res.json({ unread, today, week });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -68,7 +68,7 @@ router.put('/:id/read', async (req, res) => {
     if (n.count === 0) return res.status(404).json({ message: 'Notification not found' });
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -80,7 +80,7 @@ router.put('/:id/unread', async (req, res) => {
     if (n.count === 0) return res.status(404).json({ message: 'Notification not found' });
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -92,7 +92,7 @@ router.delete('/:id', async (req, res) => {
     if (n.count === 0) return res.status(404).json({ message: 'Notification not found' });
     res.json({ success: true });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -103,7 +103,7 @@ router.put('/mark-all-read', async (req, res) => {
     const result = await prisma.notification.updateMany({ where: { userId, read: false }, data: { read: true } });
     res.json({ success: true, updated: result.count });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -114,7 +114,7 @@ router.delete('/', async (req, res) => {
     const result = await prisma.notification.deleteMany({ where: { userId } });
     res.json({ success: true, deleted: result.count });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

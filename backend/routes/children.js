@@ -1092,7 +1092,7 @@ router.post('/batch/details', auth, async (req, res) => {
     return res.json(children);
   } catch (err) {
     console.error('POST /api/children/batch/details error', err);
-    return res.status(500).json({ error: err && err.message ? err.message : String(err) });
+    return res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

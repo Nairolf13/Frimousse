@@ -4,6 +4,7 @@ const auth = require('../middleware/authMiddleware');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const bcrypt = require('bcryptjs');
+const { validatePassword } = require('../lib/validatePassword');
 
 function isSuperAdmin(user) {
   if (!user || !user.role) return false;
@@ -85,15 +86,9 @@ router.get('/me', auth, async (req, res) => {
   res.json({ ...user, plan, subscriptionStatus });
 });
 
-router.get('/all', async (req, res) => {
+router.get('/all', auth, async (req, res) => {
   try {
-    const auth = require('../middleware/authMiddleware');
-
-    let where = {};
-    try {
-      const fakeReq = { cookies: {} };
-    } catch (e) {
-    }
+    if (!isSuperAdmin(req.user)) return res.status(403).json({ error: 'Forbidden' });
     const users = await prisma.user.findMany({ select: { id: true, role: true, centerId: true } });
     res.json(users);
   } catch (e) {
@@ -239,6 +234,7 @@ router.put('/me', auth, async (req, res) => {
     if (!name && !email && typeof notifyByEmail === 'undefined' && typeof address === 'undefined' && typeof postalCode === 'undefined' && typeof city === 'undefined' && typeof region === 'undefined' && typeof country === 'undefined' && typeof phone === 'undefined' && typeof birthDate === 'undefined') {
       return res.status(400).json({ error: 'No fields to update' });
     }
+    if (name && String(name).length > 100) return res.status(400).json({ error: 'Nom trop long (max 100 caractères).' });
 
     const data = {};
     if (typeof name === 'string') data.name = name;
@@ -295,6 +291,9 @@ router.put('/password', auth, async (req, res) => {
     const valid = await bcrypt.compare(oldPassword, user.password);
     if (!valid) return res.status(403).json({ error: 'Ancien mot de passe incorrect' });
 
+    const pwErr = validatePassword(newPassword);
+    if (pwErr) return res.status(400).json({ error: pwErr });
+
     const hash = await bcrypt.hash(newPassword, 10);
     await prisma.user.update({ where: { id: req.user.id }, data: { password: hash } });
 
@@ -303,7 +302,7 @@ router.put('/password', auth, async (req, res) => {
 
     res.json({ message: 'Mot de passe modifié' });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -346,7 +345,7 @@ router.put('/:id/password', auth, async (req, res) => {
 
   res.json({ message: 'Password updated' });
   } catch (e) {
-    res.status(500).json({ error: e && e.message ? e.message : String(e) });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

@@ -128,6 +128,7 @@ router.post('/', checkContentLength, upload.array('images', 6), async (req, res)
   }
 
   const { text, childId, taggedChildIds, visibility = 'CENTER' } = req.body;
+  if (text && String(text).length > 2000) return res.status(400).json({ message: 'Texte trop long (max 2000 caractères).' });
 
   // Normalize tagged children into an array. Maintain backward compatibility with single childId param.
   const tagged = Array.isArray(taggedChildIds) ? taggedChildIds.filter(Boolean) : (childId ? [childId] : []);
@@ -357,7 +358,8 @@ router.get('/', async (req, res) => {
     } else {
       whereClause = { centerId: user.centerId || undefined };
     }
-    const posts = await prisma.feedPost.findMany({
+    const takeLimit = Math.min(Number(limit) || 20, 50);
+    const queryOptions = {
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -366,13 +368,22 @@ router.get('/', async (req, res) => {
         _count: { select: { likes: true, comments: true } },
         comments: { take: 1, orderBy: { createdAt: 'desc' }, include: { author: true } },
       },
-      take: Number(limit),
-    });
+      take: takeLimit + 1, // fetch one extra to know if there's a next page
+    };
+    if (cursor) {
+      queryOptions.cursor = { id: String(cursor) };
+      queryOptions.skip = 1; // skip the cursor item itself
+    }
+    const posts = await prisma.feedPost.findMany(queryOptions);
+    const hasMore = posts.length > takeLimit;
+    if (hasMore) posts.pop(); // remove the extra item
+    const nextCursor = hasMore && posts.length > 0 ? posts[posts.length - 1].id : null;
+
     // Fetch all likes by this user for posts in the result set
     const postIds = posts.map(p => p.id);
     const userLikes = postIds.length ? await prisma.feedLike.findMany({ where: { postId: { in: postIds }, userId: user.id } }) : [];
     // normalize response shape
-      const mapped = posts.map(p => ({
+    const mapped = posts.map(p => ({
       id: p.id,
       text: p.text,
       createdAt: p.createdAt,
@@ -385,7 +396,7 @@ router.get('/', async (req, res) => {
       comments: p.comments.map(c => ({ authorName: c.author?.name || 'Utilisateur', timeAgo: c.createdAt, text: c.text })),
       hasLiked: !!userLikes.find(l => l.postId === p.id),
     }));
-    return res.json({ posts: mapped });
+    return res.json({ posts: mapped, nextCursor, hasMore });
   } catch (e) {
     console.error('Failed to list feed', e);
     return res.status(500).json({ message: 'Failed to list feed' });
@@ -452,6 +463,7 @@ router.post('/:id/comment', async (req, res) => {
   const postId = req.params.id;
   const { text, parentId } = req.body;
   if (!text || text.trim().length === 0) return res.status(400).json({ message: 'Comment text required' });
+  if (String(text).length > 1000) return res.status(400).json({ message: 'Commentaire trop long (max 1000 caractères).' });
   try {
     const data = { postId, authorId: user.id, text };
     if (parentId) {
@@ -503,6 +515,7 @@ router.patch('/comments/:commentId', async (req, res) => {
   const { commentId } = req.params;
   const { text } = req.body;
   if (!text || text.trim().length === 0) return res.status(400).json({ message: 'Comment text required' });
+  if (String(text).length > 1000) return res.status(400).json({ message: 'Commentaire trop long (max 1000 caractères).' });
   try {
     const existing = await prisma.feedComment.findUnique({ where: { id: commentId } });
     if (!existing) return res.status(404).json({ message: 'Comment not found' });
