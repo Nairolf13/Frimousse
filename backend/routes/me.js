@@ -22,6 +22,7 @@ router.get('/', requireAuth, async (req, res) => {
         city: true,
         region: true,
         country: true,
+        tutorialSeen: true,
         parent: {
           select: {
             id: true,

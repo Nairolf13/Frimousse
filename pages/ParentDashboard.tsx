@@ -315,6 +315,7 @@ const ParentDashboard: React.FC = () => {
             </div>
             {(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.nannyId == null)) && (
               <button
+                data-tour="btn-add-parent"
                 onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' }); }}
                 className="flex items-center justify-center gap-2 px-3 py-2 sm:px-5 sm:py-2.5 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-sm hover:opacity-90 transition flex-shrink-0"
                 style={{ background: 'linear-gradient(135deg,#0b5566,#1a8fa8)' }}

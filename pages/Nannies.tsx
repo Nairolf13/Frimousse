@@ -765,6 +765,7 @@ export default function Nannies() {
           {(user && typeof user.role === 'string' && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'))) && (
             <button
               type="button"
+              data-tour="btn-add-nanny"
               onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
               className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
             >

@@ -4,6 +4,9 @@ import { useNavigate, useOutlet } from 'react-router-dom';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import useBirthdayCheck from '../src/hooks/useBirthdayCheck';
 import BirthdayModal from './BirthdayModal';
+import { TutorialProvider } from '../src/context/TutorialContext';
+import TutorialOverlay from './TutorialOverlay';
+import TutorialMenu from './TutorialMenu';
 
 export default function ProtectedLayout() {
   const [loading, setLoading] = useState(true);
@@ -100,13 +103,16 @@ export default function ProtectedLayout() {
 
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-  <main className="flex-1 bg-[#f4f7fa] pt-12 md:pt-0 max-w-full overflow-x-hidden box-border">
-  {/* Welcome/tutorial modal disabled */}
-        {outlet}
-      </main>
-      <BirthdayModal items={birthdays} open={showBirthday} onClose={() => setShowBirthday(false)} centerId={centerId} />
-    </div>
+    <TutorialProvider>
+      <div className="flex min-h-screen">
+        <Sidebar />
+        <main className="flex-1 bg-[#f4f7fa] pt-12 md:pt-0 max-w-full overflow-x-hidden box-border">
+          {outlet}
+        </main>
+        <BirthdayModal items={birthdays} open={showBirthday} onClose={() => setShowBirthday(false)} centerId={centerId} />
+        <TutorialOverlay />
+        <TutorialMenu />
+      </div>
+    </TutorialProvider>
   );
 }

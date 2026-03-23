@@ -36,6 +36,19 @@
     0% { opacity: 0; transform: scale(0.95); }
     100% { opacity: 1; transform: scale(1); }
   }
+
+  @keyframes tutorial-backdrop {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes tutorial-card {
+    0% { opacity: 0; transform: translateY(16px) scale(0.96); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes tutorial-ring {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--color-brand-400), 0.4); }
+    50% { box-shadow: 0 0 0 8px rgba(var(--color-brand-400), 0); }
+  }
 }
 
 /* ── Base layer overrides ────────────────────── */
@@ -75,6 +88,15 @@
 @layer utilities {
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .tutorial-backdrop-in {
+    animation: tutorial-backdrop 0.25s ease-out both;
+  }
+  .tutorial-card-in {
+    animation: tutorial-card 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .tutorial-ring-pulse {
+    animation: tutorial-ring 2s ease-in-out infinite;
   }
 }
 

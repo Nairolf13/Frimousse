@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
+import { useTutorial } from '../src/context/TutorialContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe';
 import { useI18n } from '../src/lib/useI18n';
@@ -427,6 +428,11 @@ export default function Settings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const { t, setLocale } = useI18n();
+  const { tours, toggleMenu: openTutorialMenu } = useTutorial();
+  const [completedTours, setCompletedTours] = useState<string[]>([]);
+  useEffect(() => {
+    try { setCompletedTours(JSON.parse(localStorage.getItem('tutorial_completed') || '[]')); } catch { /* ignore */ }
+  }, []);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -670,6 +676,38 @@ export default function Settings() {
             </div>
           </div>
         </div>
+
+          {/* ── Tutoriels ── */}
+          <div className="bg-white rounded-2xl shadow p-5 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5" /></svg>
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-800">Tutoriels interactifs</div>
+                  <div className="text-xs text-gray-500">{completedTours.length}/{tours.length} completé{completedTours.length > 1 ? 's' : ''}</div>
+                </div>
+              </div>
+              <button
+                onClick={openTutorialMenu}
+                className="px-4 py-2 bg-gradient-to-r from-brand-600 to-brand-500 text-white text-sm font-semibold rounded-xl shadow hover:opacity-90 transition"
+              >
+                Voir les tutoriels
+              </button>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {tours.map(tour => {
+                const done = completedTours.includes(tour.id);
+                return (
+                  <span key={tour.id} className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                    {done && <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>}
+                    {tour.name}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-stretch">
             <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">
