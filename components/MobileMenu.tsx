@@ -25,7 +25,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan
     ];
   }
   // Nanny
-  if (user && user.nannyId) {
+  if (user && user.nannyId && user.role !== 'admin' && !(typeof user.role === 'string' && user.role.toLowerCase().includes('super'))) {
     return [
       { to: '/dashboard', label: t('nav.dashboard'), icon: <HiOutlineViewGrid className="w-5 h-5 mr-3" /> },
       { to: '/feed', label: t('nav.feed'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },

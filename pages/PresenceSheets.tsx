@@ -121,6 +121,8 @@ export default function PresenceSheets() {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   // { entryId, role: 'nanny'|'parent' }
   const [signingEntry, setSigningEntry] = useState<{ entryId: string; role: 'nanny' | 'parent' } | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
@@ -254,13 +256,17 @@ export default function PresenceSheets() {
   }
 
   async function deleteSheet(sheetId: string) {
-    if (!confirm('Supprimer cette feuille de présence ? Cette action est irréversible.')) return;
+    setDeleting(true);
     try {
       const res = await fetchWithRefresh(`${API_URL}/presence-sheets/${sheetId}`, { method: 'DELETE', credentials: 'include' });
       if (!res.ok) throw new Error();
       setSheets(prev => prev.filter(s => s.id !== sheetId));
       if (selectedSheet?.id === sheetId) setSelectedSheet(null);
-    } catch { setError('Erreur lors de la suppression'); }
+      setConfirmDeleteId(null);
+    } catch {
+      setError('Erreur lors de la suppression');
+      setConfirmDeleteId(null);
+    } finally { setDeleting(false); }
   }
 
   async function resetSheetStatus(sheetId: string, status: 'draft' | 'sent') {
@@ -392,7 +398,7 @@ export default function PresenceSheets() {
                 </button>
                 {isAdminUser && (
                   <div className="px-4 pb-3 flex justify-end">
-                    <button onClick={() => deleteSheet(sheet.id)}
+                    <button onClick={() => setConfirmDeleteId(sheet.id)}
                       className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition">
                       <HiOutlineTrash className="w-3.5 h-3.5" /> Supprimer
                     </button>
@@ -450,7 +456,7 @@ export default function PresenceSheets() {
                       </button>
                     )}
                     {isAdminUser && (
-                      <button onClick={() => deleteSheet(selectedSheet.id)}
+                      <button onClick={() => setConfirmDeleteId(selectedSheet.id)}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50">
                         <HiOutlineTrash className="w-3.5 h-3.5" /> Supprimer
                       </button>
@@ -709,6 +715,57 @@ export default function PresenceSheets() {
             )}
           </div>
         </div>
+
+        {/* Modal confirmation suppression */}
+        {confirmDeleteId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <HiOutlineTrash className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">Supprimer la feuille</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">Cette action est irréversible</p>
+                </div>
+              </div>
+              {(() => {
+                const sheet = sheets.find(s => s.id === confirmDeleteId);
+                return sheet ? (
+                  <div className="bg-gray-50 rounded-xl px-4 py-3 mb-5 flex items-center gap-3">
+                    <HiOutlineDocumentText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{sheet.child?.name}</p>
+                      <p className="text-xs text-gray-500">{MONTH_NAMES[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</p>
+                    </div>
+                    {statusBadge(sheet.status)}
+                  </div>
+                ) : null;
+              })()}
+              <p className="text-sm text-gray-600 mb-6">
+                Êtes-vous sûr de vouloir supprimer cette feuille de présence ? Toutes les entrées et signatures associées seront définitivement perdues.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50">
+                  Annuler
+                </button>
+                <button
+                  onClick={() => deleteSheet(confirmDeleteId)}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2">
+                  {deleting ? (
+                    <><HiOutlineRefresh className="w-4 h-4 animate-spin" /> Suppression…</>
+                  ) : (
+                    <><HiOutlineTrash className="w-4 h-4" /> Supprimer</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal signature par entrée */}
         {signingEntry && (
