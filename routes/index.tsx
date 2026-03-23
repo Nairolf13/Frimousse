@@ -65,6 +65,25 @@ const SupportPage = lazyWithRetry(() => import('../pages/SupportPage'));
 const PrivacyPolicyPage = lazyWithRetry(() => import('../pages/PrivacyPolicyPage'));
 const TermsPage = lazyWithRetry(() => import('../pages/TermsPage'));
 const LegalNoticePage = lazyWithRetry(() => import('../pages/LegalNoticePage'));
+const AssistantPage = lazyWithRetry(() => import('../pages/Assistant'));
+const SubscriptionManagement = lazyWithRetry(() => import('../pages/SubscriptionManagement'));
+const AdminEmailLogs = lazyWithRetry(() => import('../pages/AdminEmailLogs'));
+const AdminCenters = lazyWithRetry(() => import('../pages/AdminCenters'));
+const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
+
+const LoadingFallback = () => (
+  <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
+    <div className="flex flex-col items-center gap-6 animate-fade-in">
+      <div className="w-24 h-24 rounded-full flex items-center justify-center bg-white/10 shadow-lg mb-2">
+        <img src="/imgs/LogoFrimousse.webp" alt="Les Frimousses" className="w-16 h-16 object-contain" />
+      </div>
+      <div className="text-white text-xl font-bold tracking-tight">Chargement…</div>
+      <div className="mt-2">
+        <svg className="animate-spin w-8 h-8 text-white/70" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.2"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" fill="none"/></svg>
+      </div>
+    </div>
+  </div>
+);
 
 
 
@@ -75,27 +94,6 @@ function ScrollToTop() {
 }
 
 export default function AppRoutes() {
-  const AssistantPage = lazyWithRetry(() => import('../pages/Assistant'));
-  const SubscriptionManagement = lazyWithRetry(() => import('../pages/SubscriptionManagement'));
-  const AdminEmailLogs = lazyWithRetry(() => import('../pages/AdminEmailLogs'));
-  const AdminCenters = lazyWithRetry(() => import('../pages/AdminCenters'));
-const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
-
-  // Loading fallback component
-  const LoadingFallback = () => (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
-      <div className="flex flex-col items-center gap-6 animate-fade-in">
-        <div className="w-24 h-24 rounded-full flex items-center justify-center bg-white/10 shadow-lg mb-2">
-          <img src="/imgs/LogoFrimousse.webp" alt="Les Frimousses" className="w-16 h-16 object-contain" />
-        </div>
-        <div className="text-white text-xl font-bold tracking-tight">Chargement…</div>
-        <div className="mt-2">
-          <svg className="animate-spin w-8 h-8 text-white/70" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.2"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" fill="none"/></svg>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <BrowserRouter>
       <ScrollToTop />
