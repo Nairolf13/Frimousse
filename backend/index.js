@@ -49,7 +49,7 @@ const parentRoutes = require('./routes/parent');
 
 app.use(helmet());
 
-app.use(rateLimit({ windowMs: 60 * 1000, max: 120 }));
+app.use(rateLimit({ windowMs: 60 * 1000, max: 600 }));
 
 const isProd = process.env.NODE_ENV === 'production';
 const allowedOrigins = isProd

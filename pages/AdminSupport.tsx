@@ -550,7 +550,7 @@ export default function AdminSupportPage() {
             <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-700 rounded">{error}</div>
           )}
 
-          {loading && <div className="mb-4">Chargement...</div>}
+          {loading && <div className="mb-4 flex items-center gap-2 text-gray-400"><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/></svg>Chargement…</div>}
 
           {!loading && !error && (
             <>

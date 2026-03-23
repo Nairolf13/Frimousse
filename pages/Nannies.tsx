@@ -1001,7 +1001,7 @@ export default function Nannies() {
         )}
 
         {loading ? (
-          <div className="text-gray-500 text-sm py-8 text-center">Chargement...</div>
+          <div className="bg-white rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-gray-400"><svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/><path d="M12 4v4m0 12v4M4 12H0m24 0h-4"/></svg>Chargement…</div>
         ) : (
           <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full">
             {filtered

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import NannyCalendar from '../components/NannyCalendar';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import PageLoader from '../components/PageLoader';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -58,7 +59,7 @@ export default function MonPlanning() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="p-8 text-center text-[#0b5566]">Chargement...</div>;
+  if (loading) return <PageLoader title="Mon planning" icon={<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>} />;
   if (!nannyId) {
     if (isAdmin) return <div className="p-8 text-center text-red-500">Aucune nounou trouvée pour votre structure.</div>;
     return <div className="p-8 text-center text-red-500">Accès réservé aux nounous.</div>;
