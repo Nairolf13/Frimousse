@@ -1,18 +1,18 @@
 model Parent {
-  id            String         @id @default(uuid())
-  firstName     String
-  lastName      String
-  email         String         @unique
-  phone         String?
-  user          User?          @relation("UserParent")
-  children      ParentChild[]
-  photoConsents PhotoConsent[] @relation("ParentPhotoConsents")
-  paymentHistories PaymentHistory[]
+  id                 String              @id @default(uuid())
+  firstName          String
+  lastName           String
+  email              String              @unique
+  phone              String?
+  user               User?               @relation("UserParent")
+  children           ParentChild[]
+  photoConsents      PhotoConsent[]      @relation("ParentPhotoConsents")
+  paymentHistories   PaymentHistory[]
   invoiceAdjustments InvoiceAdjustment[]
-  center        Center?        @relation(fields: [centerId], references: [id])
-  centerId      String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  center             Center?             @relation(fields: [centerId], references: [id])
+  centerId           String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 }
 
 model ParentChild {
@@ -62,45 +62,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 model User {
-  id               String         @id @default(uuid())
-  email            String         @unique
-  password         String
-  name             String
-  phone            String?
-  address          String?
-  city             String?
-  postalCode       String?
-  region           String?
-  country          String?
-  role             String
-  profileCompleted Boolean        @default(true)
-  stripeCustomerId String?
-  emailVerified    Boolean        @default(false)
-  verificationCode String?
-  verificationCodeExpires DateTime?
-  oauthProvider    String?
-  oauthProviderId  String?
-  nanny            Nanny?         @relation("NannyUser", fields: [nannyId], references: [id])
-  nannyId          String?        @unique
-  parent           Parent?        @relation("UserParent", fields: [parentId], references: [id])
-  parentId         String?        @unique
-  center           Center?        @relation(fields: [centerId], references: [id])
-  centerId         String?
-  refreshTokens    RefreshToken[]
-  pushSubscriptions PushSubscription[]
-  notifications    Notification[]
-  supportTickets   SupportTicket[]
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  feedPosts        FeedPost[]
-  feedLikes        FeedLike[]
-  feedComments     FeedComment[]
-  notifyByEmail    Boolean        @default(true)
-  tutorialSeen     Boolean        @default(false)
+  id                       String                    @id @default(uuid())
+  email                    String                    @unique
+  password                 String
+  name                     String
+  phone                    String?
+  address                  String?
+  city                     String?
+  postalCode               String?
+  region                   String?
+  country                  String?
+  role                     String
+  profileCompleted         Boolean                   @default(true)
+  stripeCustomerId         String?
+  emailVerified            Boolean                   @default(false)
+  verificationCode         String?
+  verificationCodeExpires  DateTime?
+  oauthProvider            String?
+  oauthProviderId          String?
+  nanny                    Nanny?                    @relation("NannyUser", fields: [nannyId], references: [id])
+  nannyId                  String?                   @unique
+  parent                   Parent?                   @relation("UserParent", fields: [parentId], references: [id])
+  parentId                 String?                   @unique
+  center                   Center?                   @relation(fields: [centerId], references: [id])
+  centerId                 String?
+  refreshTokens            RefreshToken[]
+  pushSubscriptions        PushSubscription[]
+  notifications            Notification[]
+  supportTickets           SupportTicket[]
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  feedPosts                FeedPost[]
+  feedLikes                FeedLike[]
+  feedComments             FeedComment[]
+  notifyByEmail            Boolean                   @default(true)
+  tutorialSeen             Boolean                   @default(false)
   conversationParticipants ConversationParticipant[]
-  sentMessages     Message[]
+  sentMessages             Message[]
 }
 
 model RefreshToken {
@@ -113,34 +112,34 @@ model RefreshToken {
 }
 
 model Nanny {
-  id                   String       @id @default(uuid())
+  id                   String          @id @default(uuid())
   name                 String
-  role                 NannyRole    @default(Nounou_Senior)
+  role                 NannyRole       @default(Nounou_Senior)
   contact              String?
   email                String?
-  availability         Availability @default(Disponible)
+  availability         Availability    @default(Disponible)
   experience           Int
   birthDate            DateTime?
   assignedChildren     Assignment[]
   childNannies         ChildNanny[]
-  schedules            Schedule[]   @relation("NannySchedules")
-  user                 User?        @relation("NannyUser")
+  schedules            Schedule[]      @relation("NannySchedules")
+  user                 User?           @relation("NannyUser")
   reports              Report[]
-  center               Center?      @relation(fields: [centerId], references: [id])
+  center               Center?         @relation(fields: [centerId], references: [id])
   centerId             String?
   cotisationPaidUntil  DateTime?
   lastCotisationAmount Float?
   presenceSheets       PresenceSheet[]
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
 }
 
 model Child {
-  id                  String         @id @default(uuid())
+  id                  String          @id @default(uuid())
   name                String
   age                 Int
-  sexe                Sexe           @default(masculin)
-  group               ChildGroup     @default(G1)
+  sexe                Sexe            @default(masculin)
+  group               ChildGroup      @default(G1)
   birthDate           DateTime?
   // Prescription storage: public URL and storage path in Supabase
   prescriptionUrl     String?
@@ -151,12 +150,12 @@ model Child {
   assignments         Assignment[]
   childNannies        ChildNanny[]
   reports             Report[]
-  center              Center?        @relation(fields: [centerId], references: [id])
+  center              Center?         @relation(fields: [centerId], references: [id])
   centerId            String?
-  createdAt           DateTime       @default(now())
-  updatedAt           DateTime       @updatedAt
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
   feedPosts           FeedPost[]
-  photoConsents       PhotoConsent[] @relation("ChildPhotoConsents")
+  photoConsents       PhotoConsent[]  @relation("ChildPhotoConsents")
   presenceSheets      PresenceSheet[]
 }
 
@@ -220,21 +219,21 @@ model Report {
 }
 
 model Center {
-  id          String       @id @default(uuid())
-  name        String
-  users       User[]
-  parents     Parent[]
-  children    Child[]
-  nannies     Nanny[]
-  assignments Assignment[]
-  schedules   Schedule[]
-  reports     Report[]
-  feedPosts   FeedPost[]
+  id             String          @id @default(uuid())
+  name           String
+  users          User[]
+  parents        Parent[]
+  children       Child[]
+  nannies        Nanny[]
+  assignments    Assignment[]
+  schedules      Schedule[]
+  reports        Report[]
+  feedPosts      FeedPost[]
   reviews        Review[]
   presenceSheets PresenceSheet[]
   conversations  Conversation[]
-  createdAt      DateTime     @default(now())
-  notifyByEmail  Boolean      @default(true)
+  createdAt      DateTime        @default(now())
+  notifyByEmail  Boolean         @default(true)
 }
 
 model Subscription {
@@ -341,11 +340,11 @@ enum FeedVisibility {
 }
 
 model PushSubscription {
-  id          String   @id @default(uuid())
-  user        User?    @relation(fields: [userId], references: [id])
-  userId      String?
-  subscription Json     
-  createdAt   DateTime @default(now())
+  id           String   @id @default(uuid())
+  user         User?    @relation(fields: [userId], references: [id])
+  userId       String?
+  subscription Json
+  createdAt    DateTime @default(now())
 
   @@index([userId])
 }
@@ -366,17 +365,18 @@ model Notification {
 }
 
 model PaymentHistory {
-  id         String   @id @default(uuid())
-  parent     Parent   @relation(fields: [parentId], references: [id])
-  parentId   String
-  month      Int
-  year       Int
-  total      Float
-  details    Json
-  paid       Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  emailLogs  EmailLog[] @relation("PaymentHistoryEmailLogs")
+  id        String     @id @default(uuid())
+  parent    Parent     @relation(fields: [parentId], references: [id])
+  parentId  String
+  month     Int
+  year      Int
+  total     Float
+  details   Json
+  paid      Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  emailLogs EmailLog[] @relation("PaymentHistoryEmailLogs")
 }
+
 model InvoiceAdjustment {
   id        String   @id @default(uuid())
   parent    Parent   @relation(fields: [parentId], references: [id], onDelete: Cascade)
@@ -389,13 +389,14 @@ model InvoiceAdjustment {
 
   @@index([parentId, month])
 }
+
 // Public reviews / testimonials left by parents or visitors (shown on Landing page)
 model Review {
   id          String   @id @default(uuid())
   authorName  String?
   authorEmail String?  @unique
   content     String
-  rating      Int?     // optional 1-5 rating
+  rating      Int? // optional 1-5 rating
   approved    Boolean  @default(false)
   center      Center?  @relation(fields: [centerId], references: [id])
   centerId    String?
@@ -404,59 +405,59 @@ model Review {
 }
 
 model EmailLog {
-  id               String   @id @default(uuid())
+  id               String          @id @default(uuid())
   paymentHistory   PaymentHistory? @relation("PaymentHistoryEmailLogs", fields: [paymentHistoryId], references: [id])
   paymentHistoryId String?
   recipients       Json
   recipientsText   String?
   subject          String?
   messageId        String?
-  status           String   // 'sent' | 'failed'
+  status           String // 'sent' | 'failed'
   errorText        String?
-  bypassOptOut     Boolean  @default(false)
-  createdAt        DateTime @default(now())
+  bypassOptOut     Boolean         @default(false)
+  createdAt        DateTime        @default(now())
 
   @@index([paymentHistoryId])
 }
 
 // Support tickets system
 model SupportTicket {
-  id          String   @id @default(uuid())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String         @id @default(uuid())
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId      String
   subject     String
   message     String
-  status      String   @default("open") // 'open' | 'closed'
+  status      String         @default("open") // 'open' | 'closed'
   adminSeenAt DateTime? // when an admin last marked the ticket as seen (not visible to user)
   replies     SupportReply[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([userId])
   @@index([status])
 }
 
 model SupportReply {
-  id          String   @id @default(uuid())
+  id          String        @id @default(uuid())
   ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   ticketId    String
   message     String
-  isFromAdmin Boolean @default(false)
-  createdAt   DateTime @default(now())
+  isFromAdmin Boolean       @default(false)
+  createdAt   DateTime      @default(now())
 
   @@index([ticketId])
 }
 
 // Messaging system
 model Conversation {
-  id          String    @id @default(uuid())
-  center      Center?   @relation(fields: [centerId], references: [id])
-  centerId    String?
-  participants ConversationParticipant[]
-  messages    Message[]
+  id            String                    @id @default(uuid())
+  center        Center?                   @relation(fields: [centerId], references: [id])
+  centerId      String?
+  participants  ConversationParticipant[]
+  messages      Message[]
   lastMessageAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
 
   @@index([centerId])
 }
@@ -491,28 +492,28 @@ model Message {
 
 // Feuille de relevé de présences mensuelle
 model PresenceSheet {
-  id          String              @id @default(uuid())
-  child       Child               @relation(fields: [childId], references: [id])
-  childId     String
-  nanny       Nanny               @relation(fields: [nannyId], references: [id])
-  nannyId     String
-  center      Center?             @relation(fields: [centerId], references: [id])
-  centerId    String?
-  month       Int                 // 1-12
-  year        Int
-  status          String              @default("draft") // draft | sent | signed
+  id              String          @id @default(uuid())
+  child           Child           @relation(fields: [childId], references: [id])
+  childId         String
+  nanny           Nanny           @relation(fields: [nannyId], references: [id])
+  nannyId         String
+  center          Center?         @relation(fields: [centerId], references: [id])
+  centerId        String?
+  month           Int // 1-12
+  year            Int
+  status          String          @default("draft") // draft | sent | signed
   entries         PresenceEntry[]
   sentAt          DateTime?
   joursContrat    Int?
   joursPresence   Int?
   joursAbsence    Int?
   heuresCompl     Float?
-  nannySignature  String?             // base64
+  nannySignature  String? // base64
   nannySignedAt   DateTime?
-  parentSignature String?             // base64
+  parentSignature String? // base64
   parentSignedAt  DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@unique([childId, nannyId, month, year])
   @@index([nannyId])
@@ -524,13 +525,13 @@ model PresenceEntry {
   sheet           PresenceSheet @relation(fields: [sheetId], references: [id], onDelete: Cascade)
   sheetId         String
   date            DateTime
-  arrivalTime     String?       // ex: "08h30"
-  departureTime   String?       // ex: "17h30"
+  arrivalTime     String? // ex: "08h30"
+  departureTime   String? // ex: "17h30"
   absent          Boolean       @default(false)
   comment         String?
-  nannySignature  String?       // base64
+  nannySignature  String? // base64
   nannySignedAt   DateTime?
-  parentSignature String?       // base64
+  parentSignature String? // base64
   parentSignedAt  DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -548,14 +549,14 @@ model StripeEvent {
 
 // Super-admin announcements (bannieres in-app + emails broadcast)
 model Announcement {
-  id        String               @id @default(uuid())
+  id        String             @id @default(uuid())
   title     String
   message   String
-  type      String               @default("info") // info | success | warning | update
-  active    Boolean              @default(true)
-  sendEmail Boolean              @default(false)
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  type      String             @default("info") // info | success | warning | update
+  active    Boolean            @default(true)
+  sendEmail Boolean            @default(false)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
   reads     AnnouncementRead[]
 }
 

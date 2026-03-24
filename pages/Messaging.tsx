@@ -39,6 +39,12 @@ type Contact = {
   id: string;
   name: string;
   role: string;
+  centerId?: string | null;
+};
+
+type Center = {
+  id: string;
+  name: string;
 };
 
 type Participant = {
@@ -239,6 +245,8 @@ export default function Messaging() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [contactSearch, setContactSearch] = useState('');
   const [creatingConv, setCreatingConv] = useState(false);
+  const [centers, setCenters] = useState<Center[]>([]);
+  const [centerFilter, setCenterFilter] = useState<string>('');
 
   // Message context menu (long press)
   type ContextMenu = { msgId: string; x: number; y: number; isMe: boolean };
@@ -413,7 +421,14 @@ export default function Messaging() {
     fetchWithRefresh('/api/messaging/contacts', { credentials: 'include' })
       .then((r) => (r && r.ok ? r.json() : []))
       .then((data) => setContacts(Array.isArray(data) ? data : []));
-  }, [showNewConv]);
+    // Load centers for super-admin filter
+    const isSuperAdmin = user?.role && typeof user.role === 'string' && user.role.toLowerCase().includes('super');
+    if (isSuperAdmin) {
+      fetchWithRefresh('/api/centers', { credentials: 'include' })
+        .then((r) => (r && r.ok ? r.json() : []))
+        .then((data) => setCenters(Array.isArray(data) ? data : []));
+    }
+  }, [showNewConv, user?.role]);
 
   // ── Long press handlers ──
   const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent, msg: ConvMessage, isMe: boolean) => {
@@ -591,9 +606,11 @@ export default function Messaging() {
     return getConvName(c).toLowerCase().includes(convSearch.toLowerCase());
   });
 
-  const filteredContacts = contacts.filter((c) =>
-    c.name.toLowerCase().includes(contactSearch.toLowerCase())
-  );
+  const filteredContacts = contacts.filter((c) => {
+    if (contactSearch && !c.name.toLowerCase().includes(contactSearch.toLowerCase())) return false;
+    if (centerFilter && c.centerId !== centerFilter) return false;
+    return true;
+  });
 
   const isOtherTyping =
     otherParticipant && typingUsers[otherParticipant.id];
@@ -943,13 +960,13 @@ export default function Messaging() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <h2 className="font-bold text-gray-900 text-base">Nouveau message</h2>
               <button
-                onClick={() => { setShowNewConv(false); setContactSearch(''); }}
+                onClick={() => { setShowNewConv(false); setContactSearch(''); setCenterFilter(''); }}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400"
               >
                 <HiOutlineX className="w-5 h-5" />
               </button>
             </div>
-            <div className="px-4 py-3 border-b border-gray-100">
+            <div className="px-4 py-3 border-b border-gray-100 flex flex-col gap-2">
               <div className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-2">
                 <HiOutlineSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <input
@@ -960,6 +977,18 @@ export default function Messaging() {
                   className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none"
                 />
               </div>
+              {user?.role && typeof user.role === 'string' && user.role.toLowerCase().includes('super') && (
+                <select
+                  value={centerFilter}
+                  onChange={(e) => setCenterFilter(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30"
+                >
+                  <option value="">Tous les centres</option>
+                  {centers.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
               {filteredContacts.length === 0 ? (

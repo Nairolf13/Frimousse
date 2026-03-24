@@ -73,6 +73,17 @@ function isAdmin(user) {
  */
 async function getAllowedContactIds(user) {
   const centerId = user.centerId;
+
+  // Super-admin can message everyone in the app
+  const isSuperAdmin = typeof user.role === 'string' && user.role.toLowerCase().includes('super');
+  if (isSuperAdmin) {
+    const users = await prisma.user.findMany({
+      where: { id: { not: user.id } },
+      select: { id: true },
+    });
+    return users.map(u => u.id);
+  }
+
   if (!centerId) return [];
 
   if (isAdmin(user)) {
@@ -144,7 +155,7 @@ router.get('/contacts', async (req, res) => {
 
     const users = await prisma.user.findMany({
       where: { id: { in: allowedIds } },
-      select: { id: true, name: true, role: true, nannyId: true, parentId: true },
+      select: { id: true, name: true, role: true, nannyId: true, parentId: true, centerId: true },
     });
     res.json(users);
   } catch (e) {
