@@ -16,6 +16,43 @@ type Subscription = {
   stripeSubscriptionId?: string | null;
 };
 
+type Feature = { text: string; included: boolean; highlight?: boolean };
+
+const PLAN_FEATURES_DATA: Record<string, Feature[]> = {
+  decouverte: [
+    { text: "Tableau de bord & planning", included: true },
+    { text: "Jusqu'à 2 enfants", included: true },
+    { text: "Jusqu'à 2 nounous & parents", included: true },
+    { text: "Rapports journaliers (2 max)", included: true },
+    { text: "Fil d'actualité & photos", included: true },
+    { text: "Notifications en temps réel", included: true },
+    { text: "Feuilles de présence", included: true },
+    { text: "Messagerie instantanée", included: true },
+    { text: "Assistant IA", included: true },
+  ],
+  essentiel: [
+    { text: "Tableau de bord & planning", included: true },
+    { text: "Jusqu'à 10 enfants", included: true },
+    { text: "Jusqu'à 10 nounous & parents", included: true },
+    { text: "Rapports journaliers illimités", included: true },
+    { text: "Fil d'actualité & photos", included: true },
+    { text: "Notifications en temps réel", included: true },
+    { text: "Feuilles de présence numériques", included: true, highlight: true },
+    { text: "Messagerie instantanée", included: false },
+    { text: "Assistant IA", included: false },
+  ],
+  pro: [
+    { text: "Tout le plan Essentiel inclus", included: true },
+    { text: "Enfants, nounous & parents illimités", included: true },
+    { text: "Facturations & historique des paiements", included: true },
+    { text: "Feuilles de présence + signature numérique", included: true, highlight: true },
+    { text: "Messagerie instantanée en temps réel", included: true, highlight: true },
+    { text: "Assistant IA (rédaction, comptes-rendus)", included: true, highlight: true },
+    { text: "Support prioritaire 7j/7", included: true },
+    { text: "Mises à jour en continu", included: true },
+  ],
+};
+
 function usePlanData(t: (k: string, fallback?: string) => string) {
   const PLAN_LABELS: Record<string, string> = {
     decouverte: t('plan.decouverte', 'Découverte'),
@@ -23,18 +60,22 @@ function usePlanData(t: (k: string, fallback?: string) => string) {
     pro: t('plan.pro', 'Pro'),
   };
   const PLAN_PRICES: Record<string, string> = {
-    essentiel: t('plan.price.essentiel', '29,99 €/mois'),
-    pro: t('plan.price.pro', '59,99 €/mois'),
+    essentiel: '39,99 € / mois · sans engagement',
+    pro: '69,99 € / mois · sans engagement',
   };
-  const PLAN_FEATURES: Record<string, string[]> = {
-    decouverte: [t('plan.feature.decouverte.1', '2 enfants max'), t('plan.feature.decouverte.2', '2 nounous max'), t('plan.feature.decouverte.3', '2 parents max'), t('plan.feature.decouverte.4', "Période d'essai 7 jours")],
-    essentiel: [t('plan.feature.essentiel.1', '10 enfants max'), t('plan.feature.essentiel.2', '10 nounous max'), t('plan.feature.essentiel.3', '10 parents max'), t('plan.feature.essentiel.4', 'Facturation mensuelle')],
-    pro: [t('plan.feature.pro.1', 'Illimité'), t('plan.feature.pro.2', 'Assistant IA'), t('plan.feature.pro.3', 'Facturation mensuelle'), t('plan.feature.pro.5', 'Support prioritaire')],
-  };
+  const PLAN_FEATURES = PLAN_FEATURES_DATA;
   return { PLAN_LABELS, PLAN_PRICES, PLAN_FEATURES };
 }
 
-function StatusBadge({ status, t }: { status: string; t: (k: string, fallback?: string) => string }) {
+function daysRemaining(trialEnd?: string | null): number | null {
+  if (!trialEnd) return null;
+  const diff = new Date(trialEnd).getTime() - Date.now();
+  if (diff <= 0) return 0;
+  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+}
+
+function StatusBadge({ status, trialEnd, t }: { status: string; trialEnd?: string | null; t: (k: string, fallback?: string) => string }) {
+  const days = status === 'trialing' ? daysRemaining(trialEnd) : null;
   const map: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     active: { label: t('subscription.status.active', 'Actif'), color: 'bg-green-100 text-green-700', icon: <HiOutlineCheckCircle className="w-4 h-4" /> },
     trialing: { label: t('subscription.status.trialing', 'Essai'), color: 'bg-blue-100 text-blue-700', icon: <HiOutlineClock className="w-4 h-4" /> },
@@ -44,8 +85,13 @@ function StatusBadge({ status, t }: { status: string; t: (k: string, fallback?: 
   };
   const s = map[status] || { label: status, color: 'bg-gray-100 text-gray-500', icon: null };
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${s.color}`}>
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${s.color}`}>
       {s.icon}{s.label}
+      {days !== null && (
+        <span className="ml-0.5 bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+          {days}j
+        </span>
+      )}
     </span>
   );
 }
@@ -215,10 +261,17 @@ export default function SubscriptionManagement() {
                       <div className="font-bold text-gray-900 text-base">{PLAN_LABELS[plan]}</div>
                       <div className="text-sm text-brand-600 font-semibold mt-0.5">{PLAN_PRICES[plan]}</div>
                     </div>
-                    <ul className="space-y-1.5 flex-1">
+                    <ul className="space-y-2 flex-1">
                       {PLAN_FEATURES[plan].map(f => (
-                        <li key={f} className="flex items-center gap-2 text-sm text-gray-500">
-                          <HiOutlineCheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />{f}
+                        <li key={f.text} className={`flex items-center gap-2 text-sm ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-gray-100 text-gray-300'}`}>
+                            {f.included ? (
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            ) : (
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            )}
+                          </div>
+                          {f.text}
                         </li>
                       ))}
                     </ul>
@@ -252,7 +305,7 @@ export default function SubscriptionManagement() {
                     <div className="text-sm text-gray-500 mt-0.5">{PLAN_PRICES[sub.plan]}</div>
                   )}
                 </div>
-                <StatusBadge status={sub.status} t={t} />
+                <StatusBadge status={sub.status} trialEnd={sub.trialEnd} t={t} />
               </div>
 
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -288,11 +341,17 @@ export default function SubscriptionManagement() {
               {PLAN_FEATURES[sub.plan] && (
                 <div className="mt-5">
                   <div className="text-xs text-gray-400 font-semibold uppercase mb-2">{t('subscription.features_title', 'Inclus dans votre plan')}</div>
-                  <ul className="space-y-1">
+                  <ul className="space-y-2">
                     {PLAN_FEATURES[sub.plan].map(f => (
-                      <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
-                        <HiOutlineCheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                        {f}
+                      <li key={f.text} className={`flex items-center gap-2 text-sm ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-gray-100 text-gray-300'}`}>
+                          {f.included ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                          ) : (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                          )}
+                        </div>
+                        {f.text}
                       </li>
                     ))}
                   </ul>
@@ -302,7 +361,7 @@ export default function SubscriptionManagement() {
 
             {/* Billing portal */}
             {portalUrl && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="relative bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
                     <div className="font-semibold text-gray-900 text-sm">{t('subscription.billing.title', 'Facturation & moyen de paiement')}</div>
@@ -318,6 +377,9 @@ export default function SubscriptionManagement() {
                     <HiOutlineCreditCard className="w-4 h-4 text-white" style={{ color: '#ffffff' }} />
                     {t('subscription.billing.portal_btn', 'Portail de facturation')}
                   </a>
+                </div>
+                <div style={{ position: 'absolute', inset: 0, borderRadius: '16px', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(2px)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '12px', color: '#555', fontWeight: 600, textAlign: 'center', padding: '0 12px' }}>Bientôt disponible</span>
                 </div>
               </div>
             )}
@@ -339,10 +401,17 @@ export default function SubscriptionManagement() {
                         <div className="font-semibold text-gray-900">{PLAN_LABELS[plan]}</div>
                         <div className="text-sm text-gray-500">{PLAN_PRICES[plan]}</div>
                       </div>
-                      <ul className="space-y-1 flex-1">
+                      <ul className="space-y-1.5 flex-1">
                         {PLAN_FEATURES[plan].map(f => (
-                          <li key={f} className="flex items-center gap-1.5 text-xs text-gray-500">
-                            <HiOutlineCheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />{f}
+                          <li key={f.text} className={`flex items-center gap-2 text-xs ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-gray-100 text-gray-300'}`}>
+                              {f.included ? (
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                              ) : (
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                              )}
+                            </div>
+                            {f.text}
                           </li>
                         ))}
                       </ul>
@@ -408,10 +477,17 @@ export default function SubscriptionManagement() {
                         <div className="font-semibold text-gray-900">{PLAN_LABELS[plan]}</div>
                         <div className="text-sm text-gray-500">{PLAN_PRICES[plan]}</div>
                       </div>
-                      <ul className="space-y-1 flex-1">
+                      <ul className="space-y-1.5 flex-1">
                         {PLAN_FEATURES[plan].map(f => (
-                          <li key={f} className="flex items-center gap-1.5 text-xs text-gray-500">
-                            <HiOutlineCheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />{f}
+                          <li key={f.text} className={`flex items-center gap-2 text-xs ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-gray-100 text-gray-300'}`}>
+                              {f.included ? (
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                              ) : (
+                                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                              )}
+                            </div>
+                            {f.text}
                           </li>
                         ))}
                       </ul>
