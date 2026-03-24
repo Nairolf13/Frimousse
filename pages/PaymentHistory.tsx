@@ -617,17 +617,19 @@ export default function PaymentHistoryPage() {
 
         {/* Filters card */}
         <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-5 mb-5">
-          {/* View toggle */}
-          <div className="flex gap-2 mb-4">
-            <button type="button" onClick={() => setViewMode('by-family')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'by-family' ? 'bg-[#0b5566] text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              {t('payments.view.by_family') || 'Par famille'}
-            </button>
-            <button type="button" onClick={() => setViewMode('by-nanny')}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'by-nanny' ? 'bg-[#0b5566] text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-              {t('payments.view.by_nanny') || 'Par nounou'}
-            </button>
-          </div>
+          {/* View toggle — hidden for parents */}
+          {user?.role !== 'parent' && (
+            <div className="flex gap-2 mb-4">
+              <button type="button" onClick={() => setViewMode('by-family')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'by-family' ? 'bg-[#0b5566] text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {t('payments.view.by_family') || 'Par famille'}
+              </button>
+              <button type="button" onClick={() => setViewMode('by-nanny')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'by-nanny' ? 'bg-[#0b5566] text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {t('payments.view.by_nanny') || 'Par nounou'}
+              </button>
+            </div>
+          )}
 
           {/* Month/year + parent filter */}
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -637,39 +639,43 @@ export default function PaymentHistoryPage() {
             <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 w-full sm:w-auto">
               {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
-            <select value={parentFilter} onChange={e => setParentFilter(e.target.value)} className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 flex-1 min-w-0">
-              <option value="">{t('payments.filter.all_parents')}</option>
-              {parents.map((p, idx) => {
-                const name = p ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : '—';
-                return <option key={p?.id || idx} value={p?.id || ''}>{name}</option>;
-              })}
-            </select>
+            {user?.role !== 'parent' && (
+              <select value={parentFilter} onChange={e => setParentFilter(e.target.value)} className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 flex-1 min-w-0">
+                <option value="">{t('payments.filter.all_parents')}</option>
+                {parents.map((p, idx) => {
+                  const name = p ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : '—';
+                  return <option key={p?.id || idx} value={p?.id || ''}>{name}</option>;
+                })}
+              </select>
+            )}
           </div>
 
-          {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button onClick={async () => {
-              if (!parentFilter) { showModal(t('payments.errors.select_parent')); return; }
-              const rec = data.find(r => r.parent && r.parent.id === parentFilter);
-              if (!rec) { showModal(t('payments.errors.no_record_parent')); return; }
-              await downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`);
-            }} className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-              {t('payments.download_invoice')}
-            </button>
-            <button onClick={downloadCSVForAll} className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              {t('payments.export_csv')}
-            </button>
-            <button onClick={() => window.print()} className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-              {t('payments.print')}
-            </button>
-          </div>
+          {/* Action buttons — hidden for parents */}
+          {user?.role !== 'parent' && (
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button onClick={async () => {
+                if (!parentFilter) { showModal(t('payments.errors.select_parent')); return; }
+                const rec = data.find(r => r.parent && r.parent.id === parentFilter);
+                if (!rec) { showModal(t('payments.errors.no_record_parent')); return; }
+                await downloadInvoice(rec.id, `facture-${year}-${String(month).padStart(2,'0')}-${rec.parent?.lastName || rec.id}.pdf`);
+              }} className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                {t('payments.download_invoice')}
+              </button>
+              <button onClick={downloadCSVForAll} className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                {t('payments.export_csv')}
+              </button>
+              <button onClick={() => window.print()} className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                {t('payments.print')}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* KPI cards */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        {/* KPI cards — hidden for parents */}
+        {user?.role !== 'parent' && <div className="grid grid-cols-3 gap-3 mb-5">
           <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
             <div className="text-xs text-gray-400 font-medium mb-1">{t('payments.card.month_revenue')}</div>
             <div className="text-xl font-extrabold text-[#0b5566]">{fmt(totalRevenue)}</div>
@@ -682,7 +688,7 @@ export default function PaymentHistoryPage() {
             <div className="text-xs text-gray-400 font-medium mb-1">{t('payments.card.unpaid')}</div>
             <div className={`text-xl font-extrabold ${unpaidCount > 0 ? 'text-red-500' : 'text-emerald-600'}`}>{unpaidCount}</div>
           </div>
-        </div>
+        </div>}
 
         {/* Modal */}
         {modalVisible && (

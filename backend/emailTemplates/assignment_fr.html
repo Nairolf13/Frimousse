@@ -1,49 +1,61 @@
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-      .container { font-family: Arial, Helvetica, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; }
-      .header { text-align: center; padding: 24px 0; }
-      .btn { display:inline-block; padding:10px 16px; background:#2563eb; color:#fff; border-radius:6px; text-decoration:none }
-      .card { background:#fff; border-radius:8px; padding:18px; box-shadow:0 2px 6px rgba(0,0,0,0.05); margin-bottom:16px }
-      .muted { color:#6b7280; font-size:14px }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="card">
-        <!doctype html>
-        <html lang="fr">
-          <head>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width,initial-scale=1" />
-            <title>Mise à jour de planning</title>
-          </head>
-          <body style="margin:0;padding:20px;background:#f3f4f6;font-family:Inter, system-ui, -apple-system,'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#1f2937;">
-            <div style="max-width:640px;margin:0 auto;padding:20px;">
-              <div style="text-align:center;padding:24px 0;">
-                <img src="{{logoUrl}}" alt="Frimousse" width="72" style="display:block;margin:0 auto 12px;" />
-                <h2 style="margin:0;color:#0f172a;">Mise à jour de planning</h2>
-                <p style="color:#6b7280;margin:6px 0;">Nous vous informons d'une mise à jour concernant votre enfant.</p>
-              </div>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mise à jour de planning</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
 
-              <div style="background:#ffffff;border-radius:8px;padding:18px;box-shadow:0 2px 6px rgba(0,0,0,0.05);margin-bottom:16px;color:#1f2937;">
-                <p style="margin:0 0 8px;">Bonjour,</p>
-                <p style="margin:0 0 8px;">Votre enfant <strong>{{childName}}</strong> a une affectation :</p>
-                <ul style="margin:0 0 12px;padding-left:18px;">
-                  <li><strong>Nounou :</strong> {{nannyName}}</li>
-                  <li><strong>Date :</strong> {{date}}</li>
-                </ul>
-                <div style="margin-top:12px;">
-                  <h4 style="margin:0 0 8px;color:#0f172a;">Détails de l'activité</h4>
-                  {{activitiesHtml}}
-                </div>
-                <p style="margin-top:16px;"><a href="{{link}}" style="display:inline-block;padding:10px 16px;background:#059669;color:#ffffff;border-radius:6px;text-decoration:none;font-weight:600;">Voir le planning</a></p>
-              </div>
+        <!-- Header -->
+        <tr><td style="background:linear-gradient(135deg,#0b5566 0%,#08323a 100%);border-radius:16px 16px 0 0;padding:32px 32px 24px;text-align:center;">
+          <img src="{{logoUrl}}" alt="Frimousse" width="64" style="display:block;margin:0 auto 16px;border-radius:12px;" />
+          <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Mise à jour de planning</h1>
+          <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">Nous vous informons d'une mise à jour concernant votre enfant.</p>
+        </td></tr>
 
-              <p style="color:#6b7280;margin:8px 0;">Si vous avez des questions, répondez à cet e-mail ou contactez votre centre.</p>
-              <p style="color:#6b7280;margin:4px 0;">Cordialement,<br/>L'équipe Frimousse</p>
-            </div>
-          </body>
-        </html>
+        <!-- Body -->
+        <tr><td style="background:#ffffff;padding:32px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;">Bonjour,</p>
+          <p style="margin:0 0 20px;font-size:15px;color:#374151;">Votre enfant <strong style="color:#0b5566;">{{childName}}</strong> a une nouvelle affectation :</p>
+
+          <!-- Info card -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:20px;">
+            <tr>
+              <td style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+                <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Nounou</span><br/>
+                <span style="font-size:15px;font-weight:600;color:#0f172a;margin-top:4px;display:block;">{{nannyName}}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 20px;">
+                <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Date</span><br/>
+                <span style="font-size:15px;font-weight:600;color:#0f172a;margin-top:4px;display:block;">{{date}}</span>
+              </td>
+            </tr>
+          </table>
+
+          {{activitiesHtml}}
+
+          <!-- CTA -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+            <tr><td align="center">
+              <a href="{{link}}" style="display:inline-block;padding:13px 28px;background:linear-gradient(135deg,#0b5566 0%,#08323a 100%);color:#ffffff;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.1px;">Voir le planning</a>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:20px 32px;text-align:center;">
+          <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Des questions ? Répondez à cet e-mail ou contactez votre centre.</p>
+          <p style="margin:0;font-size:13px;color:#6b7280;">Cordialement, <strong style="color:#0b5566;">L'équipe Frimousse</strong></p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

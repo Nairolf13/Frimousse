@@ -78,7 +78,8 @@ router.get('/', auth, async (req, res) => {
 // helper to format schedules as html list
 function schedulesToHtml(schedules) {
   if (!schedules || schedules.length === 0) return '';
-  return schedules.map(s => `<div style="margin-bottom:8px"><strong>${s.name || ''}</strong><div>${s.comment || ''}</div><small>${s.startTime || ''} — ${s.endTime || ''}</small></div>`).join('');
+  const items = schedules.map(s => `<div style="margin-bottom:8px"><strong>${s.name || ''}</strong><div>${s.comment || ''}</div><small>${s.startTime || ''} — ${s.endTime || ''}</small></div>`).join('');
+  return `<div style="margin-top:12px;"><h4 style="margin:0 0 8px;color:#0f172a;">Détails de l'activité</h4>${items}</div>`;
 }
 
 // CREATE assignment
@@ -142,18 +143,27 @@ router.post('/', auth, async (req, res) => {
 
         const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
         const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-  const formattedDate = new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' });
+        const dateObj = new Date(date + 'T12:00:00Z');
+        const formattedDate = lang === 'fr'
+          ? dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+          : dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-        const schedules = await prisma.schedule.findMany({ where: { date: new Date(date), ...(isSuperAdmin(req.user) ? {} : { centerId: req.user.centerId }) } });
+        const schedules = await prisma.schedule.findMany({ where: { date: new Date(date + 'T12:00:00Z'), ...(isSuperAdmin(req.user) ? {} : { centerId: req.user.centerId }) } });
         const activitiesHtml = schedulesToHtml(schedules);
 
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const parentLink = baseUrl + '/dashboard';
+        const adminLink = baseUrl + '/dashboard';
+        const nannyLink = baseUrl + '/mon-planning';
+        const logoUrl = baseUrl + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp';
+
         const subject = (lang === 'fr' ? `Affectation pour ${child.name}` : `Assignment for ${child.name}`);
-  const text = (lang === 'fr') ? `Bonjour,\n\nVotre enfant ${child.name} a une affectation pour ${formattedDate}.` : `Hello,\n\nYour child ${child.name} has an assignment for ${formattedDate}.`;
+        const text = (lang === 'fr') ? `Bonjour,\n\nVotre enfant ${child.name} a une affectation pour ${formattedDate}.` : `Hello,\n\nYour child ${child.name} has an assignment for ${formattedDate}.`;
 
         // Send emails only if SMTP configured
         if (process.env.SMTP_HOST && parentEmails.length) {
           try {
-            await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+            await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: parentLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
           } catch (e) {
             logger.error('Failed to send assignment email to parents', e && e.message ? e.message : e);
           }
@@ -190,12 +200,12 @@ router.post('/', auth, async (req, res) => {
         if (req.user.role === 'nanny') {
           const centerAdmins = await prisma.user.findMany({ where: { role: 'admin', centerId: req.user.centerId } });
           const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
-          const adminIds = [...centerAdmins.map(u => u.id), ...superAdmins.map(u => u.id)].filter(Boolean);
+          const adminIds = centerAdmins.map(u => u.id).filter(Boolean);
           if (adminIds.length) {
             const adminSubject = (lang === 'fr' ? `Nouvelle affectation créée par ${req.user.name}` : `New assignment created by ${req.user.name}`);
             const adminText = (lang === 'fr') ? `Bonjour,\n\nUne nouvelle affectation pour ${child.name} a été créée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}` : `Hello,\n\nA new assignment for ${child.name} has been created by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}`;
               try {
-              await sendTemplatedMail({ templateName: 'assignment', lang, to: [...centerAdmins.map(u => u.email), ...superAdmins.map(u => u.email)].filter(Boolean), subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+              await sendTemplatedMail({ templateName: 'assignment', lang, to: centerAdmins.map(u => u.email).filter(Boolean), subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: adminLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
             } catch (e) {
               logger.error('Failed to send assignment email to admins', e && e.message ? e.message : e);
             }
@@ -241,7 +251,7 @@ router.post('/', auth, async (req, res) => {
                 if (process.env.SMTP_HOST) {
                   const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
                   if (nannyUser && nannyUser.email) {
-                    await sendTemplatedMail({ templateName: 'assignment', lang, to: [nannyUser.email], subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+                    await sendTemplatedMail({ templateName: 'assignment', lang, to: [nannyUser.email], subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: nannyLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
                   }
                 }
               } catch (e) {
@@ -254,7 +264,7 @@ router.post('/', auth, async (req, res) => {
               try {
                   if (process.env.SMTP_HOST && nanny && (nanny.email || nanny.contactEmail)) {
                   const to = nanny.email ? [nanny.email] : [nanny.contactEmail];
-                  await sendTemplatedMail({ templateName: 'assignment', lang, to, subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+                  await sendTemplatedMail({ templateName: 'assignment', lang, to, subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: nannyLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
                 }
               } catch (e) {
                 logger.error('Fallback email to nanny failed on update', e && e.message ? e.message : e);
@@ -343,19 +353,28 @@ router.put('/:id', auth, async (req, res) => {
 
         const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
         const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-  const formattedDate = new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' });
+        const dateObj = new Date(date + 'T12:00:00Z');
+        const formattedDate = lang === 'fr'
+          ? dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+          : dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-        const schedules = await prisma.schedule.findMany({ where: { date: new Date(date), ...(isSuperAdmin(req.user) ? {} : { centerId: req.user.centerId }) } });
+        const schedules = await prisma.schedule.findMany({ where: { date: new Date(date + 'T12:00:00Z'), ...(isSuperAdmin(req.user) ? {} : { centerId: req.user.centerId }) } });
         const activitiesHtml = schedulesToHtml(schedules);
 
-  const subject = (lang === 'fr' ? `Affectation mise à jour pour ${child.name}` : `Assignment updated for ${child.name}`);
-  const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été mise à jour pour ${formattedDate}.` : `Hello,\n\nThe assignment for ${child.name} has been updated for ${formattedDate}.`;
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const parentLink = baseUrl + '/dashboard';
+        const adminLink = baseUrl + '/dashboard';
+        const nannyLink = baseUrl + '/mon-planning';
+        const logoUrl = baseUrl + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp';
+
+        const subject = (lang === 'fr' ? `Affectation mise à jour pour ${child.name}` : `Assignment updated for ${child.name}`);
+        const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été mise à jour pour ${formattedDate}.` : `Hello,\n\nThe assignment for ${child.name} has been updated for ${formattedDate}.`;
 
         // Send emails only if SMTP configured
         if (process.env.SMTP_HOST && parentEmails.length) {
           try {
-              await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
-              await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+              await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: parentLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+              await sendTemplatedMail({ templateName: 'assignment', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: parentLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
           } catch (e) {
             logger.error('Failed to send assignment email to parents', e && e.message ? e.message : e);
           }
@@ -389,22 +408,21 @@ router.put('/:id', auth, async (req, res) => {
         // Notify admins if modified by nanny
         if (req.user.role === 'nanny') {
           const adminEmails = [];
-          // Get admins of the center
+          // Get admins of the center only (super-admins don't receive assignment emails)
           const centerAdmins = await prisma.user.findMany({ where: { role: 'admin', centerId: existing.centerId } });
           adminEmails.push(...centerAdmins.map(u => u.email));
-          // Get super-admins
+          // Keep superAdmins for push notifications only
           const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
-          adminEmails.push(...superAdmins.map(u => u.email));
           if (adminEmails.length) {
             const adminSubject = (lang === 'fr' ? `Modification d'affectation par ${req.user.name}` : `Assignment modified by ${req.user.name}`);
             const adminText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été modifiée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}` : `Hello,\n\nThe assignment for ${child.name} has been modified by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}`;
-              await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
-              await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+              await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: adminLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+              await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: adminLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
 
             // Send push notifications to admins (non-blocking)
             try {
               const { notifyUsers } = require('../lib/pushNotifications');
-              const adminIds = [...centerAdmins.map(u => u.id), ...superAdmins.map(u => u.id)].filter(Boolean);
+              const adminIds = centerAdmins.map(u => u.id).filter(Boolean);
               if (adminIds.length) {
                 const pushPayload = { title: adminSubject, body: adminText, data: { url: `/planning`, assignmentId: assignment.id } };
                 await notifyUsers(adminIds, pushPayload);
@@ -437,7 +455,7 @@ router.put('/:id', auth, async (req, res) => {
                 if (process.env.SMTP_HOST) {
                   const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
                   if (nannyUser && nannyUser.email) {
-                    await sendTemplatedMail({ templateName: 'assignment', lang, to: [nannyUser.email], subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+                    await sendTemplatedMail({ templateName: 'assignment', lang, to: [nannyUser.email], subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: nannyLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
                   }
                 }
               } catch (e) {
@@ -589,10 +607,16 @@ router.delete('/:id', auth, async (req, res) => {
         const schedules = await prisma.schedule.findMany({ where: { date: existing.date ? new Date(existing.date) : undefined, ...(isSuperAdmin(req.user) ? {} : { centerId: req.user.centerId }) } });
         const activitiesHtml = schedulesToHtml(schedules);
 
+        const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const parentLink = baseUrl + '/dashboard';
+        const adminLink = baseUrl + '/dashboard';
+        const nannyLink = baseUrl + '/mon-planning';
+        const logoUrl = baseUrl + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp';
+
         const subject = (lang === 'fr' ? `Affectation supprimée pour ${child.name}` : `Assignment removed for ${child.name}`);
         const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée.` : `Hello,\n\nThe assignment for ${child.name} has been removed.`;
 
-  await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+  await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: parentLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
 
         // Notify parents via push for assignment deletion
         try {
@@ -622,21 +646,20 @@ router.delete('/:id', auth, async (req, res) => {
         // Notify admins if deleted by nanny
         if (req.user.role === 'nanny') {
           const adminEmails = [];
-          // Get admins of the center
+          // Get admins of the center only (super-admins don't receive assignment emails)
           const centerAdmins = await prisma.user.findMany({ where: { role: 'admin', centerId: existing.centerId } });
           adminEmails.push(...centerAdmins.map(u => u.email));
-          // Get super-admins
+          // Keep superAdmins for push notifications only
           const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
-          adminEmails.push(...superAdmins.map(u => u.email));
           if (adminEmails.length) {
             const adminSubject = (lang === 'fr' ? `Suppression d'affectation par ${req.user.name}` : `Assignment deleted by ${req.user.name}`);
             const adminText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}` : `Hello,\n\nThe assignment for ${child.name} has been deleted by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}`;
-            await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+            await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: adminLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
 
             // Send push notifications to admins (non-blocking)
             try {
               const { notifyUsers } = require('../lib/pushNotifications');
-              const adminIds = [...centerAdmins.map(u => u.id), ...superAdmins.map(u => u.id)].filter(Boolean);
+              const adminIds = centerAdmins.map(u => u.id).filter(Boolean);
               if (adminIds.length) {
                 const pushPayload = { title: adminSubject, body: adminText, data: { url: `/planning`, assignmentId: fullExisting.id } };
                 await notifyUsers(adminIds, pushPayload);
@@ -668,7 +691,7 @@ router.delete('/:id', auth, async (req, res) => {
                 if (process.env.SMTP_HOST) {
                   const nannyUser = await prisma.user.findUnique({ where: { id: nannyUserId }, select: { email: true } }).catch(() => null);
                   if (nannyUser && nannyUser.email) {
-                    await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: [nannyUser.email], subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+                    await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: [nannyUser.email], subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: nannyLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
                   }
                 }
               } catch (e) {
@@ -681,7 +704,7 @@ router.delete('/:id', auth, async (req, res) => {
               try {
                 if (process.env.SMTP_HOST && nanny && (nanny.email || nanny.contactEmail)) {
                   const to = nanny.email ? [nanny.email] : [nanny.contactEmail];
-                  await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to, subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
+                  await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to, subject: nannySubject, text: nannyText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: nannyLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
                 }
               } catch (e) {
                 logger.error('Fallback email to nanny failed on delete', e && e.message ? e.message : e);

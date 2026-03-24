@@ -57,8 +57,6 @@ export default function Dashboard() {
     if (!user) return;
     if (user.role === 'nanny') {
       navigate('/mon-planning', { replace: true });
-    } else if (user.role === 'parent') {
-      navigate('/parent', { replace: true });
     }
   }, [user, navigate]);
 
