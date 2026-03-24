@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 
 // GET /api/payment-history/assigned?year=2025&month=9&limit=50&offset=0
 // month is 1-12

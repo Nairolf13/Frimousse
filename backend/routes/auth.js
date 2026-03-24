@@ -4,8 +4,8 @@ const authController = require('../controllers/authController');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 const { validatePassword } = require('../lib/validatePassword');
 
 // Strict rate limiter for login: 10 attempts / 15 min per IP+email combination

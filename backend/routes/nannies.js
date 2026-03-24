@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const bcrypt = require('bcryptjs');
@@ -36,6 +36,7 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
       country: u.country || null,
     });
   });
+  res.set('Cache-Control', 'private, max-age=15');
   res.json(mapped);
 });
 
@@ -163,7 +164,7 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
         if (region !== undefined) userUpdateData.region = region || null;
         if (country !== undefined) userUpdateData.country = country || null;
         await tx.user.update({ where: { id: existingUser.id }, data: userUpdateData });
-        return { nanny, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
+        return { nanny, user: await tx.user.findUnique({ where: { id: existingUser.id } }), isNewUser: false };
       }
 
   // Use provided password if present, otherwise create a temporary random password
@@ -177,7 +178,7 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
     if (region !== undefined) userData.region = region || null;
     if (country !== undefined) userData.country = country || null;
     const user = await tx.user.create({ data: userData });
-      return { nanny, user };
+      return { nanny, user, isNewUser: true };
     });
 
     // If the existing user is already linked to another nanny record
@@ -185,8 +186,8 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
       return res.status(409).json({ message: 'Cet utilisateur est déjà associé à une autre fiche nounou.' });
     }
 
-      // Send invite email if we created a new user with email using templated mail (respects notifyByEmail)
-      if (result.user && process.env.SMTP_HOST) {
+      // Send invite email only for newly created users — not for existing users (admin or otherwise)
+      if (result.user && result.isNewUser && process.env.SMTP_HOST) {
         (async () => {
           try {
             const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';

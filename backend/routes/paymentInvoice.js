@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const requirePlan = require('../middleware/requirePlan');
-const { PrismaClient } = require('@prisma/client');
+
 const PDFDocument = require('pdfkit');
 const { generateInvoiceBuffer } = require('../lib/invoiceGenerator');
 const { sendTemplatedMail } = require('../lib/email');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prismaClient');
 
 function fmt(v) {
   return `€ ${Number(v || 0).toFixed(2)}`;

@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const requireProOrTrial = require('../middleware/requireProOrTrial');
-const { PrismaClient } = require('@prisma/client');
+
 const wsServer = require('../lib/wsServer');
 const { notifyUsers } = require('../lib/pushNotifications');
 const multer = require('multer');
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const path = require('path');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prismaClient');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';

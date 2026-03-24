@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 const requireAuth = require('../middleware/authMiddleware');
 
 // GET /api/admin/emaillogs?limit=50&page=1&page=1

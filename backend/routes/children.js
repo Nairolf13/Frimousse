@@ -4,8 +4,8 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 const logger = require('../lib/logger');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
@@ -167,11 +167,12 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
             prescriptionUrl: true
         }
       });
+      res.set('Cache-Control', 'private, max-age=15');
       return res.json(children);
     }
 
-    const children = await prisma.child.findMany({ 
-      where, 
+    const children = await prisma.child.findMany({
+      where,
       select: {
         id: true,
         name: true,
@@ -188,6 +189,7 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
     prescriptionUrl: true
       }
     });
+    res.set('Cache-Control', 'private, max-age=15');
     return res.json(children);
   } catch (error) {
     console.error('Error fetching children', error);

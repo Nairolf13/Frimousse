@@ -414,8 +414,12 @@ const ParentDashboard: React.FC = () => {
                       ...prev,
                       parents: prev.parents.map(p => p.id === editingParent.id ? { ...p, name: `${form.firstName} ${form.lastName}`, email: form.email, phone: form.phone || p.phone } : p)
                     } : prev);
-                  } else if (resBody && typeof resBody === 'object' && resBody !== null && 'id' in (resBody as Record<string, unknown>)) {
-                    const created = resBody as Parent;
+                  } else if (resBody && typeof resBody === 'object' && resBody !== null) {
+                    // Backend wraps creation response as { parent, user, isNewUser }
+                    const raw = resBody as Record<string, unknown>;
+                    const created = (raw.parent && typeof raw.parent === 'object' ? raw.parent : ('id' in raw ? raw : null)) as Parent | null;
+                    if (!created) { fetchWithRefresh('api/parent/admin', { credentials: 'include' }).then(r => r.json()).then(j => { if (j) setAdminData(j as AdminData); }).catch(() => {}); }
+                    if (!created) { setAdding(false); setEditingParent(null); return; }
                     setAdminData(prev => prev ? {
                       ...prev,
                       parents: [created, ...prev.parents],

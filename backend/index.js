@@ -16,6 +16,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
 const app = express();
 
 // Trust first proxy (nginx) for correct IP detection with rate limiting
@@ -47,6 +48,7 @@ const reportsRoutes = require('./routes/reports');
 const parentRoutes = require('./routes/parent');
 
 
+app.use(compression());
 app.use(helmet());
 
 app.use(rateLimit({ windowMs: 60 * 1000, max: 600 }));
