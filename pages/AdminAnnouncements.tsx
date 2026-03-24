@@ -271,17 +271,19 @@ function AnnouncementDetail({ a, onBack, onToggle, onDelete }: {
   const opt = TYPE_OPTIONS.find(t => t.value === a.type) || TYPE_OPTIONS[0];
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 flex-shrink-0">
-        <button onClick={onBack} className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
-          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
-        </button>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-bold text-gray-900 text-base truncate">{a.title}</h2>
-          <p className="text-xs text-gray-400">{new Date(a.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+      <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={onBack} className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors flex-shrink-0">
+            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-gray-900 text-base truncate">{a.title}</h2>
+            <p className="text-xs text-gray-400">{new Date(a.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={onToggle}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border flex-shrink-0 ${
               a.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
             }`}
           >
@@ -290,7 +292,7 @@ function AnnouncementDetail({ a, onBack, onToggle, onDelete }: {
               : <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>Inactive</>
             }
           </button>
-          <button onClick={onDelete} className="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors border border-red-100">
+          <button onClick={onDelete} className="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors border border-red-100 flex-shrink-0">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>
         </div>
@@ -427,7 +429,7 @@ export default function AdminAnnouncements() {
       </div>
 
       {/* ── RIGHT: Create / Detail — masqué quand view=list ── */}
-      <div className={`flex-1 flex flex-col bg-[#f4f7fa] ${view === 'list' ? 'hidden' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col bg-[#f4f7fa] w-full min-w-0 ${view === 'list' ? 'hidden' : 'flex'}`}>
         {view === 'create' && (
           <div className="h-full bg-white flex flex-col overflow-hidden">
             <CreateForm onCreated={() => { setView('list'); load(); }} onCancel={() => setView('list')} />
