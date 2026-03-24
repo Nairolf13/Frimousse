@@ -84,6 +84,7 @@ const SubscriptionManagement = lazyWithRetry(() => import('../pages/Subscription
 const AdminEmailLogs = lazyWithRetry(() => import('../pages/AdminEmailLogs'));
 const AdminCenters = lazyWithRetry(() => import('../pages/AdminCenters'));
 const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
+const AdminAnnouncements = lazyWithRetry(() => import('../pages/AdminAnnouncements'));
 const PresenceSheets = lazyWithRetry(() => import('../pages/PresenceSheets'));
 const Messaging = lazyWithRetry(() => import('../pages/Messaging'));
 
@@ -153,6 +154,7 @@ export default function AppRoutes() {
             <Route path="/admin/emaillogs" element={<AdminEmailLogs />} />
             <Route path="/admin/centers" element={<AdminCenters />} />
             <Route path="/admin/support" element={<AdminSupport />} />
+            <Route path="/admin/announcements" element={<AdminAnnouncements />} />
             <Route path="/assistant" element={<AssistantPage />} />
             <Route path="/subscription" element={<SubscriptionManagement />} />
             <Route path="/presence-sheets" element={<PresenceSheets />} />

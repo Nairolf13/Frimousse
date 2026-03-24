@@ -54,7 +54,8 @@ function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, st
     // Admin links regroupés
     ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [
       { to: '/admin/centers', label: 'Centres', icon: <HiOutlineOfficeBuilding className="w-5 h-5 mr-3" /> },
-      { to: '/admin/support', label: 'Support', icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }
+      { to: '/admin/support', label: 'Support', icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> },
+      { to: '/admin/announcements', label: 'Annonces', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
     ] : []),
     { to: '/children', label: t('nav.children'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
     { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
