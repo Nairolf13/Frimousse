@@ -26,7 +26,7 @@ const plans: Plan[] = [
   {
     name: 'Découverte',
     price: '0 €',
-    priceNote: 'pendant 7 jours',
+    priceNote: 'Pendant 15 jours',
     description: 'Testez toutes les fonctionnalités sans engagement ni carte bancaire.',
     accentColor: 'text-gray-700',
     iconBg: 'bg-gray-100',
@@ -47,7 +47,7 @@ const plans: Plan[] = [
   },
   {
     name: 'Essentiel',
-    price: '29,99 €',
+    price: '39,99 €',
     priceNote: '/ mois · sans engagement',
     description: "Tout ce qu'il faut pour gérer votre MAM ou micro-crèche au quotidien.",
     accentColor: 'text-brand-600',
@@ -71,7 +71,7 @@ const plans: Plan[] = [
   {
     name: 'Pro',
     badge: 'Le plus populaire',
-    price: '59,99 €',
+    price: '69,99 €',
     priceNote: '/ mois · sans engagement',
     description: 'La solution complète pour les crèches, garderies et centres multi-sites.',
     accentColor: 'text-white',
@@ -116,7 +116,7 @@ export default function PricingPage() {
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
         title={"Tarifs Frimousse | Prix logiciel de gestion creche et micro-creche"}
-        description={"Tarifs Frimousse : essai gratuit 7 jours, plan Essentiel a 29,99 euros/mois, plan Pro a 59,99 euros/mois. Sans engagement. Application de gestion pour creches, micro-creches, MAM et garderies."}
+        description={"Tarifs Frimousse : essai gratuit 15 jours, plan Essentiel a 29,99 euros/mois, plan Pro a 59,99 euros/mois. Sans engagement. Application de gestion pour creches, micro-creches, MAM et garderies."}
         url={"https://lesfrimousses.com/tarifs"}
         image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Tarifs', url: 'https://lesfrimousses.com/tarifs' }]}
