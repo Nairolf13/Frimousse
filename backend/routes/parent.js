@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const bcrypt = require('bcryptjs');
@@ -329,7 +329,7 @@ router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'
         if (region !== undefined) updateData.region = region;
         if (country !== undefined) updateData.country = country;
         await tx.user.update({ where: { id: existingUser.id }, data: updateData });
-        return { parent, user: await tx.user.findUnique({ where: { id: existingUser.id } }) };
+        return { parent, user: await tx.user.findUnique({ where: { id: existingUser.id } }), isNewUser: false };
       } else {
 
     const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
@@ -341,11 +341,12 @@ router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'
     userData.centerId = userReq.centerId;
   }
   const user = await tx.user.create({ data: userData });
-        return { parent, user };
+        return { parent, user, isNewUser: true };
       }
     });
 
-    if (process.env.SMTP_HOST) {
+    // Envoyer l'invitation uniquement pour les nouveaux comptes créés
+    if (result.user && result.isNewUser && process.env.SMTP_HOST) {
       (async () => {
         try {
           const transporter = nodemailer.createTransport({

@@ -108,8 +108,8 @@ router.post('/supabase/finalize', authMiddleware, async (req, res) => {
 
   try {
     // Verify post exists and user is the author (or admin)
-    const { PrismaClient } = require('@prisma/client');
-    const prisma = new PrismaClient();
+    
+    const prisma = require('../lib/prismaClient');
     const post = await prisma.feedPost.findUnique({ where: { id: postId } });
     if (!post) return res.status(404).json({ message: 'Post not found' });
     if (post.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });

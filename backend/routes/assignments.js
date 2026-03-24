@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 const logger = require('../lib/logger');
 function isSuperAdmin(user) { if (!user || !user.role) return false; const r = String(user.role).toLowerCase(); return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super'); }
 
@@ -67,6 +67,7 @@ router.get('/', auth, async (req, res) => {
         nanny: { select: { id: true, name: true } }
       }
     });
+    res.set('Cache-Control', 'private, max-age=10');
     res.json(assignments);
   } catch (err) {
   logger.error('GET /assignments error', err);

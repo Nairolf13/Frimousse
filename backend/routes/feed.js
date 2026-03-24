@@ -16,8 +16,8 @@ try {
 
 const { createClient } = require('@supabase/supabase-js');
 // Robust Prisma client import: prefer generated client output, fall back to @prisma/client
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 const authMiddleware = require('../middleware/authMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const { sendFeedPostNotification, sendLikeNotification, sendCommentNotification } = require('../lib/pushNotifications');
@@ -396,6 +396,7 @@ router.get('/', async (req, res) => {
       comments: p.comments.map(c => ({ authorName: c.author?.name || 'Utilisateur', timeAgo: c.createdAt, text: c.text })),
       hasLiked: !!userLikes.find(l => l.postId === p.id),
     }));
+    res.set('Cache-Control', 'private, max-age=10');
     return res.json({ posts: mapped, nextCursor, hasMore });
   } catch (e) {
     console.error('Failed to list feed', e);

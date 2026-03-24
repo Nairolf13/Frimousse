@@ -10,8 +10,8 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 const { google, handleOAuthUser } = require('../lib/oauth');
 
 const JWT_SECRET = process.env.JWT_SECRET;

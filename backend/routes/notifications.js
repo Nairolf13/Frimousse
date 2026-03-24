@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+
+const prisma = require('../lib/prismaClient');
 
 router.use(auth);
 // unread-count is exempt from subscription check (used in header for all users)
@@ -34,6 +34,7 @@ router.get('/unread-count', async (req, res) => {
   try {
     const userId = req.user.id;
     const unread = await prisma.notification.count({ where: { userId, read: false } });
+    res.set('Cache-Control', 'private, max-age=10');
     res.json({ unread });
   } catch (e) {
     res.status(500).json({ error: 'Erreur serveur' });

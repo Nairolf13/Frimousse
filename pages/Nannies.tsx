@@ -540,7 +540,9 @@ export default function Nannies() {
       // Attempt to parse saved nanny from response
       let savedNanny: Nanny | null = null;
       try {
-        savedNanny = await res.json();
+        const body = await res.json();
+        // Backend wraps creation response as { nanny, user, isNewUser }
+        savedNanny = (body && body.nanny ? body.nanny : body) as Nanny | null;
       } catch {
         savedNanny = null;
       }
@@ -851,7 +853,7 @@ export default function Nannies() {
             <div id="nanny-form-address" className="md:col-span-2">
               <label className={labelCls}>{t('parent.form.address')} <span className="text-red-500">*</span></label>
               <div className="relative">
-                <input name="address" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} placeholder={t('parent.form.address')} className={inputCls} onFocus={() => setOpenAddress(true)} />
+                <input name="address" value={form.address || ''} onChange={(e) => { setForm({ ...form, address: e.target.value }); setOpenAddress(true); }} placeholder={t('parent.form.address')} className={inputCls} onFocus={() => setOpenAddress(true)} />
                 {openAddress && placeSuggestions.length > 0 && (
                   <ul className="absolute z-20 left-0 right-0 bg-white border border-gray-200 mt-1 max-h-56 overflow-auto rounded-xl shadow-lg">
                     {placeSuggestions.map((p, idx) => {
