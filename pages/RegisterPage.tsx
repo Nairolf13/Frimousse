@@ -777,8 +777,8 @@ export default function RegisterPage() {
           {/* Découverte */}
           <button type="button" onClick={() => setInitialPlan('decouverte')} className={`group p-4 rounded-2xl border-2 focus:outline-none flex flex-col text-left transition-all ${initialPlan === 'decouverte' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
             <div className="text-base font-extrabold text-brand-600 tracking-tight">Découverte</div>
-            <div className="text-[11px] font-medium text-gray-400 mt-0.5">Essai 7 jours</div>
-            <div className="text-2xl font-black text-brand-500 mt-2">0 € <span className="text-xs font-normal text-gray-400">pendant 7 jours</span></div>
+            <div className="text-[11px] font-medium text-gray-400 mt-0.5">Essai 15 jours</div>
+            <div className="text-2xl font-black text-brand-500 mt-2">0 € <span className="text-xs font-normal text-gray-400">pendant 15 jours</span></div>
             <ul className="mt-3 space-y-1.5">
               {[
                 "Tableau de bord & planning",
