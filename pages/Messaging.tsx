@@ -425,8 +425,11 @@ export default function Messaging() {
     const isSuperAdmin = user?.role && typeof user.role === 'string' && user.role.toLowerCase().includes('super');
     if (isSuperAdmin) {
       fetchWithRefresh('/api/centers', { credentials: 'include' })
-        .then((r) => (r && r.ok ? r.json() : []))
-        .then((data) => setCenters(Array.isArray(data) ? data : []));
+        .then(async (r) => {
+          if (!r || !r.ok) { console.error('centers fetch failed', r?.status, await r?.text().catch(() => '')); return []; }
+          return r.json();
+        })
+        .then((data) => { const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []); setCenters(list); });
     }
   }, [showNewConv, user?.role]);
 

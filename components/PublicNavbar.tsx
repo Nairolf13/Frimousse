@@ -131,7 +131,7 @@ export default function PublicNavbar({ variant = "dark" }: PublicNavbarProps) {
                 className="text-center text-base font-bold bg-brand-500 text-white px-4 py-3.5 rounded-xl hover:bg-brand-600 transition-all shadow-sm"
                 style={{ color: '#ffffff' }}
               >
-                Essai gratuit — 7 jours offerts
+                Essai gratuit
               </Link>
             </div>
           </div>
