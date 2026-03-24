@@ -1,23 +1,65 @@
 <!doctype html>
 <html lang="fr">
-  <head>
-    <meta charset="utf-8" />
-    <title>Notification d'activité</title>
-  </head>
-  <body style="margin:0;padding:20px;background:#f3f4f6;font-family:Inter, system-ui, -apple-system,'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#333;">
-    <div style="max-width:640px;margin:0 auto;padding:20px;">
-      <div style="text-align:center;margin-bottom:8px;"><img src="{{logoUrl}}" alt="logo" width="120" style="display:inline-block;"/></div>
-      <h2 style="margin:8px 0;color:#0f172a;">Nouvelle activité planifiée</h2>
-      <p style="margin:6px 0;">Bonjour,</p>
-      <p style="margin:6px 0;">Une activité a été planifiée pour le {{date}}. Détails :</p>
-      <div style="background:#f8fafc;padding:12px;border-radius:8px;margin-top:12px;">
-        <p style="margin:0 0 6px;"><strong>{{activityName}}</strong></p>
-        <p style="margin:0 0 6px;">{{comment}}</p>
-        <p style="margin:0 0 6px;"><strong>Heure :</strong> {{startTime}} — {{endTime}}</p>
-      </div>
-      <p style="margin:12px 0 6px;">Vous pouvez consulter le planning et les détails ici :</p>
-      <p style="margin:0 0 12px;"><a href="{{link}}" style="display:inline-block;padding:10px 14px;background:#059669;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">Voir le planning</a></p>
-      <p style="margin:6px 0;">— L'équipe</p>
-    </div>
-  </body>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nouvelle activité planifiée</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- Header -->
+        <tr><td style="background:linear-gradient(135deg,#0b5566 0%,#08323a 100%);border-radius:16px 16px 0 0;padding:32px 32px 24px;text-align:center;">
+          <img src="{{logoUrl}}" alt="Frimousse" width="64" style="display:block;margin:0 auto 16px;border-radius:12px;" />
+          <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Nouvelle activité planifiée</h1>
+          <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">Une activité a été ajoutée au planning.</p>
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td style="background:#ffffff;padding:32px;">
+          <p style="margin:0 0 16px;font-size:15px;color:#374151;">Bonjour,</p>
+          <p style="margin:0 0 20px;font-size:15px;color:#374151;">Une activité a été planifiée pour le <strong style="color:#0b5566;">{{date}}</strong>.</p>
+
+          <!-- Activity card -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:20px;">
+            <tr>
+              <td style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+                <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Activité</span><br/>
+                <span style="font-size:15px;font-weight:600;color:#0f172a;margin-top:4px;display:block;">{{activityName}}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
+                <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Horaires</span><br/>
+                <span style="font-size:15px;font-weight:600;color:#0f172a;margin-top:4px;display:block;">{{startTime}} — {{endTime}}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 20px;">
+                <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Détails</span><br/>
+                <span style="font-size:14px;color:#374151;margin-top:4px;display:block;">{{comment}}</span>
+              </td>
+            </tr>
+          </table>
+
+          <!-- CTA -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+            <tr><td align="center">
+              <a href="{{link}}" style="display:inline-block;padding:13px 28px;background:linear-gradient(135deg,#0b5566 0%,#08323a 100%);color:#ffffff;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">Voir le planning</a>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:20px 32px;text-align:center;">
+          <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Des questions ? Répondez à cet e-mail ou contactez votre centre.</p>
+          <p style="margin:0;font-size:13px;color:#6b7280;">Cordialement, <strong style="color:#0b5566;">L'équipe Frimousse</strong></p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
 </html>
