@@ -138,6 +138,7 @@ export default function PresenceSheets() {
   const [savingBilling, setSavingBilling] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [error, setError] = useState('');
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const [filterMonth, setFilterMonth] = useState<string>('');
   const [filterYear, setFilterYear] = useState<string>('');
@@ -295,6 +296,28 @@ export default function PresenceSheets() {
     finally { setSavingBilling(false); }
   }
 
+  async function downloadPdf(sheet: Sheet) {
+    setDownloadingPdf(true);
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/presence-sheets/${sheet.id}/pdf`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Erreur PDF');
+      const blob = await res.blob();
+      const name = `fiche-presence-${sheet.month}-${sheet.year}.pdf`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('Erreur lors du téléchargement du PDF');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   async function createSheet() {
     setSaving(true); setError('');
     try {
@@ -351,7 +374,9 @@ export default function PresenceSheets() {
 
   return (
     <div className="min-h-screen bg-[#f4f7fa] p-2 sm:p-4 md:pl-64 w-full">
-      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
+
+
+<div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
@@ -549,9 +574,9 @@ export default function PresenceSheets() {
                         {sending ? 'Envoi…' : 'Envoyer aux parents'}
                       </button>
                     )}
-                    <button onClick={() => window.open(`${API_URL}/presence-sheets/${selectedSheet.id}/pdf`, '_blank')}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50">
-                      <HiOutlineDownload className="w-3.5 h-3.5" /> PDF
+                    <button onClick={() => downloadPdf(selectedSheet)} disabled={downloadingPdf}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 disabled:opacity-50">
+                      <HiOutlineDownload className="w-3.5 h-3.5" /> {downloadingPdf ? '…' : 'PDF'}
                     </button>
                     {isAdminUser && selectedSheet.status === 'signed' && (
                       <button onClick={() => resetSheetStatus(selectedSheet.id, 'sent')}

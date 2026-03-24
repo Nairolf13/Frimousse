@@ -7,6 +7,29 @@ import type { User } from './context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { HelmetProvider } from 'react-helmet-async';
 
+function prefetchRoutes() {
+  const imports = [
+    () => import('../pages/Dashboard'),
+    () => import('../pages/Children'),
+    () => import('../pages/Nannies'),
+    () => import('../pages/ParentDashboard'),
+    () => import('../pages/PresenceSheets'),
+    () => import('../pages/Feed'),
+    () => import('../pages/MonPlanning'),
+    () => import('../pages/Settings'),
+    () => import('../pages/Notifications'),
+    () => import('../pages/ReportsPage'),
+    () => import('../components/ProtectedLayout'),
+  ];
+  if ('requestIdleCallback' in window) {
+    (window as Window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(() => {
+      imports.forEach(fn => fn().catch(() => null));
+    });
+  } else {
+    setTimeout(() => imports.forEach(fn => fn().catch(() => null)), 2000);
+  }
+}
+
 function App() {
   const [user, setUser] = useState<User | null>(null);
   useEffect(() => {
@@ -20,6 +43,7 @@ function App() {
       .then(res => res && res.ok ? res.json() : null)
       .then(async data => {
         setUser(data);
+        if (data) prefetchRoutes();
         try {
           // if authenticated and there's a registered service worker subscription, associate it to this user
           if (data && typeof window !== 'undefined' && 'serviceWorker' in navigator) {

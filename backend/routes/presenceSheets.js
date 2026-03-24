@@ -686,9 +686,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
     });
 
     const buf = Buffer.concat(chunks);
-    const filename = `presence_${sheet.child.name.replace(/\s+/g, '_')}_${sheet.month}-${sheet.year}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.status(200).send(buf);
   } catch (err) {
     console.error('GET /api/presence-sheets/:id/pdf error', err);
