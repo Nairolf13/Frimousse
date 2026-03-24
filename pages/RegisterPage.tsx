@@ -774,23 +774,91 @@ export default function RegisterPage() {
           <h3 className="text-sm font-bold text-gray-800">Choisir une offre</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <button type="button" onClick={() => setInitialPlan('decouverte')} className={`group p-5 rounded-2xl border-2 focus:outline-none flex flex-col items-center text-center transition-all ${initialPlan === 'decouverte' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
+          {/* Découverte */}
+          <button type="button" onClick={() => setInitialPlan('decouverte')} className={`group p-4 rounded-2xl border-2 focus:outline-none flex flex-col text-left transition-all ${initialPlan === 'decouverte' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
             <div className="text-base font-extrabold text-brand-600 tracking-tight">Découverte</div>
             <div className="text-[11px] font-medium text-gray-400 mt-0.5">Essai 7 jours</div>
-            <div className="mt-2 text-xs text-gray-500 leading-relaxed">Tester Frimousse sans engagement</div>
-            <div className="mt-auto pt-3 text-2xl font-black text-brand-500">0€</div>
+            <div className="text-2xl font-black text-brand-500 mt-2">0 € <span className="text-xs font-normal text-gray-400">pendant 7 jours</span></div>
+            <ul className="mt-3 space-y-1.5">
+              {[
+                "Tableau de bord & planning",
+                "Jusqu'à 2 enfants",
+                "Jusqu'à 2 nounous & parents",
+                "Rapports journaliers (2 max)",
+                "Fil d'actualité & photos",
+                "Notifications en temps réel",
+                "Feuilles de présence",
+                "Messagerie instantanée",
+                "Assistant IA",
+              ].map(f => (
+                <li key={f} className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  </span>
+                  {f}
+                </li>
+              ))}
+            </ul>
           </button>
-          <button type="button" onClick={() => setInitialPlan('essentiel')} className={`group p-5 rounded-2xl border-2 focus:outline-none flex flex-col items-center text-center transition-all ${initialPlan === 'essentiel' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
+          {/* Essentiel */}
+          <button type="button" onClick={() => setInitialPlan('essentiel')} className={`group p-4 rounded-2xl border-2 focus:outline-none flex flex-col text-left transition-all ${initialPlan === 'essentiel' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
             <div className="text-base font-extrabold text-brand-600 tracking-tight">Essentiel</div>
             <div className="text-[11px] font-medium text-gray-400 mt-0.5">Petites structures</div>
-            <div className="mt-2 text-xs text-gray-500 leading-relaxed">10 enfants, exports, notifications</div>
-            <div className="mt-auto pt-3 text-2xl font-black text-brand-500">29,99€ <span className="text-xs font-normal text-gray-400">/ mois</span></div>
+            <div className="text-2xl font-black text-brand-500 mt-2">39,99 € <span className="text-xs font-normal text-gray-400">/ mois</span></div>
+            <ul className="mt-3 space-y-1.5">
+              {[
+                { text: "Tableau de bord & planning", included: true },
+                { text: "Jusqu'à 10 enfants", included: true },
+                { text: "Jusqu'à 10 nounous & parents", included: true },
+                { text: "Rapports journaliers illimités", included: true },
+                { text: "Fil d'actualité & photos", included: true },
+                { text: "Notifications en temps réel", included: true },
+                { text: "Feuilles de présence numériques", included: true },
+                { text: "Messagerie instantanée", included: false },
+                { text: "Assistant IA", included: false },
+              ].map(f => (
+                <li key={f.text} className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                  {f.included ? (
+                    <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    </span>
+                  ) : (
+                    <span className="flex-shrink-0 w-4 h-4 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center">
+                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </span>
+                  )}
+                  <span className={f.included ? '' : 'text-gray-400'}>{f.text}</span>
+                </li>
+              ))}
+            </ul>
           </button>
-          <button type="button" onClick={() => setInitialPlan('pro')} className={`group p-5 rounded-2xl border-2 focus:outline-none flex flex-col items-center text-center transition-all ${initialPlan === 'pro' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
-            <div className="text-base font-extrabold text-brand-600 tracking-tight">Pro</div>
+          {/* Pro */}
+          <button type="button" onClick={() => setInitialPlan('pro')} className={`group p-4 rounded-2xl border-2 focus:outline-none flex flex-col text-left transition-all ${initialPlan === 'pro' ? 'border-brand-500 bg-brand-50/60 shadow-md ring-1 ring-brand-200 scale-[1.02]' : 'border-gray-400 bg-gray-50/40 hover:bg-white hover:shadow-sm hover:border-gray-500'}`}>
+            <div className="flex items-center gap-2">
+              <div className="text-base font-extrabold text-brand-600 tracking-tight">Pro</div>
+              <span className="text-[10px] font-bold bg-brand-500 text-white px-1.5 py-0.5 rounded-full">Populaire</span>
+            </div>
             <div className="text-[11px] font-medium text-gray-400 mt-0.5">Structures avancées</div>
-            <div className="mt-2 text-xs text-gray-500 leading-relaxed">Illimité, Assistant IA</div>
-            <div className="mt-auto pt-3 text-2xl font-black text-brand-500">59,99€ <span className="text-xs font-normal text-gray-400">/ mois</span></div>
+            <div className="text-2xl font-black text-brand-500 mt-2">69,99 € <span className="text-xs font-normal text-gray-400">/ mois</span></div>
+            <ul className="mt-3 space-y-1.5">
+              {[
+                "Tout le plan Essentiel inclus",
+                "Enfants, nounous & parents illimités",
+                "Facturations & historique des paiements",
+                "Feuilles de présence + signature numérique",
+                "Messagerie instantanée en temps réel",
+                "Assistant IA (rédaction, comptes-rendus)",
+                "Support prioritaire 7j/7",
+                "Mises à jour en continu",
+              ].map(f => (
+                <li key={f} className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
+                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+                  </span>
+                  {f}
+                </li>
+              ))}
+            </ul>
           </button>
         </div>
 
