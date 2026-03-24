@@ -108,14 +108,41 @@ router.post('/batch/details', auth, async (req, res) => {
 
     // compute per-nanny totals (sum of per-parent amounts)
     const nannyTotals = {};
+    const allParentIds = new Set();
     for (const nid of nannyIds) {
       const kids = nannyToChildren[nid] || [];
-      let total = 0;
+      for (const cid of kids) {
+        for (const pid of childToParents[cid] || []) allParentIds.add(pid);
+      }
+    }
+
+    // load adjustments for all parents this month
+    const monthStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+    const allParentIdsArr = Array.from(allParentIds);
+    const adjustmentsArr = allParentIdsArr.length > 0 ? await prisma.invoiceAdjustment.findMany({
+      where: { parentId: { in: allParentIdsArr }, month: monthStr },
+      select: { parentId: true, amount: true }
+    }) : [];
+    const adjustmentsByParent = {};
+    for (const adj of adjustmentsArr) {
+      adjustmentsByParent[adj.parentId] = (adjustmentsByParent[adj.parentId] || 0) + adj.amount;
+    }
+
+    for (const nid of nannyIds) {
+      const kids = nannyToChildren[nid] || [];
+      // compute per-parent subtotal first, then subtract reduction
+      const parentSubtotals = {};
       for (const cid of kids) {
         const days = childCounts[cid] || 0;
         const amount = days * 2;
-        const parents = childToParents[cid] || [];
-        total += amount * (parents.length || 0);
+        for (const pid of childToParents[cid] || []) {
+          parentSubtotals[pid] = (parentSubtotals[pid] || 0) + amount;
+        }
+      }
+      let total = 0;
+      for (const pid of Object.keys(parentSubtotals)) {
+        const reduction = adjustmentsByParent[pid] || 0;
+        total += Math.max(0, parentSubtotals[pid] - reduction);
       }
       nannyTotals[nid] = total;
     }
@@ -394,6 +421,23 @@ router.get('/:id/cotisation-total', auth, async (req, res) => {
       const amount = days * 2;
       for (const pid of childToParents[childId] || []) {
         parentTotals[pid] = (parentTotals[pid] || 0) + amount;
+      }
+    }
+
+    // subtract adjustments (reductions) for each parent this month
+    const monthStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+    const parentIds = Object.keys(parentTotals);
+
+    if (parentIds.length > 0) {
+      const adjustments = await prisma.invoiceAdjustment.findMany({
+        where: { parentId: { in: parentIds }, month: monthStr },
+        select: { parentId: true, amount: true }
+      });
+
+      for (const adj of adjustments) {
+        if (parentTotals[adj.parentId] !== undefined) {
+          parentTotals[adj.parentId] = Math.max(0, parentTotals[adj.parentId] - adj.amount);
+        }
       }
     }
 

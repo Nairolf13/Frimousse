@@ -54,8 +54,11 @@ export default function Dashboard() {
   const { t, locale } = useI18n();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   useEffect(() => {
-    if (user && user.nannyId) {
+    if (!user) return;
+    if (user.role === 'nanny') {
       navigate('/mon-planning', { replace: true });
+    } else if (user.role === 'parent') {
+      navigate('/parent', { replace: true });
     }
   }, [user, navigate]);
 
