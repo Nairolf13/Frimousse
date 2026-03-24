@@ -500,11 +500,19 @@ model PresenceSheet {
   centerId    String?
   month       Int                 // 1-12
   year        Int
-  status      String              @default("draft") // draft | sent | signed
-  entries     PresenceEntry[]
-  sentAt      DateTime?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
+  status          String              @default("draft") // draft | sent | signed
+  entries         PresenceEntry[]
+  sentAt          DateTime?
+  joursContrat    Int?
+  joursPresence   Int?
+  joursAbsence    Int?
+  heuresCompl     Float?
+  nannySignature  String?             // base64
+  nannySignedAt   DateTime?
+  parentSignature String?             // base64
+  parentSignedAt  DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
 
   @@unique([childId, nannyId, month, year])
   @@index([nannyId])
@@ -536,4 +544,28 @@ model StripeEvent {
   processedAt DateTime @default(now())
 
   @@index([processedAt])
+}
+
+// Super-admin announcements (bannieres in-app + emails broadcast)
+model Announcement {
+  id        String               @id @default(uuid())
+  title     String
+  message   String
+  type      String               @default("info") // info | success | warning | update
+  active    Boolean              @default(true)
+  sendEmail Boolean              @default(false)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  reads     AnnouncementRead[]
+}
+
+model AnnouncementRead {
+  id             String       @id @default(uuid())
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  announcementId String
+  userId         String
+  readAt         DateTime     @default(now())
+
+  @@unique([announcementId, userId])
+  @@index([userId])
 }

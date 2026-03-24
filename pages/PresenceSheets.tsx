@@ -32,6 +32,14 @@ type Sheet = {
   child: Child;
   nanny: Nanny;
   sentAt: string | null;
+  joursContrat: number | null;
+  joursPresence: number | null;
+  joursAbsence: number | null;
+  heuresCompl: number | null;
+  nannySignature: string | null;
+  nannySignedAt: string | null;
+  parentSignature: string | null;
+  parentSignedAt: string | null;
 };
 
 const MONTH_NAMES = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
@@ -98,10 +106,10 @@ function SignaturePad({ onSave, onCancel }: { onSave: (sig: string) => void; onC
         onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
         onTouchStart={start} onTouchMove={move} onTouchEnd={end}
       />
-      <div className="flex gap-2">
-        <button onClick={clear} className="px-3 py-1.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Effacer</button>
-        <button onClick={onCancel} className="px-3 py-1.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Annuler</button>
-        <button onClick={save} className="px-3 py-1.5 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:opacity-90">Valider</button>
+      <div className="flex gap-2 w-full">
+        <button onClick={clear} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100">Effacer</button>
+        <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100">Annuler</button>
+        <button onClick={save} className="flex-1 py-3 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:opacity-90 active:opacity-80">Valider</button>
       </div>
     </div>
   );
@@ -125,8 +133,14 @@ export default function PresenceSheets() {
   const [deleting, setDeleting] = useState(false);
   // { entryId, role: 'nanny'|'parent' }
   const [signingEntry, setSigningEntry] = useState<{ entryId: string; role: 'nanny' | 'parent' } | null>(null);
+  const [signingSheet, setSigningSheet] = useState<'nanny' | 'parent' | null>(null);
+  const [billingData, setBillingData] = useState({ joursContrat: '', joursPresence: '', joursAbsence: '', heuresCompl: '' });
+  const [savingBilling, setSavingBilling] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [error, setError] = useState('');
+
+  const [filterMonth, setFilterMonth] = useState<string>('');
+  const [filterYear, setFilterYear] = useState<string>('');
 
   const [children, setChildren] = useState<Child[]>([]);
   const [createForm, setCreateForm] = useState({
@@ -172,6 +186,12 @@ export default function PresenceSheets() {
   function openSheet(sheet: Sheet) {
     setSelectedSheet(sheet);
     setEditingEntries(sheet.entries.map(e => ({ ...e })));
+    setBillingData({
+      joursContrat: sheet.joursContrat != null ? String(sheet.joursContrat) : '',
+      joursPresence: sheet.joursPresence != null ? String(sheet.joursPresence) : '',
+      joursAbsence: sheet.joursAbsence != null ? String(sheet.joursAbsence) : '',
+      heuresCompl: sheet.heuresCompl != null ? String(sheet.heuresCompl) : '',
+    });
     setError(''); setSuccessMsg('');
   }
 
@@ -237,6 +257,42 @@ export default function PresenceSheets() {
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur lors de la signature'); }
     finally { setSaving(false); setSigningEntry(null); }
+  }
+
+  async function signSheet(role: 'nanny' | 'parent', signature: string) {
+    if (!selectedSheet) return;
+    setSaving(true);
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/presence-sheets/${selectedSheet.id}/sign`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ signature, role }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Erreur'); }
+      const updated: Sheet = await res.json();
+      setSelectedSheet(updated);
+      setSheets(prev => prev.map(s => s.id === updated.id ? updated : s));
+      setSuccessMsg('Feuille signée');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur lors de la signature'); }
+    finally { setSaving(false); setSigningSheet(null); }
+  }
+
+  async function saveBilling() {
+    if (!selectedSheet) return;
+    setSavingBilling(true);
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/presence-sheets/${selectedSheet.id}/billing`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify(billingData),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Erreur'); }
+      const updated: Sheet = await res.json();
+      setSelectedSheet(updated);
+      setSheets(prev => prev.map(s => s.id === updated.id ? updated : s));
+      setSuccessMsg('Données de facturation enregistrées');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur'); }
+    finally { setSavingBilling(false); }
   }
 
   async function createSheet() {
@@ -317,6 +373,45 @@ export default function PresenceSheets() {
           )}
         </div>
 
+        {/* Filtres mois / année */}
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <select
+            value={filterMonth}
+            onChange={e => setFilterMonth(e.target.value)}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
+          >
+            <option value="">Tous les mois</option>
+            {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+          </select>
+          <select
+            value={filterYear}
+            onChange={e => setFilterYear(e.target.value)}
+            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
+          >
+            <option value="">Toutes les années</option>
+            {[2024, 2025, 2026, 2027].map(y => <option key={y} value={String(y)}>{y}</option>)}
+          </select>
+          {(filterMonth || filterYear) && (
+            <button
+              onClick={() => { setFilterMonth(''); setFilterYear(''); }}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-gray-500 border border-gray-200 bg-white hover:bg-gray-50 transition"
+            >
+              <HiOutlineX className="w-3.5 h-3.5" /> Réinitialiser
+            </button>
+          )}
+          {(filterMonth || filterYear) && (
+            <span className="text-xs text-gray-400 ml-1">
+              {sheets.filter(s =>
+                (!filterMonth || s.month === Number(filterMonth)) &&
+                (!filterYear || s.year === Number(filterYear))
+              ).length} résultat{sheets.filter(s =>
+                (!filterMonth || s.month === Number(filterMonth)) &&
+                (!filterYear || s.year === Number(filterYear))
+              ).length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
         {/* Modal création */}
         {showCreate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -375,47 +470,57 @@ export default function PresenceSheets() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Liste */}
-          <div className={`lg:col-span-1 space-y-2 ${selectedSheet ? 'hidden lg:block' : ''}`}>
-            {sheets.length === 0 ? (
+        {/* Liste des feuilles — toujours visible, détail en dessous */}
+        {!selectedSheet && (
+          <div className="space-y-2 mb-4">
+            <p className="text-sm text-gray-400 text-center mb-3">Sélectionnez une feuille pour la consulter</p>
+            {sheets.filter(s =>
+                s.child && s.nanny &&
+                (!filterMonth || s.month === Number(filterMonth)) &&
+                (!filterYear || s.year === Number(filterYear))
+              ).length === 0 ? (
               <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-400">
                 <HiOutlineDocumentText className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">Aucune feuille de présence</p>
-                {canEdit && <p className="text-xs mt-1">Créez votre première feuille</p>}
-              </div>
-            ) : sheets.filter(s => s.child && s.nanny).map(sheet => (
-              <div key={sheet.id}
-                className={`bg-white rounded-2xl shadow border-2 transition-all hover:border-[#0b5566]/40 ${selectedSheet?.id === sheet.id ? 'border-[#0b5566]' : 'border-transparent'}`}>
-                <button className="w-full text-left p-4" onClick={() => openSheet(sheet)}>
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-semibold text-gray-900 text-sm">{sheet.child?.name}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">{MONTH_NAMES[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</div>
-                    </div>
-                    {statusBadge(sheet.status)}
-                  </div>
-                </button>
-                {isAdminUser && (
-                  <div className="px-4 pb-3 flex justify-end">
-                    <button onClick={() => setConfirmDeleteId(sheet.id)}
-                      className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition">
-                      <HiOutlineTrash className="w-3.5 h-3.5" /> Supprimer
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Détail */}
-          <div className="lg:col-span-2">
-            {!selectedSheet ? (
-              <div className="bg-white rounded-2xl shadow p-10 text-center text-gray-400">
-                <HiOutlineDocumentText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p className="text-sm">Sélectionnez une feuille pour la consulter</p>
+                <p className="text-sm">
+                  {filterMonth || filterYear ? 'Aucune feuille pour cette période' : 'Aucune feuille de présence'}
+                </p>
+                {canEdit && !filterMonth && !filterYear && <p className="text-xs mt-1">Créez votre première feuille</p>}
               </div>
             ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {sheets.filter(s =>
+                    s.child && s.nanny &&
+                    (!filterMonth || s.month === Number(filterMonth)) &&
+                    (!filterYear || s.year === Number(filterYear))
+                  ).map(sheet => (
+                  <div key={sheet.id}
+                    className="bg-white rounded-2xl shadow border-2 border-transparent transition-all hover:border-[#0b5566]/40 hover:shadow-md">
+                    <button className="w-full text-left p-4" onClick={() => openSheet(sheet)}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-semibold text-gray-900 text-sm">{sheet.child?.name}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{MONTH_NAMES[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</div>
+                        </div>
+                        {statusBadge(sheet.status)}
+                      </div>
+                    </button>
+                    {isAdminUser && (
+                      <div className="px-4 pb-3 flex justify-end">
+                        <button onClick={() => setConfirmDeleteId(sheet.id)}
+                          className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition">
+                          <HiOutlineTrash className="w-3.5 h-3.5" /> Supprimer
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Détail feuille sélectionnée */}
+        {selectedSheet && (
               <div className="bg-white rounded-2xl shadow overflow-hidden">
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -711,10 +816,92 @@ export default function PresenceSheets() {
                     )}
                   </div>
                 </div>
+
+                {/* Tableau de facturation + Signatures globales */}
+                <div className="px-5 py-5 border-t border-gray-100 space-y-5">
+
+                  {/* Tableau réservé à la facturation */}
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 text-center">Tableau Réservé à la Facturation</h3>
+                    <div className="border border-gray-300 rounded-xl overflow-hidden text-sm">
+                      {([
+                        { label: 'Nombre de jours de contrat', key: 'joursContrat' },
+                        { label: 'Nombre de jours de présence', key: 'joursPresence' },
+                        { label: "Nombre de jours d'absences", key: 'joursAbsence' },
+                        { label: "Nombre d'heures complémentaires", key: 'heuresCompl' },
+                      ] as { label: string; key: keyof typeof billingData }[]).map((row, i) => (
+                        <div key={i} className={`flex items-center ${i > 0 ? 'border-t border-gray-200' : ''}`}>
+                          <span className="flex-1 px-4 py-2.5 text-gray-700">{row.label}</span>
+                          {(isAdminUser || isNannyUser) ? (
+                            <input
+                              type="number"
+                              min="0"
+                              step={row.key === 'heuresCompl' ? '0.5' : '1'}
+                              value={billingData[row.key]}
+                              onChange={e => setBillingData(prev => ({ ...prev, [row.key]: e.target.value }))}
+                              onBlur={saveBilling}
+                              placeholder="—"
+                              className="w-20 border-l border-gray-200 px-3 py-2.5 text-center text-gray-800 bg-transparent focus:outline-none focus:bg-[#0b5566]/5 transition"
+                            />
+                          ) : (
+                            <span className="w-20 border-l border-gray-200 px-3 py-2.5 text-center text-gray-600">{billingData[row.key] || '—'}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    {savingBilling && <p className="text-[10px] text-gray-400 mt-1 text-right">Enregistrement…</p>}
+                  </div>
+
+                  {/* Signatures globales */}
+                  {selectedSheet.status !== 'draft' && (
+                  <div>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Signatures de validation</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Signature Nounou */}
+                      <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Signature Nounou</span>
+                        {selectedSheet.nannySignature ? (
+                          <img src={selectedSheet.nannySignature} alt="Signature nounou" className="h-16 w-full object-contain" />
+                        ) : (
+                          <div className="h-16 w-full flex items-center justify-center text-gray-300 text-xs border border-dashed border-gray-200 rounded-lg">Non signé</div>
+                        )}
+                        {selectedSheet.nannySignedAt && (
+                          <span className="text-[10px] text-gray-400">Signé le {new Date(selectedSheet.nannySignedAt).toLocaleDateString('fr-FR')}</span>
+                        )}
+                        {(isNannyUser || isAdminUser) && !selectedSheet.nannySignature && (
+                          <button
+                            onClick={() => setSigningSheet('nanny')}
+                            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[#0b5566]/40 text-xs text-[#0b5566] hover:bg-[#0b5566]/5 transition">
+                            <HiOutlinePencil className="w-3 h-3" /> Signer
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Signature Parent */}
+                      <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Signature Parent</span>
+                        {selectedSheet.parentSignature ? (
+                          <img src={selectedSheet.parentSignature} alt="Signature parent" className="h-16 w-full object-contain" />
+                        ) : (
+                          <div className="h-16 w-full flex items-center justify-center text-gray-300 text-xs border border-dashed border-gray-200 rounded-lg">Non signé</div>
+                        )}
+                        {selectedSheet.parentSignedAt && (
+                          <span className="text-[10px] text-gray-400">Signé le {new Date(selectedSheet.parentSignedAt).toLocaleDateString('fr-FR')}</span>
+                        )}
+                        {isParentUser && !selectedSheet.parentSignature && (
+                          <button
+                            onClick={() => setSigningSheet('parent')}
+                            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-emerald-400/60 text-xs text-emerald-600 hover:bg-emerald-50 transition">
+                            <HiOutlinePencil className="w-3 h-3" /> Signer
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+        )}
 
         {/* Modal confirmation suppression */}
         {confirmDeleteId && (
@@ -767,10 +954,29 @@ export default function PresenceSheets() {
           </div>
         )}
 
+        {/* Modal signature globale de la feuille */}
+        {signingSheet && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-sm overflow-y-auto max-h-[90vh] p-6 pb-8">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold text-[#0b5566] text-sm">
+                  Signature {signingSheet === 'nanny' ? 'Nounou' : 'Parent'} — Validation
+                </h2>
+                <button onClick={() => setSigningSheet(null)} className="p-2 rounded-full hover:bg-gray-100"><HiOutlineX className="w-5 h-5 text-gray-400" /></button>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">Signez pour valider l'ensemble de la feuille de présence du mois.</p>
+              <SignaturePad
+                onSave={sig => signSheet(signingSheet, sig)}
+                onCancel={() => setSigningSheet(null)}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Modal signature par entrée */}
         {signingEntry && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm overflow-y-auto max-h-[90vh] p-6 pb-8">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-[#0b5566]">
                   Signature {signingEntry.role === 'nanny' ? 'Nounou' : 'Parent'} — {(() => {

@@ -7,6 +7,7 @@ import { TutorialProvider } from '../src/context/TutorialContext';
 import TutorialOverlay from './TutorialOverlay';
 import TutorialMenu from './TutorialMenu';
 import { useAuth } from '../src/context/AuthContext';
+import AnnouncementBanner from './AnnouncementBanner';
 
 export default function ProtectedLayout() {
   const { user, setUser } = useAuth();
@@ -74,6 +75,7 @@ export default function ProtectedLayout() {
 
   return (
     <TutorialProvider>
+      <AnnouncementBanner />
       <div className="flex min-h-screen">
         <Sidebar />
         <main className="flex-1 bg-[#f4f7fa] pt-12 md:pt-0 max-w-full overflow-x-hidden box-border">

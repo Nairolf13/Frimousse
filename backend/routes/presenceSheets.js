@@ -202,6 +202,32 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
+// PATCH /api/presence-sheets/:id/billing — mise à jour du tableau de facturation (admin/nanny)
+router.patch('/:id/billing', auth, async (req, res) => {
+  try {
+    const sheet = await prisma.presenceSheet.findUnique({ where: { id: req.params.id } });
+    if (!sheet) return res.status(404).json({ error: 'Feuille introuvable' });
+    if (!isAdmin(req.user) && !(isNanny(req.user) && sheet.nannyId === req.user.nannyId)) {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+    const { joursContrat, joursPresence, joursAbsence, heuresCompl } = req.body;
+    const updated = await prisma.presenceSheet.update({
+      where: { id: sheet.id },
+      data: {
+        joursContrat: joursContrat !== undefined ? (joursContrat === '' ? null : parseInt(joursContrat)) : undefined,
+        joursPresence: joursPresence !== undefined ? (joursPresence === '' ? null : parseInt(joursPresence)) : undefined,
+        joursAbsence: joursAbsence !== undefined ? (joursAbsence === '' ? null : parseInt(joursAbsence)) : undefined,
+        heuresCompl: heuresCompl !== undefined ? (heuresCompl === '' ? null : parseFloat(heuresCompl)) : undefined,
+      },
+      include: { child: true, nanny: true, entries: { orderBy: { date: 'asc' } } },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('PATCH /api/presence-sheets/:id/billing error', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // PATCH /api/presence-sheets/:id/entries — mise à jour des entrées (nanny/admin uniquement)
 router.patch('/:id/entries', auth, async (req, res) => {
   try {
@@ -321,7 +347,6 @@ router.post('/:id/entries/:entryId/sign', auth, async (req, res) => {
     if (isNanny(req.user) && sheet.nannyId === req.user.nannyId) {
       updateData = { nannySignature: signature, nannySignedAt: new Date() };
     } else if (isParent(req.user)) {
-      // vérifier que le parent est bien parent de cet enfant
       let parentId = req.user.parentId;
       if (!parentId) {
         const parentRecord = await prisma.parent.findFirst({ where: { user: { id: req.user.id } }, select: { id: true } });
@@ -331,10 +356,20 @@ router.post('/:id/entries/:entryId/sign', auth, async (req, res) => {
       if (!ok) return res.status(403).json({ error: 'Accès interdit' });
       updateData = { parentSignature: signature, parentSignedAt: new Date() };
     } else if (isAdmin(req.user)) {
-      // admin peut signer des deux côtés selon le paramètre role
       const { role } = req.body;
-      if (role === 'parent') updateData = { parentSignature: signature, parentSignedAt: new Date() };
-      else updateData = { nannySignature: signature, nannySignedAt: new Date() };
+      if (role === 'parent') {
+        // L'admin ne peut signer côté parent que s'il est aussi parent de cet enfant
+        let parentId = req.user.parentId;
+        if (!parentId) {
+          const parentRecord = await prisma.parent.findFirst({ where: { user: { id: req.user.id } }, select: { id: true } });
+          parentId = parentRecord?.id || null;
+        }
+        const ok = parentId && sheet.child.parents.some(pc => pc.parentId === parentId);
+        if (!ok) return res.status(403).json({ error: 'Seul le parent de l\'enfant peut signer côté parent' });
+        updateData = { parentSignature: signature, parentSignedAt: new Date() };
+      } else {
+        updateData = { nannySignature: signature, nannySignedAt: new Date() };
+      }
     } else {
       return res.status(403).json({ error: 'Accès interdit' });
     }
@@ -406,6 +441,56 @@ router.post('/:id/entries/:entryId/sign', auth, async (req, res) => {
   }
 });
 
+// POST /api/presence-sheets/:id/sign — signature globale de la feuille
+router.post('/:id/sign', auth, async (req, res) => {
+  try {
+    const sheet = await prisma.presenceSheet.findUnique({
+      where: { id: req.params.id },
+      include: { child: { include: { parents: true } } },
+    });
+    if (!sheet) return res.status(404).json({ error: 'Feuille introuvable' });
+    if (sheet.status === 'draft') return res.status(400).json({ error: 'La feuille doit être envoyée avant de pouvoir être signée' });
+
+    const { signature, role } = req.body;
+    if (!signature) return res.status(400).json({ error: 'Signature requise' });
+
+    let updateData = {};
+    if (isNanny(req.user) && sheet.nannyId === req.user.nannyId) {
+      updateData = { nannySignature: signature, nannySignedAt: new Date() };
+    } else if (isParent(req.user)) {
+      const parentId = req.user.parentId;
+      const ok = parentId && sheet.child.parents.some(pc => pc.parentId === parentId);
+      if (!ok) return res.status(403).json({ error: 'Accès interdit' });
+      updateData = { parentSignature: signature, parentSignedAt: new Date() };
+    } else if (isAdmin(req.user)) {
+      if (role === 'parent') {
+        let parentId = req.user.parentId;
+        if (!parentId) {
+          const parentRecord = await prisma.parent.findFirst({ where: { user: { id: req.user.id } }, select: { id: true } });
+          parentId = parentRecord?.id || null;
+        }
+        const ok = parentId && sheet.child.parents.some(pc => pc.parentId === parentId);
+        if (!ok) return res.status(403).json({ error: 'Seul le parent de l\'enfant peut signer côté parent' });
+        updateData = { parentSignature: signature, parentSignedAt: new Date() };
+      } else {
+        updateData = { nannySignature: signature, nannySignedAt: new Date() };
+      }
+    } else {
+      return res.status(403).json({ error: 'Accès interdit' });
+    }
+
+    const updated = await prisma.presenceSheet.update({
+      where: { id: sheet.id },
+      data: updateData,
+      include: { child: true, nanny: true, entries: { orderBy: { date: 'asc' } } },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error('POST /api/presence-sheets/:id/sign error', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // GET /api/presence-sheets/:id/pdf — export PDF
 router.get('/:id/pdf', auth, async (req, res) => {
   try {
@@ -416,6 +501,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
         nanny: { select: { id: true, name: true } },
         center: { select: { name: true } },
         entries: { orderBy: { date: 'asc' } },
+        // joursContrat, joursPresence, joursAbsence, heuresCompl, nannySignature, nannySignedAt, parentSignature, parentSignedAt are scalar fields — included by default
       },
     });
     if (!sheet) return res.status(404).json({ error: 'Feuille introuvable' });
@@ -430,7 +516,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
     }
 
     const PDFDocument = require('pdfkit');
-    const doc = new PDFDocument({ margin: 40, size: 'A4' });
+    const doc = new PDFDocument({ margin: 30, size: 'A4' });
     const chunks = [];
     doc.on('data', c => chunks.push(c));
 
@@ -446,34 +532,39 @@ router.get('/:id/pdf', auth, async (req, res) => {
       const pageW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
       const tableX = doc.page.margins.left;
 
-      // En-tête
-      doc.font('Helvetica-Bold').fontSize(14).fillColor('#0b5566').text(centerName, { align: 'left' });
-      doc.moveDown(0.2);
-      doc.font('Helvetica').fontSize(10).fillColor('#374151').text('Fiche de relevé de présences', { align: 'left' });
-      doc.fontSize(9).fillColor('#6b7280').text(`Mois : ${monthLabel}`, { align: 'left' });
+      // En-tête compact sur une ligne
+      const headerY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(11).fillColor('#0b5566').text(centerName, tableX, headerY, { width: pageW / 2, lineBreak: false });
+      doc.font('Helvetica').fontSize(8).fillColor('#374151').text('Fiche de relevé de présences', tableX + pageW / 2, headerY, { width: pageW / 2, align: 'right', lineBreak: false });
       doc.moveDown(0.3);
-      doc.font('Helvetica-Bold').fontSize(11).fillColor('#0b5566').text(`Enfant : ${sheet.child.name}`);
-      doc.font('Helvetica').fontSize(9).fillColor('#374151').text(`Nounou : ${sheet.nanny.name}`);
-      doc.moveDown(0.6);
+      const infoY = doc.y;
+      doc.font('Helvetica').fontSize(8).fillColor('#6b7280').text(`Mois : ${monthLabel}  |  Enfant : ${sheet.child.name}  |  Nounou : ${sheet.nanny.name}`, tableX, infoY, { width: pageW });
+      doc.moveDown(0.4);
 
       // Séparateur
       doc.moveTo(tableX, doc.y).lineTo(tableX + pageW, doc.y).strokeColor('#e5e7eb').lineWidth(1).stroke();
       doc.moveDown(0.5);
 
       // En-tête tableau
-      const colDate = 70, colDay = 45, colArr = 65, colDep = 65, colAbs = 45, colComment = pageW - colDate - colDay - colArr - colDep - colAbs;
-      const rowH = 18;
+      const colDate = 60, colDay = 30, colArr = 45, colDep = 45, colAbs = 35, colComment = 70;
+      const colSigN = (pageW - colDate - colDay - colArr - colDep - colAbs - colComment) / 2;
+      const colSigP = colSigN;
+      const rowH = 16; // hauteur très compacte
 
-      doc.rect(tableX, doc.y, pageW, rowH).fill('#f1f5f9');
+      doc.rect(tableX, doc.y, pageW, 14).fill('#f1f5f9');
       const hY = doc.y + 4;
-      doc.font('Helvetica-Bold').fontSize(8).fillColor('#374151');
+      doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#374151');
       doc.text('Date', tableX + 4, hY, { width: colDate });
       doc.text('Jour', tableX + colDate, hY, { width: colDay });
       doc.text('Arrivée', tableX + colDate + colDay, hY, { width: colArr });
       doc.text('Départ', tableX + colDate + colDay + colArr, hY, { width: colDep });
       doc.text('Absent', tableX + colDate + colDay + colArr + colDep, hY, { width: colAbs });
       doc.text('Commentaire', tableX + colDate + colDay + colArr + colDep + colAbs, hY, { width: colComment });
-      doc.moveDown(1.2);
+      const sigNX = tableX + colDate + colDay + colArr + colDep + colAbs + colComment;
+      const sigPX = sigNX + colSigN;
+      doc.text('Sig. Nounou', sigNX, hY, { width: colSigN });
+      doc.text('Sig. Parent', sigPX, hY, { width: colSigP });
+      doc.moveDown(0.9);
 
       // Lignes
       for (const entry of sheet.entries) {
@@ -487,47 +578,109 @@ router.get('/:id/pdf', auth, async (req, res) => {
         const tY = rowY + 4;
         const color = weekend ? '#9ca3af' : '#111827';
         const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        doc.font('Helvetica').fontSize(8).fillColor(color);
+        doc.font('Helvetica').fontSize(7.5).fillColor(color);
         doc.text(dateStr, tableX + 4, tY, { width: colDate });
         doc.text(dayNames[d.getDay()], tableX + colDate, tY, { width: colDay });
         doc.fillColor(entry.absent ? '#dc2626' : color).text(entry.arrivalTime || '—', tableX + colDate + colDay, tY, { width: colArr });
         doc.fillColor(entry.absent ? '#dc2626' : color).text(entry.departureTime || '—', tableX + colDate + colDay + colArr, tY, { width: colDep });
         doc.fillColor(entry.absent ? '#dc2626' : '#6b7280').text(entry.absent ? 'Absent' : '', tableX + colDate + colDay + colArr + colDep, tY, { width: colAbs });
-        doc.fillColor('#6b7280').text(entry.comment || '', tableX + colDate + colDay + colArr + colDep + colAbs, tY, { width: colComment - 4 });
-        doc.moveDown(1.1);
+        doc.fillColor('#6b7280').text(entry.comment || '', tableX + colDate + colDay + colArr + colDep + colAbs, tY, { width: colComment - 2, lineBreak: false });
 
+        // Signatures par entrée
+        const sigImgH = rowH - 2;
+        const sigImgW = colSigN - 4;
+        if (entry.nannySignature) {
+          try {
+            const imgData = entry.nannySignature.replace(/^data:image\/\w+;base64,/, '');
+            const imgBuf = Buffer.from(imgData, 'base64');
+            doc.image(imgBuf, sigNX + 2, tY - 2, { width: sigImgW, height: sigImgH, fit: [sigImgW, sigImgH] });
+          } catch (_) {
+            doc.font('Helvetica').fontSize(6).fillColor('#16a34a').text('✓', sigNX + 4, tY + 8, { width: colSigN });
+          }
+        } else if (!weekend && !entry.absent) {
+          doc.font('Helvetica').fontSize(6).fillColor('#d1d5db').text('—', sigNX + 4, tY + 8, { width: colSigN });
+        }
+        if (entry.parentSignature) {
+          try {
+            const imgData = entry.parentSignature.replace(/^data:image\/\w+;base64,/, '');
+            const imgBuf = Buffer.from(imgData, 'base64');
+            doc.image(imgBuf, sigPX + 2, tY - 2, { width: sigImgW, height: sigImgH, fit: [sigImgW, sigImgH] });
+          } catch (_) {
+            doc.font('Helvetica').fontSize(6).fillColor('#16a34a').text('✓', sigPX + 4, tY + 8, { width: colSigP });
+          }
+        } else if (!weekend && !entry.absent) {
+          doc.font('Helvetica').fontSize(6).fillColor('#d1d5db').text('—', sigPX + 4, tY + 8, { width: colSigP });
+        }
+
+        doc.y = rowY + rowH;
         if (doc.y > doc.page.height - doc.page.margins.bottom - 100) doc.addPage();
       }
 
-      // Récapitulatif
-      doc.moveDown(0.5);
+      // Séparateur
+      doc.moveDown(0.4);
       doc.moveTo(tableX, doc.y).lineTo(tableX + pageW, doc.y).strokeColor('#e5e7eb').lineWidth(1).stroke();
-      doc.moveDown(0.5);
-      const presenceDays = sheet.entries.filter(e => !e.absent && e.arrivalTime && !isWeekend(new Date(e.date))).length;
-      const absentDays = sheet.entries.filter(e => e.absent).length;
-      doc.font('Helvetica-Bold').fontSize(9).fillColor('#0b5566').text(`Jours de présence : ${presenceDays}    Jours d'absence : ${absentDays}`);
-      doc.moveDown(1.5);
+      doc.moveDown(0.4);
 
-      // Zone signatures
+      // Signatures globales côte à côte
       const sigW = (pageW - 20) / 2;
-      doc.font('Helvetica-Bold').fontSize(9).fillColor('#374151');
-      doc.text('Signature Nounou', tableX, doc.y, { width: sigW });
-      doc.text('Signature Parent', tableX + sigW + 20, doc.y - doc.currentLineHeight(), { width: sigW });
-      doc.moveDown(0.3);
+      const sigH = 45;
+      const sigLabelY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(8).fillColor('#374151');
+      doc.text('Signature Nounou', tableX, sigLabelY, { width: sigW, align: 'center' });
+      doc.text('Signature Parent', tableX + sigW + 20, sigLabelY, { width: sigW, align: 'center' });
 
-      const sigBoxY = doc.y;
-      doc.rect(tableX, sigBoxY, sigW, 50).strokeColor('#d1d5db').lineWidth(1).stroke();
-      doc.rect(tableX + sigW + 20, sigBoxY, sigW, 50).strokeColor('#d1d5db').lineWidth(1).stroke();
+      const sigBoxY = sigLabelY + 12;
+      doc.rect(tableX, sigBoxY, sigW, sigH).strokeColor('#d1d5db').lineWidth(1).stroke();
+      doc.rect(tableX + sigW + 20, sigBoxY, sigW, sigH).strokeColor('#d1d5db').lineWidth(1).stroke();
 
+      if (sheet.nannySignature) {
+        try {
+          const imgBuf = Buffer.from(sheet.nannySignature.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+          doc.image(imgBuf, tableX, sigBoxY, { width: sigW, height: sigH - 12, fit: [sigW, sigH - 12], align: 'center', valign: 'center' });
+        } catch (_) {}
+      }
       if (sheet.nannySignedAt) {
-        doc.font('Helvetica').fontSize(7).fillColor('#6b7280').text(`Signé le ${new Date(sheet.nannySignedAt).toLocaleDateString('fr-FR')}`, tableX + 4, sigBoxY + 38, { width: sigW - 8 });
+        doc.font('Helvetica').fontSize(6).fillColor('#6b7280').text(`Signé le ${new Date(sheet.nannySignedAt).toLocaleDateString('fr-FR')}`, tableX, sigBoxY + sigH - 10, { width: sigW, align: 'center' });
+      }
+      if (sheet.parentSignature) {
+        try {
+          const imgBuf = Buffer.from(sheet.parentSignature.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+          doc.image(imgBuf, tableX + sigW + 20, sigBoxY, { width: sigW, height: sigH - 12, fit: [sigW, sigH - 12], align: 'center', valign: 'center' });
+        } catch (_) {}
       }
       if (sheet.parentSignedAt) {
-        doc.font('Helvetica').fontSize(7).fillColor('#6b7280').text(`Signé le ${new Date(sheet.parentSignedAt).toLocaleDateString('fr-FR')}`, tableX + sigW + 24, sigBoxY + 38, { width: sigW - 8 });
+        doc.font('Helvetica').fontSize(6).fillColor('#6b7280').text(`Signé le ${new Date(sheet.parentSignedAt).toLocaleDateString('fr-FR')}`, tableX + sigW + 20, sigBoxY + sigH - 10, { width: sigW, align: 'center' });
       }
 
-      doc.moveDown(0.5);
-      doc.font('Helvetica').fontSize(7).fillColor('#9ca3af').text(`Document généré le ${new Date().toLocaleDateString('fr-FR')} — ${centerName}`, { align: 'center' });
+      doc.y = sigBoxY + sigH + 10;
+
+      // Tableau réservé à la facturation
+      const facRows = [
+        { label: 'Nombre de jours de contrat', value: sheet.joursContrat != null ? String(sheet.joursContrat) : '' },
+        { label: 'Nombre de jours de présence', value: sheet.joursPresence != null ? String(sheet.joursPresence) : '' },
+        { label: "Nombre de jours d'absences", value: sheet.joursAbsence != null ? String(sheet.joursAbsence) : '' },
+        { label: "Nombre d'heures complémentaires", value: sheet.heuresCompl != null ? String(sheet.heuresCompl) : '' },
+      ];
+      const facRowH = 14;
+      const facTitleW = pageW;
+      const facColLabel = facTitleW * 0.75;
+      const facColVal = facTitleW - facColLabel;
+      const facStartY = doc.y;
+      doc.font('Helvetica-Bold').fontSize(8).fillColor('#374151').text('Tableau Réservé à la Facturation', tableX, facStartY, { width: facTitleW, align: 'center' });
+      let facY = facStartY + 12;
+      doc.rect(tableX, facY, facTitleW, facRowH * facRows.length).strokeColor('#374151').lineWidth(0.8).stroke();
+      for (let i = 0; i < facRows.length; i++) {
+        const ry = facY + i * facRowH;
+        if (i > 0) doc.moveTo(tableX, ry).lineTo(tableX + facTitleW, ry).strokeColor('#374151').lineWidth(0.5).stroke();
+        doc.moveTo(tableX + facColLabel, ry).lineTo(tableX + facColLabel, ry + facRowH).strokeColor('#374151').lineWidth(0.5).stroke();
+        doc.font('Helvetica').fontSize(7).fillColor('#111827').text(facRows[i].label, tableX + 4, ry + 3, { width: facColLabel - 8, lineBreak: false });
+        if (facRows[i].value) {
+          doc.font('Helvetica-Bold').fontSize(7).fillColor('#0b5566').text(facRows[i].value, tableX + facColLabel + 2, ry + 3, { width: facColVal - 4, align: 'center', lineBreak: false });
+        }
+      }
+
+      doc.y = facY + facRowH * facRows.length + 8;
+      doc.font('Helvetica').fontSize(6).fillColor('#9ca3af').text(`Document généré le ${new Date().toLocaleDateString('fr-FR')} — ${centerName}`, { align: 'center' });
 
       doc.end();
     });
