@@ -1,15 +1,10 @@
 import { useTutorial } from '../src/context/useTutorial';
-import { useEffect, useState } from 'react';
+import { useAuth } from '../src/context/AuthContext';
 
 export default function TutorialMenu() {
   const { tours, showMenu, closeMenu, startTour, isActive } = useTutorial();
-  const [completed, setCompleted] = useState<string[]>([]);
-
-  useEffect(() => {
-    try {
-      setCompleted(JSON.parse(localStorage.getItem('tutorial_completed') || '[]'));
-    } catch { /* ignore */ }
-  }, [showMenu]);
+  const { user } = useAuth();
+  const completed = user?.tutorialCompleted ?? [];
 
   if (!showMenu || isActive) return null;
 

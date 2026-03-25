@@ -158,7 +158,7 @@ const TOURS: Tour[] = [
 export function TutorialProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const isAdmin = user && typeof user.role === 'string' && (user.role === 'admin' || user.role.toLowerCase().includes('super'));
   const [activeTour, setActiveTour] = useState<Tour | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
@@ -188,30 +188,33 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     setActiveTour(null);
     setCurrentStep(0);
     pendingRoute.current = null;
-    // Rouvre le menu sauf si tous les tours sont déjà complétés
-    try {
-      const done = JSON.parse(localStorage.getItem('tutorial_completed') || '[]');
-      const allDone = TOURS.every(t => done.includes(t.id));
-      if (!allDone) setShowMenu(true);
-    } catch { setShowMenu(true); }
+    setShowMenu(true);
   }, []);
 
   const nextStep = useCallback(() => {
     if (!activeTour) return;
     if (currentStep >= activeTour.steps.length - 1) {
-      // Mark tour as completed
-      let allDone = false;
-      try {
-        const done = JSON.parse(localStorage.getItem('tutorial_completed') || '[]');
-        if (!done.includes(activeTour.id)) done.push(activeTour.id);
-        localStorage.setItem('tutorial_completed', JSON.stringify(done));
-        allDone = TOURS.every(t => done.includes(t.id));
-      } catch { /* ignore */ }
+      // Mark tour as completed in DB + local state
+      const tourId = activeTour.id;
+      fetch('/api/user/tutorial-completed', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tourId }),
+      }).catch(() => { /* ignore */ });
+      if (user) {
+        const prev = user.tutorialCompleted || [];
+        if (!prev.includes(tourId)) {
+          const next = [...prev, tourId];
+          setUser({ ...user, tutorialCompleted: next });
+          // Fallback localStorage pour cohérence
+          try { localStorage.setItem('tutorial_completed', JSON.stringify(next)); } catch { /* ignore */ }
+        }
+      }
       setActiveTour(null);
       setCurrentStep(0);
       pendingRoute.current = null;
-      // Rouvre le menu sauf si tous les tours sont terminés
-      if (!allDone) setShowMenu(true);
+      setShowMenu(true);
       return;
     }
     const nextIdx = currentStep + 1;
@@ -227,7 +230,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     } else {
       setCurrentStep(nextIdx);
     }
-  }, [activeTour, currentStep, location.pathname, navigate]);
+  }, [activeTour, currentStep, location.pathname, navigate, user, setUser]);
 
   const prevStep = useCallback(() => {
     if (!activeTour || currentStep <= 0) return;

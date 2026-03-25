@@ -11,6 +11,9 @@ export interface User {
   plan?: string | null;
   subscriptionStatus?: string | null;
   tutorialSeen?: boolean;
+  tutorialCompleted?: string[];
+  cookieConsent?: string | null;
+  language?: string | null;
   profileCompleted?: boolean;
 }
 

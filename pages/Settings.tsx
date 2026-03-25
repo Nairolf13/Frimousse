@@ -412,6 +412,7 @@ export default function Settings() {
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null);
   const [pushSubId, setPushSubId] = useState<string | null>(null);
+  const [pushDeniedModal, setPushDeniedModal] = useState(false);
   const [language, setLanguage] = useState(() => {
     try {
       const saved = localStorage.getItem('site_language');
@@ -424,18 +425,20 @@ export default function Settings() {
       document.documentElement.lang = language === 'en' ? 'en' : 'fr';
       localStorage.setItem('site_language', language);
       document.cookie = `site_language=${language};path=/;max-age=${60 * 60 * 24 * 365}`;
-    } catch {
-      // ignore
+    } catch { /* ignore */ }
+    if (authUser) {
+      fetch('/api/user/preferences', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language }),
+      }).catch(() => { /* ignore */ });
     }
-  }, [language]);
+  }, [language]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const { t, setLocale } = useI18n();
   const { tours, toggleMenu: openTutorialMenu } = useTutorial();
-  const [completedTours, setCompletedTours] = useState<string[]>([]);
-  useEffect(() => {
-    try { setCompletedTours(JSON.parse(localStorage.getItem('tutorial_completed') || '[]')); } catch { /* ignore */ }
-  }, []);
+  const completedTours = authUser?.tutorialCompleted ?? [];
   const isAdmin = !!(authUser && typeof authUser.role === 'string' && (authUser.role === 'admin' || authUser.role.toLowerCase().includes('super')));
   const isSuperAdmin = !!(authUser && typeof authUser.role === 'string' && authUser.role.toLowerCase().includes('super'));
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -754,9 +757,8 @@ export default function Settings() {
                         }
                       } catch { /* ignore backend save errors */ }
                       setPushEnabled(true);
-                    } catch (err) {
-                      const msg = err instanceof Error ? err.message : String(err);
-                      alert('Impossible d\'activer les notifications push: ' + msg);
+                    } catch {
+                      setPushDeniedModal(true);
                     }
                   }} className="sr-only peer" />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
@@ -873,7 +875,31 @@ export default function Settings() {
         </div>
       </div>
 
-        {showDeleteModal && (
+        {pushDeniedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm flex flex-col items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center">
+              <svg className="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+              </svg>
+            </div>
+            <div className="text-center">
+              <h3 className="font-bold text-gray-900 text-base mb-1">Notifications bloquées</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Votre navigateur a bloqué les notifications. Pour les activer, cliquez sur l'icône <strong>🔒</strong> dans la barre d'adresse, puis autorisez les notifications pour ce site.
+              </p>
+            </div>
+            <button
+              onClick={() => setPushDeniedModal(false)}
+              className="w-full py-2.5 rounded-xl bg-[#0b5566] text-white font-semibold text-sm hover:bg-[#094a52] transition"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs flex flex-col items-center relative">
               <button type="button" onClick={() => setShowDeleteModal(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>

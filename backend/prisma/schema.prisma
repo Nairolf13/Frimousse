@@ -98,6 +98,9 @@ model User {
   feedComments             FeedComment[]
   notifyByEmail            Boolean                   @default(true)
   tutorialSeen             Boolean                   @default(false)
+  tutorialCompleted        String[]
+  cookieConsent            String?
+  language                 String?
   conversationParticipants ConversationParticipant[]
   sentMessages             Message[]
 }
