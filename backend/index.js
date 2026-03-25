@@ -140,6 +140,7 @@ const userRoutes = require('./routes/user');
 app.use('/api/user', userRoutes);
 
 // Route publique (sans auth) pour les stats de la landing page
+const prisma = require('./lib/prismaClient');
 app.get('/api/public/stats', async (_req, res) => {
   try {
     const [structuresCount, childrenCount] = await Promise.all([
