@@ -7,11 +7,6 @@ import ConfirmDialog from '../components/ConfirmDialog';
 
         const API_URL = import.meta.env.VITE_API_URL || '';
 
-        type User = {
-          id: string;
-          role: string;
-        };
-
         type Review = {
           id: string;
           authorName?: string | null;
@@ -46,26 +41,12 @@ import ConfirmDialog from '../components/ConfirmDialog';
           useEffect(() => {
             const doFetches = async () => {
               try {
-                const res = await fetch(`${API_URL}/children/count`);
-                const data = (await res.json()) as { count?: number };
-                setChildrenCount(typeof data.count === 'number' ? data.count : 0);
+                const res = await fetch(`${API_URL}/public/stats`);
+                const data = (await res.json()) as { structuresCount?: number; childrenCount?: number };
+                setChildrenCount(typeof data.childrenCount === 'number' ? data.childrenCount : 0);
+                setAdminCount(typeof data.structuresCount === 'number' ? data.structuresCount : 0);
               } catch {
                 setChildrenCount(0);
-              }
-
-              try {
-                const res = await fetch(`${API_URL}/user/all`, { credentials: 'include' });
-                const data = await res.json();
-                if (Array.isArray(data)) {
-                  const users = data as User[];
-                  setAdminCount(users.filter(u => u.role === 'admin').length);
-                } else if (Array.isArray((data && data.users))) {
-                  const users = data.users as User[];
-                  setAdminCount(users.filter(u => u.role === 'admin').length);
-                } else {
-                  setAdminCount(0);
-                }
-              } catch {
                 setAdminCount(0);
               }
 
