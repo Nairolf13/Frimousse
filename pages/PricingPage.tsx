@@ -128,7 +128,7 @@ export default function PricingPage() {
           "description": "Application de gestion pour creches, micro-creches et MAM",
           "brand": { "@type": "Brand", "name": "Frimousse" },
           "offers": [
-            { "@type": "Offer", "name": "Decouverte", "price": "0", "priceCurrency": "EUR", "description": "Essai gratuit 7 jours" },
+            { "@type": "Offer", "name": "Decouverte", "price": "0", "priceCurrency": "EUR", "description": "Essai gratuit 15 jours" },
             { "@type": "Offer", "name": "Essentiel", "price": "29.99", "priceCurrency": "EUR", "description": "Jusqu'a 10 enfants" },
             { "@type": "Offer", "name": "Pro", "price": "59.99", "priceCurrency": "EUR", "description": "Enfants illimites" }
           ]
@@ -262,7 +262,7 @@ export default function PricingPage() {
             </div>
 
             <div className="mt-14 text-center text-gray-400 text-sm space-y-1">
-              <p>Tarifs HT. 29,99 €/mois pour Essentiel, 59,99 €/mois pour Pro. 7 jours d'essai gratuit sans carte bancaire. Sans engagement, annulation à tout moment. Options sur devis : formation, migration de données, modules personnalisés.</p>
+              <p>Tarifs HT. 39,99 €/mois pour Essentiel, 69,99 €/mois pour Pro. 15 jours d'essai gratuit sans carte bancaire. Sans engagement, annulation à tout moment. Options sur devis : formation, migration de données, modules personnalisés.</p>
               <p>Pour les réseaux, fédérations ou structures multi-sites, contactez-nous pour une offre sur-mesure.</p>
             </div>
           </div>

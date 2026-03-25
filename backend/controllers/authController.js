@@ -7,7 +7,6 @@ const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { validatePassword } = require('../lib/validatePassword');
 
 function generateAccessToken(user) {
@@ -97,7 +96,7 @@ exports.register = async (req, res) => {
   // If client asked for a 'decouverte' free trial, create a trialing subscription record
   try {
     if (plan && String(plan).toLowerCase() === 'decouverte') {
-      const trialDays = 7;
+      const trialDays = 15;
       const trialEnd = new Date(Date.now() + trialDays * 24 * 3600 * 1000);
       await prisma.subscription.create({ data: {
         userId: user.id,
@@ -145,176 +144,6 @@ exports.register = async (req, res) => {
     centerId: user.centerId || null,
     requiresVerification: true 
   });
-};
-
-// Create user + Stripe customer + return SetupIntent client secret for card collection
-exports.registerSubscribeInit = async (req, res) => {
-  try {
-    // normalize email
-    const email = String(req.body.email || '').trim().toLowerCase();
-    const { password, name, role, centerName, plan, address, city, postalCode, region, country } = req.body;
-    if (!email || !password || !name || !role || !plan) return res.status(400).json({ message: 'Missing fields' });
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse e-mail.' });
-    const hash = await bcrypt.hash(password, 10);
-  const userData = { email, password: hash, name, role };
-  if (address) userData.address = address;
-  if (city) userData.city = city;
-  if (postalCode) userData.postalCode = postalCode;
-  if (region) userData.region = region;
-  if (country) userData.country = country;
-    // center creation rules similar to register
-    const totalUsers = await prisma.user.count();
-    if (totalUsers === 0) {
-      const center = await prisma.center.create({ data: { name: centerName || `${name} - Centre` } });
-      userData.centerId = center.id;
-      userData.role = 'super-admin';
-    } else if (userData.role === 'admin') {
-      const center = await prisma.center.create({ data: { name: centerName || `${name} - Centre` } });
-      userData.centerId = center.id;
-    }
-
-        try {
-        // fallback SMTP path is handled here (this area uses nodemailer directly and not sendTemplatedMail)
-        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-        const templatePath = `${__dirname}/../emailTemplates/welcome_${lang}.html`;
-        const fs = require('fs');
-        let html = null;
-        try {
-          html = fs.readFileSync(templatePath, 'utf8');
-          html = html.replace(/{{name}}/g, user.name || '').replace(/{{loginUrl}}/g, `${frontendUrl}/login`);
-        } catch (e) {
-          html = null;
-        }
-        const subject = lang === 'fr' ? 'Bienvenue sur Frimousse' : 'Welcome to Frimousse';
-        await require('../lib/email').sendTemplatedMail({ templateName: 'welcome', lang, to: user.email, subject, substitutions: { name: user.name || '', loginUrl: `${frontendUrl}/login` }, prisma });
-      } catch (err) {
-        console.error('Failed to send welcome email', err);
-      }
-    // create a short-lived subscribe token so we can start a Checkout session without being logged in
-    const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
-
-    // return client secret, temporary user id and subscribe token to start Checkout from the frontend
-  res.status(201).json({ clientSecret: setupIntent.client_secret, userId: user.id, subscribeToken });
-  } catch (err) {
-    console.error('registerSubscribeInit error', err);
-    res.status(500).json({ error: 'Erreur lors de la création du compte' });
-  }
-};
-
-// Complete registration: attach payment method, create subscription, create session cookies
-exports.registerSubscribeComplete = async (req, res) => {
-  try {
-    let { userId, plan, paymentMethodId, mode, selectedPlan } = req.body; // mode optional: 'discovery'|'direct'
-    if (!userId || !plan || !paymentMethodId) return res.status(400).json({ error: 'Missing fields' });
-    if (plan === 'decouverte') {
-      if (!selectedPlan || !['essentiel', 'pro'].includes(selectedPlan)) return res.status(400).json({ error: 'For decouverte you must select either "essentiel" or "pro" as selectedPlan' });
-      plan = selectedPlan;
-    }
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
-
-    const customerId = user.stripeCustomerId;
-    if (!customerId) return res.status(400).json({ error: 'Customer absent' });
-
-    // attach payment method and set as default
-    try {
-      // Attach and ensure the payment method is attached to this customer.
-      await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
-      // retrieve payment method to verify attachment
-      const pmFetched = await stripe.paymentMethods.retrieve(paymentMethodId).catch(() => null);
-      if (!pmFetched || pmFetched.customer !== customerId) {
-        // Try a second attach attempt
-        try {
-          await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
-        } catch (attachErr) {
-          console.error('[auth.registerSubscribeComplete] second attach attempt failed', attachErr && attachErr.message ? attachErr.message : attachErr);
-          return res.status(500).json({ error: 'Erreur lors de la finalisation de l\'inscription' });
-        }
-      }
-      await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } });
-    } catch (pmErr) {
-      console.error('[auth.registerSubscribeComplete] paymentMethods.attach/update failed', pmErr && pmErr.message ? pmErr.message : pmErr);
-      console.error(pmErr && pmErr.stack ? pmErr.stack : pmErr);
-      return res.status(500).json({ error: 'Erreur lors de la finalisation de l\'inscription' });
-    }
-
-    const trialDays = mode === 'discovery' || plan === 'decouverte' ? 7 : 30;
-    const trialEnd = Math.floor(Date.now() / 1000) + trialDays * 24 * 3600;
-
-    const priceMap = {
-      essentiel: process.env.PRICE_ID_ESSENTIEL,
-      pro: process.env.PRICE_ID_PRO,
-      decouverte: process.env.PRICE_ID_DECOUVERTE || process.env.PRICE_ID_ESSENTIEL
-    };
-    let priceId = priceMap[plan] || process.env.PRICE_ID_ESSENTIEL;
-    // If the configured priceId is a placeholder value, fallback to ESSENTIEL
-    if (!priceId || String(priceId).includes('REPLACE_ME')) {
-      priceId = process.env.PRICE_ID_ESSENTIEL;
-    }
-
-    if (!priceId) {
-      console.error('registerSubscribeComplete error: missing priceId for plan', plan, 'env PRICE_ID_ESSENTIEL present?', !!process.env.PRICE_ID_ESSENTIEL);
-      return res.status(500).json({ error: 'Internal server error: price id not configured for selected plan' });
-    }
-
-    // Idempotency: if user already has a trialing/active/past_due subscription, return it and login
-    const existing = await prisma.subscription.findFirst({ where: { userId: user.id, status: { in: ['trialing', 'active', 'past_due'] } } });
-    if (existing) {
-      let stripeSub = null;
-      try {
-        if (existing.stripeSubscriptionId) stripeSub = await stripe.subscriptions.retrieve(existing.stripeSubscriptionId);
-      } catch (e) {
-        // ignore
-      }
-      const accessToken = generateAccessToken(user);
-      const refreshToken = generateRefreshToken(user);
-      await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-      await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-  const cookieOpts = Object.assign({ maxAge: 15*60*1000 }, cookieOptions());
-  const refreshOpts = Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions());
-  res.cookie('accessToken', accessToken, cookieOpts);
-  res.cookie('refreshToken', refreshToken, refreshOpts);
-      return res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null, subscription: stripeSub || existing });
-    }
-
-    let subscription;
-    try {
-      subscription = await stripe.subscriptions.create({
-        customer: customerId,
-        items: [{ price: priceId }],
-        trial_end: trialEnd,
-        proration_behavior: 'none'
-      });
-    } catch (stripeErr) {
-      console.error('[auth.registerSubscribeComplete] Stripe subscription creation failed', stripeErr && stripeErr.message ? stripeErr.message : stripeErr);
-      console.error(stripeErr && stripeErr.stack ? stripeErr.stack : stripeErr);
-      return res.status(500).json({ error: 'Erreur lors de la création de l\'abonnement' });
-    }
-
-    const subRecord = await prisma.subscription.create({ data: {
-      userId: user.id,
-      stripeSubscriptionId: subscription.id,
-      plan,
-      status: 'trialing',
-      trialStart: new Date(),
-      trialEnd: new Date(trialEnd * 1000)
-    }});
-
-    // create tokens and set cookies (log the user in)
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-    await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-    await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-  res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
-  res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
-
-    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null, subscription: subRecord });
-  } catch (err) {
-    console.error('registerSubscribeComplete error', err);
-    res.status(500).json({ error: 'Erreur lors de la finalisation de l\'inscription' });
-  }
 };
 
 exports.login = async (req, res) => {

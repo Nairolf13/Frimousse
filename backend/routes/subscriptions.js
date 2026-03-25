@@ -284,9 +284,8 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
       await prisma.user.update({ where: { id: dbUser.id }, data: { stripeCustomerId: customerId } });
     }
 
-    const trialDays = mode === 'discovery' ? 7 : 7;
     const subscriptionData = {
-      trial_end: Math.floor(Date.now() / 1000) + trialDays * 24 * 3600,
+      ...(plan === 'decouverte' ? { trial_end: Math.floor(Date.now() / 1000) + 15 * 24 * 3600 } : {}),
       metadata: { plan: effectivePlan, selectedPlan: plan === 'decouverte' ? selectedPlan : effectivePlan },
     };
 
@@ -328,9 +327,6 @@ router.post('/create-checkout-with-token', async (req, res) => {
     const priceId = await resolvePriceId(effectivePlan);
     if (!priceId) return res.status(500).json({ error: 'Price id not configured' });
 
-    const trialDays = mode === 'discovery' ? 7 : 30;
-    const trialEnd = Math.floor(Date.now() / 1000) + trialDays * 24 * 3600;
-
     // ensure customer exists in Stripe
     let customerId = user.stripeCustomerId;
     if (!customerId) {
@@ -339,11 +335,12 @@ router.post('/create-checkout-with-token', async (req, res) => {
       await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } });
     }
 
+    const trialEnd = plan === 'decouverte' ? Math.floor(Date.now() / 1000) + 15 * 24 * 3600 : undefined;
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      subscription_data: { trial_end: trialEnd, metadata: { plan: effectivePlan, selectedPlan: plan === 'decouverte' ? selectedPlan : effectivePlan, subscribeToken } },
+      subscription_data: { ...(trialEnd ? { trial_end: trialEnd } : {}), metadata: { plan: effectivePlan, selectedPlan: plan === 'decouverte' ? selectedPlan : effectivePlan, subscribeToken } },
   // include the Checkout session id in the redirect so the frontend can finalize the subscription if webhooks are not delivered in dev
   success_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/register?checkout=canceled`,
@@ -458,8 +455,6 @@ router.post('/create-with-token', async (req, res) => {
     await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
     await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: paymentMethodId } });
 
-    const trialDays = mode === 'discovery' ? 7 : 30;
-    const trialEnd = Math.floor(Date.now() / 1000) + trialDays * 24 * 3600;
   let effectivePlan = plan;
   const selectedPlan = req.body.selectedPlan;
   if (plan === 'decouverte') {
@@ -493,16 +488,17 @@ router.post('/create-with-token', async (req, res) => {
       return res.status(500).json({ error: 'Internal server error: price id not configured for selected plan' });
     }
 
+    const trialEnd = plan === 'decouverte' ? Math.floor(Date.now() / 1000) + 15 * 24 * 3600 : null;
     let subscription;
     try {
-      subscription = await stripe.subscriptions.create({ customer: customerId, items: [{ price: priceId }], trial_end: trialEnd, proration_behavior: 'none' });
+      subscription = await stripe.subscriptions.create({ customer: customerId, items: [{ price: priceId }], ...(trialEnd ? { trial_end: trialEnd } : {}), proration_behavior: 'none' });
     } catch (stripeErr) {
       console.error('Stripe subscriptions.create failed (create-with-token)', stripeErr && stripeErr.message ? stripeErr.message : stripeErr);
       console.error(stripeErr && stripeErr.stack ? stripeErr.stack : stripeErr);
       return res.status(500).json({ error: 'Erreur lors de la création de l\'abonnement' });
     }
 
-    const sub = await prisma.subscription.create({ data: { userId: user.id, stripeSubscriptionId: subscription.id, plan, status: 'trialing', trialStart: new Date(), trialEnd: new Date(trialEnd * 1000) } });
+    const sub = await prisma.subscription.create({ data: { userId: user.id, stripeSubscriptionId: subscription.id, plan, status: trialEnd ? 'trialing' : 'active', trialStart: trialEnd ? new Date() : null, trialEnd: trialEnd ? new Date(trialEnd * 1000) : null } });
     res.json({ subscription: sub });
   } catch (e) {
   console.error('[subscriptions.create-with-token] Unexpected error', e && e.message ? e.message : e);
