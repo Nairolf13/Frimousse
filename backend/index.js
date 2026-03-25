@@ -139,6 +139,19 @@ app.use('/api/reviews', reviewsRoutes);
 const userRoutes = require('./routes/user');
 app.use('/api/user', userRoutes);
 
+// Route publique (sans auth) pour les stats de la landing page
+app.get('/api/public/stats', async (_req, res) => {
+  try {
+    const [structuresCount, childrenCount] = await Promise.all([
+      prisma.user.count({ where: { role: 'admin' } }),
+      prisma.child.count(),
+    ]);
+    res.json({ structuresCount, childrenCount });
+  } catch {
+    res.json({ structuresCount: 0, childrenCount: 0 });
+  }
+});
+
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
 
