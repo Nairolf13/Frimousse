@@ -70,7 +70,7 @@ async function handleOAuthUser(prisma, { email, name, provider, providerId, emai
 
   // Create a free trial subscription (same as register decouverte)
   try {
-    const trialDays = 7;
+    const trialDays = 15;
     const trialEnd = new Date(Date.now() + trialDays * 24 * 3600 * 1000);
     await prisma.subscription.create({
       data: {

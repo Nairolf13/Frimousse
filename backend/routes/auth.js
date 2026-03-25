@@ -50,8 +50,6 @@ const refreshLimiter = rateLimit({
 });
 
 router.post('/register', registerLimiter, authController.register);
-router.post('/register-subscribe/init', registerLimiter, authController.registerSubscribeInit);
-router.post('/register-subscribe/complete', registerLimiter, authController.registerSubscribeComplete);
 router.post('/login', authLimiter, authController.login);
 router.post('/refresh', refreshLimiter, authController.refresh);
 router.post('/logout', authController.logout);
