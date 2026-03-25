@@ -1,11 +1,36 @@
 import AppRoutes from '../routes';
 import { useEffect, useState } from 'react';
-import { AuthContext } from './context/AuthContext';
+import { AuthContext, useAuth } from './context/AuthContext';
 import { AssistantProvider } from './context/AssistantContext';
 import NotificationsProvider from './context/NotificationsProvider';
 import type { User } from './context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { HelmetProvider } from 'react-helmet-async';
+import CookieConsentBanner from './components/CookieConsent';
+import { writeLocalConsent } from './utils/cookieConsent';
+import { useI18n } from './lib/useI18n';
+
+// Synchronise BDD → local dès que l'user est connu (multi-appareils)
+function UserPreferencesSync() {
+  const { user } = useAuth();
+  const { setLocale } = useI18n();
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.language === 'fr' || user.language === 'en') {
+      setLocale(user.language);
+      try { localStorage.setItem('site_language', user.language); } catch { /* ignore */ }
+    }
+    if (user.cookieConsent === 'all' || user.cookieConsent === 'essential') {
+      writeLocalConsent(user.cookieConsent);
+    }
+    if (Array.isArray(user.tutorialCompleted) && user.tutorialCompleted.length > 0) {
+      try { localStorage.setItem('tutorial_completed', JSON.stringify(user.tutorialCompleted)); } catch { /* ignore */ }
+    }
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
+}
 
 function prefetchRoutes() {
   const imports = [
@@ -91,6 +116,8 @@ function App() {
   return (
     <HelmetProvider>
       <AuthContext.Provider value={{ user, setUser }}>
+        <UserPreferencesSync />
+        <CookieConsentBanner />
         <NotificationsProvider>
           <AssistantProvider>
             <AppRoutes />

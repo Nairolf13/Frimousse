@@ -361,4 +361,42 @@ router.put('/tutorial-seen', auth, async (req, res) => {
   }
 });
 
+router.put('/preferences', auth, async (req, res) => {
+  try {
+    const { cookieConsent, language } = req.body;
+    const data = {};
+    if (cookieConsent !== undefined) {
+      if (!['all', 'essential'].includes(cookieConsent)) return res.status(400).json({ error: 'cookieConsent invalide' });
+      data.cookieConsent = cookieConsent;
+    }
+    if (language !== undefined) {
+      if (!['fr', 'en'].includes(language)) return res.status(400).json({ error: 'language invalide' });
+      data.language = language;
+    }
+    if (Object.keys(data).length === 0) return res.status(400).json({ error: 'Aucune donnée' });
+    await prisma.user.update({ where: { id: req.user.id }, data });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+router.put('/tutorial-completed', auth, async (req, res) => {
+  try {
+    const { tourId } = req.body;
+    if (!tourId || typeof tourId !== 'string') return res.status(400).json({ error: 'tourId requis' });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { tutorialCompleted: true } });
+    const current = user?.tutorialCompleted || [];
+    if (!current.includes(tourId)) {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { tutorialCompleted: { push: tourId } },
+      });
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;

@@ -532,8 +532,10 @@ export default function PaymentHistoryPage() {
   }
 
   async function togglePaid(id: string, paid: boolean) {
+    const savedScroll = window.scrollY;
     // optimistic update
-  setData(d => d.map(r => r.id === id ? { ...r, paid } : r));
+    setData(d => d.map(r => r.id === id ? { ...r, paid } : r));
+    requestAnimationFrame(() => window.scrollTo({ top: savedScroll, behavior: 'instant' as ScrollBehavior }));
     try {
       const res = await fetch(`${API_URL}/payment-history/${id}/paid`, {
         method: 'PATCH',
@@ -585,7 +587,10 @@ export default function PaymentHistoryPage() {
       }
       // If we're currently viewing nanny grouped data, refresh it locally so the change is visible immediately
       try {
-        if (viewMode === 'by-nanny') await loadNannyGroups();
+        if (viewMode === 'by-nanny') {
+          await loadNannyGroups();
+          requestAnimationFrame(() => window.scrollTo({ top: savedScroll, behavior: 'instant' as ScrollBehavior }));
+        }
       } catch (ngErr) {
         console.error('Failed to reload nanny groups after togglePaid', ngErr);
       }
@@ -593,6 +598,7 @@ export default function PaymentHistoryPage() {
       console.error('Failed to toggle paid', err);
       // revert optimistic
       setData(d => d.map(r => r.id === id ? { ...r, paid: !paid } : r));
+      requestAnimationFrame(() => window.scrollTo({ top: savedScroll, behavior: 'instant' as ScrollBehavior }));
       showModal('Erreur lors de la mise à jour du statut de paiement.');
     }
   }

@@ -1,48 +1,33 @@
-import { useEffect, useState } from 'react';
-
-type ConsentState = 'unknown' | 'all' | 'essential';
+import { useEffect, useRef, useState } from 'react';
+import { readLocalConsent, writeLocalConsent } from '../utils/cookieConsent';
+import type { ConsentState } from '../utils/cookieConsent';
+import { useAuth } from '../context/AuthContext';
 
 declare global {
   interface Window { gtag?: (...args: unknown[]) => void; gaConfigured?: boolean; }
 }
 
 export default function CookieConsent() {
-  const [consent, setConsent] = useState<ConsentState>(() => {
-    try {
-      let v = null;
-      try { v = localStorage.getItem('cookie_consent'); } catch { v = null; }
-      if (!v) {
-        // fallback: try reading a non-HTTP-only cookie so the preference survives localStorage.clear()
-        try {
-          const m = document.cookie.match(/(?:^|; )cookie_consent=([^;]+)/);
-          if (m && m[1]) v = decodeURIComponent(m[1]);
-        } catch { /* ignore cookie read failures */ }
-      }
-      if (!v) return 'unknown';
-      return v === 'all' ? 'all' : 'essential';
-    } catch (e) {
-      console.warn('cookie consent read failed', e);
-      return 'unknown';
-    }
-  });
-
+  const { user } = useAuth();
+  const userRef = useRef(user);
+  userRef.current = user;
+  const [consent, setConsent] = useState<ConsentState>(readLocalConsent);
   const [lastGtagConsent, setLastGtagConsent] = useState<ConsentState | null>(null);
 
   useEffect(() => {
     if (consent === 'unknown') return;
-    try { localStorage.setItem('cookie_consent', consent); } catch (e) { console.warn('cookie consent write failed', e); }
-    try {
-      // also write a non-HTTP-only cookie so the preference survives localStorage.clear() and redirects
-      // 60 * 60 * 24 * 365 = 31536000 (1 year)
-      document.cookie = `cookie_consent=${encodeURIComponent(consent)};path=/;max-age=31536000`;
-  } catch { /* ignore cookie write failures */ }
-    // If gtag exists and consent has changed, update consent state: ad_storage and analytics_storage
-    // all -> grant both, essential -> deny optional storage
+    writeLocalConsent(consent);
+    if (userRef.current) {
+      fetch('/api/user/preferences', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cookieConsent: consent }),
+      }).catch(() => { /* ignore */ });
+    }
     if (typeof window.gtag === 'function' && lastGtagConsent !== consent) {
       if (consent === 'all') {
         try { window.gtag('consent', 'update', { 'ad_storage': 'granted', 'analytics_storage': 'granted' }); } catch (e) { console.warn('gtag consent update failed', e); }
-  try { window.gtag('event', 'consent_granted', { method: 'banner' }); } catch { /* ignore */ }
-        // Configure GA only when consent is granted, and only once
+        try { window.gtag('event', 'consent_granted', { method: 'banner' }); } catch { /* ignore */ }
         if (!window.gaConfigured) {
           window.gaConfigured = true;
           try { window.gtag('config', 'G-7HTQYHMFDQ'); } catch (e) { console.warn('gtag config failed', e); }
