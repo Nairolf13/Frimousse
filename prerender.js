@@ -48,22 +48,10 @@ async function prerender() {
 
       // Navigate to the page
       const url = BASE_URL + route;
-      await page.goto(url, { waitUntil: 'networkidle0' });
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
-      // Wait for Tailwind CSS to be fully loaded and applied
-      await page.waitForFunction(() => {
-        // Check if Tailwind utility classes are applied (look for common Tailwind classes)
-        const body = document.body;
-        const hasTailwindClasses = body.classList.length > 0 ||
-          document.querySelector('[class*="bg-"]') ||
-          document.querySelector('[class*="text-"]') ||
-          document.querySelector('[class*="p-"]') ||
-          document.querySelector('[class*="m-"]');
-        return hasTailwindClasses;
-      }, { timeout: 10000 });
-
-      // Additional wait for any dynamic styling
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait for React to mount
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       // Get the rendered HTML
       const html = await page.evaluate(() => {
