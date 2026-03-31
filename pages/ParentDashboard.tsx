@@ -346,7 +346,7 @@ const ParentDashboard: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-2 lg:ml-auto">
               {user && typeof user.role === 'string' && user.role === 'super-admin' && (
                 <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-xl px-3 py-2.5 bg-white text-gray-700 shadow-sm text-sm w-full sm:w-auto min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
-                  <option value="">Tous les centres</option>
+                  <option value="">{t('messages.center.all', 'Tous les centres')}</option>
                   {centers.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
                 </select>
               )}
@@ -499,13 +499,13 @@ const ParentDashboard: React.FC = () => {
                 {/* Règles mot de passe */}
                 {(adding || editingParent) && !(form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase()) && (
                   <div className="md:col-span-2 lg:col-span-3">
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Le mot de passe doit contenir :</div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{t('parent.password.requirements.title', 'Le mot de passe doit contenir :')}</div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
-                        { ok: hasUpper, label: '1 majuscule' },
-                        { ok: hasDigit, label: '1 chiffre' },
-                        { ok: hasSpecial, label: '1 caractère spécial' },
-                        { ok: hasLength, label: `${minLength}+ caractères` },
+                        { ok: hasUpper, label: t('parent.password.requirements.upper', '1 majuscule') },
+                        { ok: hasDigit, label: t('parent.password.requirements.digit', '1 chiffre') },
+                        { ok: hasSpecial, label: t('parent.password.requirements.special', '1 caractère spécial') },
+                        { ok: hasLength, label: t('parent.password.requirements.length', '{min}+ caractères').replace('{min}', String(minLength)) },
                       ].map(r => (
                         <div key={r.label} className={`flex items-center gap-1.5 text-xs rounded-lg px-2 py-1.5 ${r.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
                           <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M8 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>

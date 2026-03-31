@@ -1,8 +1,9 @@
 import SEO from '../components/SEO';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
-import { useEffect, useState} from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../src/lib/useI18n';
 
 
 
@@ -94,6 +95,7 @@ const plans: Plan[] = [
 ];
 
 export default function PricingPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const search = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams('');
   const subscribeTokenFromQs = search.get('subscribeToken');
@@ -227,7 +229,7 @@ export default function PricingPage() {
                           title="Paiement temporairement indisponible"
                           style={{ position: 'absolute', inset: 0, borderRadius: '8px', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(2px)', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
-                          <span style={{ fontSize: '11px', color: '#555', fontWeight: 600, textAlign: 'center', padding: '0 8px' }}>Bientôt disponible</span>
+                          <span style={{ fontSize: '11px', color: '#555', fontWeight: 600, textAlign: 'center', padding: '0 8px' }}>{t('subscription.coming_soon', 'Bientôt disponible')}</span>
                         </div>
                       </div>
                     ) : (

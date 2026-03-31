@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '../src/context/AuthContext';
+import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import PageLoader from '../components/PageLoader';
 import { HiOutlineDocumentText, HiOutlinePlus, HiOutlinePaperAirplane, HiOutlineDownload, HiOutlineCheck, HiOutlinePencil, HiOutlineX, HiOutlineTrash, HiOutlineRefresh } from 'react-icons/hi';
@@ -43,7 +44,6 @@ type Sheet = {
   parentSignedAt: string | null;
 };
 
-const MONTH_NAMES = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const DAY_NAMES = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
 
 function isWeekend(dateStr: string) {
@@ -62,14 +62,14 @@ function isNonWorkDay(dateStr: string) {
   return isWeekend(dateStr) || isHoliday(dateStr);
 }
 
-function statusBadge(status: string) {
-  if (status === 'signed') return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Signée</span>;
-  if (status === 'sent') return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Envoyée</span>;
-  return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">Brouillon</span>;
+function statusBadge(status: string, t: (k: string, fallback?: string) => string) {
+  if (status === 'signed') return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">{t('presenceSheets.status.signed', 'Signée')}</span>;
+  if (status === 'sent') return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{t('presenceSheets.status.sent', 'Envoyée')}</span>;
+  return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">{t('presenceSheets.status.draft', 'Brouillon')}</span>;
 }
 
 // Canvas de signature
-function SignaturePad({ onSave, onCancel }: { onSave: (sig: string) => void; onCancel: () => void }) {
+function SignaturePad({ onSave, onCancel, t }: { onSave: (sig: string) => void; onCancel: () => void; t: (k: string, fallback?: string) => string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
@@ -108,9 +108,9 @@ function SignaturePad({ onSave, onCancel }: { onSave: (sig: string) => void; onC
         onTouchStart={start} onTouchMove={move} onTouchEnd={end}
       />
       <div className="flex gap-2 w-full">
-        <button onClick={clear} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100">Effacer</button>
-        <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100">Annuler</button>
-        <button onClick={save} className="flex-1 py-3 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:opacity-90 active:opacity-80">Valider</button>
+        <button onClick={clear} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100">{t('presenceSheets.signature.clear', 'Effacer')}</button>
+        <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100">{t('presenceSheets.signature.cancel', 'Annuler')}</button>
+        <button onClick={save} className="flex-1 py-3 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:opacity-90 active:opacity-80">{t('presenceSheets.signature.save', 'Valider')}</button>
       </div>
     </div>
   );
@@ -118,6 +118,11 @@ function SignaturePad({ onSave, onCancel }: { onSave: (sig: string) => void; onC
 
 export default function PresenceSheets() {
   const { user } = useAuth();
+  const { t, locale } = useI18n();
+  const monthNames: string[] = useMemo(() => {
+    const localeCode = locale === 'fr' ? 'fr-FR' : locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : locale || 'en-US';
+    return Array.from({ length: 12 }, (_: unknown, i: number) => new Intl.DateTimeFormat(localeCode, { month: 'long' }).format(new Date(2000, i, 1)));
+  }, [locale]);
   const u = user as { role?: string | null; nannyId?: string | null; parentId?: string | null } | null;
   const isAdminUser = !!(u && typeof u.role === 'string' && (u.role === 'admin' || u.role.includes('super')));
   const isNannyUser = !!(u && u.nannyId);
@@ -184,9 +189,9 @@ export default function PresenceSheets() {
       const res = await fetchWithRefresh(url, { credentials: 'include' });
       if (!res.ok) throw new Error();
       setSheets(await res.json());
-    } catch { setError('Impossible de charger les feuilles'); }
+    } catch { setError(t('presenceSheets.error.load', 'Impossible de charger les feuilles')); }
     finally { setLoading(false); }
-  }, [centerFilter, parentFilter, u, isAdminUser]);
+  }, [centerFilter, parentFilter, u, isAdminUser, t]);
 
   useEffect(() => { loadSheets(); }, [loadSheets]);
 
@@ -255,9 +260,9 @@ export default function PresenceSheets() {
       setSelectedSheet(updated);
       setEditingEntries(updated.entries.map((e: Entry) => ({ ...e })));
       setSheets(prev => prev.map(s => s.id === updated.id ? updated : s));
-      setSuccessMsg('Modifications enregistrées');
+      setSuccessMsg(t('presenceSheets.success.saved', 'Modifications enregistrées'));
       setTimeout(() => setSuccessMsg(''), 3000);
-    } catch { setError('Erreur lors de la sauvegarde'); }
+    } catch { setError(t('presenceSheets.error.save', 'Erreur lors de la sauvegarde')); }
     finally { setSaving(false); }
   }
 
@@ -272,9 +277,9 @@ export default function PresenceSheets() {
       if (!res.ok) throw new Error();
       await loadSheets();
       setSelectedSheet(prev => prev ? { ...prev, status: 'sent', sentAt: new Date().toISOString() } : prev);
-      setSuccessMsg('Feuille envoyée aux parents');
+      setSuccessMsg(t('presenceSheets.success.sent', 'Feuille envoyée aux parents'));
       setTimeout(() => setSuccessMsg(''), 4000);
-    } catch { setError('Erreur lors de l\'envoi'); }
+    } catch { setError(t('presenceSheets.error.send', 'Erreur lors de l\'envoi')); }
     finally { setSending(false); }
   }
 
@@ -300,9 +305,9 @@ export default function PresenceSheets() {
         return updatedSheet;
       });
       setSheets(prev => prev.map(s => s.id === selectedSheet.id ? { ...s, entries: newEntries } : s));
-      setSuccessMsg('Signature enregistrée');
+      setSuccessMsg(t('presenceSheets.success.signature', 'Signature enregistrée'));
       setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur lors de la signature'); }
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : t('presenceSheets.error.signature', 'Erreur lors de la signature')); }
     finally { setSaving(false); setSigningEntry(null); }
   }
 
@@ -318,9 +323,9 @@ export default function PresenceSheets() {
       const updated: Sheet = await res.json();
       setSelectedSheet(updated);
       setSheets(prev => prev.map(s => s.id === updated.id ? updated : s));
-      setSuccessMsg('Feuille signée');
+      setSuccessMsg(t('presenceSheets.success.signed', 'Feuille signée'));
       setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur lors de la signature'); }
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : t('presenceSheets.error.signature', 'Erreur lors de la signature')); }
     finally { setSaving(false); setSigningSheet(null); }
   }
 
@@ -414,7 +419,7 @@ export default function PresenceSheets() {
     setEditingEntries(prev => prev.map((e, i) => i === idx ? { ...e, [field]: value } : e));
   }
 
-  if (loading) return <PageLoader title="Feuilles de présence" icon={<HiOutlineDocumentText className="w-6 h-6 text-white" />} />;
+  if (loading) return <PageLoader title={t('page.presenceSheets', 'Feuilles de présence')} icon={<HiOutlineDocumentText className="w-6 h-6 text-white" />} />;
 
   const canEdit = isNannyUser || isAdminUser;
 
@@ -440,15 +445,15 @@ export default function PresenceSheets() {
               <HiOutlineDocumentText className="w-6 h-6 text-white" />
             </div>
             <div className="pt-0.5">
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">Feuilles de présence</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Relevés mensuels — signature journalière</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.presenceSheets', 'Feuilles de présence')}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.presenceSheets.description', 'Consultez et gérez les feuilles de présence et signatures des enfants.')}</p>
             </div>
           </div>
           {canEdit && (
             <button onClick={() => { setShowCreate(true); setError(''); }}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow hover:opacity-90 transition"
               style={{ background: 'linear-gradient(135deg,#0b5566,#1a8fa8)' }}>
-              <HiOutlinePlus className="w-4 h-4" /> Nouvelle feuille
+              <HiOutlinePlus className="w-4 h-4" /> {t('presenceSheets.new_sheet', 'Nouvelle feuille')}
             </button>
           )}
         </div>
@@ -460,15 +465,15 @@ export default function PresenceSheets() {
             onChange={e => setFilterMonth(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
           >
-            <option value="">Tous les mois</option>
-            {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+            <option value="">{t('presenceSheets.month.all', 'Tous les mois')}</option>
+            {monthNames.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
           </select>
           <select
             value={filterYear}
             onChange={e => setFilterYear(e.target.value)}
             className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
           >
-            <option value="">Toutes les années</option>
+            <option value="">{t('presenceSheets.year.all', 'Toutes les années')}</option>
             {[2024, 2025, 2026, 2027].map(y => <option key={y} value={String(y)}>{y}</option>)}
           </select>
           {isAdminUser && (
@@ -477,7 +482,7 @@ export default function PresenceSheets() {
               onChange={e => setParentFilter(e.target.value)}
               className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
             >
-              <option value="">Tous les parents</option>
+              <option value="">{t('presenceSheets.parent.all', 'Tous les parents')}</option>
               {parents.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           )}
@@ -487,7 +492,7 @@ export default function PresenceSheets() {
               onChange={e => setCenterFilter(e.target.value)}
               className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
             >
-              <option value="">Tous les centres</option>
+              <option value="">{t('presenceSheets.center.all', 'Tous les centres')}</option>
               {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
@@ -512,29 +517,29 @@ export default function PresenceSheets() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-lg text-[#0b5566]">Nouvelle feuille de présence</h2>
+                <h2 className="font-bold text-lg text-[#0b5566]">{t('presenceSheets.new_sheet.title', 'Nouvelle feuille de présence')}</h2>
                 <button onClick={() => setShowCreate(false)}><HiOutlineX className="w-5 h-5 text-gray-400" /></button>
               </div>
               {error && <div className="mb-3 text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Enfant</label>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.child', 'Enfant')}</label>
                   <select value={createForm.childId} onChange={e => setCreateForm(p => ({ ...p, childId: e.target.value }))}
                     className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
-                    <option value="">Sélectionner un enfant</option>
+                    <option value="">{t('presenceSheets.create.selectChild', 'Sélectionner un enfant')}</option>
                     {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Mois</label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.month', 'Mois')}</label>
                     <select value={createForm.month} onChange={e => setCreateForm(p => ({ ...p, month: e.target.value }))}
                       className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
-                      {MONTH_NAMES.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
+                      {monthNames.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Année</label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.year', 'Année')}</label>
                     <select value={createForm.year} onChange={e => setCreateForm(p => ({ ...p, year: e.target.value }))}
                       className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
                       {[2024, 2025, 2026, 2027].map(y => <option key={y} value={String(y)}>{y}</option>)}
@@ -543,22 +548,22 @@ export default function PresenceSheets() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Arrivée par défaut</label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.arrival', 'Arrivée par défaut')}</label>
                     <input type="text" value={createForm.defaultArrival} onChange={e => setCreateForm(p => ({ ...p, defaultArrival: e.target.value }))}
-                      placeholder="08h30" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
+                      placeholder={t('presenceSheets.create.arrivalPlaceholder', '08h30')} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Départ par défaut</label>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.departure', 'Départ par défaut')}</label>
                     <input type="text" value={createForm.defaultDeparture} onChange={e => setCreateForm(p => ({ ...p, defaultDeparture: e.target.value }))}
-                      placeholder="17h30" className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
+                      placeholder={t('presenceSheets.create.departurePlaceholder', '17h30')} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
                   </div>
                 </div>
               </div>
               <div className="flex gap-2 mt-5">
-                <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">Annuler</button>
+                <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">{t('global.cancel', 'Annuler')}</button>
                 <button onClick={createSheet} disabled={!createForm.childId || saving}
                   className="flex-1 py-2.5 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
-                  {saving ? 'Création…' : 'Créer'}
+                  {saving ? t('presenceSheets.creating', 'Création…') : t('presenceSheets.create', 'Créer')}
                 </button>
               </div>
             </div>
@@ -568,14 +573,14 @@ export default function PresenceSheets() {
         {/* Liste des feuilles — toujours visible, détail en dessous */}
         {!selectedSheet && (
           <div className="space-y-2 mb-4">
-            <p className="text-sm text-gray-400 text-center mb-3">Sélectionnez une feuille pour la consulter</p>
+            <p className="text-sm text-gray-400 text-center mb-3">{t('presenceSheets.select_sheet', 'Sélectionnez une feuille pour la consulter')}</p>
             {filteredSheets.length === 0 ? (
               <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-400">
                 <HiOutlineDocumentText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">
-                  {filterMonth || filterYear ? 'Aucune feuille pour cette période' : 'Aucune feuille de présence'}
+                  {filterMonth || filterYear ? t('presenceSheets.select_sheet.empty.date', 'Aucune feuille pour cette période') : t('presenceSheets.select_sheet.empty', 'Aucune feuille de présence')}
                 </p>
-                {canEdit && !filterMonth && !filterYear && <p className="text-xs mt-1">Créez votre première feuille</p>}
+                {canEdit && !filterMonth && !filterYear && <p className="text-xs mt-1">{t('presenceSheets.select_sheet.first', 'Créez votre première feuille')}</p>}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -586,16 +591,16 @@ export default function PresenceSheets() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="font-semibold text-gray-900 text-sm">{sheet.child?.name}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">{MONTH_NAMES[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{monthNames[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</div>
                         </div>
-                        {statusBadge(sheet.status)}
+                        {statusBadge(sheet.status, t)}
                       </div>
                     </button>
                     {isAdminUser && (
                       <div className="px-4 pb-3 flex justify-end">
                         <button onClick={() => setConfirmDeleteId(sheet.id)}
                           className="flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition">
-                          <HiOutlineTrash className="w-3.5 h-3.5" /> Supprimer
+                          <HiOutlineTrash className="w-3.5 h-3.5" /> {t('global.delete', 'Supprimer')}
                         </button>
                       </div>
                     )}
@@ -613,44 +618,44 @@ export default function PresenceSheets() {
                 <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => setSelectedSheet(null)} className="lg:hidden mr-1 p-1.5 rounded-lg hover:bg-gray-100 transition" title="Retour">
+                      <button onClick={() => setSelectedSheet(null)} className="lg:hidden mr-1 p-1.5 rounded-lg hover:bg-gray-100 transition" title={t('common.back', 'Retour')}>
                         <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                       </button>
                       <h2 className="font-bold text-[#0b5566] text-base">{selectedSheet.child.name}</h2>
-                      {statusBadge(selectedSheet.status)}
+                      {statusBadge(selectedSheet.status, t)}
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">{MONTH_NAMES[selectedSheet.month - 1]} {selectedSheet.year} · {selectedSheet.nanny.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{monthNames[selectedSheet.month - 1]} {selectedSheet.year} · {selectedSheet.nanny.name}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {canEdit && selectedSheet.status !== 'signed' && (
                       <button onClick={saveEntries} disabled={saving}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#0b5566]/30 text-[#0b5566] text-xs font-semibold hover:bg-[#0b5566]/5 disabled:opacity-50">
                         <HiOutlinePencil className="w-3.5 h-3.5" />
-                        {saving ? 'Sauvegarde…' : 'Sauvegarder'}
+                        {saving ? t('presenceSheets.saving', 'Sauvegarde…') : t('presenceSheets.save', 'Sauvegarder')}
                       </button>
                     )}
                     {canEdit && selectedSheet.status === 'draft' && (
                       <button onClick={sendSheet} disabled={sending}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50">
                         <HiOutlinePaperAirplane className="w-3.5 h-3.5" />
-                        {sending ? 'Envoi…' : 'Envoyer aux parents'}
+                        {sending ? t('presenceSheets.sending', 'Envoi…') : t('presenceSheets.send', 'Envoyer aux parents')}
                       </button>
                     )}
                     <button onClick={() => downloadPdf(selectedSheet)} disabled={downloadingPdf}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 disabled:opacity-50">
-                      <HiOutlineDownload className="w-3.5 h-3.5" /> {downloadingPdf ? '…' : 'PDF'}
+                      <HiOutlineDownload className="w-3.5 h-3.5" /> {downloadingPdf ? '…' : t('presenceSheets.pdf', 'PDF')}
                     </button>
                     {isAdminUser && selectedSheet.status === 'signed' && (
                       <button onClick={() => resetSheetStatus(selectedSheet.id, 'sent')}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 text-orange-600 text-xs font-semibold hover:bg-orange-50"
-                        title="Remettre en statut Envoyée">
-                        <HiOutlineRefresh className="w-3.5 h-3.5" /> Réouvrir
+                        title={t('presenceSheets.reopen.title', 'Remettre en statut Envoyée')}>
+                        <HiOutlineRefresh className="w-3.5 h-3.5" /> {t('presenceSheets.reopen', 'Réouvrir')}
                       </button>
                     )}
                     {isAdminUser && (
                       <button onClick={() => setConfirmDeleteId(selectedSheet.id)}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50">
-                        <HiOutlineTrash className="w-3.5 h-3.5" /> Supprimer
+                        <HiOutlineTrash className="w-3.5 h-3.5" /> {t('global.delete', 'Supprimer')}
                       </button>
                     )}
                   </div>
@@ -666,9 +671,9 @@ export default function PresenceSheets() {
                 {/* Légende signatures */}
                 {selectedSheet.status !== 'draft' && (
                   <div className="px-5 pt-3 pb-1 flex gap-4 text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-[#0b5566] inline-block" />Nounou signé</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />Parent signé</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />Non signé</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-[#0b5566] inline-block" />{t('presenceSheets.legend.nannySigned', 'Nounou signé')}</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />{t('presenceSheets.legend.parentSigned', 'Parent signé')}</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />{t('presenceSheets.legend.notSigned', 'Non signé')}</span>
                   </div>
                 )}
 
@@ -702,15 +707,15 @@ export default function PresenceSheets() {
                               {DAY_NAMES[d.getDay()]} {d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                             </span>
                             {entryIsSigned && !isAdminUser && (
-                              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><title>Entrée verrouillée — déjà signée</title><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><title>{t('presenceSheets.entry.locked', 'Entrée verrouillée — déjà signée')}</title><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            {entry.absent && <span className="text-xs font-semibold text-red-500 bg-red-100 px-2 py-0.5 rounded-full">Absent</span>}
+                            {entry.absent && <span className="text-xs font-semibold text-red-500 bg-red-100 px-2 py-0.5 rounded-full">{t('presenceSheets.entry.absent', 'Absent')}</span>}
                             {canEditEntry && (
                               <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
                                 <input type="checkbox" checked={entry.absent} onChange={e => updateEntry(idx, 'absent', e.target.checked)} className="w-4 h-4 rounded accent-red-500" />
-                                Absent
+                                {t('presenceSheets.entry.absent', 'Absent')}
                               </label>
                             )}
                           </div>
@@ -720,7 +725,7 @@ export default function PresenceSheets() {
                         {!entry.absent && (
                           <div className="flex gap-3 mb-2">
                             <div className="flex-1">
-                              <div className="text-xs text-gray-400 mb-1">Arrivée</div>
+                              <div className="text-xs text-gray-400 mb-1">{t('presenceSheets.entry.arrival', 'Arrivée')}</div>
                               {canEditEntry ? (
                                 <input type="text" value={entry.arrivalTime || ''} onChange={e => updateEntry(idx, 'arrivalTime', e.target.value)}
                                   placeholder="08h30"
@@ -728,7 +733,7 @@ export default function PresenceSheets() {
                               ) : <span className="text-sm font-medium text-gray-700">{entry.arrivalTime || '—'}</span>}
                             </div>
                             <div className="flex-1">
-                              <div className="text-xs text-gray-400 mb-1">Départ</div>
+                              <div className="text-xs text-gray-400 mb-1">{t('presenceSheets.entry.departure', 'Départ')}</div>
                               {canEditEntry ? (
                                 <input type="text" value={entry.departureTime || ''} onChange={e => updateEntry(idx, 'departureTime', e.target.value)}
                                   placeholder="17h30"
@@ -741,7 +746,7 @@ export default function PresenceSheets() {
                         {/* Commentaire */}
                         {canEditEntry ? (
                           <input type="text" value={entry.comment || ''} onChange={e => updateEntry(idx, 'comment', e.target.value)}
-                            placeholder="Commentaire…"
+                            placeholder={t('presenceSheets.entry.commentPlaceholder', 'Commentaire…')}
                             className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40 mb-2" />
                         ) : entry.comment ? (
                           <p className="text-xs text-gray-500 mb-2">{entry.comment}</p>
@@ -754,12 +759,12 @@ export default function PresenceSheets() {
                             <div className="flex-1 flex items-center gap-1.5">
                               {entry.nannySignedAt ? (
                                 <span className="flex items-center gap-1 text-xs text-[#0b5566] font-medium">
-                                  <HiOutlineCheck className="w-3.5 h-3.5" /> Nounou
+                                  <HiOutlineCheck className="w-3.5 h-3.5" /> {t('presenceSheets.entry.nanny', 'Nounou')}
                                 </span>
                               ) : canSignNanny ? (
                                 <button onClick={() => setSigningEntry({ entryId: entry.id, role: 'nanny' })}
                                   className="flex items-center gap-1 px-2 py-1 rounded-lg border border-dashed border-[#0b5566]/40 text-xs text-[#0b5566] hover:bg-[#0b5566]/5 transition">
-                                  <HiOutlinePencil className="w-3 h-3" /> Signer (nounou)
+                                  <HiOutlinePencil className="w-3 h-3" /> {t('presenceSheets.entry.signNanny', 'Signer (nounou)')}
                                 </button>
                               ) : (
                                 <span className="flex items-center gap-1 text-xs text-gray-300">
@@ -776,7 +781,7 @@ export default function PresenceSheets() {
                               ) : canSignParent ? (
                                 <button onClick={() => setSigningEntry({ entryId: entry.id, role: 'parent' })}
                                   className="flex items-center gap-1 px-2 py-1 rounded-lg border border-dashed border-emerald-400/60 text-xs text-emerald-600 hover:bg-emerald-50 transition">
-                                  <HiOutlinePencil className="w-3 h-3" /> Signer (parent)
+                                  <HiOutlinePencil className="w-3 h-3" /> {t('presenceSheets.entry.signParent', 'Signer (parent)')}
                                 </button>
                               ) : (
                                 <span className="flex items-center gap-1 text-xs text-gray-300">
@@ -936,50 +941,50 @@ export default function PresenceSheets() {
                         </div>
                       ))}
                     </div>
-                    {savingBilling && <p className="text-[10px] text-gray-400 mt-1 text-right">Enregistrement…</p>}
+                    {savingBilling && <p className="text-[10px] text-gray-400 mt-1 text-right">{t('presenceSheets.billing.saving', 'Enregistrement…')}</p>}
                   </div>
 
                   {/* Signatures globales */}
                   {selectedSheet.status !== 'draft' && (
                   <div>
-                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">Signatures de validation</h3>
+                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">{t('presenceSheets.signatures.title', 'Signatures de validation')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       {/* Signature Nounou */}
                       <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Signature Nounou</span>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('presenceSheets.signature.role.nanny', 'Nounou')}</span>
                         {selectedSheet.nannySignature ? (
-                          <img src={selectedSheet.nannySignature} alt="Signature nounou" className="h-16 w-full object-contain" />
+                          <img src={selectedSheet.nannySignature} alt={t('presenceSheets.signature.alt.nanny', 'Signature nounou')} className="h-16 w-full object-contain" />
                         ) : (
-                          <div className="h-16 w-full flex items-center justify-center text-gray-300 text-xs border border-dashed border-gray-200 rounded-lg">Non signé</div>
+                          <div className="h-16 w-full flex items-center justify-center text-gray-300 text-xs border border-dashed border-gray-200 rounded-lg">{t('presenceSheets.signature.notSigned', 'Non signé')}</div>
                         )}
                         {selectedSheet.nannySignedAt && (
-                          <span className="text-[10px] text-gray-400">Signé le {new Date(selectedSheet.nannySignedAt).toLocaleDateString('fr-FR')}</span>
+                          <span className="text-[10px] text-gray-400">{t('presenceSheets.signature.signedAt', { date: new Date(selectedSheet.nannySignedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR') })}</span>
                         )}
                         {(isNannyUser || isAdminUser) && !selectedSheet.nannySignature && (
                           <button
                             onClick={() => setSigningSheet('nanny')}
                             className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[#0b5566]/40 text-xs text-[#0b5566] hover:bg-[#0b5566]/5 transition">
-                            <HiOutlinePencil className="w-3 h-3" /> Signer
+                            <HiOutlinePencil className="w-3 h-3" /> {t('presenceSheets.signature.btn', 'Signer')}
                           </button>
                         )}
                       </div>
 
                       {/* Signature Parent */}
                       <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Signature Parent</span>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('presenceSheets.signature.role.parent', 'Parent')}</span>
                         {selectedSheet.parentSignature ? (
-                          <img src={selectedSheet.parentSignature} alt="Signature parent" className="h-16 w-full object-contain" />
+                          <img src={selectedSheet.parentSignature} alt={t('presenceSheets.signature.alt.parent', 'Signature parent')} className="h-16 w-full object-contain" />
                         ) : (
-                          <div className="h-16 w-full flex items-center justify-center text-gray-300 text-xs border border-dashed border-gray-200 rounded-lg">Non signé</div>
+                          <div className="h-16 w-full flex items-center justify-center text-gray-300 text-xs border border-dashed border-gray-200 rounded-lg">{t('presenceSheets.signature.notSigned', 'Non signé')}</div>
                         )}
                         {selectedSheet.parentSignedAt && (
-                          <span className="text-[10px] text-gray-400">Signé le {new Date(selectedSheet.parentSignedAt).toLocaleDateString('fr-FR')}</span>
+                          <span className="text-[10px] text-gray-400">{t('presenceSheets.signature.signedAt', { date: new Date(selectedSheet.parentSignedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR') })}</span>
                         )}
                         {isParentUser && !selectedSheet.parentSignature && (
                           <button
                             onClick={() => setSigningSheet('parent')}
                             className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-emerald-400/60 text-xs text-emerald-600 hover:bg-emerald-50 transition">
-                            <HiOutlinePencil className="w-3 h-3" /> Signer
+                            <HiOutlinePencil className="w-3 h-3" /> {t('presenceSheets.signature.btn', 'Signer')}
                           </button>
                         )}
                       </div>
@@ -999,8 +1004,8 @@ export default function PresenceSheets() {
                   <HiOutlineTrash className="w-6 h-6 text-red-600" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">Supprimer la feuille</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">Cette action est irréversible</p>
+                  <h2 className="text-lg font-bold text-gray-900">{t('presenceSheets.delete.title', 'Supprimer la feuille')}</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">{t('presenceSheets.delete.subtitle', 'Cette action est irréversible')}</p>
                 </div>
               </div>
               {(() => {
@@ -1010,30 +1015,30 @@ export default function PresenceSheets() {
                     <HiOutlineDocumentText className="w-5 h-5 text-gray-400 flex-shrink-0" />
                     <div>
                       <p className="text-sm font-semibold text-gray-800">{sheet.child?.name}</p>
-                      <p className="text-xs text-gray-500">{MONTH_NAMES[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</p>
+                      <p className="text-xs text-gray-500">{monthNames[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</p>
                     </div>
-                    {statusBadge(sheet.status)}
+                    {statusBadge(sheet.status, t)}
                   </div>
                 ) : null;
               })()}
               <p className="text-sm text-gray-600 mb-6">
-                Êtes-vous sûr de vouloir supprimer cette feuille de présence ? Toutes les entrées et signatures associées seront définitivement perdues.
+                {t('presenceSheets.delete.confirm', 'Êtes-vous sûr de vouloir supprimer cette feuille de présence ? Toutes les entrées et signatures associées seront définitivement perdues.')}
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmDeleteId(null)}
                   disabled={deleting}
                   className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50">
-                  Annuler
+                  {t('global.cancel', 'Annuler')}
                 </button>
                 <button
                   onClick={() => deleteSheet(confirmDeleteId)}
                   disabled={deleting}
                   className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition disabled:opacity-50 flex items-center justify-center gap-2">
                   {deleting ? (
-                    <><HiOutlineRefresh className="w-4 h-4 animate-spin" /> Suppression…</>
+                    <><HiOutlineRefresh className="w-4 h-4 animate-spin" /> {t('presenceSheets.delete.deleting', 'Suppression…')}</>
                   ) : (
-                    <><HiOutlineTrash className="w-4 h-4" /> Supprimer</>
+                    <><HiOutlineTrash className="w-4 h-4" /> {t('presenceSheets.delete.button', 'Supprimer')}</>
                   )}
                 </button>
               </div>
@@ -1047,14 +1052,15 @@ export default function PresenceSheets() {
             <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-sm overflow-y-auto max-h-[90vh] p-6 pb-8">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-[#0b5566] text-sm">
-                  Signature {signingSheet === 'nanny' ? 'Nounou' : 'Parent'} — Validation
+                  {t('presenceSheets.signatureSheet.title', { role: signingSheet === 'nanny' ? t('presenceSheets.signature.role.nanny', 'Nounou') : t('presenceSheets.signature.role.parent', 'Parent') })}
                 </h2>
                 <button onClick={() => setSigningSheet(null)} className="p-2 rounded-full hover:bg-gray-100"><HiOutlineX className="w-5 h-5 text-gray-400" /></button>
               </div>
-              <p className="text-xs text-gray-500 mb-4">Signez pour valider l'ensemble de la feuille de présence du mois.</p>
+              <p className="text-xs text-gray-500 mb-4">{t('presenceSheets.signatureSheet.desc', 'Signez pour valider l\'ensemble de la feuille de présence du mois.')}</p>
               <SignaturePad
                 onSave={sig => signSheet(signingSheet, sig)}
                 onCancel={() => setSigningSheet(null)}
+                t={t}
               />
             </div>
           </div>
@@ -1087,6 +1093,7 @@ export default function PresenceSheets() {
               <SignaturePad
                 onSave={sig => signEntry(signingEntry.entryId, signingEntry.role, sig)}
                 onCancel={() => setSigningEntry(null)}
+                t={t}
               />
             </div>
           </div>

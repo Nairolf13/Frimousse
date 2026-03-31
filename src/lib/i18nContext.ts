@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-export type Locale = 'fr' | 'en';
+export type Locale = 'fr' | 'en' | 'es';
 
 export type I18nShape = {
   locale: Locale;

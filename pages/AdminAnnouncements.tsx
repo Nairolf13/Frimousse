@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -36,6 +37,13 @@ const TYPE_OPTIONS: { value: AnnouncementType; label: string; badgeCls: string; 
   { value: 'warning', label: 'Important',   badgeCls: 'bg-amber-100 text-amber-700 border-amber-200',          activeCls: 'border-amber-400 bg-amber-50 text-amber-700',       icon: '⚠️' },
 ];
 
+const TYPE_TRANSLATION_KEYS: Record<AnnouncementType, string> = {
+  update: 'announcements.type.update',
+  info: 'announcements.type.info',
+  success: 'announcements.type.success',
+  warning: 'announcements.type.warning',
+};
+
 const TYPE_GRADIENT: Record<AnnouncementType, string> = {
   update:  'from-[#0b5566] to-[#1a8fa6]',
   info:    'from-blue-500 to-indigo-600',
@@ -45,19 +53,20 @@ const TYPE_GRADIENT: Record<AnnouncementType, string> = {
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
 function EmptyList({ onCreate }: { onCreate: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col items-center justify-center flex-1 py-20 gap-4 px-6 text-center">
       <div className="w-16 h-16 rounded-2xl bg-[#0b5566]/8 flex items-center justify-center text-3xl">📢</div>
       <div>
-        <div className="font-bold text-gray-700">Aucune annonce publiée</div>
-        <div className="text-sm text-gray-400 mt-1">Créez votre première annonce pour communiquer avec vos utilisateurs</div>
+        <div className="font-bold text-gray-700">{t('announcements.empty.title', 'Aucune annonce publiée')}</div>
+        <div className="text-sm text-gray-400 mt-1">{t('announcements.empty.subtitle', 'Créez votre première annonce pour communiquer avec vos utilisateurs')}</div>
       </div>
       <button
         onClick={onCreate}
         className="flex items-center gap-2 px-5 py-2.5 bg-[#0b5566] text-white rounded-xl font-semibold text-sm hover:bg-[#0a4a59] transition shadow-sm"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
-        Créer une annonce
+        {t('announcements.action.create', 'Créer une annonce')}
       </button>
     </div>
   );
@@ -65,7 +74,9 @@ function EmptyList({ onCreate }: { onCreate: () => void }) {
 
 // ─── List item ────────────────────────────────────────────────────────────────
 function AnnouncementItem({ a, selected, onClick }: { a: Announcement; selected: boolean; onClick: () => void }) {
+  const { t } = useI18n();
   const opt = TYPE_OPTIONS.find(t => t.value === a.type) || TYPE_OPTIONS[0];
+  const label = t(TYPE_TRANSLATION_KEYS[opt.value], opt.label);
   return (
     <button
       onClick={onClick}
@@ -81,8 +92,8 @@ function AnnouncementItem({ a, selected, onClick }: { a: Announcement; selected:
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${opt.badgeCls}`}>{opt.label}</span>
-              {!a.active && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">Désactivée</span>}
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${opt.badgeCls}`}>{label}</span>
+              {!a.active && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 border border-gray-200">{t('announcements.status.disabled', 'Désactivée')}</span>}
             </div>
             <div className="font-bold text-sm text-gray-800 truncate">{a.title}</div>
             <div className="text-xs text-gray-400 mt-0.5 truncate">{a.message}</div>
@@ -118,7 +129,7 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim() || !form.message.trim()) { setError('Titre et message requis'); return; }
+    if (!form.title.trim() || !form.message.trim()) { setError(t('announcements.create.error.required', 'Titre et message requis')); return; }
     setSending(true);
     setError('');
     try {
@@ -128,8 +139,9 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error((await res.json()).error || 'Erreur');
-      setSuccess(form.sendEmail ? 'Annonce publiée et emails envoyés !' : 'Annonce publiée !');
+      if (!res.ok) throw new Error((await res.json()).error || t('announcements.create.error.generic', 'Erreur'));
+      setSuccess(form.sendEmail ? t('announcements.create.success.emailSent', 'Annonce publiée et emails envoyés !') : t('announcements.create.success.published', 'Annonce publiée !'));
+
       setTimeout(() => onCreated(), 1200);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur inattendue');
@@ -138,6 +150,7 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
     }
   };
 
+  const { t } = useI18n();
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 flex-shrink-0">
@@ -145,8 +158,8 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
           <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
         </button>
         <div>
-          <h2 className="font-bold text-gray-900 text-base">Nouvelle annonce</h2>
-          <p className="text-xs text-gray-400">Visible immédiatement pour tous les utilisateurs connectés</p>
+          <h2 className="font-bold text-gray-900 text-base">{t('announcements.create.title', 'Nouvelle annonce')}</h2>
+          <p className="text-xs text-gray-400">{t('announcements.create.subtitle', 'Visible immédiatement pour tous les utilisateurs connectés')}</p>
         </div>
       </div>
 
@@ -154,7 +167,7 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
         <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
           {/* Type */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-widest">Type d'annonce</label>
+            <label className="block text-xs font-bold text-gray-500 mb-3 uppercase tracking-widest">{t('announcements.create.type.label', "Type d'annonce")}</label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               {TYPE_OPTIONS.map(opt => (
                 <button key={opt.value} type="button"
@@ -164,7 +177,7 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
                   }`}
                 >
                   <span className="text-xl leading-none">{opt.icon}</span>
-                  <span className="text-[11px] font-bold">{opt.label}</span>
+                  <span className="text-[11px] font-bold">{t(TYPE_TRANSLATION_KEYS[opt.value], opt.label)}</span>
                 </button>
               ))}
             </div>
@@ -172,10 +185,10 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
 
           {/* Title */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">Titre</label>
+            <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{t('announcements.create.title.label', 'Titre')}</label>
             <input type="text" value={form.title}
               onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-              placeholder="ex: Mise à jour v2.1 — Nouvelles fonctionnalités"
+              placeholder={t('announcements.create.title.placeholder', 'ex: Mise à jour v2.1 — Nouvelles fonctionnalités')}
               maxLength={100}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition bg-gray-50 focus:bg-white"
             />
@@ -184,10 +197,10 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
 
           {/* Message */}
           <div>
-            <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">Message</label>
+            <label className="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-widest">{t('announcements.create.message.label', 'Message')}</label>
             <textarea ref={textareaRef} value={form.message}
               onChange={e => { setForm(f => ({ ...f, message: e.target.value })); autoResize(); }}
-              placeholder="Décrivez en détail les changements ou informations à communiquer..."
+              placeholder={t('announcements.create.message.placeholder', 'Décrivez en détail les changements ou informations à communiquer...')}
               maxLength={5000} rows={3}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition bg-gray-50 focus:bg-white resize-none overflow-hidden leading-relaxed"
               style={{ minHeight: '80px' }}
@@ -205,8 +218,8 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
               className="mt-0.5 w-4 h-4 rounded flex-shrink-0 accent-[#0b5566]"
             />
             <div>
-              <div className="text-sm font-bold text-[#0b5566]">Envoyer par email à tous les utilisateurs</div>
-              <div className="text-xs text-[#0b5566]/60 mt-0.5">Un email sera envoyé à tous les comptes ayant activé les notifications.</div>
+              <div className="text-sm font-bold text-[#0b5566]">{t('announcements.create.email.label', 'Envoyer par email à tous les utilisateurs')}</div>
+              <div className="text-xs text-[#0b5566]/60 mt-0.5">{t('announcements.create.email.subtitle', 'Un email sera envoyé à tous les comptes ayant activé les notifications.')}</div>
             </div>
           </label>
 
@@ -215,14 +228,14 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
             <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
               <div className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-50 border-b border-gray-200">
                 <span className="w-2 h-2 rounded-full bg-gray-300"/><span className="w-2 h-2 rounded-full bg-gray-300"/><span className="w-2 h-2 rounded-full bg-gray-300"/>
-                <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">Aperçu bannière</span>
+                <div className="ml-2 text-[10px] font-bold uppercase tracking-widest text-gray-400">{t('announcements.create.preview.label', 'Aperçu bannière')}</div>
               </div>
               <div className={`bg-gradient-to-r ${TYPE_GRADIENT[form.type]} p-4`}>
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-base">{selectedType.icon}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-white font-bold text-sm">{form.title || "Titre de l'annonce"}</div>
-                    <div className="text-white/80 text-xs mt-0.5 leading-relaxed whitespace-pre-wrap">{form.message || "Message de l'annonce..."}</div>
+                    <div className="text-white font-bold text-sm">{form.title || t('announcements.create.preview.title', "Titre de l'annonce")}</div>
+                    <div className="text-white/80 text-xs mt-0.5 leading-relaxed whitespace-pre-wrap">{form.message || t('announcements.create.preview.message', "Message de l'annonce...")}</div>
                   </div>
                   <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
                     <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -250,11 +263,11 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
             className="w-full py-3.5 bg-[#0b5566] text-white font-bold text-sm rounded-xl hover:bg-[#0a4a59] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md active:scale-[0.98] flex items-center justify-center gap-2"
           >
             {sending ? (
-              <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" fill="none"/></svg>Envoi en cours…</>
+              <><svg className="animate-spin w-4 h-4" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.3"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4" fill="none"/></svg>{t('announcements.create.sending', 'Envoi en cours…')}</>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
-                Publier{form.sendEmail ? ' + email' : ''}
+                {t('announcements.create.publish', 'Publier')}{form.sendEmail ? ` + ${t('announcements.create.publishEmail', 'email')}` : ''}
               </>
             )}
           </button>
@@ -268,7 +281,10 @@ function CreateForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: 
 function AnnouncementDetail({ a, onBack, onToggle, onDelete }: {
   a: Announcement; onBack: () => void; onToggle: () => void; onDelete: () => void;
 }) {
+  const { t } = useI18n();
   const opt = TYPE_OPTIONS.find(t => t.value === a.type) || TYPE_OPTIONS[0];
+  const statusText = a.active ? t('announcements.detail.status.active', 'Active') : t('announcements.detail.status.inactive', 'Inactive');
+  const statusDot = a.active ? '●' : '○';
   return (
     <div className="flex flex-col h-full">
       <div className="flex flex-col gap-2 px-4 py-3 border-b border-gray-100 flex-shrink-0">
@@ -288,8 +304,8 @@ function AnnouncementDetail({ a, onBack, onToggle, onDelete }: {
             }`}
           >
             {a.active
-              ? <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>Active</>
-              : <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>Inactive</>
+              ? <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>{statusText}</>
+              : <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>{statusText}</>
             }
           </button>
           <button onClick={onDelete} className="w-8 h-8 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition-colors border border-red-100 flex-shrink-0">
@@ -313,10 +329,10 @@ function AnnouncementDetail({ a, onBack, onToggle, onDelete }: {
         {/* Meta */}
         <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
           {[
-            { label: 'Statut', value: <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${a.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{a.active ? '● Active' : '○ Désactivée'}</span> },
-            { label: 'Type', value: <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${opt.badgeCls}`}>{opt.icon} {opt.label}</span> },
-            { label: 'Email envoyé', value: <span className={`text-xs font-bold ${a.sendEmail ? 'text-[#0b5566]' : 'text-gray-400'}`}>{a.sendEmail ? '✉ Oui' : 'Non'}</span> },
-            { label: 'Publiée le', value: <span className="text-xs text-gray-600 font-medium">{new Date(a.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span> },
+            { label: t('announcements.detail.meta.status', 'Statut'), value: <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${a.active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>{statusDot} {statusText}</span> },
+            { label: t('announcements.detail.meta.type', 'Type'), value: <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${opt.badgeCls}`}>{opt.icon} {t(TYPE_TRANSLATION_KEYS[opt.value], opt.label)}</span> },
+            { label: t('announcements.detail.meta.email', 'Email envoyé'), value: <span className={`text-xs font-bold ${a.sendEmail ? 'text-[#0b5566]' : 'text-gray-400'}`}>{a.sendEmail ? `${t('announcements.detail.meta.emailYes', '✉ Oui')}` : t('announcements.detail.meta.emailNo', 'Non')}</span> },
+            { label: t('announcements.detail.meta.published', 'Publiée le'), value: <span className="text-xs text-gray-600 font-medium">{new Date(a.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span> },
           ].map(row => (
             <div key={row.label} className="flex items-center justify-between px-5 py-3.5">
               <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">{row.label}</span>
@@ -331,6 +347,7 @@ function AnnouncementDetail({ a, onBack, onToggle, onDelete }: {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function AdminAnnouncements() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
   const isShortLandscape = useIsShortLandscape();
@@ -390,10 +407,16 @@ export default function AdminAnnouncements() {
                 </svg>
               </div>
               <div>
-                <h1 className="font-extrabold text-gray-900 text-base leading-tight">Annonces</h1>
+                <h1 className="font-extrabold text-gray-900 text-base leading-tight">{t('announcements.page.title', 'Annonces')}</h1>
                 <p className="text-xs text-gray-400">
-                  {announcements.filter(a => a.active).length} active{announcements.filter(a => a.active).length !== 1 ? 's' : ''}
-                  {' · '}{announcements.length} au total
+                  {(() => {
+                    const activeCount = announcements.filter(a => a.active).length;
+                    return t('announcements.page.stats', {
+                      active: String(activeCount),
+                      suffix: activeCount === 1 ? '' : 's',
+                      total: String(announcements.length),
+                    });
+                  })()}
                 </p>
               </div>
             </div>
@@ -402,7 +425,7 @@ export default function AdminAnnouncements() {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0b5566] text-white font-semibold text-xs rounded-lg hover:bg-[#0a4a59] transition shadow-sm active:scale-[0.98] flex-shrink-0"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
-              Créer
+              {t('announcements.action.create.short', 'Créer')}
             </button>
           </div>
         </div>

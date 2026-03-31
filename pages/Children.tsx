@@ -721,7 +721,7 @@ export default function Children() {
           </div>
           {user && (user as { role?: string | null }).role === 'super-admin' && (
             <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
-              <option value="">Tous les centres</option>
+              <option value="">{t('messages.center.all', 'Tous les centres')}</option>
               {centers.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           )}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../src/context/AuthContext';
+import { useI18n } from '../src/lib/useI18n';
 import { HiOutlineOfficeBuilding, HiOutlineUsers, HiOutlineChevronDown, HiOutlineChevronRight } from 'react-icons/hi';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -46,6 +47,7 @@ interface CenterWithUsers extends Center {
 
 export default function AdminSupportPage() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [centers, setCenters] = useState<CenterWithUsers[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -540,8 +542,8 @@ export default function AdminSupportPage() {
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
               </div>
               <div className="pt-0.5">
-                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">Support</h1>
-                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Gestion des tickets de support par centre</p>
+                <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('support.title', 'Support')}</h1>
+                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('support.description', 'Gestion des tickets de support par centre')}</p>
               </div>
             </div>
           </div>
@@ -557,8 +559,8 @@ export default function AdminSupportPage() {
               {centers.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="text-gray-400 text-6xl mb-4">💬</div>
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Aucun ticket en cours</h2>
-                  <p className="text-gray-600">Tous les centres sont à jour avec leur support.</p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('support.empty.title', 'Aucun ticket en cours')}</h2>
+                  <p className="text-gray-600">{t('support.empty.message', 'Tous les centres sont à jour avec leur support.')}</p>
                 </div>
               ) : (
                 <>

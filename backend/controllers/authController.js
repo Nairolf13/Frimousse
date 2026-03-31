@@ -10,11 +10,16 @@ const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const { validatePassword } = require('../lib/validatePassword');
 const { notifyUsers } = require('../lib/pushNotifications');
 
+// Session durations
+const ACCESS_TOKEN_TTL_MS  = 15 * 60 * 1000;          // 15 minutes
+const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const REFRESH_TOKEN_TTL_JWT = '30d';
+
 function generateAccessToken(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
 }
 function generateRefreshToken(user) {
-  return jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: user.id, centerId: user.centerId || null }, REFRESH_TOKEN_SECRET, { expiresIn: REFRESH_TOKEN_TTL_JWT });
 }
 
 function cookieOptions() {
@@ -255,9 +260,9 @@ exports.login = async (req, res) => {
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
   await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
-  await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-  res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
-  res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
+  await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS) } });
+  res.cookie('accessToken', accessToken, Object.assign({ maxAge: ACCESS_TOKEN_TTL_MS }, cookieOptions()));
+  res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: REFRESH_TOKEN_TTL_MS }, cookieOptions()));
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });
   } catch (err) {
     console.error('login error', err);
@@ -268,13 +273,24 @@ exports.login = async (req, res) => {
 exports.refresh = async (req, res) => {
   const { refreshToken } = req.cookies;
   if (!refreshToken) return res.status(401).json({ message: 'No refresh token' });
-  const stored = await prisma.refreshToken.findUnique({ where: { token: refreshToken } });
-  if (!stored) return res.status(403).json({ message: 'Invalid refresh token' });
   try {
+    // Verify JWT signature first (fast, no DB hit)
     const payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
-    await prisma.refreshToken.deleteMany({ where: { userId: payload.id } });
+
+    // Atomically delete the exact token — if another request already consumed it,
+    // deleteMany returns count=0 and we reject immediately (no race window)
+    const deleted = await prisma.refreshToken.deleteMany({
+      where: { token: refreshToken, userId: payload.id },
+    });
+    if (deleted.count === 0) {
+      // Token already rotated by a concurrent request — tell client to retry
+      // with the new cookie that was already set by the winning request
+      return res.status(403).json({ message: 'Token already rotated' });
+    }
+
     const user = await prisma.user.findUnique({ where: { id: payload.id } });
     if (!user) return res.status(404).json({ message: 'User not found' });
+
     // Enforce subscription on refresh using same rules as login
     async function hasValidSubscriptionForRefresh(u) {
       if (!u) return false;
@@ -305,12 +321,15 @@ exports.refresh = async (req, res) => {
     if (!ok) {
       return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
     }
+
     const newRefreshToken = generateRefreshToken(user);
-    await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
+    await prisma.refreshToken.create({
+      data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS) },
+    });
     const accessToken = generateAccessToken(user);
-  res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
-  res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
-  res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });
+    res.cookie('accessToken', accessToken, Object.assign({ maxAge: ACCESS_TOKEN_TTL_MS }, cookieOptions()));
+    res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: REFRESH_TOKEN_TTL_MS }, cookieOptions()));
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });
   } catch (err) {
     return res.status(403).json({ message: 'Invalid refresh token' });
   }
@@ -426,9 +445,9 @@ exports.verifyEmail = async (req, res) => {
     const accessToken = generateAccessToken(updated);
     const refreshToken = generateRefreshToken(updated);
     await prisma.refreshToken.deleteMany({ where: { userId: updated.id } });
-    await prisma.refreshToken.create({ data: { token: refreshToken, userId: updated.id, expiresAt: new Date(Date.now() + 7*24*60*60*1000) } });
-    res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, cookieOptions()));
-    res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, cookieOptions()));
+    await prisma.refreshToken.create({ data: { token: refreshToken, userId: updated.id, expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS) } });
+    res.cookie('accessToken', accessToken, Object.assign({ maxAge: ACCESS_TOKEN_TTL_MS }, cookieOptions()));
+    res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: REFRESH_TOKEN_TTL_MS }, cookieOptions()));
     
     // Send welcome email now that email is verified
     (async () => {

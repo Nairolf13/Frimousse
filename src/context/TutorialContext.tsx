@@ -1,154 +1,126 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { TutorialContext } from './TutorialTypes';
 import type { Tour } from './TutorialTypes';
+import { useI18n } from '../lib/useI18n';
 export type { TutorialStep, Tour, TutorialContextValue } from './TutorialTypes';
 
-/* ───── Tour definitions ───── */
+/* ───── Tour definitions — all text uses i18n keys ───── */
 
-const TOURS: Tour[] = [
+type RawStep = { target: string; titleKey: string; contentKey: string; modal?: boolean; placement?: 'right' | 'bottom' | 'top' | 'left'; route?: string; adminOnly?: boolean };
+type RawTour = { id: string; icon: ReactNode; steps: RawStep[] };
+
+const TOURS_RAW: RawTour[] = [
   {
     id: 'onboarding',
-    name: 'Prise en main',
-    description: 'Découvrez l\'interface et les fonctionnalités principales de Frimousse.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
-    ),
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>,
     steps: [
-      { target: '_modal_', title: 'Bienvenue sur Frimousse !', content: 'Ce tutoriel va vous présenter chaque page de l\'application une par une. Vous saurez à quoi sert chaque section en moins de 2 minutes.', modal: true },
-      { target: 'sidebar-logo', title: 'Votre structure', content: 'Le nom de votre structure s\'affiche ici en haut du menu. Toutes les pages sont accessibles depuis cette barre latérale.', placement: 'right' },
-      { target: 'nav-dashboard', title: 'Tableau de bord', content: 'Le tableau de bord est votre page d\'accueil. Il affiche le calendrier du mois, les affectations prévues et un résumé de l\'activité du jour.', placement: 'right', route: '/dashboard' },
-      { target: 'nav-feed', title: 'Fil d\'actualité', content: 'Le fil d\'actualité est l\'espace de communication entre la nounou et les parents. La nounou y publie ce qui s\'est passé dans la journée. Si les parents ont donné leur autorisation, des photos de leur enfant peuvent également être partagées.', placement: 'right', route: '/feed' },
-      { target: 'nav-notifications', title: 'Notifications', content: 'Les notifications vous alertent des nouveaux messages, publications ou événements importants. Le badge indique le nombre de notifications non lues.', placement: 'right', route: '/notifications' },
-      { target: 'nav-children', title: 'Enfants', content: 'La liste de tous les enfants inscrits dans votre structure. Vous pouvez ajouter un enfant, consulter ses informations, ses allergies, son groupe et le rattacher à ses parents.', placement: 'right', route: '/children' },
-      { target: 'nav-parent', title: 'Parents', content: 'La liste des parents et tuteurs légaux. Chaque parent peut se connecter à son espace pour suivre les publications du fil d\'actualité concernant son enfant.', placement: 'right', route: '/parent' },
-      { target: 'nav-nannies', title: 'Nounous', content: 'La liste de votre équipe. Gérez les disponibilités, les plannings et les affectations de chaque professionnelle aux enfants dont elle s\'occupe.', placement: 'right', route: '/nannies' },
-      { target: 'nav-activites', title: 'Activités', content: 'Planifiez les activités de la semaine pour vos groupes d\'enfants : éveil musical, motricité, arts plastiques, sorties... Visible par toute l\'équipe.', placement: 'right', route: '/activites' },
-      { target: 'nav-reports', title: 'Rapports', content: 'La section Rapports permet à la nounou de rédiger un compte-rendu pour les parents : refus de manger, colère, fatigue, chute ou tout autre événement survenu dans la journée.', placement: 'right', route: '/reports' },
-      { target: 'nav-assistant', title: 'Assistant IA', content: 'L\'assistant IA vous aide à rédiger des messages, générer des comptes-rendus et gagner du temps au quotidien. Cette section est disponible uniquement avec un abonnement Pro.', placement: 'right', route: '/assistant' },
-      { target: 'nav-presence-sheets', title: 'Feuilles de présence', content: 'Les feuilles de présence permettent de suivre les heures d\'arrivée et de départ de chaque enfant jour par jour. La nounou remplit les horaires, envoie la feuille au parent concerné, puis chacun la signe numériquement. Les signatures se mettent à jour en temps réel.', placement: 'right', route: '/presence-sheets' },
-      { target: 'nav-messages', title: 'Messages', content: 'La messagerie instantanée permet d\'échanger en direct entre l\'admin, les nounous et les parents. Indicateur de frappe en temps réel, statut en ligne, modification et suppression des messages.', placement: 'right', route: '/messages' },
-      { target: 'nav-payment-history', title: 'Paiements', content: 'L\'historique des paiements et des cotisations. Consultez les règlements effectués et suivez la facturation de votre structure.', placement: 'right', route: '/payment-history' },
-      { target: 'nav-subscription', title: 'Mon abonnement', content: 'Gérez votre abonnement, consultez votre plan actuel et passez en Pro pour débloquer l\'assistant IA et toutes les fonctionnalités avancées.', placement: 'right', route: '/subscription', adminOnly: true },
-      { target: 'nav-settings', title: 'Paramètres', content: 'Configurez votre profil, votre mot de passe, les notifications et retrouvez tous les tutoriels de l\'application.', placement: 'right', route: '/settings' },
-      { target: '_modal_', title: 'C\'est parti !', content: 'Vous connaissez maintenant toutes les pages de Frimousse. Explorez les autres tutoriels pour apprendre à créer une nounou, un parent et un enfant !', modal: true },
+      { target: '_modal_', titleKey: 'tour.onboarding.step0.title', contentKey: 'tour.onboarding.step0.content', modal: true },
+      { target: 'sidebar-logo', titleKey: 'tour.onboarding.step1.title', contentKey: 'tour.onboarding.step1.content', placement: 'right' },
+      { target: 'nav-dashboard', titleKey: 'tour.onboarding.step2.title', contentKey: 'tour.onboarding.step2.content', placement: 'right', route: '/dashboard' },
+      { target: 'nav-feed', titleKey: 'tour.onboarding.step3.title', contentKey: 'tour.onboarding.step3.content', placement: 'right', route: '/feed' },
+      { target: 'nav-notifications', titleKey: 'tour.onboarding.step4.title', contentKey: 'tour.onboarding.step4.content', placement: 'right', route: '/notifications' },
+      { target: 'nav-children', titleKey: 'tour.onboarding.step5.title', contentKey: 'tour.onboarding.step5.content', placement: 'right', route: '/children' },
+      { target: 'nav-parent', titleKey: 'tour.onboarding.step6.title', contentKey: 'tour.onboarding.step6.content', placement: 'right', route: '/parent' },
+      { target: 'nav-nannies', titleKey: 'tour.onboarding.step7.title', contentKey: 'tour.onboarding.step7.content', placement: 'right', route: '/nannies' },
+      { target: 'nav-activites', titleKey: 'tour.onboarding.step8.title', contentKey: 'tour.onboarding.step8.content', placement: 'right', route: '/activites' },
+      { target: 'nav-reports', titleKey: 'tour.onboarding.step9.title', contentKey: 'tour.onboarding.step9.content', placement: 'right', route: '/reports' },
+      { target: 'nav-assistant', titleKey: 'tour.onboarding.step10.title', contentKey: 'tour.onboarding.step10.content', placement: 'right', route: '/assistant' },
+      { target: 'nav-presence-sheets', titleKey: 'tour.onboarding.step11.title', contentKey: 'tour.onboarding.step11.content', placement: 'right', route: '/presence-sheets' },
+      { target: 'nav-messages', titleKey: 'tour.onboarding.step12.title', contentKey: 'tour.onboarding.step12.content', placement: 'right', route: '/messages' },
+      { target: 'nav-payment-history', titleKey: 'tour.onboarding.step13.title', contentKey: 'tour.onboarding.step13.content', placement: 'right', route: '/payment-history' },
+      { target: 'nav-subscription', titleKey: 'tour.onboarding.step14.title', contentKey: 'tour.onboarding.step14.content', placement: 'right', route: '/subscription', adminOnly: true },
+      { target: 'nav-settings', titleKey: 'tour.onboarding.step15.title', contentKey: 'tour.onboarding.step15.content', placement: 'right', route: '/settings' },
+      { target: '_modal_', titleKey: 'tour.onboarding.step16.title', contentKey: 'tour.onboarding.step16.content', modal: true },
     ],
   },
   {
     id: 'add-nanny',
-    name: 'Créer une nounou',
-    description: 'Apprenez à ajouter une assistante maternelle ou une professionnelle à votre équipe.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
-    ),
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>,
     steps: [
-      { target: '_modal_', title: 'Ajouter une nounou', content: 'Suivez ce guide pour ajouter une nouvelle professionnelle (assistante maternelle, auxiliaire...) à votre équipe.', modal: true },
-      { target: 'nav-nannies', title: 'Menu Nounous', content: 'Commencez par cliquer sur "Nounous" dans le menu pour accéder à la liste de votre équipe.', placement: 'right', route: '/nannies' },
-      { target: 'btn-add-nanny', title: 'Bouton Ajouter', content: 'Cliquez sur ce bouton pour ouvrir le formulaire d\'ajout d\'une nouvelle nounou.', placement: 'bottom' },
-      { target: '_modal_', title: 'Remplir le formulaire', content: 'Renseignez le nom, l\'email, le mot de passe et les informations de contact. L\'email et le mot de passe permettront à la nounou de se connecter à son espace.', modal: true },
-      { target: '_modal_', title: 'Disponibilités & spécialisations', content: 'Indiquez la disponibilité (disponible ou en congé), les années d\'expérience et les spécialisations éventuelles.', modal: true },
-      { target: '_modal_', title: 'Nounou créée !', content: 'Une fois validé, la nounou apparaît dans la liste et peut se connecter avec ses identifiants. Vous pourrez ensuite lui affecter des enfants dans le planning.', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-nanny.step0.title', contentKey: 'tour.add-nanny.step0.content', modal: true },
+      { target: 'nav-nannies', titleKey: 'tour.add-nanny.step1.title', contentKey: 'tour.add-nanny.step1.content', placement: 'right', route: '/nannies' },
+      { target: 'btn-add-nanny', titleKey: 'tour.add-nanny.step2.title', contentKey: 'tour.add-nanny.step2.content', placement: 'bottom' },
+      { target: '_modal_', titleKey: 'tour.add-nanny.step3.title', contentKey: 'tour.add-nanny.step3.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-nanny.step4.title', contentKey: 'tour.add-nanny.step4.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-nanny.step5.title', contentKey: 'tour.add-nanny.step5.content', modal: true },
     ],
   },
   {
     id: 'add-parent',
-    name: 'Créer un parent',
-    description: 'Apprenez à inscrire un parent ou tuteur légal dans l\'application.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-    ),
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>,
     steps: [
-      { target: '_modal_', title: 'Ajouter un parent', content: 'Ce tutoriel vous montre comment créer un compte parent. Le parent pourra ensuite se connecter pour suivre son enfant.', modal: true },
-      { target: 'nav-parent', title: 'Menu Parents', content: 'Cliquez sur "Parents" dans le menu latéral pour accéder à la gestion des parents.', placement: 'right', route: '/parent' },
-      { target: 'btn-add-parent', title: 'Bouton Ajouter', content: 'Cliquez ici pour ouvrir le formulaire de création d\'un nouveau parent.', placement: 'bottom' },
-      { target: '_modal_', title: 'Informations du parent', content: 'Renseignez le prénom, le nom, l\'email et le numéro de téléphone. L\'email servira d\'identifiant de connexion.', modal: true },
-      { target: '_modal_', title: 'Adresse & mot de passe', content: 'Ajoutez l\'adresse du parent et définissez un mot de passe temporaire. Le parent pourra le modifier dans ses paramètres.', modal: true },
-      { target: '_modal_', title: 'Parent créé !', content: 'Le parent est maintenant inscrit ! Vous pourrez ensuite lui rattacher un ou plusieurs enfants lors de la création d\'un enfant.', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-parent.step0.title', contentKey: 'tour.add-parent.step0.content', modal: true },
+      { target: 'nav-parent', titleKey: 'tour.add-parent.step1.title', contentKey: 'tour.add-parent.step1.content', placement: 'right', route: '/parent' },
+      { target: 'btn-add-parent', titleKey: 'tour.add-parent.step2.title', contentKey: 'tour.add-parent.step2.content', placement: 'bottom' },
+      { target: '_modal_', titleKey: 'tour.add-parent.step3.title', contentKey: 'tour.add-parent.step3.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-parent.step4.title', contentKey: 'tour.add-parent.step4.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-parent.step5.title', contentKey: 'tour.add-parent.step5.content', modal: true },
     ],
   },
   {
     id: 'add-child',
-    name: 'Inscrire un enfant',
-    description: 'Apprenez à inscrire un enfant et le rattacher à un parent et une nounou.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
-    ),
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>,
     steps: [
-      { target: '_modal_', title: 'Inscrire un enfant', content: 'Ce guide vous explique comment ajouter un enfant dans Frimousse et le rattacher à ses parents et sa nounou.', modal: true },
-      { target: 'nav-children', title: 'Menu Enfants', content: 'Rendez-vous dans la section "Enfants" depuis le menu.', placement: 'right', route: '/children' },
-      { target: 'btn-add-child', title: 'Bouton Ajouter', content: 'Cliquez sur le bouton d\'ajout pour ouvrir le formulaire d\'inscription.', placement: 'bottom' },
-      { target: '_modal_', title: 'Informations de l\'enfant', content: 'Renseignez le nom, la date de naissance, le sexe et le groupe (bébés, moyens, grands...). Le groupe permet d\'organiser les enfants par âge.', modal: true },
-      { target: '_modal_', title: 'Rattacher un parent', content: 'Sélectionnez le parent dans la liste déroulante. Si le parent n\'est pas encore créé, faites-le d\'abord via le tutoriel "Créer un parent".', modal: true },
-      { target: '_modal_', title: 'Informations médicales', content: 'Ajoutez les allergies éventuelles et les informations de santé importantes. Ces informations seront visibles par les nounous.', modal: true },
-      { target: '_modal_', title: 'Enfant inscrit !', content: 'L\'enfant apparaît maintenant dans la liste. Vous pouvez lui affecter une nounou via le planning et ses parents peuvent suivre son activité.', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-child.step0.title', contentKey: 'tour.add-child.step0.content', modal: true },
+      { target: 'nav-children', titleKey: 'tour.add-child.step1.title', contentKey: 'tour.add-child.step1.content', placement: 'right', route: '/children' },
+      { target: 'btn-add-child', titleKey: 'tour.add-child.step2.title', contentKey: 'tour.add-child.step2.content', placement: 'bottom' },
+      { target: '_modal_', titleKey: 'tour.add-child.step3.title', contentKey: 'tour.add-child.step3.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-child.step4.title', contentKey: 'tour.add-child.step4.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-child.step5.title', contentKey: 'tour.add-child.step5.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.add-child.step6.title', contentKey: 'tour.add-child.step6.content', modal: true },
     ],
   },
   {
     id: 'planning',
-    name: 'Gérer le planning',
-    description: 'Découvrez comment organiser le planning et les pointages.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>
-    ),
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" /></svg>,
     steps: [
-      { target: '_modal_', title: 'Le planning', content: 'Le planning vous permet de visualiser les affectations nounou-enfant et de gérer les pointages quotidiens.', modal: true },
-      { target: 'nav-dashboard', title: 'Tableau de bord', content: 'Le tableau de bord affiche le calendrier du mois avec les affectations prévues pour chaque jour.', placement: 'right', route: '/dashboard' },
-      { target: '_modal_', title: 'Créer une affectation', content: 'Cliquez sur un jour du calendrier pour créer une affectation : choisissez l\'enfant et la nounou, puis validez.', modal: true },
-      { target: 'nav-activites', title: 'Activités', content: 'Dans la section Activités, planifiez les activités de la semaine : éveil musical, motricité, arts plastiques...', placement: 'right', route: '/activites' },
+      { target: '_modal_', titleKey: 'tour.planning.step0.title', contentKey: 'tour.planning.step0.content', modal: true },
+      { target: 'nav-dashboard', titleKey: 'tour.planning.step1.title', contentKey: 'tour.planning.step1.content', placement: 'right', route: '/dashboard' },
+      { target: '_modal_', titleKey: 'tour.planning.step2.title', contentKey: 'tour.planning.step2.content', modal: true },
+      { target: 'nav-activites', titleKey: 'tour.planning.step3.title', contentKey: 'tour.planning.step3.content', placement: 'right', route: '/activites' },
     ],
   },
   {
     id: 'presence-sheets',
-    name: 'Feuilles de présence',
-    description: 'Créez et signez les relevés mensuels de présence avec les parents.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>
-    ),
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" /></svg>,
     steps: [
-      { target: '_modal_', title: 'Feuilles de présence', content: 'Les feuilles de présence remplacent le carnet papier. Elles permettent à la nounou de saisir les heures d\'arrivée et de départ de chaque enfant, puis d\'obtenir la signature numérique des parents jour par jour.', modal: true },
-      { target: 'nav-presence-sheets', title: 'Accéder aux feuilles', content: 'Cliquez sur "Feuilles de présence" dans le menu pour accéder à la section.', placement: 'right', route: '/presence-sheets' },
-      { target: '_modal_', title: 'Créer une feuille', content: 'Cliquez sur "Nouvelle feuille", sélectionnez l\'enfant concerné, le mois et l\'année. Les horaires d\'arrivée et de départ par défaut sont pré-remplis pour vous faire gagner du temps.', modal: true },
-      { target: '_modal_', title: 'Saisir les horaires', content: 'Pour chaque jour travaillé, modifiez l\'heure d\'arrivée et de départ si nécessaire. Cochez "Absent" si l\'enfant n\'était pas présent. Les week-ends et jours fériés sont automatiquement désactivés.', modal: true },
-      { target: '_modal_', title: 'Envoyer au parent', content: 'Une fois les horaires saisis, cliquez sur "Envoyer aux parents". Le parent reçoit une notification et peut accéder à la feuille depuis son espace.', modal: true },
-      { target: '_modal_', title: 'Signature numérique', content: 'Chaque jour peut être signé indépendamment. La nounou signe de son côté, le parent signe du sien. Les signatures apparaissent en temps réel grâce à la synchronisation instantanée.', modal: true },
-      { target: '_modal_', title: 'Sécurité des signatures', content: 'Une fois qu\'un jour est signé, les horaires ne peuvent plus être modifiés par la nounou ou le parent. Seul un administrateur peut corriger une entrée déjà signée.', modal: true },
-      { target: '_modal_', title: 'Export PDF', content: 'À tout moment vous pouvez exporter la feuille en PDF pour l\'archiver ou l\'imprimer. Elle récapitule toutes les présences du mois ainsi que les signatures.', modal: true },
+      { target: '_modal_', titleKey: 'tour.presence-sheets.step0.title', contentKey: 'tour.presence-sheets.step0.content', modal: true },
+      { target: 'nav-presence-sheets', titleKey: 'tour.presence-sheets.step1.title', contentKey: 'tour.presence-sheets.step1.content', placement: 'right', route: '/presence-sheets' },
+      { target: '_modal_', titleKey: 'tour.presence-sheets.step2.title', contentKey: 'tour.presence-sheets.step2.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.presence-sheets.step3.title', contentKey: 'tour.presence-sheets.step3.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.presence-sheets.step4.title', contentKey: 'tour.presence-sheets.step4.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.presence-sheets.step5.title', contentKey: 'tour.presence-sheets.step5.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.presence-sheets.step6.title', contentKey: 'tour.presence-sheets.step6.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.presence-sheets.step7.title', contentKey: 'tour.presence-sheets.step7.content', modal: true },
     ],
   },
   {
     id: 'messaging',
-    name: 'Messagerie instantanée',
-    description: 'Échangez en direct avec les nounous et les parents de votre centre.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>
-    ),
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>,
     steps: [
-      { target: '_modal_', title: 'Messagerie instantanée', content: 'La messagerie vous permet d\'échanger en temps réel avec toutes les personnes de votre centre : nounous et parents. Les messages sont délivrés instantanément grâce aux WebSockets.', modal: true },
-      { target: 'nav-messages', title: 'Accéder aux messages', content: 'Cliquez sur "Messages" dans le menu pour ouvrir la messagerie.', placement: 'right', route: '/messages' },
-      { target: '_modal_', title: 'Liste des conversations', content: 'La page affiche la liste de vos conversations existantes. Chaque ligne montre le nom de votre interlocuteur, un aperçu du dernier message et un badge rouge si vous avez des messages non lus.', modal: true },
-      { target: '_modal_', title: 'Statut en ligne', content: 'Un point vert à côté de l\'avatar indique que la personne est connectée en ce moment. Un point gris signifie qu\'elle est hors ligne.', modal: true },
-      { target: '_modal_', title: 'Nouvelle conversation', content: 'Cliquez sur le crayon en haut à droite pour démarrer une nouvelle conversation. Seules les personnes autorisées apparaissent : l\'admin voit tout le centre, un parent voit l\'admin et la nounou de son enfant, une nounou voit l\'admin et les parents de ses enfants.', modal: true },
-      { target: '_modal_', title: 'Envoyer un message', content: 'Tapez votre message dans la zone de saisie et appuyez sur Entrée pour envoyer. Utilisez Maj+Entrée pour un saut de ligne. Le destinataire reçoit une notification push même s\'il n\'a pas l\'application ouverte.', modal: true },
-      { target: '_modal_', title: 'Indicateur de frappe', content: 'Lorsque votre interlocuteur est en train d\'écrire, trois points animés apparaissent dans la conversation. C\'est la même expérience que les grandes messageries modernes.', modal: true },
-      { target: '_modal_', title: 'Modifier ou supprimer un message', content: 'Restez appuyé sur une de vos bulles pour faire apparaître un menu contextuel. Vous pouvez modifier le texte ou supprimer le message. La modification est visible en temps réel par votre interlocuteur.', modal: true },
-      { target: '_modal_', title: 'Supprimer une conversation', content: 'Sur mobile, faites glisser une conversation vers la gauche pour révéler le bouton de suppression rouge. La conversation est retirée de votre liste instantanément.', modal: true },
+      { target: '_modal_', titleKey: 'tour.messaging.step0.title', contentKey: 'tour.messaging.step0.content', modal: true },
+      { target: 'nav-messages', titleKey: 'tour.messaging.step1.title', contentKey: 'tour.messaging.step1.content', placement: 'right', route: '/messages' },
+      { target: '_modal_', titleKey: 'tour.messaging.step2.title', contentKey: 'tour.messaging.step2.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.messaging.step3.title', contentKey: 'tour.messaging.step3.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.messaging.step4.title', contentKey: 'tour.messaging.step4.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.messaging.step5.title', contentKey: 'tour.messaging.step5.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.messaging.step6.title', contentKey: 'tour.messaging.step6.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.messaging.step7.title', contentKey: 'tour.messaging.step7.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.messaging.step8.title', contentKey: 'tour.messaging.step8.content', modal: true },
     ],
   },
   {
     id: 'feed-reports',
-    name: 'Fil d\'actualité',
-    description: 'Communiquez avec les parents : humeur, repas, incidents, moments du quotidien.',
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>
-    ),
+    icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>,
     steps: [
-      { target: '_modal_', title: 'Le fil d\'actualité', content: 'Le fil d\'actualité est l\'outil de communication quotidienne entre la nounou et les parents. La nounou y signale tout ce qui s\'est passé dans la journée avec l\'enfant.', modal: true },
-      { target: 'nav-feed', title: 'Accéder au fil', content: 'Cliquez sur "Fil d\'actualité" dans le menu pour accéder aux publications.', placement: 'right', route: '/feed' },
-      { target: '_modal_', title: 'Partager des moments', content: 'La nounou peut publier des photos des activités de la journée, partager des informations importantes concernant la crèche ou la MAM : sorties, événements, fermetures exceptionnelles...', modal: true },
-      { target: '_modal_', title: 'Réactions & réponses', content: 'Les parents peuvent liker la publication et voir qui d\'autre a réagi. Cela crée un lien de confiance et de transparence entre la structure et les familles.', modal: true },
-      { target: '_modal_', title: 'Bonne pratique', content: 'Publiez au moins un message par enfant en fin de journée. Les parents apprécient savoir comment s\'est passée la journée même quand tout va bien.', modal: true },
+      { target: '_modal_', titleKey: 'tour.feed-reports.step0.title', contentKey: 'tour.feed-reports.step0.content', modal: true },
+      { target: 'nav-feed', titleKey: 'tour.feed-reports.step1.title', contentKey: 'tour.feed-reports.step1.content', placement: 'right', route: '/feed' },
+      { target: '_modal_', titleKey: 'tour.feed-reports.step2.title', contentKey: 'tour.feed-reports.step2.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.feed-reports.step3.title', contentKey: 'tour.feed-reports.step3.content', modal: true },
+      { target: '_modal_', titleKey: 'tour.feed-reports.step4.title', contentKey: 'tour.feed-reports.step4.content', modal: true },
     ],
   },
 ];
@@ -159,6 +131,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, setUser } = useAuth();
+  const { t } = useI18n();
   const isAdmin = user && typeof user.role === 'string' && (user.role === 'admin' || user.role.toLowerCase().includes('super'));
   const [activeTour, setActiveTour] = useState<Tour | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
@@ -166,6 +139,23 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const pendingRoute = useRef<string | null>(null);
 
   const isActive = activeTour !== null;
+
+  // Resolve all i18n keys into Tour objects
+  const TOURS: Tour[] = useMemo(() => TOURS_RAW.map(raw => ({
+    id: raw.id,
+    icon: raw.icon,
+    name: t(`tour.${raw.id}.name`),
+    description: t(`tour.${raw.id}.description`),
+    steps: raw.steps.map(s => ({
+      target: s.target,
+      title: t(s.titleKey),
+      content: t(s.contentKey),
+      ...(s.modal !== undefined && { modal: s.modal }),
+      ...(s.placement !== undefined && { placement: s.placement }),
+      ...(s.route !== undefined && { route: s.route }),
+      ...(s.adminOnly !== undefined && { adminOnly: s.adminOnly }),
+    })),
+  })), [t]);
 
   const startTour = useCallback((tourId: string) => {
     const tour = TOURS.find(t => t.id === tourId);
@@ -177,12 +167,11 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     setActiveTour(filteredTour);
     setCurrentStep(0);
     setShowMenu(false);
-    // Navigate to first step's route if needed
     const firstRoute = tour.steps[0]?.route;
     if (firstRoute && location.pathname !== firstRoute) {
       navigate(firstRoute);
     }
-  }, [navigate, location.pathname, isAdmin]);
+  }, [TOURS, navigate, location.pathname, isAdmin]);
 
   const stopTour = useCallback(() => {
     setActiveTour(null);
@@ -194,7 +183,6 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const nextStep = useCallback(() => {
     if (!activeTour) return;
     if (currentStep >= activeTour.steps.length - 1) {
-      // Mark tour as completed in DB + local state
       const tourId = activeTour.id;
       fetch('/api/user/tutorial-completed', {
         method: 'PUT',
@@ -207,7 +195,6 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         if (!prev.includes(tourId)) {
           const next = [...prev, tourId];
           setUser({ ...user, tutorialCompleted: next });
-          // Fallback localStorage pour cohérence
           try { localStorage.setItem('tutorial_completed', JSON.stringify(next)); } catch { /* ignore */ }
         }
       }
@@ -222,7 +209,6 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     if (nextRoute && location.pathname !== nextRoute) {
       pendingRoute.current = nextRoute;
       navigate(nextRoute);
-      // Wait for navigation then set step
       setTimeout(() => {
         setCurrentStep(nextIdx);
         pendingRoute.current = null;
@@ -247,11 +233,9 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   const toggleMenu = useCallback(() => setShowMenu(v => !v), []);
   const closeMenu = useCallback(() => setShowMenu(false), []);
 
-  // Auto-launch onboarding on very first login (server-side flag)
   useEffect(() => {
     if (!user) return;
     if (user.tutorialSeen) return;
-    // Mark as seen on the server
     fetch('/api/user/tutorial-seen', { method: 'PUT', credentials: 'include' }).catch(() => { /* ignore */ });
     const timer = setTimeout(() => setShowMenu(true), 1500);
     return () => clearTimeout(timer);

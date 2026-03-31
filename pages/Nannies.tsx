@@ -810,7 +810,7 @@ export default function Nannies() {
           </div>
           {user && typeof user.role === 'string' && user.role === 'super-admin' && (
             <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
-              <option value="">Tous les centres</option>
+              <option value="">{t('messages.center.all', 'Tous les centres')}</option>
               {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
@@ -969,10 +969,10 @@ export default function Nannies() {
               <div className="md:col-span-2">
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { ok: hasUpper, label: 'Une majuscule (A-Z)' },
-                    { ok: hasDigit, label: 'Un chiffre (0-9)' },
-                    { ok: hasSpecial, label: 'Un caractère spécial' },
-                    { ok: hasLength, label: `${minLength} caractères min.` },
+                    { ok: hasUpper, label: t('nanny.password.requirements.upper', 'Une majuscule (A-Z)') },
+                    { ok: hasDigit, label: t('nanny.password.requirements.digit', 'Un chiffre (0-9)') },
+                    { ok: hasSpecial, label: t('nanny.password.requirements.special', 'Un caractère spécial') },
+                    { ok: hasLength, label: t('nanny.password.requirements.length', '{min} caractères min.').replace('{min}', String(minLength)) },
                   ].map(({ ok, label }) => (
                     <div key={label} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg font-medium ${ok ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
                       <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points={ok ? "20 6 9 17 4 12" : "18 6 6 18M6 6l12 12"}/></svg>

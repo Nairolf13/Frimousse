@@ -27,6 +27,7 @@ interface AssignmentFormProps {
 }
 
 export default function AssignmentModal({ open, onClose, onSave, initial }: AssignmentFormProps) {
+  const { t, locale } = useI18n();
   const [children, setChildren] = useState<Child[]>([]);
   const [nannies, setNannies] = useState<Nanny[]>([]);
 
@@ -38,8 +39,6 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
   const [selectedNannyId, setSelectedNannyId] = useState('');
   const [manualDates, setManualDates] = useState<string[]>([]);
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
-
-  const { t } = useI18n();
 
   const isEdit = !!initial?.childId;
 
@@ -154,7 +153,7 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
               </p>
             )}
             {!isEdit && !(selectedDates.length > 0 && selectedChildIds.length > 0) && (
-              <p className="text-xs text-gray-400 mt-0.5">Sélectionnez des enfants, jours et une nounou</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t('assignment.modal.help', 'Select children, days and a nanny')}</p>
             )}
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition flex-shrink-0">
@@ -232,20 +231,20 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
               <>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                    Sélection de jours <span className="text-red-400">*</span>
+                    {t('assignment.modal.day_selection', 'Select days')} <span className="text-red-400">*</span>
                   </label>
                   <div className="flex items-center justify-between text-xs font-semibold mb-2">
                     <button
                       type="button"
                       onClick={() => setCalendarMonth(month => new Date(month.getFullYear(), month.getMonth() - 1, 1))}
                       className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200"
-                    >Préc.</button>
-                    <span>{new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(calendarMonth)}</span>
+                    >{t('assignment.modal.prev', 'Prev')}</button>
+                    <span>{new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-US', { month: 'long', year: 'numeric' }).format(calendarMonth)}</span>
                     <button
                       type="button"
                       onClick={() => setCalendarMonth(month => new Date(month.getFullYear(), month.getMonth() + 1, 1))}
                       className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200"
-                    >Suiv.</button>
+                    >{t('assignment.modal.next', 'Next')}</button>
                   </div>
                   <div className="grid grid-cols-7 gap-1 text-[10px] text-gray-500 text-center mb-1">
                     {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((d, index) => <div key={`${d}-${index}`}>{d}</div>)}
@@ -282,7 +281,7 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
                   {manualDates.length > 0 ? (
                     <p className="text-xs text-gray-400">{manualDates.length} jour{manualDates.length > 1 ? 's' : ''} sélectionné{manualDates.length > 1 ? 's' : ''}</p>
                   ) : (
-                    <p className="text-xs text-gray-400">Aucun jour sélectionné</p>
+                    <p className="text-xs text-gray-400">{t('assignment.modal.no_days', 'No days selected')}</p>
                   )}
                 </div>
 

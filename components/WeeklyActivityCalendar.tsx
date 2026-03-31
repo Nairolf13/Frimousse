@@ -256,7 +256,7 @@ export default function WeeklyActivityCalendar() {
               {user && (user as { role?: string | null }).role === 'super-admin' && (
               <div className="w-full md:w-auto mb-2 md:mb-0 md:mr-2">
                   <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm w-full md:w-auto min-h-[44px]">
-                  <option value="">Tous les centres</option>
+                  <option value="">{t('activities.center.all', 'Tous les centres')}</option>
                   {centers.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -464,7 +464,9 @@ export default function WeeklyActivityCalendar() {
                   return (
                     <div>
                       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                        {resolvedNannies.length > 1 ? `${resolvedNannies.length} Nounous assignées` : 'Nounou assignée'}
+                        {resolvedNannies.length > 1
+                          ? t('activities.nannies.assigned', `${resolvedNannies.length} Nounous assignées`)
+                          : t('activities.nannies.assigned_single', 'Nounou assignée')}
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {resolvedNannies.map(nanny => (
@@ -518,7 +520,7 @@ export default function WeeklyActivityCalendar() {
                 </div>
                 <div>
                   <h2 className="text-base sm:text-lg font-extrabold text-[#0b5566] leading-tight">{selectedActivity ? t('activities.modal.edit') : t('activities.modal.add')}</h2>
-                  <p className="text-xs text-gray-400 leading-none mt-0.5 hidden sm:block">Planifiez une activité pour la semaine</p>
+                  <p className="text-xs text-gray-400 leading-none mt-0.5 hidden sm:block">{t('activities.modal.subtitle', 'Planifiez une activité pour la semaine')}</p>
                 </div>
               </div>
               <button onClick={() => { setAdding(false); setSelectedActivity(null); }} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-xl leading-none flex-shrink-0">×</button>
@@ -534,7 +536,7 @@ export default function WeeklyActivityCalendar() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ex : Atelier peinture, Lecture, Jeux libres…"
+                  placeholder={t('activities.modal.name.placeholder', 'Ex : Atelier peinture, Lecture, Jeux libres…')}
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition"
@@ -575,10 +577,10 @@ export default function WeeklyActivityCalendar() {
               {/* Commentaire */}
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                  {t('label.comment.optional') || 'Commentaire'} <span className="text-gray-400 font-normal normal-case text-xs">(optionnel)</span>
+                  {t('label.comment.optional', 'Commentaire (optionnel)')}
                 </label>
                 <textarea
-                  placeholder="Matériel nécessaire, consignes particulières…"
+                  placeholder={t('activities.modal.comment.placeholder', 'Matériel nécessaire, consignes particulières…')}
                   value={form.comment}
                   onChange={e => setForm(f => ({ ...f, comment: e.target.value }))}
                   rows={2}
@@ -590,7 +592,7 @@ export default function WeeklyActivityCalendar() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                    Nounous assignées <span className="text-red-400">*</span>
+                    {t('activities.nannies.assigned', 'Nounous assignées')} <span className="text-red-400">*</span>
                   </label>
                   {form.nannyIds.length > 0 && (
                     <span className="text-xs font-semibold text-[#0b5566] bg-[#e6f4f7] px-2 py-0.5 rounded-full">
@@ -599,7 +601,7 @@ export default function WeeklyActivityCalendar() {
                   )}
                 </div>
                 {nannies.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic">Aucune nounou disponible.</p>
+                  <p className="text-xs text-gray-400 italic">{t('activity.modal.no_nannies', 'Aucune nounou disponible.')}</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {nannies.map(n => {
@@ -637,7 +639,7 @@ export default function WeeklyActivityCalendar() {
                 {form.nannyIds.length > 1 && (
                   <div className="mt-2 flex items-center gap-1.5 bg-[#e6f4f7] rounded-xl px-3 py-2">
                     <svg className="w-4 h-4 text-[#0b5566] flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
-                    <p className="text-xs text-[#0b5566] font-medium">Activité de groupe — {form.nannyIds.length} nounous assignées</p>
+                    <p className="text-xs text-[#0b5566] font-medium">{t('activities.nannies.group_summary', { count: String(form.nannyIds.length) })}</p>
                   </div>
                 )}
               </div>

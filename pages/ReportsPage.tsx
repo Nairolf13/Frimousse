@@ -110,6 +110,14 @@ export default function ReportsPage() {
       .then(data => setReports(Array.isArray(data) ? data : []))
       .catch(() => setReports([]));
   }, []);
+  const getNannyRoleLabel = (role?: string) => {
+    if (!role) return '';
+    const roleItem = nannyRoles.find(r => r.key === role);
+    if (roleItem) return t(roleItem.label);
+    // if already a localized value or fallback
+    return t(`nanny.role.${role.toLowerCase().replace(/ /g, '')}`, role);
+  };
+
   const total = reports.length;
   const week = reports.filter(r => {
     if (!r.date) return false;
@@ -364,7 +372,7 @@ export default function ReportsPage() {
                     <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm flex-shrink-0">{nannyInitials}</div>
                     <div>
                       <div className="font-semibold text-gray-800 text-sm leading-tight">{report.nanny?.name}</div>
-                      <div className="text-xs text-gray-400">{report.nanny?.role}</div>
+<div className="text-xs text-gray-400">{getNannyRoleLabel(report.nanny?.role)}</div>
                     </div>
                   </div>
 
@@ -386,7 +394,7 @@ export default function ReportsPage() {
                   )}
 
                   <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>Par <span className="font-semibold text-gray-600">{report.nanny?.name}</span></span>
+                    <span>{t('reports.by', 'Par')} <span className="font-semibold text-gray-600">{report.nanny?.name}</span></span>
                     <span>
                       {(() => {
                         try {

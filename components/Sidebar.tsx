@@ -12,7 +12,7 @@ import { useCenterInfo } from '../src/hooks/useCenterInfo';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 
-function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, string>) => string) {
+function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, string> | string) => string) {
   // Parents should see a limited set of links
   if (user && user.role === 'parent') {
     return [
@@ -23,8 +23,8 @@ function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, st
       { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
       { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
-      ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || (user && typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/messages', label: 'Messages', icon: <HiOutlineChatAlt2 className="w-5 h-5 mr-3" /> }] : []),
-      { to: '/presence-sheets', label: 'Feuilles de présence', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || (user && typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/messages', label: t('nav.messages'), icon: <HiOutlineChatAlt2 className="w-5 h-5 mr-3" /> }] : []),
+      { to: '/presence-sheets', label: t('nav.presenceSheets'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
       { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
@@ -41,8 +41,8 @@ function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, st
       { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
       { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || user?.role === 'super-admin' ? [{ to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> }] : []),
-      ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || user?.role === 'super-admin' ? [{ to: '/messages', label: 'Messages', icon: <HiOutlineChatAlt2 className="w-5 h-5 mr-3" /> }] : []),
-      { to: '/presence-sheets', label: 'Feuilles de présence', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+      ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || user?.role === 'super-admin' ? [{ to: '/messages', label: t('nav.messages'), icon: <HiOutlineChatAlt2 className="w-5 h-5 mr-3" /> }] : []),
+      { to: '/presence-sheets', label: t('nav.presenceSheets'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
       { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
       { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
     ];
@@ -53,9 +53,9 @@ function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, st
     { to: '/notifications', label: t('nav.notifications'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
     // Admin links regroupés
     ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [
-      { to: '/admin/centers', label: 'Centres', icon: <HiOutlineOfficeBuilding className="w-5 h-5 mr-3" /> },
-      { to: '/admin/support', label: 'Support', icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> },
-      { to: '/admin/announcements', label: 'Annonces', icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
+      { to: '/admin/centers', label: t('nav.centers', 'Centres'), icon: <HiOutlineOfficeBuilding className="w-5 h-5 mr-3" /> },
+      { to: '/admin/support', label: t('nav.support', 'Support'), icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> },
+      { to: '/admin/announcements', label: t('nav.announcements', 'Annonces'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
     ] : []),
     { to: '/children', label: t('nav.children'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
     { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
@@ -63,11 +63,11 @@ function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, st
     { to: '/activites', label: t('nav.activities'), icon: <HiOutlineCalendar className="w-5 h-5 mr-3" /> },
     { to: '/reports', label: t('nav.reports'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
     ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || (user && typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/assistant', label: t('nav.assistant'), icon: <FaRobot className="w-5 h-5 mr-3" /> }] : []),
-    ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || (user && typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/messages', label: 'Messages', icon: <HiOutlineChatAlt2 className="w-5 h-5 mr-3" /> }] : []),
-    { to: '/presence-sheets', label: 'Feuilles de présence', icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
+    ...((user?.plan || '').toLowerCase() === 'pro' || (user?.subscriptionStatus || '').toLowerCase() === 'trialing' || (user && typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/messages', label: t('nav.messages'), icon: <HiOutlineChatAlt2 className="w-5 h-5 mr-3" /> }] : []),
+    { to: '/presence-sheets', label: t('nav.presenceSheets'), icon: <HiOutlineDocumentText className="w-5 h-5 mr-3" /> },
     { to: '/payment-history', label: t('nav.payments'), icon: <HiOutlineCurrencyDollar className="w-5 h-5 mr-3" /> },
-    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/reviews', label: 'Avis', icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }] : []),
-    ...(user && (typeof user.role === 'string' && (user.role === 'admin' || user.role.toLowerCase().includes('super'))) ? [{ to: '/subscription', label: 'Mon abonnement', icon: <HiOutlineCreditCard className="w-5 h-5 mr-3" /> }] : []),
+    ...(user && (typeof user.role === 'string' && user.role.toLowerCase().includes('super')) ? [{ to: '/admin/reviews', label: t('nav.reviews', 'Avis'), icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> }] : []),
+    ...(user && (typeof user.role === 'string' && (user.role === 'admin' || user.role.toLowerCase().includes('super'))) ? [{ to: '/subscription', label: t('nav.subscription', 'Mon abonnement'), icon: <HiOutlineCreditCard className="w-5 h-5 mr-3" /> }] : []),
     { to: '/settings', label: t('nav.settings'), icon: <HiOutlineCog className="w-5 h-5 mr-3" /> },
   ];
 }

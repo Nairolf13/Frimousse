@@ -18,7 +18,7 @@ function UserPreferencesSync() {
 
   useEffect(() => {
     if (!user) return;
-    if (user.language === 'fr' || user.language === 'en') {
+    if (user.language === 'fr' || user.language === 'en' || user.language === 'es') {
       setLocale(user.language);
       try { localStorage.setItem('site_language', user.language); } catch { /* ignore */ }
     }
