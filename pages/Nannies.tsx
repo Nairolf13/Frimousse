@@ -3,6 +3,7 @@ import { useI18n } from '../src/lib/useI18n';
 import '../styles/filter-responsive.css';
 import NannyCalendar from '../components/NannyCalendar';
 import { useAuth } from '../src/context/AuthContext';
+import { useCenterSettings } from '../src/context/CenterSettingsContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 
@@ -85,6 +86,8 @@ export default function Nannies() {
   const [cotisationStatus, setCotisationStatus] = useState<Record<string, { paidUntil: string | null; loading: boolean }>>({});
   const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number>>({});
   const [cotisationParentsTotals, setCotisationParentsTotals] = useState<Record<string, number>>({});
+  const { settings: centerSettings } = useCenterSettings();
+  const defaultNannyCotisation = centerSettings.nannyCotisationAmount;
   interface Assignment {
     id: string;
     date: string;
@@ -251,7 +254,7 @@ export default function Nannies() {
   };
 
   const requestPay = (nannyId: string) => {
-    const amount = cotisationAmounts[nannyId] || 10;
+    const amount = cotisationAmounts[nannyId] || defaultNannyCotisation;
     setConfirmPayment({ nannyId, amount });
   };
 
@@ -280,7 +283,7 @@ export default function Nannies() {
               const cotStatus: Record<string, { paidUntil: string | null; loading: boolean }> = {};
               const parentsTotals: Record<string, number> = {};
               (enriched || []).forEach((n: Nanny & { totalMonthly?: number; lastCotisationAmount?: number }) => {
-                amounts[n.id] = Number(n.lastCotisationAmount) || 10;
+                amounts[n.id] = Number(n.lastCotisationAmount) || defaultNannyCotisation;
                 cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false };
                 parentsTotals[n.id] = Number(n.totalMonthly || 0);
               });
@@ -297,7 +300,7 @@ export default function Nannies() {
           // fallback defaults when batch details fail
           const amounts: Record<string, number> = {};
           const cotStatus: Record<string, { paidUntil: string | null; loading: boolean }> = {};
-          (cached || []).forEach(n => { amounts[n.id] = 10; cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false }; });
+          (cached || []).forEach(n => { amounts[n.id] = defaultNannyCotisation; cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false }; });
           setCotisationAmounts(amounts);
           setCotisationStatus(cotStatus);
           setLoading(false);
@@ -314,7 +317,7 @@ export default function Nannies() {
         const cotStatus: Record<string, { paidUntil: string | null; loading: boolean }> = {};
         const parentsTotals: Record<string, number> = {};
         (enriched || []).forEach((n: Nanny & { totalMonthly?: number; lastCotisationAmount?: number }) => {
-          amounts[n.id] = Number(n.lastCotisationAmount) || 10;
+          amounts[n.id] = Number(n.lastCotisationAmount) || defaultNannyCotisation;
           cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false };
           parentsTotals[n.id] = Number(n.totalMonthly || 0);
         });
@@ -331,7 +334,7 @@ export default function Nannies() {
           setNannies(nannies);
           const amounts: Record<string, number> = {};
           const cotStatus: Record<string, { paidUntil: string | null; loading: boolean }> = {};
-          (nannies || []).forEach((n: Nanny) => { amounts[n.id] = 10; cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false }; });
+          (nannies || []).forEach((n: Nanny) => { amounts[n.id] = defaultNannyCotisation; cotStatus[n.id] = { paidUntil: n.cotisationPaidUntil || null, loading: false }; });
           setCotisationAmounts(amounts);
           setCotisationStatus(cotStatus);
           try { setCached(cacheKeyNannies, nannies); } catch { /* ignore */ }
@@ -342,7 +345,8 @@ export default function Nannies() {
         setLoading(false);
       }
     })();
-  }, [centerFilter]);
+  }, [centerFilter, defaultNannyCotisation]);
+
 
   useEffect(() => {
     // initial load
@@ -1131,35 +1135,27 @@ export default function Nannies() {
                     </div>
 
                     {/* Cotisation */}
-                    <div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('nanny.cotisation.label')}</span>
+                    {defaultNannyCotisation > 0 && (<div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2">
+                      <div className="flex items-center gap-2 flex-nowrap min-w-0">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{t('nanny.cotisation.label')}</span>
                         {cotisation && !cotisation.loading && (
                           daysRemaining > 0 ? (
-                            <span className="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center justify-center gap-1">
+                            <span className="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center justify-center gap-1 whitespace-nowrap">
                               <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                               {t('nanny.cotisation.days_remaining', { n: String(daysRemaining) })}
                             </span>
                           ) : (
-                            <span className="ml-auto text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full flex items-center justify-center">{t('nanny.cotisation.renew')}</span>
+                            <span className="ml-auto text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full flex items-center justify-center whitespace-nowrap">{t('nanny.cotisation.renew')}</span>
                           )
                         )}
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-nowrap min-w-0">
                         {cotisation?.loading ? (
                           <span className="text-sm text-gray-400 animate-pulse">{t('loading')}</span>
                         ) : daysRemaining > 0 ? (
-                          <span className="text-xl font-extrabold text-[#0b5566]">{(cotisationAmounts[nanny.id] ?? 10)}€</span>
-                        ) : isAdmin ? (
-                          <input
-                            type="number"
-                            className="w-20 px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20"
-                            value={cotisationAmounts[nanny.id] ?? 10}
-                            onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [nanny.id]: Number(e.target.value) }))}
-                            onClick={(e) => e.stopPropagation()}
-                          />
+                          <span className="text-xl font-extrabold text-[#0b5566]">{defaultNannyCotisation}€</span>
                         ) : (
-                          <span className="text-xl font-extrabold text-gray-700">10€</span>
+                          <span className="text-xl font-extrabold text-gray-700">{defaultNannyCotisation}€</span>
                         )}
                         {daysRemaining <= 0 && isAdmin && (
                           <button
@@ -1179,6 +1175,7 @@ export default function Nannies() {
                         <span className="font-bold text-gray-700 ml-1">{(cotisationParentsTotals[nanny.id] ?? 0)}€</span>
                       </div>
                     </div>
+                    )}
                   </div>
 
                   {/* Card footer */}

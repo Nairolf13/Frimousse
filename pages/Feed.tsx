@@ -300,7 +300,8 @@ export default function Feed() {
         if (!res || !res.ok) return;
         const data = await res.json();
         if (!mounted) return;
-        if (Array.isArray(data)) setCenters(data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+        if (list.length > 0) setCenters(list.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
       } catch (e) {
         if (import.meta.env.DEV) console.error('Failed to load centers for filter', e);
       }

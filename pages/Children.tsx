@@ -13,10 +13,6 @@ function computeAge(birthDate?: string, fallbackAge?: number): number {
   return fallbackAge ?? 0;
 }
 
-function getCurrentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-}
 function getPrescriptionUrl(child: unknown): string | undefined {
   if (!child || typeof child !== 'object') return undefined;
   const c = child as Record<string, unknown>;
@@ -68,9 +64,10 @@ interface Billing {
 }
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { getCached, setCached } from '../src/utils/apiCache';
+import { getCached, setCached, invalidate } from '../src/utils/apiCache';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
+import { useCenterSettings } from '../src/context/CenterSettingsContext';
 import '../styles/filter-responsive.css';
 import '../styles/children-responsive.css';
 
@@ -212,7 +209,6 @@ export default function Children() {
   const successTimer = useRef<number | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
-  const [cotisationAmounts, setCotisationAmounts] = useState<Record<string, number | undefined>>({});
   const [photoConsentMap, setPhotoConsentMap] = useState<Record<string, boolean>>({});
   const [prescriptionModal, setPrescriptionModal] = useState<{ open: boolean; url?: string | null; childName?: string | null }>({ open: false, url: null, childName: null });
   const [emptyPrescriptionModal, setEmptyPrescriptionModal] = useState<{ open: boolean; childName?: string | null }>({ open: false, childName: null });
@@ -223,6 +219,8 @@ export default function Children() {
   
 
   const { user } = useAuth();
+  const { settings: centerSettings, settingsVersion } = useCenterSettings();
+  const defaultChildCotisation = centerSettings.childCotisationAmount;
   const isAdminUser = !!(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.role.toLowerCase() === 'administrator'));
   type UserLike = { role?: string | null; nannyId?: string | null } | null;
   const uLike = user as unknown as UserLike;
@@ -239,6 +237,39 @@ export default function Children() {
     setShowForm(true);
     setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
   }
+
+  const fetchBillings = useCallback(async () => {
+    try {
+      const todayMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      const cacheKeyChildren = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+      const cachedChildren = getCached<unknown[]>(cacheKeyChildren);
+      const childrenData: Child[] = cachedChildren ? (cachedChildren as unknown as Child[]) : (await fetchWithRefresh(`${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`, { credentials: 'include' }).then(r => r.json()));
+      const billingData: Record<string, Billing> = {};
+      const ids = childrenData.map(c => c.id);
+      if (ids.length > 0) {
+        try {
+          const res = await fetchWithRefresh(`${API_URL}/children/batch/billing?month=${todayMonth}`, {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+          });
+          if (res.ok) {
+            const body = await res.json();
+            ids.forEach(id => {
+              const b = body && body[id];
+              if (b && typeof b.amount === 'number') billingData[id] = { days: Number(b.days || 0), amount: Number(b.amount || 0) };
+            });
+          }
+        } catch (e) {
+          console.error('Batch billing fetch failed', e);
+        }
+      }
+      setBillings(billingData);
+    } catch {
+      setBillings({});
+    }
+  }, [centerFilter]);
 
   const fetchChildren = useCallback(async () => {
     setLoading(true);
@@ -273,10 +304,6 @@ export default function Children() {
   } catch {
     // noop
   }
-  // initialize default cotisation amount to 15 for each child
-  const amounts: Record<string, number | undefined> = {};
-  childrenData.forEach(c => { amounts[c.id] = 15; });
-  setCotisationAmounts(amounts);
       // fetch photo consent summary for all children in a single batch request
       try {
         const ids = childrenData.map(c => c.id);
@@ -308,12 +335,6 @@ export default function Children() {
       setLoading(false);
     }
   }, [centerFilter]);
-
-  useEffect(() => {
-    // initial load
-    fetchChildren();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
   const fetchParents = async () => {
@@ -367,41 +388,8 @@ export default function Children() {
       }
     };
     fetchNannies();
-    const fetchBillings = async () => {
-      try {
-        const todayMonth = getCurrentMonth();
-        // try to reuse cached children list
-        const cacheKeyChildren = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
-        const cachedChildren = getCached<unknown[]>(cacheKeyChildren);
-        const childrenData: Child[] = cachedChildren ? (cachedChildren as unknown as Child[]) : (await fetchWithRefresh(`${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`, { credentials: 'include' }).then(r => r.json()));
-        const billingData: Record<string, Billing> = {};
-        const ids = childrenData.map(c => c.id);
-        if (ids.length > 0) {
-          try {
-            const res = await fetchWithRefresh(`${API_URL}/children/batch/billing?month=${todayMonth}`, {
-              method: 'POST',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ids })
-            });
-            if (res.ok) {
-              const body = await res.json();
-              ids.forEach(id => {
-                const b = body && body[id];
-                if (b && typeof b.amount === 'number') billingData[id] = { days: Number(b.days || 0), amount: Number(b.amount || 0) };
-              });
-            }
-          } catch (e) {
-            console.error('Batch billing fetch failed', e);
-          }
-        }
-        setBillings(billingData);
-      } catch {
-        setBillings({});
-      }
-    };
     fetchBillings();
-  }, [user, centerFilter]);
+  }, [user, centerFilter, fetchBillings, settingsVersion]);
 
   // reload children when center filter changes
   useEffect(() => {
@@ -569,23 +557,19 @@ export default function Children() {
             }
             return [newChild, ...prev];
           });
-          // update shared cache after optimistic add/edit
+          // invalidate cache then refetch to get clean server state
           try {
             const cacheKeyChildren = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
-            const existing = getCached<Child[]>(cacheKeyChildren) ?? [];
-            const updated = wasEditing ? existing.map(c => c.id === newChild.id ? newChild : c) : [newChild, ...existing];
-            setCached(cacheKeyChildren, updated);
+            invalidate(cacheKeyChildren);
           } catch {
             // ignore cache errors
           }
-          // clear optimistic id as we have a real record
           optimisticId = null;
+          fetchChildren();
         } catch {
-          // fallback: refetch
           fetchChildren();
         }
       } else {
-        // fallback: refetch
         fetchChildren();
       }
       setForm(emptyForm);
@@ -910,7 +894,7 @@ export default function Children() {
             }
             const handleCotisation = async () => {
               setCotisationLoadingId(child.id);
-              const amount = cotisationAmounts[child.id] ?? 15;
+              const amount = defaultChildCotisation;
               try {
                 const res = await fetchWithRefresh(`${API_URL}/children/${child.id}`, {
                   method: 'PUT',
@@ -1021,62 +1005,65 @@ export default function Children() {
                       <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                       <span className="font-medium truncate">{child.parentName || <span className="text-gray-400 italic">—</span>}</span>
                     </div>
-                    {child.parentContact && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <div className="flex items-center gap-2 text-sm">
+                      <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                      {child.parentContact ? (
                         <a href={`tel:${child.parentContact}`} className="text-[#0b5566] hover:underline transition">{child.parentContact}</a>
-                      </div>
-                    )}
-                    {child.parentMail && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                      ) : (
+                        <span className="text-gray-400 italic">—</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                      {child.parentMail ? (
                         <a href={`mailto:${child.parentMail}`} className="text-[#0b5566] hover:underline transition truncate">{child.parentMail}</a>
-                      </div>
-                    )}
+                      ) : (
+                        <span className="text-gray-400 italic">—</span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Cotisation */}
+                  {(defaultChildCotisation > 0 || centerSettings.dailyRate > 0) && (
                   <div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('children.cotisation.label')}</span>
-                      {cotisationOk ? (
-                        <span className="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                          {countdown}
-                        </span>
-                      ) : (
-                        <span className="ml-auto text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{countdown || t('children.cotisation.pay')}</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {daysRemaining > 0 ? (
-                        <span className="text-xl font-extrabold text-[#0b5566]">{(cotisationAmounts[child.id] ?? 15)}€</span>
-                      ) : user && (user.role === 'admin' || user.role === 'super-admin') ? (
-                        <input
-                          type="number"
-                          min={0}
-                          className="w-24 px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20"
-                          value={cotisationAmounts[child.id] ?? ''}
-                          placeholder="€"
-                          onChange={(e) => setCotisationAmounts(prev => ({ ...prev, [child.id]: e.target.value === '' ? undefined : Number(e.target.value) }))}
-                        />
-                      ) : (
-                        <span className="text-xl font-extrabold text-emerald-600">{(cotisationAmounts[child.id] ?? 15)}€</span>
-                      )}
-                      {!cotisationOk && (
-                        cotisationLoadingId === child.id ? (
-                          <span className="text-gray-400 text-xs animate-pulse ml-1">{t('children.loading')}</span>
-                        ) : !isNannyUser ? (
-                          <button onClick={handleCotisation} className="text-[#0b5566] text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0b5566]/10 hover:bg-[#0b5566]/20 transition" title={t('children.cotisation.pay')}>{t('children.cotisation.pay')}</button>
-                        ) : null
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <span>{t('children.cotisation.this_month')}</span>
-                      <span className="font-bold text-gray-700 ml-1">{billing ? `${billing.amount}€` : '...'}</span>
-                      <span className="text-gray-400">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
-                    </div>
+                    {defaultChildCotisation > 0 && (
+                      <>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('children.cotisation.label')}</span>
+                          {cotisationOk ? (
+                            <span className="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                              {countdown}
+                            </span>
+                          ) : (
+                            <span className="ml-auto text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{countdown || t('children.cotisation.pay')}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {daysRemaining > 0 ? (
+                            <span className="text-xl font-extrabold text-[#0b5566]">{defaultChildCotisation}€</span>
+                          ) : (
+                            <span className="text-xl font-extrabold text-gray-700">{defaultChildCotisation}€</span>
+                          )}
+                          {!cotisationOk && (
+                            cotisationLoadingId === child.id ? (
+                              <span className="text-gray-400 text-xs animate-pulse ml-1">{t('children.loading')}</span>
+                            ) : !isNannyUser ? (
+                              <button onClick={handleCotisation} className="text-[#0b5566] text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0b5566]/10 hover:bg-[#0b5566]/20 transition" title={t('children.cotisation.pay')}>{t('children.cotisation.pay')}</button>
+                            ) : null
+                          )}
+                        </div>
+                      </>
+                    )}
+                    {centerSettings.dailyRate > 0 && (
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <span>{t('children.cotisation.this_month')}</span>
+                        <span className="font-bold text-gray-700 ml-1">{billing ? `${billing.amount}€` : '...'}</span>
+                        <span className="text-gray-400">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
+                      </div>
+                    )}
                   </div>
+                  )}
 
                   {/* Photo consent */}
                   <div className="flex items-center justify-between gap-2">

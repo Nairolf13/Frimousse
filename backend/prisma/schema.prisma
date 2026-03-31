@@ -222,21 +222,24 @@ model Report {
 }
 
 model Center {
-  id             String          @id @default(uuid())
-  name           String
-  users          User[]
-  parents        Parent[]
-  children       Child[]
-  nannies        Nanny[]
-  assignments    Assignment[]
-  schedules      Schedule[]
-  reports        Report[]
-  feedPosts      FeedPost[]
-  reviews        Review[]
-  presenceSheets PresenceSheet[]
-  conversations  Conversation[]
-  createdAt      DateTime        @default(now())
-  notifyByEmail  Boolean         @default(true)
+  id                      String          @id @default(uuid())
+  name                    String
+  users                   User[]
+  parents                 Parent[]
+  children                Child[]
+  nannies                 Nanny[]
+  assignments             Assignment[]
+  schedules               Schedule[]
+  reports                 Report[]
+  feedPosts               FeedPost[]
+  reviews                 Review[]
+  presenceSheets          PresenceSheet[]
+  conversations           Conversation[]
+  createdAt               DateTime        @default(now())
+  notifyByEmail           Boolean         @default(true)
+  dailyRate               Float           @default(2.0)
+  childCotisationAmount   Float           @default(15.0)
+  nannyCotisationAmount   Float           @default(10.0)
 }
 
 model Subscription {

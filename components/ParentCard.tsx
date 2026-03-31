@@ -4,6 +4,7 @@ import { useI18n } from '../src/lib/useI18n';
 
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useAuth } from '../src/context/AuthContext';
+import { useCenterSettings } from '../src/context/CenterSettingsContext';
 
 type ChildRef = { child: { id: string; name: string; group?: string; prescriptionUrl?: string | null } };
 
@@ -20,11 +21,13 @@ type Parent = {
 import InvoiceAdjustmentModal from './InvoiceAdjustmentModal';
 import parentService from '../services/parent';
 
-export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete, annualPerChild, onAdjustmentSaved }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; annualPerChild?: number; onAdjustmentSaved?: () => void }) {
+export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete, onAdjustmentSaved }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; onAdjustmentSaved?: () => void }) {
   const navigate = useNavigate();
   const { t, locale } = useI18n();
   const initials = ((parent.firstName && parent.lastName) ? `${parent.firstName[0] || ''}${parent.lastName[0] || ''}` : (parent.name || 'U')).toUpperCase().slice(0,2);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { settings: centerSettings } = useCenterSettings();
+  const annualPerChild = centerSettings.childCotisationAmount;
   const API_URL = import.meta.env.VITE_API_URL;
 
   // map childId -> { url?, loading }
@@ -222,16 +225,20 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
 
         {/* Footer cotisation + actions */}
         <div className="px-5 pb-5 pt-3 border-t border-black/5">
+          {(annualPerChild > 0 || centerSettings.dailyRate > 0) && (
           <div className="bg-white/60 rounded-xl px-3 py-2.5 mb-3 text-center">
-            <div className="flex items-center justify-center gap-2 mb-0.5">
-              <span className="text-xs text-gray-500">{t('parent.cotisation.this_month')} :</span>
-              <span className="font-extrabold text-[#0b5566] text-base">{(parentDue || 0)} €</span>
-              {hasAdjustment && <span title={t('adjustment.exists')} className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400" />}
-            </div>
-            {adjustmentSum > 0 && <div className="text-xs text-yellow-600">{t('adjustment.label')} {adjustmentSum.toFixed(2)} €</div>}
-            <div className="text-xs text-gray-400 mt-0.5">{t('parent.cotisation.annual_total')} : <span className="font-bold text-gray-700">{((parent.children?.length || 0) * (annualPerChild ?? 15))} €</span></div>
+            {centerSettings.dailyRate > 0 && (
+              <div className="flex items-center justify-center gap-2 mb-0.5">
+                <span className="text-xs text-gray-500">{t('parent.cotisation.this_month')} :</span>
+                <span className="font-extrabold text-[#0b5566] text-base">{(parentDue || 0)} €</span>
+                {hasAdjustment && <span title={t('adjustment.exists')} className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400" />}
+              </div>
+            )}
+            {centerSettings.dailyRate > 0 && adjustmentSum > 0 && <div className="text-xs text-yellow-600">{t('adjustment.label')} {adjustmentSum.toFixed(2)} €</div>}
+            {annualPerChild > 0 && <div className="text-xs text-gray-400 mt-0.5">{t('parent.cotisation.annual_total')} : <span className="font-bold text-gray-700">{((parent.children?.length || 0) * annualPerChild)} €</span></div>}
           </div>
-          {isAdminUser && (
+          )}
+          {isAdminUser && (annualPerChild > 0 || centerSettings.dailyRate > 0) && (
             <div className="text-center mb-2">
               <button className="text-xs font-semibold text-[#0b5566] hover:underline" onClick={() => setShowAdjModal(true)}>{t('adjustment.button')}</button>
             </div>

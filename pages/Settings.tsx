@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../src/context/AuthContext';
+import { useCenterSettings } from '../src/context/CenterSettingsContext';
 import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import PageLoader from '../components/PageLoader';
 import { useTutorial } from '../src/context/useTutorial';
@@ -436,10 +437,15 @@ export default function Settings() {
   }, [language]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [tarifs, setTarifs] = useState({ dailyRate: 2, childCotisationAmount: 15, nannyCotisationAmount: 10 });
+  const [tarifsSaving, setTarifsSaving] = useState(false);
+  const [tarifsSuccess, setTarifsSuccess] = useState(false);
+  const [tarifsError, setTarifsError] = useState<string | null>(null);
   const { t, setLocale } = useI18n();
   const { tours, toggleMenu: openTutorialMenu } = useTutorial();
   const completedTours = authUser?.tutorialCompleted ?? [];
   const isAdmin = !!(authUser && typeof authUser.role === 'string' && (authUser.role === 'admin' || authUser.role.toLowerCase().includes('super')));
+  const { reload: reloadCenterSettings } = useCenterSettings();
   const isSuperAdmin = !!(authUser && typeof authUser.role === 'string' && authUser.role.toLowerCase().includes('super'));
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [supportTickets, setSupportTickets] = useState<Ticket[]>([]);
@@ -453,6 +459,14 @@ export default function Settings() {
   const [replyMessage, setReplyMessage] = useState('');
   const supportModalContainerRef = useRef<HTMLDivElement | null>(null);
   const replyInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    fetchWithRefresh(`${API_URL}/centers/settings`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setTarifs({ dailyRate: d.dailyRate ?? 2, childCotisationAmount: d.childCotisationAmount ?? 0, nannyCotisationAmount: d.nannyCotisationAmount ?? 0 }); })
+      .catch(() => {});
+  }, [isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     // load current user's notifyByEmail preference
@@ -699,6 +713,75 @@ export default function Settings() {
               })}
             </div>
           </div>
+
+          {/* ── Tarifs (admin seulement) ── */}
+          {isAdmin && (
+            <div className="bg-white rounded-2xl shadow p-5 mb-4">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center text-brand-600">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-800">Tarifs de la structure</div>
+                  <div className="text-xs text-gray-500">Ces tarifs sont utilisés pour le calcul automatique des factures</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tarif journalier garde (€/jour)</label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={tarifs.dailyRate}
+                    onChange={e => setTarifs(t => ({ ...t, dailyRate: parseFloat(e.target.value) || 0 }))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cotisation annuelle enfant (€/an)</label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={tarifs.childCotisationAmount}
+                    onChange={e => setTarifs(t => ({ ...t, childCotisationAmount: parseFloat(e.target.value) || 0 }))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cotisation mensuelle nounou (€/mois)</label>
+                  <input
+                    type="number" min="0" step="0.01"
+                    value={tarifs.nannyCotisationAmount}
+                    onChange={e => setTarifs(t => ({ ...t, nannyCotisationAmount: parseFloat(e.target.value) || 0 }))}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                </div>
+              </div>
+              {tarifsError && <p className="text-red-500 text-sm mt-3">{tarifsError}</p>}
+              {tarifsSuccess && <p className="text-emerald-600 text-sm mt-3">Tarifs enregistrés avec succès.</p>}
+              <div className="mt-4 flex justify-end">
+                <button
+                  disabled={tarifsSaving}
+                  onClick={async () => {
+                    setTarifsSaving(true);
+                    setTarifsError(null);
+                    setTarifsSuccess(false);
+                    try {
+                      const res = await fetchWithRefresh(`${API_URL}/centers/settings`, {
+                        method: 'PUT', credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(tarifs),
+                      });
+                      if (!res.ok) { const d = await res.json().catch(() => ({})); setTarifsError(d.error || 'Erreur lors de la sauvegarde'); }
+                      else { setTarifsSuccess(true); reloadCenterSettings(); setTimeout(() => setTarifsSuccess(false), 3000); }
+                    } catch { setTarifsError('Erreur réseau'); }
+                    finally { setTarifsSaving(false); }
+                  }}
+                  className="px-5 py-2 bg-gradient-to-r from-brand-600 to-brand-500 text-white text-sm font-semibold rounded-xl shadow hover:opacity-90 transition disabled:opacity-50"
+                >
+                  {tarifsSaving ? 'Enregistrement...' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-stretch">
             <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between h-full">

@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
 const { validatePassword } = require('../lib/validatePassword');
+const { notifyUsers } = require('../lib/pushNotifications');
 
 function generateAccessToken(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role, centerId: user.centerId || null }, JWT_SECRET, { expiresIn: '15m' });
@@ -110,6 +111,24 @@ exports.register = async (req, res) => {
   } catch (e) {
     console.error('Failed to create decouverte subscription record', e);
   }
+
+  // Notify super-admins of new registration (fire and forget)
+  (async () => {
+    try {
+      const superAdmins = await prisma.user.findMany({ where: { role: 'super-admin' }, select: { id: true } });
+      const superAdminIds = superAdmins.map(u => u.id);
+      if (superAdminIds.length > 0) {
+        await notifyUsers(superAdminIds, {
+          title: 'Nouvelle inscription',
+          body: `${user.name || user.email} vient de créer un compte (${user.role}).`,
+          tag: 'frimousse-new-user',
+          data: { url: '/admin' }
+        });
+      }
+    } catch (e) {
+      console.error('Failed to notify super-admins of new registration', e);
+    }
+  })();
 
   // Send verification email instead of welcome email
   (async () => {

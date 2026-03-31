@@ -25,6 +25,7 @@ type Sheet = {
   id: string;
   childId: string;
   nannyId: string;
+  centerId?: string | null;
   month: number;
   year: number;
   status: 'draft' | 'sent' | 'signed';
@@ -140,8 +141,15 @@ export default function PresenceSheets() {
   const [error, setError] = useState('');
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
+  type ParentItem = { id: string; name: string; children?: { id: string; name: string }[] };
+  type ParentApiItem = { id?: string | null; firstName?: string | null; lastName?: string | null; name?: string | null; children?: Array<{ id?: string | null; name?: string | null; child?: { id?: string | null; name?: string | null } }> };
+
   const [filterMonth, setFilterMonth] = useState<string>('');
   const [filterYear, setFilterYear] = useState<string>('');
+  const [centerFilter, setCenterFilter] = useState<string>('');
+  const [parentFilter, setParentFilter] = useState<string>('');
+  const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
+  const [parents, setParents] = useState<ParentItem[]>([]);
 
   const [children, setChildren] = useState<Child[]>([]);
   const [createForm, setCreateForm] = useState({
@@ -169,12 +177,16 @@ export default function PresenceSheets() {
 
   const loadSheets = useCallback(async () => {
     try {
-      const res = await fetchWithRefresh(`${API_URL}/presence-sheets`, { credentials: 'include' });
+      const params = new URLSearchParams();
+      if (centerFilter && u?.role === 'super-admin') params.set('centerId', centerFilter);
+      if (parentFilter && isAdminUser) params.set('parentId', parentFilter);
+      const url = `${API_URL}/presence-sheets${params.toString() ? `?${params.toString()}` : ''}`;
+      const res = await fetchWithRefresh(url, { credentials: 'include' });
       if (!res.ok) throw new Error();
       setSheets(await res.json());
     } catch { setError('Impossible de charger les feuilles'); }
     finally { setLoading(false); }
-  }, []);
+  }, [centerFilter, parentFilter, u, isAdminUser]);
 
   useEffect(() => { loadSheets(); }, [loadSheets]);
 
@@ -183,6 +195,40 @@ export default function PresenceSheets() {
     fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' })
       .then(r => r.json()).then(setChildren).catch(() => {});
   }, [showCreate, isNannyUser, isAdminUser]);
+
+  useEffect(() => {
+    if (!u || u.role !== 'super-admin') return;
+    fetchWithRefresh(`${API_URL}/centers`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : { data: [] })
+      .then((res: { data?: Array<{id:string,name:string}> } | Array<{id:string,name:string}>) => {
+        const list = Array.isArray(res) ? res : (Array.isArray((res as { data?: Array<{id:string,name:string}> }).data) ? (res as { data: Array<{id:string,name:string}> }).data : []);
+        setCenters(list);
+      })
+      .catch(() => setCenters([]));
+  }, [u]);
+
+  useEffect(() => {
+    if (!isAdminUser) return;
+    const centerQuery = centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : '';
+    fetchWithRefresh(`${API_URL}/parent/admin${centerQuery}`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : { parents: [] })
+      .then((data: { parents?: ParentApiItem[] }) => {
+        const list = Array.isArray(data.parents) ? data.parents : [];
+        setParents(list.map((p: ParentApiItem) => {
+          const children = Array.isArray(p.children) ? p.children.map((c) => {
+            // API returns ParentChild relation: { child: { id, name } } or flat { id, name }
+            const child = c.child ?? c;
+            return { id: String(child.id ?? ''), name: String(child.name ?? '') };
+          }).filter(c => c.id) : [];
+          return {
+            id: String(p.id ?? ''),
+            name: String(p.name ?? `${p.firstName ?? ''} ${p.lastName ?? ''}`).trim() || String(p.id ?? ''),
+            children,
+          };
+        }));
+      })
+      .catch(() => setParents([]));
+  }, [isAdminUser, centerFilter]);
 
   function openSheet(sheet: Sheet) {
     setSelectedSheet(sheet);
@@ -372,6 +418,15 @@ export default function PresenceSheets() {
 
   const canEdit = isNannyUser || isAdminUser;
 
+  const parentChildIds = parentFilter ? (parents.find(p => p.id === parentFilter)?.children?.map(c => c.id) || []) : [];
+  const filteredSheets = sheets.filter(s =>
+    s.child && s.nanny &&
+    (!filterMonth || s.month === Number(filterMonth)) &&
+    (!filterYear || s.year === Number(filterYear)) &&
+    (!centerFilter || s.centerId === centerFilter) &&
+    (!parentFilter || parentChildIds.includes(s.childId))
+  );
+
   return (
     <div className="min-h-screen bg-[#f4f7fa] p-2 sm:p-4 md:pl-64 w-full">
 
@@ -416,23 +471,38 @@ export default function PresenceSheets() {
             <option value="">Toutes les années</option>
             {[2024, 2025, 2026, 2027].map(y => <option key={y} value={String(y)}>{y}</option>)}
           </select>
-          {(filterMonth || filterYear) && (
+          {isAdminUser && (
+            <select
+              value={parentFilter}
+              onChange={e => setParentFilter(e.target.value)}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
+            >
+              <option value="">Tous les parents</option>
+              {parents.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
+          {u?.role === 'super-admin' && (
+            <select
+              value={centerFilter}
+              onChange={e => setCenterFilter(e.target.value)}
+              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
+            >
+              <option value="">Tous les centres</option>
+              {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+
+          {(filterMonth || filterYear || centerFilter || parentFilter) && (
             <button
-              onClick={() => { setFilterMonth(''); setFilterYear(''); }}
+              onClick={() => { setFilterMonth(''); setFilterYear(''); setCenterFilter(''); setParentFilter(''); }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-gray-500 border border-gray-200 bg-white hover:bg-gray-50 transition"
             >
               <HiOutlineX className="w-3.5 h-3.5" /> Réinitialiser
             </button>
           )}
-          {(filterMonth || filterYear) && (
+          {(filterMonth || filterYear || centerFilter || parentFilter) && (
             <span className="text-xs text-gray-400 ml-1">
-              {sheets.filter(s =>
-                (!filterMonth || s.month === Number(filterMonth)) &&
-                (!filterYear || s.year === Number(filterYear))
-              ).length} résultat{sheets.filter(s =>
-                (!filterMonth || s.month === Number(filterMonth)) &&
-                (!filterYear || s.year === Number(filterYear))
-              ).length !== 1 ? 's' : ''}
+              {filteredSheets.length} résultat{filteredSheets.length !== 1 ? 's' : ''}
             </span>
           )}
         </div>
@@ -499,11 +569,7 @@ export default function PresenceSheets() {
         {!selectedSheet && (
           <div className="space-y-2 mb-4">
             <p className="text-sm text-gray-400 text-center mb-3">Sélectionnez une feuille pour la consulter</p>
-            {sheets.filter(s =>
-                s.child && s.nanny &&
-                (!filterMonth || s.month === Number(filterMonth)) &&
-                (!filterYear || s.year === Number(filterYear))
-              ).length === 0 ? (
+            {filteredSheets.length === 0 ? (
               <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-400">
                 <HiOutlineDocumentText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">
@@ -513,11 +579,7 @@ export default function PresenceSheets() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {sheets.filter(s =>
-                    s.child && s.nanny &&
-                    (!filterMonth || s.month === Number(filterMonth)) &&
-                    (!filterYear || s.year === Number(filterYear))
-                  ).map(sheet => (
+                {filteredSheets.map(sheet => (
                   <div key={sheet.id}
                     className="bg-white rounded-2xl shadow border-2 border-transparent transition-all hover:border-[#0b5566]/40 hover:shadow-md">
                     <button className="w-full text-left p-4" onClick={() => openSheet(sheet)}>
@@ -640,7 +702,7 @@ export default function PresenceSheets() {
                               {DAY_NAMES[d.getDay()]} {d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                             </span>
                             {entryIsSigned && !isAdminUser && (
-                              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" title="Entrée verrouillée — déjà signée"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><title>Entrée verrouillée — déjà signée</title><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
@@ -761,7 +823,7 @@ export default function PresenceSheets() {
                               <div className="flex items-center gap-1">
                                 {d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                                 {entryIsSigned && !isAdminUser && (
-                                  <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" title="Verrouillé — déjà signé"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                  <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><title>Verrouillé — déjà signé</title><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                 )}
                               </div>
                             </td>

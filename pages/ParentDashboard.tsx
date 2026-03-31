@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
+import { useCenterSettings } from '../src/context/CenterSettingsContext';
 import ParentCard from '../components/ParentCard';
 import ChildOptionsModal from '../components/ChildOptionsModal';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -46,6 +47,7 @@ const ParentDashboard: React.FC = () => {
     const r = (u.role || '').toLowerCase();
     return r === 'admin' || !!u.nannyId || r.includes('super');
   };
+  const { settingsVersion } = useCenterSettings();
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(true);
   const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
@@ -254,7 +256,7 @@ const ParentDashboard: React.FC = () => {
       }
     };
     load();
-  }, [authUser, user, centerFilter, refreshBilling]);
+  }, [authUser, user, centerFilter, refreshBilling, settingsVersion]);
 
   useEffect(() => {
     let mounted = true;
@@ -695,7 +697,6 @@ const ParentDashboard: React.FC = () => {
               onChildClick={(child) => { setSelectedChild(child); setShowChildModal(true); }}
               onEdit={undefined}
               onDelete={undefined}
-              annualPerChild={15}
             />
           </div>
         ) : children.length === 0 ? (
