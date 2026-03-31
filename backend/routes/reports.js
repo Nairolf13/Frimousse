@@ -6,6 +6,7 @@ const auth = require('../middleware/authMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const logger = require('../lib/logger');
+const { detectLang, subject: emailSubject } = require('../lib/i18n');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
 router.get('/', auth, requireActiveSubscription, async (req, res) => {
@@ -86,10 +87,9 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('report'), asyn
           }
         }
         if (!parentEmails.size && !parentIds.size) return;
-        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-        const subject = (lang === 'fr') ? `Nouveau rapport concernant votre enfant` : `New report about your child`;
-        const text = (lang === 'fr') ? `Un nouveau rapport a été créé par la nounou${report.nannyId ? '' : ''} concernant votre enfant. Résumé: ${report.summary || ''}` : `A new report was created by the nanny regarding your child. Summary: ${report.summary || ''}`;
+        const lang = detectLang(req);
+        const subject = emailSubject('report_new', lang);
+        const text = lang === 'fr' ? `Un nouveau rapport a été créé par la nounou${report.nannyId ? '' : ''} concernant votre enfant. Résumé: ${report.summary || ''}` : lang === 'es' ? `Se ha creado un nuevo informe por la cuidadora sobre tu hijo/a. Resumen: ${report.summary || ''}` : `A new report was created by the nanny regarding your child. Summary: ${report.summary || ''}`;
 
         // send emails
         if (process.env.SMTP_HOST && parentEmails.size) {

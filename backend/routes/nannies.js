@@ -4,6 +4,7 @@ const auth = require('../middleware/authMiddleware');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
 const prisma = require('../lib/prismaClient');
+const { detectLang, subject: emailSubject } = require('../lib/i18n');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const bcrypt = require('bcryptjs');
@@ -221,9 +222,8 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
             const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
             const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
             const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
-            const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-            const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-            const subject = lang === 'fr' ? 'Invitation - Accès Frimousse' : 'Invitation - Access Frimousse';
+            const lang = detectLang(req);
+            const subject = emailSubject('invite_nanny', lang);
             await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_nanny', lang, to: result.user.email, subject, substitutions: { name: result.user.name || '', inviteUrl }, prisma });
           } catch (err) {
             console.error('Failed to send nanny invite email', err && err.message ? err.message : err);

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Restablecer contraseña</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
+
+        <!-- Header -->
+        <tr><td style="background:linear-gradient(135deg,#0b5566 0%,#08323a 100%);border-radius:16px 16px 0 0;padding:32px 32px 24px;text-align:center;">
+          <div style="width:64px;height:64px;background:rgba(255,255,255,0.15);border-radius:16px;margin:0 auto 16px;font-size:28px;line-height:64px;text-align:center;">🔒</div>
+          <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Restablecer contraseña</h1>
+          <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">Se ha solicitado un restablecimiento de contraseña.</p>
+        </td></tr>
+
+        <!-- Body -->
+        <tr><td style="background:#ffffff;padding:32px;">
+          <p style="margin:0 0 12px;font-size:15px;color:#374151;">Hola <strong style="color:#0b5566;">{{name}}</strong>,</p>
+          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">Has solicitado restablecer tu contraseña. Haz clic en el botón a continuación para definir una nueva. Este enlace es válido durante <strong>1 hora</strong>.</p>
+
+          <!-- CTA -->
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+            <tr><td align="center">
+              <a href="{{resetUrl}}" style="display:inline-block;padding:13px 28px;background:linear-gradient(135deg,#0b5566 0%,#08323a 100%);color:#ffffff;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">Restablecer mi contraseña</a>
+            </td></tr>
+          </table>
+
+          <!-- Security note -->
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
+              <p style="margin:0;font-size:13px;color:#92400e;">🔐 Si no has solicitado este restablecimiento, ignora este correo. Tu contraseña no cambiará.</p>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:20px 32px;text-align:center;">
+          <p style="margin:0;font-size:13px;color:#6b7280;">© Frimousse — <strong style="color:#0b5566;">El equipo de Frimousse</strong></p>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

@@ -4,6 +4,7 @@ const auth = require('../middleware/authMiddleware');
 
 const prisma = require('../lib/prismaClient');
 const logger = require('../lib/logger');
+const { detectLang, subject: emailSubject, formatDate } = require('../lib/i18n');
 function isSuperAdmin(user) { if (!user || !user.role) return false; const r = String(user.role).toLowerCase(); return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super'); }
 
 function isAdminRole(user) {
@@ -141,12 +142,9 @@ router.post('/', auth, async (req, res) => {
         const nanny = full.nanny;
         const parentEmails = (child.parents || []).map(p => p.parent && p.parent.email).filter(Boolean);
 
-        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+        const lang = detectLang(req);
         const dateObj = new Date(date + 'T12:00:00Z');
-        const formattedDate = lang === 'fr'
-          ? dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-          : dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const formattedDate = formatDate(dateObj, lang);
 
         const schedules = await prisma.schedule.findMany({ where: { date: new Date(date + 'T12:00:00Z'), ...(isSuperAdmin(req.user) ? {} : { centerId: req.user.centerId }) } });
         const activitiesHtml = schedulesToHtml(schedules);
@@ -157,7 +155,7 @@ router.post('/', auth, async (req, res) => {
         const nannyLink = baseUrl + '/mon-planning';
         const logoUrl = baseUrl + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp';
 
-        const subject = (lang === 'fr' ? `Affectation pour ${child.name}` : `Assignment for ${child.name}`);
+        const subject = emailSubject('assignment', lang, { childName: child.name });
         const text = (lang === 'fr') ? `Bonjour,\n\nVotre enfant ${child.name} a une affectation pour ${formattedDate}.` : `Hello,\n\nYour child ${child.name} has an assignment for ${formattedDate}.`;
 
         // Send emails only if SMTP configured
@@ -202,7 +200,7 @@ router.post('/', auth, async (req, res) => {
           const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
           const adminIds = centerAdmins.map(u => u.id).filter(Boolean);
           if (adminIds.length) {
-            const adminSubject = (lang === 'fr' ? `Nouvelle affectation créée par ${req.user.name}` : `New assignment created by ${req.user.name}`);
+            const adminSubject = emailSubject('assignment_by_nanny', lang, { nannyName: req.user.name });
             const adminText = (lang === 'fr') ? `Bonjour,\n\nUne nouvelle affectation pour ${child.name} a été créée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}` : `Hello,\n\nA new assignment for ${child.name} has been created by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}`;
               try {
               await sendTemplatedMail({ templateName: 'assignment', lang, to: centerAdmins.map(u => u.email).filter(Boolean), subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: adminLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
@@ -244,7 +242,7 @@ router.post('/', auth, async (req, res) => {
               logger.warn('No linked user found for nanny when creating assignment', { nannyId: nanny && nanny.id ? nanny.id : null, nannyEmail: nanny && nanny.email ? nanny.email : null });
             }
             if (nannyUserId) {
-              const nannySubject = (lang === 'fr' ? `Nouvelle affectation pour ${child.name}` : `New assignment for ${child.name}`);
+              const nannySubject = emailSubject('assignment', lang, { childName: child.name });
               const nannyText = (lang === 'fr') ? `Bonjour,\n\nVous avez été affectée à ${child.name} le ${formattedDate}.` : `Hello,\n\nYou have been assigned to ${child.name} on ${formattedDate}.`;
               // Send email to the nanny user if available
               try {
@@ -351,12 +349,9 @@ router.put('/:id', auth, async (req, res) => {
         const nanny = full.nanny;
         const parentEmails = (child.parents || []).map(p => p.parent && p.parent.email).filter(Boolean);
 
-        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+        const lang = detectLang(req);
         const dateObj = new Date(date + 'T12:00:00Z');
-        const formattedDate = lang === 'fr'
-          ? dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-          : dateObj.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const formattedDate = formatDate(dateObj, lang);
 
         const schedules = await prisma.schedule.findMany({ where: { date: new Date(date + 'T12:00:00Z'), ...(isSuperAdmin(req.user) ? {} : { centerId: req.user.centerId }) } });
         const activitiesHtml = schedulesToHtml(schedules);
@@ -367,7 +362,7 @@ router.put('/:id', auth, async (req, res) => {
         const nannyLink = baseUrl + '/mon-planning';
         const logoUrl = baseUrl + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp';
 
-        const subject = (lang === 'fr' ? `Affectation mise à jour pour ${child.name}` : `Assignment updated for ${child.name}`);
+        const subject = emailSubject('assignment_updated', lang, { childName: child.name });
         const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été mise à jour pour ${formattedDate}.` : `Hello,\n\nThe assignment for ${child.name} has been updated for ${formattedDate}.`;
 
         // Send emails only if SMTP configured
@@ -414,7 +409,7 @@ router.put('/:id', auth, async (req, res) => {
           // Keep superAdmins for push notifications only
           const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
           if (adminEmails.length) {
-            const adminSubject = (lang === 'fr' ? `Modification d'affectation par ${req.user.name}` : `Assignment modified by ${req.user.name}`);
+            const adminSubject = emailSubject('assignment_modified_by_nanny', lang, { nannyName: req.user.name });
             const adminText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été modifiée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}` : `Hello,\n\nThe assignment for ${child.name} has been modified by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}`;
               await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: adminLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
               await sendTemplatedMail({ templateName: 'assignment', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: adminLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
@@ -448,7 +443,7 @@ router.put('/:id', auth, async (req, res) => {
               if (maybeUser && maybeUser.id) nannyUserId = maybeUser.id;
             }
             if (nannyUserId) {
-              const nannySubject = (lang === 'fr' ? `Affectation mise à jour pour ${child.name}` : `Assignment updated for ${child.name}`);
+              const nannySubject = emailSubject('assignment_updated', lang, { childName: child.name });
               const nannyText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été mise à jour pour ${formattedDate}.` : `Hello,\n\nThe assignment for ${child.name} has been updated for ${formattedDate}.`;
               // Send email to the nanny user if available
               try {
@@ -600,9 +595,8 @@ router.delete('/:id', auth, async (req, res) => {
         const parentEmails = (child && child.parents ? child.parents.map(p => p.parent && p.parent.email).filter(Boolean) : []);
         if (!parentEmails.length) return;
 
-        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-  const formattedDate = existing.date ? new Date(existing.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }) : '';
+        const lang = detectLang(req);
+  const formattedDate = existing.date ? formatDate(existing.date, lang, { dateStyle: 'full' }) : '';
 
         const schedules = await prisma.schedule.findMany({ where: { date: existing.date ? new Date(existing.date) : undefined, ...(isSuperAdmin(req.user) ? {} : { centerId: req.user.centerId }) } });
         const activitiesHtml = schedulesToHtml(schedules);
@@ -613,7 +607,7 @@ router.delete('/:id', auth, async (req, res) => {
         const nannyLink = baseUrl + '/mon-planning';
         const logoUrl = baseUrl + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp';
 
-        const subject = (lang === 'fr' ? `Affectation supprimée pour ${child.name}` : `Assignment removed for ${child.name}`);
+        const subject = emailSubject('assignment_deleted', lang, { childName: child.name });
         const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée.` : `Hello,\n\nThe assignment for ${child.name} has been removed.`;
 
   await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: parentEmails, subject, text, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: parentLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
@@ -652,7 +646,7 @@ router.delete('/:id', auth, async (req, res) => {
           // Keep superAdmins for push notifications only
           const superAdmins = await prisma.user.findMany({ where: { role: { in: ['super-admin', 'super_admin', 'superadmin'] } } });
           if (adminEmails.length) {
-            const adminSubject = (lang === 'fr' ? `Suppression d'affectation par ${req.user.name}` : `Assignment deleted by ${req.user.name}`);
+            const adminSubject = emailSubject('assignment_deleted_by_nanny', lang, { nannyName: req.user.name });
             const adminText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée par la nounou ${req.user.name}.\n\nDate: ${formattedDate}\nNounou assignée: ${nanny ? nanny.name : ''}` : `Hello,\n\nThe assignment for ${child.name} has been deleted by nanny ${req.user.name}.\n\nDate: ${formattedDate}\nAssigned nanny: ${nanny ? nanny.name : ''}`;
             await sendTemplatedMail({ templateName: 'assignment_deleted', lang, to: adminEmails, subject: adminSubject, text: adminText, substitutions: { childName: child.name || '', nannyName: nanny ? nanny.name : '', date: formattedDate, link: adminLink, logoUrl, activityName: schedules.length ? schedules[0].name : '', activityComment: schedules.length ? schedules[0].comment : '', activityStart: schedules.length ? schedules[0].startTime : '', activityEnd: schedules.length ? schedules[0].endTime : '', activitiesHtml }, prisma });
 
@@ -684,7 +678,7 @@ router.delete('/:id', auth, async (req, res) => {
               if (maybeUser && maybeUser.id) nannyUserId = maybeUser.id;
             }
             if (nannyUserId) {
-              const nannySubject = (lang === 'fr' ? `Affectation supprimée pour ${child.name}` : `Assignment removed for ${child.name}`);
+              const nannySubject = emailSubject('assignment_deleted', lang, { childName: child.name });
               const nannyText = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée de votre planning.` : `Hello,\n\nThe assignment for ${child.name} has been removed.`;
               // Send email to the nanny user if available
               try {

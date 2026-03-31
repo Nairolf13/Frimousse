@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const requireAuth = require('../middleware/authMiddleware');
+const { detectLang, subject: emailSubject } = require('../lib/i18n');
 
 function isSuperAdmin(user) {
   if (!user || !user.role) return false;
@@ -369,19 +370,8 @@ router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'
           const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
           const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
           const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
-          const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-          const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-          const templatePath = `${__dirname}/../emailTemplates/welcome_parent_${lang}.html`;
-          const fs = require('fs');
-          let html = null;
-          try {
-            html = fs.readFileSync(templatePath, 'utf8');
-            html = html.replace(/{{name}}/g, firstName || '').replace(/{{inviteUrl}}/g, inviteUrl);
-          } catch (e) {
-            html = null;
-          }
-
-          const subject = lang === 'fr' ? 'Invitation - Accès Frimousse' : 'Invitation - Access Frimousse';
+          const lang = detectLang(req);
+          const subject = emailSubject('invite_parent', lang);
           await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_parent', lang, to: email, subject, substitutions: { name: firstName || '', inviteUrl }, prisma });
           
         } catch (err) {

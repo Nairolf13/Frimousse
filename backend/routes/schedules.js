@@ -4,6 +4,7 @@ const router = express.Router();
 const prisma = require('../lib/prismaClient');
 const auth = require('../middleware/authMiddleware');
 const logger = require('../lib/logger');
+const { detectLang, subject: emailSubject, formatDate } = require('../lib/i18n');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
 router.get('/schedules', auth, async (req, res) => {
@@ -55,14 +56,13 @@ router.post('/schedules', auth, async (req, res) => {
         try {
           const { sendTemplatedMail } = require('../lib/email');
           const { notifyUsers } = require('../lib/pushNotifications');
-          const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-          const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+          const lang = detectLang(req);
 
           const nannyIds = (fullSchedule && fullSchedule.nannies) ? fullSchedule.nannies.map(n => n.id).filter(Boolean) : [];
           if (!nannyIds.length) return;
 
-          const title = (lang === 'fr') ? `Nouvelle activité : ${name || ''}` : `New activity: ${name || ''}`;
-          const text = (lang === 'fr') ? `Une nouvelle activité a été planifiée pour ${new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' })}` : `A new activity has been planned for ${new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' })}`;
+          const title = emailSubject('activity_new', lang, { name: name || '' });
+          const text = (lang === 'fr') ? `Une nouvelle activité a été planifiée pour ${formatDate(date, lang, { dateStyle: 'full' })}` : `A new activity has been planned for ${formatDate(date, lang, { dateStyle: 'full' })}`;
 
           // Notify nannies (push + email to user account if present)
           for (const nid of nannyIds) {
@@ -76,7 +76,7 @@ router.post('/schedules', auth, async (req, res) => {
               // send email to nanny user if configured
                   if (nannyUserRec && nannyUserRec.email && process.env.SMTP_HOST) {
                 try {
-                  await sendTemplatedMail({ templateName: 'activity', lang, to: [nannyUserRec.email], subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' }, prisma });
+                  await sendTemplatedMail({ templateName: 'activity', lang, to: [nannyUserRec.email], subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: formatDate(date, lang, { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' }, prisma });
                 } catch (e) { logger.error('Failed to send activity email to nanny user', e && e.message ? e.message : e); }
               }
               if (nannyUserId) {
@@ -86,7 +86,7 @@ router.post('/schedules', auth, async (req, res) => {
                 if (process.env.SMTP_HOST && (nannyRec.email || nannyRec.contactEmail)) {
                   try {
                     const to = nannyRec.email ? [nannyRec.email] : [nannyRec.contactEmail];
-                    await sendTemplatedMail({ templateName: 'activity', lang, to, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' }, prisma });
+                    await sendTemplatedMail({ templateName: 'activity', lang, to, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: formatDate(date, lang, { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' }, prisma });
                   } catch (e) { logger.error('Fallback activity email to nanny failed', e && e.message ? e.message : e); }
                 }
               }
@@ -113,7 +113,7 @@ router.post('/schedules', auth, async (req, res) => {
             // send emails
             if (process.env.SMTP_HOST && parentEmailList.length) {
               try {
-                await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmailList, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' }, prisma });
+                await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmailList, subject: title, text, substitutions: { activityName: name || '', comment: comment || '', date: formatDate(date, lang, { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '' }, prisma });
               } catch (e) { logger.error('Failed to send activity emails to parents', e && e.message ? e.message : e); }
             }
             // push to parent users (resolve users by parentId)
@@ -155,13 +155,12 @@ router.put('/schedules/:scheduleId', auth, async (req, res) => {
         try {
           const { sendTemplatedMail, getParentEmailsForDate } = require('../lib/email');
           if (!process.env.SMTP_HOST) return;
-          const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-          const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+          const lang = detectLang(req);
           const parentEmails = await getParentEmailsForDate(prisma, date, req.user.centerId, isSuperAdmin(req.user));
           if (!parentEmails.length) return;
-          const subject = (lang === 'fr') ? `Activité mise à jour : ${name || ''}` : `Activity updated: ${name || ''}`;
-          const text = (lang === 'fr') ? `Une activité a été mise à jour pour ${new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' })}` : `An activity has been updated for ${new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' })}`;
-          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: name || '', comment: comment || '', date: new Date(date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp' }, prisma });
+          const subject = emailSubject('activity_updated', lang, { name: name || '' });
+          const text = (lang === 'fr') ? `Une activité a été mise à jour pour ${formatDate(date, lang, { dateStyle: 'full' })}` : `An activity has been updated for ${formatDate(date, lang, { dateStyle: 'full' })}`;
+          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: name || '', comment: comment || '', date: formatDate(date, lang, { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp' }, prisma });
         } catch (err) {
           console.error('Failed to send activity update notification', err && err.message ? err.message : err);
         }
@@ -188,13 +187,12 @@ router.delete('/schedules/:scheduleId', auth, async (req, res) => {
         try {
           const { sendTemplatedMail, getParentEmailsForDate } = require('../lib/email');
           if (!process.env.SMTP_HOST) return;
-          const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-          const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+          const lang = detectLang(req);
           const parentEmails = await getParentEmailsForDate(prisma, existing.date, req.user.centerId, isSuperAdmin(req.user));
           if (!parentEmails.length) return;
-          const subject = (lang === 'fr') ? `Activité supprimée : ${existing.name || ''}` : `Activity removed: ${existing.name || ''}`;
-          const text = (lang === 'fr') ? `Une activité a été supprimée pour ${existing.date ? new Date(existing.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }) : ''}` : `An activity has been removed for ${existing.date ? new Date(existing.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }) : ''}`;
-          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: existing.name || '', comment: existing.comment || '', date: existing.date ? new Date(existing.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'en-US', { dateStyle: 'full' }) : '', startTime: existing.startTime || '', endTime: existing.endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp' }, prisma });
+          const subject = emailSubject('activity_deleted', lang, { name: existing.name || '' });
+          const text = (lang === 'fr') ? `Une activité a été supprimée pour ${existing.date ? formatDate(existing.date, lang, { dateStyle: 'full' }) : ''}` : `An activity has been removed for ${existing.date ? formatDate(existing.date, lang, { dateStyle: 'full' }) : ''}`;
+          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: existing.name || '', comment: existing.comment || '', date: existing.date ? formatDate(existing.date, lang, { dateStyle: 'full' }) : '', startTime: existing.startTime || '', endTime: existing.endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp' }, prisma });
         } catch (err) {
           console.error('Failed to send activity deletion notification', err && err.message ? err.message : err);
         }
