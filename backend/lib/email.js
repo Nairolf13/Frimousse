@@ -3,20 +3,26 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 
 function renderTemplate(templateName, lang, substitutions = {}) {
-  const templatePath = path.join(__dirname, '..', 'emailTemplates', `${templateName}_${lang}.html`);
+  // Try requested language first, then fall back to 'fr', then 'en'
+  const candidates = [lang, 'fr', 'en'].filter((v, i, a) => a.indexOf(v) === i);
   let html = null;
-  try {
-    html = fs.readFileSync(templatePath, 'utf8');
-    for (const key of Object.keys(substitutions)) {
-      // Support {{{key}}} for unescaped HTML (3 braces)
-      const reTriple = new RegExp(`{{{${key}}}}`, 'g');
-      html = html.replace(reTriple, substitutions[key] == null ? '' : substitutions[key]);
-      // Support {{key}} for regular text (2 braces)
-      const re = new RegExp(`{{${key}}}`, 'g');
-      html = html.replace(re, substitutions[key] == null ? '' : substitutions[key]);
+  for (const candidate of candidates) {
+    const templatePath = path.join(__dirname, '..', 'emailTemplates', `${templateName}_${candidate}.html`);
+    try {
+      html = fs.readFileSync(templatePath, 'utf8');
+      break;
+    } catch (e) {
+      // try next candidate
     }
-  } catch (e) {
-    return null;
+  }
+  if (!html) return null;
+  for (const key of Object.keys(substitutions)) {
+    // Support {{{key}}} for unescaped HTML (3 braces)
+    const reTriple = new RegExp(`{{{${key}}}}`, 'g');
+    html = html.replace(reTriple, substitutions[key] == null ? '' : substitutions[key]);
+    // Support {{key}} for regular text (2 braces)
+    const re = new RegExp(`{{${key}}}`, 'g');
+    html = html.replace(re, substitutions[key] == null ? '' : substitutions[key]);
   }
   return html;
 }

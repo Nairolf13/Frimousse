@@ -72,17 +72,6 @@ export default function PaymentHistoryPage() {
     try { return JSON.stringify(e); } catch { return String(e); }
   }, []);
 
-  // helper for comparing data without rerendering if identical
-  // use a generic so we avoid `any` lint errors; it doesn't really matter what
-  // type the array contains since we stringify elements for comparison.
-  const arraysEqual = <T,>(a: T[], b: T[]): boolean => {
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (JSON.stringify(a[i]) !== JSON.stringify(b[i])) return false;
-    }
-    return true;
-  };
-
   const loadData = useCallback(async (showSpinner = true) => {
     // remember scroll position so we can restore it after refresh
     const prevScroll = typeof window !== 'undefined' ? window.scrollY : 0;
@@ -106,9 +95,7 @@ export default function PaymentHistoryPage() {
       const d = await res.json();
       if (mounted) {
         const newData = Array.isArray(d) ? d : [];
-        if (!arraysEqual(data, newData)) {
-          setData(newData);
-        }
+        setData(newData);
       }
     } catch (err) {
       console.error('Failed to fetch payment history', err);
@@ -121,7 +108,7 @@ export default function PaymentHistoryPage() {
       }
     }
     return () => { mounted = false; };
-  }, [year, month, safeMessage, data]);
+  }, [year, month, safeMessage]);
 
   const loadNannyGroups = useCallback(async (showSpinner = true) => {
     if (viewMode !== 'by-nanny') return;
@@ -131,8 +118,7 @@ export default function PaymentHistoryPage() {
     if (showSpinner) setLoadingNannyGroups(true);
     setNannyGroupsError('');
     // capture current array for comparison below
-    const prev = nannyGroups;
-    try {
+      try {
       const res = await fetchWithRefresh(`${API_URL}/payment-history/${year}/${month}/group-by-nanny`, { credentials: 'include' });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
@@ -147,9 +133,7 @@ export default function PaymentHistoryPage() {
       const d = await res.json();
       if (mounted) {
         const newData = Array.isArray(d) ? d : [];
-        if (!arraysEqual(prev || [], newData)) {
-          setNannyGroups(newData);
-        }
+        setNannyGroups(newData);
       }
     } catch (err) {
       console.error('Failed to fetch nanny groups', err);
@@ -161,7 +145,7 @@ export default function PaymentHistoryPage() {
       }
     }
     return () => { mounted = false; };
-  }, [viewMode, year, month, safeMessage, nannyGroups]);
+  }, [viewMode, year, month, safeMessage]);
 
   useEffect(() => {
     // Initial load + keep page in sync for current month using polling and cross-tab notifications

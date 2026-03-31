@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const { subject: emailSubject } = require('../lib/i18n');
 
 // Reminders schedule in hours
 const REMINDER_HOURS = [24, 72, 24*7]; // 24h, 72h, 7d
@@ -39,14 +40,14 @@ async function main() {
     const nextReminderHour = REMINDER_HOURS[reminder.sentCount];
     if (hoursSince >= nextReminderHour) {
       const acceptLang = (u.email || '').includes('.com') ? 'en' : 'fr';
-      const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+      const lang = ['fr', 'en', 'es'].includes(acceptLang) ? acceptLang : 'fr';
       const templatePath = path.join(__dirname, '..', 'emailTemplates', `abandoned_signup_${lang}.html`);
       let html = null;
       try { html = fs.readFileSync(templatePath, 'utf8'); } catch (e) { html = null; }
       if (!html) continue;
       html = html.replace(/{{name}}/g, u.name || '').replace(/{{frontendUrl}}/g, frontendUrl);
       try {
-        const subject = lang === 'fr' ? 'Finalisez votre inscription sur Frimousse' : 'Finish your Frimousse signup';
+        const subject = emailSubject('abandoned_signup', lang);
         await require('../lib/email').sendTemplatedMail({ templateName: 'abandoned_signup', lang, to: u.email, subject, substitutions: { name: u.name || '', frontendUrl }, prisma });
         await prisma.abandonedSignupReminder.update({ where: { id: reminder.id }, data: { sentCount: reminder.sentCount + 1, lastSentAt: new Date() } });
         console.log(`Reminder sent to ${u.email}`);

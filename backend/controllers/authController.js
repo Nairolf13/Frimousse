@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
 const { sendTemplatedMail } = require('../lib/email');
+const { detectLang, subject: emailSubject } = require('../lib/i18n');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -139,9 +140,8 @@ exports.register = async (req, res) => {
   (async () => {
     try {
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-      const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-      const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-      const subject = lang === 'fr' ? 'Vérifiez votre adresse email - Frimousse' : 'Verify your email - Frimousse';
+      const lang = detectLang(req);
+      const subject = emailSubject('verification', lang);
       await require('../lib/email').sendTemplatedMail({
         templateName: 'verification',
         lang,
@@ -366,10 +366,9 @@ exports.forgotPassword = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
     // send templated email (lang detection)
-    const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-    const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
+    const lang = detectLang(req);
     try {
-  await sendTemplatedMail({ templateName: 'reset', lang, to: user.email, subject: lang === 'fr' ? 'Réinitialiser votre mot de passe' : 'Reset your password', substitutions: { name: user.name || '', resetUrl }, prisma });
+  await sendTemplatedMail({ templateName: 'reset', lang, to: user.email, subject: emailSubject('reset', lang), substitutions: { name: user.name || '', resetUrl }, prisma });
     } catch (e) {
       console.error('Failed to send reset email', e && e.message ? e.message : e);
     }

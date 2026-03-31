@@ -7,6 +7,7 @@ function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
 const prisma = require('../lib/prismaClient');
 const logger = require('../lib/logger');
+const { detectLang, subject: emailSubject } = require('../lib/i18n');
 const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const multer = require('multer');
@@ -295,10 +296,9 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('child'), async
         const { sendTemplatedMail } = require('../lib/email');
         const { notifyUsers } = require('../lib/pushNotifications');
         const childRec = result;
-        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-        const title = (lang === 'fr') ? `Nouvel enfant assigné: ${childRec.name}` : `New child assigned: ${childRec.name}`;
-        const text = (lang === 'fr') ? `Bonjour,\n\nUn nouvel enfant (${childRec.name}) vous a été confié.` : `Hello,\n\nA new child (${childRec.name}) has been assigned to you.`;
+        const lang = detectLang(req);
+        const title = emailSubject('child_assigned', lang, { childName: childRec.name });
+        const text = lang === 'fr' ? `Bonjour,\n\nUn nouvel enfant (${childRec.name}) vous a été confié.` : lang === 'es' ? `Hola,\n\nUn nuevo niño/a (${childRec.name}) te ha sido asignado.` : `Hello,\n\nA new child (${childRec.name}) has been assigned to you.`;
         for (const cn of (childRec.childNannies || [])) {
           const nanny = cn && cn.nanny ? cn.nanny : null;
           if (!nanny) continue;
@@ -528,10 +528,9 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
         const { sendTemplatedMail } = require('../lib/email');
         const { notifyUsers } = require('../lib/pushNotifications');
         const childRec = fullExisting;
-        const acceptLang = (req.headers['accept-language'] || process.env.DEFAULT_LANG || 'fr').split(',')[0].split('-')[0];
-        const lang = ['fr', 'en'].includes(acceptLang) ? acceptLang : 'fr';
-  const title = (lang === 'fr') ? `Affectation supprimée : ${childRec.name}` : `Assignment removed: ${childRec.name}`;
-  const text = (lang === 'fr') ? `Bonjour,\n\nL'enfant ${childRec.name} a été retiré de vos affectations et n'est plus disponible.` : `Hello,\n\nThe child ${childRec.name} has been removed from your assignments and is no longer available.`;
+        const lang = detectLang(req);
+  const title = emailSubject('child_unassigned', lang, { childName: childRec.name });
+  const text = lang === 'fr' ? `Bonjour,\n\nL'enfant ${childRec.name} a été retiré de vos affectations et n'est plus disponible.` : lang === 'es' ? `Hola,\n\nEl niño/a ${childRec.name} ha sido retirado de tus asignaciones y ya no está disponible.` : `Hello,\n\nThe child ${childRec.name} has been removed from your assignments and is no longer available.`;
 
         for (const cn of (childRec.childNannies || [])) {
           const nanny = cn && cn.nanny ? cn.nanny : null;
