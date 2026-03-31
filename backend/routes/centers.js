@@ -100,6 +100,72 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/centers/settings - Get tariff settings for the caller's center (admin)
+router.get('/settings', requireAuth, async (req, res) => {
+  try {
+    if (!req.user || !['admin', 'super-admin'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    // super-admin may not have centerId — find first center as fallback
+    let centerId = req.user.centerId;
+    if (!centerId && req.user.role === 'super-admin') {
+      const first = await prisma.center.findFirst({ select: { id: true } });
+      centerId = first?.id;
+    }
+    if (!centerId) return res.status(400).json({ error: 'Aucun centre associé' });
+    const center = await prisma.center.findUnique({
+      where: { id: centerId },
+      select: { dailyRate: true, childCotisationAmount: true, nannyCotisationAmount: true }
+    });
+    if (!center) return res.status(404).json({ error: 'Centre non trouvé' });
+    res.json({
+      dailyRate: center.dailyRate ?? 2.0,
+      childCotisationAmount: center.childCotisationAmount ?? 15.0,
+      nannyCotisationAmount: center.nannyCotisationAmount ?? 10.0,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// PUT /api/centers/settings - Update tariff settings for the caller's center (admin)
+router.put('/settings', requireAuth, async (req, res) => {
+  try {
+    if (!req.user || !['admin', 'super-admin'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    let centerId = req.user.centerId;
+    if (!centerId && req.user.role === 'super-admin') {
+      const first = await prisma.center.findFirst({ select: { id: true } });
+      centerId = first?.id;
+    }
+    if (!centerId) return res.status(400).json({ error: 'Aucun centre associé' });
+    const { dailyRate, childCotisationAmount, nannyCotisationAmount } = req.body;
+    const data = {};
+    if (dailyRate !== undefined) {
+      const v = parseFloat(dailyRate);
+      if (isNaN(v) || v < 0) return res.status(400).json({ error: 'Tarif journalier invalide' });
+      data.dailyRate = v;
+    }
+    if (childCotisationAmount !== undefined) {
+      const v = parseFloat(childCotisationAmount);
+      if (isNaN(v) || v < 0) return res.status(400).json({ error: 'Cotisation enfant invalide' });
+      data.childCotisationAmount = v;
+    }
+    if (nannyCotisationAmount !== undefined) {
+      const v = parseFloat(nannyCotisationAmount);
+      if (isNaN(v) || v < 0) return res.status(400).json({ error: 'Cotisation nounou invalide' });
+      data.nannyCotisationAmount = v;
+    }
+    await prisma.center.update({ where: { id: centerId }, data });
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // GET /api/centers/:id
 router.get('/:id', requireAuth, async (req, res) => {
   try {

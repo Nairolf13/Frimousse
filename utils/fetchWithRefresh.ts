@@ -1,5 +1,27 @@
 // fetchWithRefresh: central fetch wrapper with automatic refresh and subscription event dispatch
 
+// Mutex to ensure only one refresh runs at a time — prevents race conditions when
+// multiple parallel requests all hit 401 simultaneously and each try to rotate the token
+let refreshPromise: Promise<boolean> | null = null;
+
+async function doRefresh(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const refreshRes = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      return refreshRes.ok;
+    } catch {
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
+
 export async function fetchWithRefresh(input: RequestInfo, init?: RequestInit): Promise<Response> {
   const fetchInit = { ...init, credentials: 'include' as RequestCredentials };
 
@@ -10,9 +32,7 @@ export async function fetchWithRefresh(input: RequestInfo, init?: RequestInit): 
   const parseRetryAfter = (header: string | null): number | null => {
     if (!header) return null;
     const s = header.trim();
-    // numeric seconds
     if (/^\d+$/.test(s)) return parseInt(s, 10) * 1000;
-    // try HTTP-date
     const ts = Date.parse(s);
     if (!Number.isNaN(ts)) {
       const delta = ts - Date.now();
@@ -27,10 +47,8 @@ export async function fetchWithRefresh(input: RequestInfo, init?: RequestInit): 
   let res: Response | null = null;
   while (attempt <= maxRetries) {
     try {
-      // perform the fetch
       res = await fetch(input, fetchInit);
     } catch (err) {
-      // network error: if we still have retries, backoff and retry
       if (attempt < maxRetries) {
         const backoff = Math.min(10000, 300 * Math.pow(2, attempt));
         const jitter = Math.floor(Math.random() * 300);
@@ -38,30 +56,22 @@ export async function fetchWithRefresh(input: RequestInfo, init?: RequestInit): 
         attempt += 1;
         continue;
       }
-      // out of retries — rethrow to let caller handle network failure
       throw err;
     }
 
-    // If we got a response that's not 429, break and handle below
     if (res.status !== 429) break;
 
-    // Received 429: check Retry-After header
-    if (attempt >= maxRetries) break; // don't wait more
+    if (attempt >= maxRetries) break;
     const ra = parseRetryAfter(res.headers.get('Retry-After'));
     const backoffBase = Math.min(10000, 500 * Math.pow(2, attempt));
     const delay = ra !== null ? Math.min(10000, ra) : backoffBase + Math.floor(Math.random() * 300);
     await sleep(delay);
     attempt += 1;
-    // loop to retry
   }
 
-  // At this point `res` is set (or thrown). Type it for TypeScript
-  if (!res) {
-    // should not happen, but guard
-    throw new Error('Unexpected fetch error: no response');
-  }
+  if (!res) throw new Error('Unexpected fetch error: no response');
+
   if (res.status === 402) {
-    // Try to parse message and dispatch global event so UI can show upgrade modal
     try {
       const body = await res.clone().json().catch(() => ({}));
       const message = body?.error || body?.message || 'Abonnement requis';
@@ -71,9 +81,10 @@ export async function fetchWithRefresh(input: RequestInfo, init?: RequestInit): 
     }
     return res;
   }
+
   if (res.status !== 401) return res;
 
-  // Avoid attempting refresh if caller opted out or if the original request was the refresh itself
+  // Skip refresh if caller opted out or if the request is the refresh itself
   try {
     let skipRefresh = false;
     if (fetchInit.headers && typeof fetchInit.headers === 'object') {
@@ -83,21 +94,18 @@ export async function fetchWithRefresh(input: RequestInfo, init?: RequestInit): 
     skipRefresh = skipRefresh || (typeof input === 'string' && input.includes('/api/auth/refresh'));
     if (skipRefresh) return res;
 
-    // Use a relative refresh endpoint so the browser uses the current origin
-    const refreshRes = await fetch('/api/auth/refresh', {
-      method: 'POST',
-      credentials: 'include',
-    });
-    if (!refreshRes.ok) {
-      // refresh failed — session truly expired, notify the app to redirect to login
+    // Use shared mutex — if another request is already refreshing, wait for it
+    const refreshed = await doRefresh();
+    if (!refreshed) {
+      // refresh failed — session truly expired
       try { window.dispatchEvent(new CustomEvent('auth:session-expired')); } catch { /* non-browser env */ }
       return res;
     }
-    // retry original request after successful refresh
+
+    // retry original request with new access token cookie
     res = await fetch(input, fetchInit);
     return res;
   } catch {
-    // network or other error during refresh — return original response to caller
     return res;
   }
 }

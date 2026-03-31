@@ -91,7 +91,15 @@ router.get('/:id/billing', auth, async (req, res) => {
     }
   });
   const days = assignments.length;
-  const amount = days * 2;
+  let ratePerDay = 2;
+  try {
+    const centerId = req.user && req.user.centerId;
+    if (centerId) {
+      const centerData = await prisma.center.findUnique({ where: { id: centerId }, select: { dailyRate: true } });
+      if (centerData && centerData.dailyRate != null) ratePerDay = centerData.dailyRate;
+    }
+  } catch { /* keep default */ }
+  const amount = days * ratePerDay;
   res.json({ childId: id, month, days, amount });
 });
 
@@ -1036,10 +1044,20 @@ router.post('/batch/billing', auth, async (req, res) => {
     const counts = {};
     billingRows.forEach(r => { counts[r.childId] = (counts[r.childId] || 0) + 1; });
 
+    // Fetch dailyRate from the center
+    let ratePerDay = 2;
+    try {
+      const centerId = req.user && req.user.centerId;
+      if (centerId) {
+        const centerData = await prisma.center.findUnique({ where: { id: centerId }, select: { dailyRate: true } });
+        if (centerData && centerData.dailyRate != null) ratePerDay = centerData.dailyRate;
+      }
+    } catch { /* keep default */ }
+
     const result = {};
     for (const id of ids) {
       const days = counts[id] || 0;
-      const amount = days * 2; // same calc as single endpoint
+      const amount = days * ratePerDay;
       result[id] = { days, amount };
     }
     return res.json(result);

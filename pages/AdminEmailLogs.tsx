@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useI18n } from '../src/lib/useI18n';
 import { HiOutlineCheck, HiOutlineClock, HiOutlineExclamationCircle, HiOutlineEye, HiOutlineDownload, HiOutlineRefresh, HiOutlineDocumentText, HiOutlineSearch } from 'react-icons/hi';
@@ -16,21 +17,6 @@ type EmailLog = {
 
 // shortRecipients removed — desktop now shows parsed recipients and mobile shows full chips
 
-function timeAgo(iso: string) {
-  try {
-    const diff = Date.now() - new Date(iso).getTime();
-    const sec = Math.floor(diff / 1000);
-    if (sec < 60) return `il y a ${sec}s`;
-    const min = Math.floor(sec / 60);
-    if (min < 60) return `il y a ${min}m`;
-    const h = Math.floor(min / 60);
-    if (h < 24) return `il y a ${h}h`;
-    const d = Math.floor(h / 24);
-    return `il y a ${d}j`;
-  } catch {
-    return '';
-  }
-}
 
 // month grid helpers (copied/adapted from NannyCalendar)
 function getMonthGrid(date: Date) {
@@ -53,7 +39,8 @@ function getMonthGrid(date: Date) {
 
 
 export default function AdminEmailLogs() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL ?? '/api';
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   const [logs, setLogs] = useState<EmailLog[]>([]);
@@ -107,16 +94,6 @@ export default function AdminEmailLogs() {
     return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
   }, []);
 
-  // localized timeAgo wrapper uses the raw helper and inserts into translated string
-  const localTimeAgo = (iso: string) => {
-    try {
-      // reuse existing timeAgo helper which currently returns a French-ish relative string
-      const raw = timeAgo(iso);
-      return t('admin.emaillogs.last_attempt', { when: raw });
-    } catch {
-      return '';
-    }
-  };
 
   // when debounced query or month changes, reset to first page
   useEffect(() => {
@@ -372,60 +349,103 @@ export default function AdminEmailLogs() {
     <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
 
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-6">
+        {/* Titre principal */}
+        <div className="flex items-start gap-3 mb-4">
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
-            <HiOutlineDocumentText className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
           </div>
           <div className="pt-0.5">
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('admin.emaillogs.title')}</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('admin.emaillogs.description')}</p>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('settings.title')}</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('settings.description')}</p>
+          </div>
+        </div>
+
+        {/* Flèche retour + nom de la sous-page */}
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => navigate('/settings')}
+            className="flex items-center justify-center w-9 h-9 rounded-xl bg-white shadow border border-gray-100 text-gray-500 hover:text-[#0b5566] hover:border-[#0b5566] transition"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <h2 className="text-lg font-bold text-[#0b5566]">{t('admin.emaillogs.title')}</h2>
+        </div>
+
+        {/* Stats rapides */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#e6f4f7] flex items-center justify-center flex-shrink-0">
+              <HiOutlineDocumentText className="w-5 h-5 text-[#0b5566]" />
+            </div>
+            <div>
+              <div className="text-xl font-extrabold text-gray-800">{loading ? '…' : (total ?? logs.length)}</div>
+              <div className="text-xs text-gray-400">{t('admin.emaillogs.stat.total')}</div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+              <HiOutlineCheck className="w-5 h-5 text-emerald-500" />
+            </div>
+            <div>
+              <div className="text-xl font-extrabold text-gray-800">{loading ? '…' : logs.filter(l => l.status === 'sent').length}</div>
+              <div className="text-xs text-gray-400">{t('admin.emaillogs.stat.sent')}</div>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
+              <HiOutlineExclamationCircle className="w-5 h-5 text-red-400" />
+            </div>
+            <div>
+              <div className="text-xl font-extrabold text-gray-800">{loading ? '…' : logs.filter(l => l.status !== 'sent' && l.status !== 'pending').length}</div>
+              <div className="text-xs text-gray-400">{t('admin.emaillogs.stat.errors')}</div>
+            </div>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>
-        )}
-        {loading && (
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
-            <HiOutlineRefresh className="w-4 h-4 animate-spin" />
-            {t('admin.emaillogs.loading')}
+          <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm px-4 py-3">
+            <HiOutlineExclamationCircle className="w-4 h-4 flex-shrink-0" />{error}
           </div>
         )}
 
         {/* Filtres */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Recherche */}
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 flex-1">
-              <HiOutlineSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              <input aria-label="search" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none w-full" placeholder={t('admin.emaillogs.search_placeholder')} />
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Recherche */}
+              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 flex-1 focus-within:border-[#0b5566] focus-within:ring-2 focus-within:ring-[#0b5566]/10 transition">
+                <HiOutlineSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <input aria-label="search" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none w-full" placeholder={t('admin.emaillogs.search_placeholder')} />
+                {query && <button onClick={() => setQuery('')} className="text-gray-400 hover:text-gray-600 flex-shrink-0">✕</button>}
+              </div>
+              {/* Actions */}
+              <div className="flex gap-2 flex-shrink-0">
+                <button onClick={() => exportCsv()} className="flex items-center gap-2 bg-gradient-to-r from-[#0b5566] to-[#08a7c4] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow hover:opacity-90 transition">
+                  <HiOutlineDownload className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t('admin.emaillogs.export_csv')}</span>
+                </button>
+                <button onClick={() => { setPage(1); setQuery(''); setSelectedMonth(defaultMonth); }} className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition" title={t('admin.emaillogs.refresh')}>
+                  <HiOutlineRefresh className={`w-4 h-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
-            {/* Mois / Année */}
-            <div className="flex gap-2">
-              <select value={month} onChange={e => setMonth(Number(e.target.value))} className="flex-1 sm:flex-none border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
-                {monthNames.map((mName, idx) => <option key={mName} value={idx + 1}>{mName}</option>)}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Mois / Année */}
+              <div className="flex gap-2 flex-1">
+                <select value={month} onChange={e => setMonth(Number(e.target.value))} className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 capitalize">
+                  {monthNames.map((mName, idx) => <option key={mName} value={idx + 1} className="capitalize">{mName}</option>)}
+                </select>
+                <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
+                  {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+              </div>
+              {/* Destinataire */}
+              <select value={recipientFilter} onChange={e => setRecipientFilter(e.target.value)} className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
+                <option value="">{t('admin.emaillogs.all_recipients')}</option>
+                {Array.from(new Set(logs.flatMap(l => {
+                  try { const p = JSON.parse(l.recipients || '[]'); return Array.isArray(p) ? p.map(String) : [String(p)]; } catch { return (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
+                }))).map((r, idx) => <option key={idx} value={r}>{r}</option>)}
               </select>
-              <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
-                {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-            </div>
-            {/* Destinataire */}
-            <select value={recipientFilter} onChange={e => setRecipientFilter(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
-              <option value="">{t('admin.emaillogs.all_recipients')}</option>
-              {Array.from(new Set(logs.flatMap(l => {
-                try { const p = JSON.parse(l.recipients || '[]'); return Array.isArray(p) ? p.map(String) : [String(p)]; } catch { return (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
-              }))).map((r, idx) => <option key={idx} value={r}>{r}</option>)}
-            </select>
-            {/* Actions */}
-            <div className="flex gap-2">
-              <button onClick={() => exportCsv()} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2 text-sm font-medium transition">
-                <HiOutlineDocumentText className="w-4 h-4" />
-                <span className="hidden sm:inline">{t('admin.emaillogs.export')}</span>
-              </button>
-              <button onClick={() => { setPage(1); setQuery(''); setSelectedMonth(defaultMonth); }} className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition" title="Rafraîchir">
-                <HiOutlineRefresh className="w-4 h-4 text-gray-500" />
-              </button>
             </div>
           </div>
         </div>
@@ -441,57 +461,71 @@ export default function AdminEmailLogs() {
               if (query) { const q = query.toLowerCase(); if (!(String(l.subject || '').toLowerCase().includes(q) || recips.join(' ').toLowerCase().includes(q))) return false; }
               return true;
             });
-            if (v.length === 0) return <div className="text-center py-12 text-gray-400 text-sm">Aucun email trouvé</div>;
+            if (v.length === 0) return (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
+                  <HiOutlineDocumentText className="w-7 h-7 text-gray-300" />
+                </div>
+                <p className="text-sm">{t('admin.emaillogs.empty')}</p>
+              </div>
+            );
             return v.map(l => {
               let recips: string[] = [];
               try { const parsed = JSON.parse(l.recipients || '[]'); recips = Array.isArray(parsed) ? parsed.map(String) : [String(parsed)]; }
               catch { recips = (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
               const s = getStatusInfo(l.status);
               const statusIsSent = l.status === 'sent';
+              const statusIsError = l.status !== 'sent' && l.status !== 'pending';
               return (
-                <div key={l.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                <div key={l.id} className={`bg-white rounded-2xl shadow-sm border-l-4 ${statusIsSent ? 'border-l-emerald-400' : statusIsError ? 'border-l-red-400' : 'border-l-amber-400'} border border-gray-100 p-4`}>
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-[#e6f4f7] flex items-center justify-center flex-shrink-0">
-                        <HiOutlineDocumentText className="w-5 h-5 text-[#0b5566]" />
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${statusIsSent ? 'bg-emerald-50' : statusIsError ? 'bg-red-50' : 'bg-amber-50'}`}>
+                        <HiOutlineDocumentText className={`w-5 h-5 ${statusIsSent ? 'text-emerald-500' : statusIsError ? 'text-red-400' : 'text-amber-500'}`} />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">{l.subject || t('payments.download_invoice')}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{localTimeAgo(l.createdAt)}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{new Date(l.createdAt).toLocaleDateString()} · {new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
                     </div>
-                    <div className={`flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${s.badge}`}>{s.icon}<span>{s.label}</span></div>
+                    <div className={`flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${s.badge}`}>{s.icon}<span>{s.label}</span></div>
                   </div>
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                      {new Date(l.createdAt).toLocaleDateString()} à {new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
+                  <div className="space-y-1.5 mb-3">
                     {recips.map((r, i) => (
                       <div key={i} className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusIsSent ? 'bg-green-500' : 'bg-red-400'}`} />
+                        <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                         <span className="truncate">{r}</span>
                       </div>
                     ))}
                     {l.paymentHistory && (() => {
                       const ph = l.paymentHistory;
                       const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : new Date();
-                      return <p className="text-xs text-[#0b5566] font-medium">FA-{invoiceDate.getFullYear()}-{String(ph.id).slice(0,6)}</p>;
+                      return (
+                        <div className="flex items-center gap-2 text-xs text-[#0b5566] bg-[#e6f4f7] rounded-lg px-3 py-1.5 font-medium">
+                          <HiOutlineDocumentText className="w-3 h-3 flex-shrink-0" />
+                          FA-{invoiceDate.getFullYear()}-{String(ph.id).slice(0,6)}
+                          {ph.total != null && <span className="ml-auto font-bold">{ph.total.toFixed(2)} €</span>}
+                        </div>
+                      );
                     })()}
-                    {l.errorText && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-1.5">{l.errorText}</p>}
+                    {l.errorText && (
+                      <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-1.5">
+                        <HiOutlineExclamationCircle className="w-3 h-3 flex-shrink-0" />{l.errorText}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-2 pt-2 border-t border-gray-100">
                     {statusIsSent ? (
                       <>
-                        <button onClick={() => l.paymentHistory && openInvoice(l.paymentHistory!.id)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                        <button onClick={() => l.paymentHistory && openInvoice(l.paymentHistory!.id)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
                           <HiOutlineEye className="w-4 h-4" /> Voir
                         </button>
-                        <button onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory!.id, `facture-${l.paymentHistory!.id}.pdf`)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                        <button onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory!.id, `facture-${l.paymentHistory!.id}.pdf`)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
                           <HiOutlineDownload className="w-4 h-4" /> Télécharger
                         </button>
                       </>
                     ) : (
-                      <button onClick={() => resendEmail(l.id)} disabled={!!resending[l.id] || !!(l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id)))} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700 hover:bg-amber-100 transition ${resending[l.id] ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <button onClick={() => resendEmail(l.id)} disabled={!!resending[l.id] || !!(l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id)))} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition ${resending[l.id] ? 'opacity-50 cursor-not-allowed' : ''}`}>
                         <HiOutlineRefresh className={`w-4 h-4 ${resending[l.id] ? 'animate-spin' : ''}`} /> Renvoyer
                       </button>
                     )}
@@ -621,7 +655,7 @@ export default function AdminEmailLogs() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-3">
-                <div className="font-medium">{new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(calendarDate)}</div>
+                <div className="font-medium">{new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(calendarDate)}</div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="px-2 py-1 border rounded">‹</button>
                   <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} className="px-2 py-1 border rounded">›</button>
@@ -629,7 +663,7 @@ export default function AdminEmailLogs() {
               </div>
               <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-2">
                 {getMonthGrid(calendarDate).flat().slice(0,7).map((d, i) => (
-                  <div key={i}>{new Intl.DateTimeFormat('fr-FR', { weekday: 'short' }).format(d)}</div>
+                  <div key={i}>{new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(d)}</div>
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">

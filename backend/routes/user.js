@@ -35,7 +35,7 @@ async function resolveUserCenter(prismaClient, userRecord) {
 router.get('/me', auth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
-    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true, profileCompleted: true, oauthProvider: true }
+    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true, profileCompleted: true, oauthProvider: true, language: true }
   });
   if (!user) return res.status(404).json({ message: 'User not found' });
   try {
@@ -370,7 +370,7 @@ router.put('/preferences', auth, async (req, res) => {
       data.cookieConsent = cookieConsent;
     }
     if (language !== undefined) {
-      if (!['fr', 'en'].includes(language)) return res.status(400).json({ error: 'language invalide' });
+      if (!['fr', 'en', 'es'].includes(language)) return res.status(400).json({ error: 'language invalide' });
       data.language = language;
     }
     if (Object.keys(data).length === 0) return res.status(400).json({ error: 'Aucune donnée' });

@@ -4,6 +4,7 @@ import { useI18n } from '../src/lib/useI18n';
 
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useAuth } from '../src/context/AuthContext';
+import { useCenterSettings } from '../src/context/CenterSettingsContext';
 
 type ChildRef = { child: { id: string; name: string; group?: string; prescriptionUrl?: string | null } };
 
@@ -20,11 +21,13 @@ type Parent = {
 import InvoiceAdjustmentModal from './InvoiceAdjustmentModal';
 import parentService from '../services/parent';
 
-export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete, annualPerChild, onAdjustmentSaved }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; annualPerChild?: number; onAdjustmentSaved?: () => void }) {
+export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete, onAdjustmentSaved }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; onAdjustmentSaved?: () => void }) {
   const navigate = useNavigate();
-  const { t, locale } = useI18n();
+  const { t } = useI18n();
   const initials = ((parent.firstName && parent.lastName) ? `${parent.firstName[0] || ''}${parent.lastName[0] || ''}` : (parent.name || 'U')).toUpperCase().slice(0,2);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { settings: centerSettings } = useCenterSettings();
+  const annualPerChild = centerSettings.childCotisationAmount;
   const API_URL = import.meta.env.VITE_API_URL;
 
   // map childId -> { url?, loading }
@@ -146,8 +149,7 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
             <span className="inline-flex items-center gap-1 text-xs font-semibold bg-white text-emerald-700 px-2.5 py-1 rounded-full shadow-sm border border-emerald-100">
               {(() => {
                 const childCount = parent.children ? parent.children.length : 0;
-                if (locale === 'en') return `${childCount} ${childCount === 1 ? 'child' : 'children'}`;
-                return `${childCount} ${childCount > 1 ? 'enfants' : 'enfant'}`;
+                return t('parent.children.count', '{n} enfant(s)').replace('{n}', String(childCount));
               })()}
             </span>
           </div>
@@ -175,7 +177,7 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
         {/* Enfants */}
         <div className="px-5 py-3 flex-1 overflow-auto">
           <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            {(() => { const n = parent.children ? parent.children.length : 0; if (locale === 'en') return n <= 1 ? 'Child' : 'Children'; return n <= 1 ? 'Enfant' : 'Enfants'; })()}
+            {t('parent.children.label', 'Enfants')}
           </div>
           <div className="flex flex-wrap gap-2 min-h-[100px]">
             {(parent.children || []).map(c => (
@@ -222,16 +224,20 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
 
         {/* Footer cotisation + actions */}
         <div className="px-5 pb-5 pt-3 border-t border-black/5">
+          {(annualPerChild > 0 || centerSettings.dailyRate > 0) && (
           <div className="bg-white/60 rounded-xl px-3 py-2.5 mb-3 text-center">
-            <div className="flex items-center justify-center gap-2 mb-0.5">
-              <span className="text-xs text-gray-500">{t('parent.cotisation.this_month')} :</span>
-              <span className="font-extrabold text-[#0b5566] text-base">{(parentDue || 0)} €</span>
-              {hasAdjustment && <span title={t('adjustment.exists')} className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400" />}
-            </div>
-            {adjustmentSum > 0 && <div className="text-xs text-yellow-600">{t('adjustment.label')} {adjustmentSum.toFixed(2)} €</div>}
-            <div className="text-xs text-gray-400 mt-0.5">{t('parent.cotisation.annual_total')} : <span className="font-bold text-gray-700">{((parent.children?.length || 0) * (annualPerChild ?? 15))} €</span></div>
+            {centerSettings.dailyRate > 0 && (
+              <div className="flex items-center justify-center gap-2 mb-0.5">
+                <span className="text-xs text-gray-500">{t('parent.cotisation.this_month')} :</span>
+                <span className="font-extrabold text-[#0b5566] text-base">{(parentDue || 0)} €</span>
+                {hasAdjustment && <span title={t('adjustment.exists')} className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-400" />}
+              </div>
+            )}
+            {centerSettings.dailyRate > 0 && adjustmentSum > 0 && <div className="text-xs text-yellow-600">{t('adjustment.label')} {adjustmentSum.toFixed(2)} €</div>}
+            {annualPerChild > 0 && <div className="text-xs text-gray-400 mt-0.5">{t('parent.cotisation.annual_total')} : <span className="font-bold text-gray-700">{((parent.children?.length || 0) * annualPerChild)} €</span></div>}
           </div>
-          {isAdminUser && (
+          )}
+          {isAdminUser && (annualPerChild > 0 || centerSettings.dailyRate > 0) && (
             <div className="text-center mb-2">
               <button className="text-xs font-semibold text-[#0b5566] hover:underline" onClick={() => setShowAdjModal(true)}>{t('adjustment.button')}</button>
             </div>
@@ -240,13 +246,13 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
             {onEdit && (
               <button onClick={() => { if (onEdit) onEdit(parent); }} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-600 hover:text-[#0b5566] hover:border-[#0b5566]/30 rounded-xl shadow-sm touch-manipulation transition text-xs font-medium" title={t('children.action.edit')}>
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
-                Modifier
+                {t('children.action.edit')}
               </button>
             )}
             {onDelete && (
               <button onClick={() => setIsDeleting(true)} className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-600 hover:text-red-500 hover:border-red-200 rounded-xl shadow-sm touch-manipulation transition text-xs font-medium" title={t('children.action.delete')}>
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                Supprimer
+                {t('children.action.delete')}
               </button>
             )}
           </div>

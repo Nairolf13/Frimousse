@@ -1,21 +1,23 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-
-const NAV_LINKS = [
-  { to: '/', label: 'Accueil' },
-  { to: '/fonctionnalites', label: 'Fonctionnalités' },
-  { to: '/tarifs', label: 'Tarifs' },
-  { to: '/support', label: 'Support' },
-  { to: '/about', label: 'À propos' },
-];
+import { useI18n } from '../src/lib/useI18n';
 
 type PublicNavbarProps = {
   variant?: string;
 };
 
-export default function PublicNavbar({ variant = "dark" }: PublicNavbarProps) {
+export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
+  const { t } = useI18n();
   const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const NAV_LINKS = [
+    { to: '/', label: t('nav.home', 'Accueil') },
+    { to: '/fonctionnalites', label: t('nav.features', 'Fonctionnalités') },
+    { to: '/tarifs', label: t('nav.pricing', 'Tarifs') },
+    { to: '/support', label: t('nav.support', 'Support') },
+    { to: '/about', label: t('nav.about', 'À propos') },
+  ];
 
   const isDark = variant === "dark";
 

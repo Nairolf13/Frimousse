@@ -1,6 +1,7 @@
 import AppRoutes from '../routes';
 import { useEffect, useState } from 'react';
 import { AuthContext, useAuth } from './context/AuthContext';
+import { CenterSettingsProvider } from './context/CenterSettingsContext';
 import { AssistantProvider } from './context/AssistantContext';
 import NotificationsProvider from './context/NotificationsProvider';
 import type { User } from './context/AuthContext';
@@ -17,7 +18,7 @@ function UserPreferencesSync() {
 
   useEffect(() => {
     if (!user) return;
-    if (user.language === 'fr' || user.language === 'en') {
+    if (user.language === 'fr' || user.language === 'en' || user.language === 'es') {
       setLocale(user.language);
       try { localStorage.setItem('site_language', user.language); } catch { /* ignore */ }
     }
@@ -118,11 +119,13 @@ function App() {
       <AuthContext.Provider value={{ user, setUser }}>
         <UserPreferencesSync />
         <CookieConsentBanner />
-        <NotificationsProvider>
-          <AssistantProvider>
-            <AppRoutes />
-          </AssistantProvider>
-        </NotificationsProvider>
+        <CenterSettingsProvider>
+          <NotificationsProvider>
+            <AssistantProvider>
+              <AppRoutes />
+            </AssistantProvider>
+          </NotificationsProvider>
+        </CenterSettingsProvider>
       </AuthContext.Provider>
     </HelmetProvider>
   );

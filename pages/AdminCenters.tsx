@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { HiOutlineOfficeBuilding, HiOutlineUsers, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlinePencil, HiOutlineTrash, HiOutlineDocumentReport } from 'react-icons/hi';
 
@@ -35,14 +36,15 @@ type Center = {
 };
 
 function SubBadge({ sub }: { sub: Subscription | null | undefined }) {
-  if (!sub) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">Aucun abonnement</span>;
+  const { t } = useI18n();
+  if (!sub) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">{t('centers.subbadge.no_subscription', 'Aucun abonnement')}</span>;
   const statusMap: Record<string, { label: string; color: string }> = {
-    active:   { label: 'Actif',     color: 'bg-emerald-100 text-emerald-700' },
-    trialing: { label: 'Essai',     color: 'bg-blue-100 text-blue-700' },
-    canceled: { label: 'Annulé',    color: 'bg-red-100 text-red-700' },
-    past_due: { label: 'Impayé',    color: 'bg-orange-100 text-orange-700' },
-    unpaid:   { label: 'Impayé',    color: 'bg-orange-100 text-orange-700' },
-    inactive: { label: 'Inactif',   color: 'bg-gray-100 text-gray-500' },
+    active:   { label: t('subscription.status.active', 'Actif'),     color: 'bg-emerald-100 text-emerald-700' },
+    trialing: { label: t('subscription.status.trialing', 'Essai'),     color: 'bg-blue-100 text-blue-700' },
+    canceled: { label: t('subscription.status.canceled', 'Annulé'),    color: 'bg-red-100 text-red-700' },
+    past_due: { label: t('subscription.status.past_due', 'Paiement en retard'),    color: 'bg-orange-100 text-orange-700' },
+    unpaid:   { label: t('subscription.status.unpaid', 'Impayé'),    color: 'bg-orange-100 text-orange-700' },
+    inactive: { label: t('subscription.status.inactive', 'Inactif'),   color: 'bg-gray-100 text-gray-500' },
   };
   const s = statusMap[sub.status] ?? { label: sub.status, color: 'bg-gray-100 text-gray-500' };
   const planLabel = sub.plan === 'pro' ? 'Pro' : sub.plan === 'essentiel' ? 'Essentiel' : sub.plan === 'decouverte' ? 'Découverte' : sub.plan;
@@ -57,6 +59,7 @@ function SubBadge({ sub }: { sub: Subscription | null | undefined }) {
 
 export default function AdminCenters() {
   const API_URL = import.meta.env.VITE_API_URL ?? '/api';
+  const { t } = useI18n();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   const [centers, setCenters] = useState<Center[]>([]);
   const [loading, setLoading] = useState(false);
@@ -269,8 +272,8 @@ export default function AdminCenters() {
               <HiOutlineOfficeBuilding className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div className="pt-0.5">
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">Centres</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{centers.length} centre{centers.length > 1 ? 's' : ''} enregistré{centers.length > 1 ? 's' : ''}</p>
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.centers.title', 'Centres')}</h1>
+              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.centers.subtitle', { count: String(centers.length) })}</p>
             </div>
           </div>
         </div>
@@ -288,10 +291,10 @@ export default function AdminCenters() {
             {/* KPI bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               {[
-                { label: 'Utilisateurs', value: totalUsers, icon: <HiOutlineUsers className="w-5 h-5" />, color: 'text-blue-600 bg-blue-50' },
-                { label: 'Enfants', value: totalChildren, icon: <HiOutlineHeart className="w-5 h-5" />, color: 'text-pink-600 bg-pink-50' },
-                { label: 'Nounous', value: totalNannies, icon: <HiOutlineCalendar className="w-5 h-5" />, color: 'text-violet-600 bg-violet-50' },
-                { label: 'Rapports', value: totalReports, icon: <HiOutlineDocumentReport className="w-5 h-5" />, color: 'text-amber-600 bg-amber-50' },
+                { label: t('centers.kpi.users', 'Utilisateurs'), value: totalUsers, icon: <HiOutlineUsers className="w-5 h-5" />, color: 'text-blue-600 bg-blue-50' },
+                { label: t('centers.kpi.children', 'Enfants'), value: totalChildren, icon: <HiOutlineHeart className="w-5 h-5" />, color: 'text-pink-600 bg-pink-50' },
+                { label: t('centers.kpi.nannies', 'Nounous'), value: totalNannies, icon: <HiOutlineCalendar className="w-5 h-5" />, color: 'text-violet-600 bg-violet-50' },
+                { label: t('centers.kpi.reports', 'Rapports'), value: totalReports, icon: <HiOutlineDocumentReport className="w-5 h-5" />, color: 'text-amber-600 bg-amber-50' },
               ].map(kpi => (
                 <div key={kpi.label} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${kpi.color}`}>{kpi.icon}</div>
@@ -360,10 +363,10 @@ export default function AdminCenters() {
                     {/* Stats grid */}
                     <div className="grid grid-cols-4 gap-2 pt-1">
                       {[
-                        { icon: <HiOutlineUsers className="w-3.5 h-3.5" />, val: center._count.users, label: 'users' },
-                        { icon: <HiOutlineUserGroup className="w-3.5 h-3.5" />, val: center._count.parents, label: 'parents' },
-                        { icon: <HiOutlineHeart className="w-3.5 h-3.5" />, val: center._count.children, label: 'enfants' },
-                        { icon: <HiOutlineCalendar className="w-3.5 h-3.5" />, val: center._count.nannies, label: 'nounous' },
+                        { icon: <HiOutlineUsers className="w-3.5 h-3.5" />, val: center._count.users, label: t('centers.row.users', 'Utilisateurs') },
+                        { icon: <HiOutlineUserGroup className="w-3.5 h-3.5" />, val: center._count.parents, label: t('centers.row.parents', 'Parents') },
+                        { icon: <HiOutlineHeart className="w-3.5 h-3.5" />, val: center._count.children, label: t('centers.row.children', 'Enfants') },
+                        { icon: <HiOutlineCalendar className="w-3.5 h-3.5" />, val: center._count.nannies, label: t('centers.row.nannies', 'Nounous') },
                       ].map(s => (
                         <div key={s.label} className="bg-gray-50 rounded-xl p-2 text-center">
                           <div className="flex justify-center text-gray-400 mb-0.5">{s.icon}</div>
@@ -376,10 +379,10 @@ export default function AdminCenters() {
                     {/* Actions */}
                     <div className="flex gap-2 pt-1">
                       <button onClick={() => openEditModal(center)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-[#eef9ff] text-[#0b5566] hover:bg-[#d9f2fb] transition-colors">
-                        <HiOutlinePencil className="w-4 h-4" /> Modifier
+                        <HiOutlinePencil className="w-4 h-4" /> {t('global.edit', 'Modifier')}
                       </button>
                       <button onClick={() => openDeleteModal(center)} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
-                        <HiOutlineTrash className="w-4 h-4" /> Supprimer
+                        <HiOutlineTrash className="w-4 h-4" /> {t('global.delete', 'Supprimer')}
                       </button>
                     </div>
                   </div>
@@ -393,11 +396,11 @@ export default function AdminCenters() {
                 <table className="min-w-full">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/60">
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">Centre</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">Admin</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">Contact & Adresse</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">Abonnement</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">Statistiques</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('centers.table.center', 'Centre')}</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('centers.table.admin', 'Admin')}</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('centers.table.contact_address', 'Contact & Adresse')}</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('centers.table.subscription', 'Abonnement')}</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('centers.table.stats', 'Statistiques')}</th>
                       <th className="py-3 px-5" />
                     </tr>
                   </thead>
@@ -412,7 +415,7 @@ export default function AdminCenters() {
                             </div>
                             <div>
                               <div className="font-semibold text-gray-900 text-sm">{center.name}</div>
-                              <div className="text-xs text-gray-400">Créé le {new Date(center.createdAt).toLocaleDateString('fr-FR')}</div>
+                              <div className="text-xs text-gray-400">{t('centers.row.created', 'Créé le')} {new Date(center.createdAt).toLocaleDateString('fr-FR')}</div>
                             </div>
                           </div>
                         </td>
@@ -422,11 +425,11 @@ export default function AdminCenters() {
                             <div>
                               <div className="text-sm font-medium text-gray-800">{center.adminName}</div>
                               {center.adminCreatedAt && (
-                                <div className="text-xs text-gray-400">Inscrit le {new Date(center.adminCreatedAt).toLocaleDateString('fr-FR')}</div>
+                                <div className="text-xs text-gray-400">{t('centers.row.admin_since', 'Inscrit le')} {new Date(center.adminCreatedAt).toLocaleDateString('fr-FR')}</div>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-400 italic">Aucun admin</span>
+                            <span className="text-xs text-gray-400 italic">{t('centers.row.no_admin', 'Aucun admin')}</span>
                           )}
                         </td>
                         {/* Contact & adresse */}
@@ -451,7 +454,7 @@ export default function AdminCenters() {
                               </div>
                             ) : null}
                             {!center.email && !center.phone && !center.address && !center.city && (
-                              <span className="text-xs text-gray-400 italic">Non renseigné</span>
+                              <span className="text-xs text-gray-400 italic">{t('centers.row.not_specified', 'Non renseigné')}</span>
                             )}
                           </div>
                         </td>
@@ -460,35 +463,35 @@ export default function AdminCenters() {
                           <SubBadge sub={center.subscription} />
                           {center.subscription?.currentPeriodEnd && (
                             <div className="text-xs text-gray-400 mt-1">
-                              Expire le {new Date(center.subscription.currentPeriodEnd).toLocaleDateString('fr-FR')}
+                              {t('centers.row.expires_on', 'Expire le')} {new Date(center.subscription.currentPeriodEnd).toLocaleDateString('fr-FR')}
                             </div>
                           )}
                           {center.subscription?.status === 'trialing' && center.subscription?.trialEnd && (
                             <div className="text-xs text-blue-500 mt-1">
-                              Essai jusqu'au {new Date(center.subscription.trialEnd).toLocaleDateString('fr-FR')}
+                              {t('centers.row.trial_until', 'Essai jusqu\'au')} {new Date(center.subscription.trialEnd).toLocaleDateString('fr-FR')}
                             </div>
                           )}
                         </td>
                         {/* Stats */}
                         <td className="py-4 px-5">
                           <div className="flex flex-wrap gap-3">
-                            <div className="flex items-center gap-1 text-xs text-gray-600" title="Utilisateurs">
+                            <div className="flex items-center gap-1 text-xs text-gray-600" title={t('centers.table.users', 'Utilisateurs')}>
                               <HiOutlineUsers className="w-4 h-4 text-gray-400" />
                               <span className="font-semibold">{center._count.users}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-gray-600" title="Parents">
+                            <div className="flex items-center gap-1 text-xs text-gray-600" title={t('centers.table.parents', 'Parents')}>
                               <HiOutlineUserGroup className="w-4 h-4 text-gray-400" />
                               <span className="font-semibold">{center._count.parents}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-gray-600" title="Enfants">
+                            <div className="flex items-center gap-1 text-xs text-gray-600" title={t('centers.table.children', 'Enfants')}>
                               <HiOutlineHeart className="w-4 h-4 text-gray-400" />
                               <span className="font-semibold">{center._count.children}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-gray-600" title="Nounous">
+                            <div className="flex items-center gap-1 text-xs text-gray-600" title={t('centers.table.nannies', 'Nounous')}>
                               <HiOutlineCalendar className="w-4 h-4 text-gray-400" />
                               <span className="font-semibold">{center._count.nannies}</span>
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-gray-600" title="Rapports">
+                            <div className="flex items-center gap-1 text-xs text-gray-600" title={t('centers.table.reports', 'Rapports')}>
                               <HiOutlineDocumentReport className="w-4 h-4 text-gray-400" />
                               <span className="font-semibold">{center._count.reports ?? 0}</span>
                             </div>
@@ -497,10 +500,10 @@ export default function AdminCenters() {
                         {/* Actions */}
                         <td className="py-4 px-5">
                           <div className="flex items-center gap-1">
-                            <button onClick={() => openEditModal(center)} className="p-2 text-[#0b5566] hover:bg-[#eef9ff] rounded-lg transition-colors" title="Modifier">
+                            <button onClick={() => openEditModal(center)} className="p-2 text-[#0b5566] hover:bg-[#eef9ff] rounded-lg transition-colors" title={t('global.edit', 'Modifier')}>
                               <HiOutlinePencil className="w-4 h-4" />
                             </button>
-                            <button onClick={() => openDeleteModal(center)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Supprimer">
+                            <button onClick={() => openDeleteModal(center)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title={t('global.delete', 'Supprimer')}>
                               <HiOutlineTrash className="w-4 h-4" />
                             </button>
                           </div>

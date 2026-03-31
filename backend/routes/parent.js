@@ -239,13 +239,23 @@ router.get('/billing', requireAuth, async (req, res) => {
     // count days per child
     const childCounts = assignments.reduce((acc, a) => { acc[a.childId] = (acc[a.childId] || 0) + 1; return acc; }, {});
 
-    // build totals per parent (amount = days * 2 as per billing logic)
+    // Fetch dailyRate from center
+    let ratePerDay = 2;
+    try {
+      const centerId = userReq.centerId;
+      if (centerId) {
+        const centerData = await prisma.center.findUnique({ where: { id: centerId }, select: { dailyRate: true } });
+        if (centerData && centerData.dailyRate != null) ratePerDay = centerData.dailyRate;
+      }
+    } catch { /* keep default */ }
+
+    // build totals per parent
     const result = {};
     for (const [pid, childIds] of parentChildMap.entries()) {
       let tot = 0;
       for (const cid of childIds) {
         const days = childCounts[cid] || 0;
-        tot += days * 2;
+        tot += days * ratePerDay;
       }
       // subtract any manual adjustments for this parent/month
       const adjMonth = `${year}-${String(mon).padStart(2,'0')}`;

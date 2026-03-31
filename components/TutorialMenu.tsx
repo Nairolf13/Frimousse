@@ -1,15 +1,24 @@
+import { useNavigate } from 'react-router-dom';
 import { useTutorial } from '../src/context/useTutorial';
 import { useAuth } from '../src/context/AuthContext';
+import { useI18n } from '../src/lib/useI18n';
 
 export default function TutorialMenu() {
   const { tours, showMenu, closeMenu, startTour, isActive } = useTutorial();
   const { user } = useAuth();
+  const { t } = useI18n();
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    closeMenu();
+    navigate('/settings?section=tutoriels');
+  };
   const completed = user?.tutorialCompleted ?? [];
 
   if (!showMenu || isActive) return null;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center" onClick={closeMenu}>
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center" onClick={handleClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm tutorial-backdrop-in" />
       <div
         className="relative z-10 bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden tutorial-card-in"
@@ -25,12 +34,12 @@ export default function TutorialMenu() {
                 </svg>
               </div>
               <div>
-                <h2 className="text-xl font-bold">Tutoriels</h2>
-                <p className="text-sm text-white/80">Apprenez a utiliser Frimousse</p>
+                <h2 className="text-xl font-bold">{t('settings.tutorials.menu.title', 'Tutoriels')}</h2>
+                <p className="text-sm text-white/80">{t('settings.tutorials.menu.subtitle', 'Apprenez à utiliser Frimousse')}</p>
               </div>
             </div>
             <button
-              onClick={closeMenu}
+              onClick={handleClose}
               className="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -91,7 +100,10 @@ export default function TutorialMenu() {
         {/* Footer */}
         <div className="px-6 pb-5 pt-2">
           <p className="text-center text-xs text-gray-400">
-            Vous pouvez relancer un tutoriel a tout moment depuis le bouton <span className="font-semibold text-brand-500">?</span> du menu.
+            {t(
+              'settings.tutorials.menu.footer',
+              'Vous pouvez relancer un tutoriel à tout moment depuis le bouton ? du menu.'
+            )}
           </p>
         </div>
       </div>

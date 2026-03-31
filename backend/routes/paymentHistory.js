@@ -7,8 +7,7 @@ const requireActiveSubscription = require('../middleware/subscriptionMiddleware'
 
 router.use(auth, requireActiveSubscription);
 
-// Any change to RATE_PER_DAY should be mirrored in paymentCron.js
-const RATE_PER_DAY = 2;
+const DEFAULT_RATE_PER_DAY = 2;
 
 // Récupérer l’historique par mois/année
 router.get('/:year/:month', async (req, res) => {
@@ -103,21 +102,34 @@ router.get('/:year/:month', async (req, res) => {
         let actual = 0;
         // find children of this parent
         const kids = await prisma.child.findMany({ where: { parents: { some: { parentId: rec.parentId } } }, select: { id: true } });
+        // get dailyRate from center
+        const parentData = await prisma.parent.findUnique({ where: { id: rec.parentId }, select: { centerId: true } });
+        let ratePerDay = DEFAULT_RATE_PER_DAY;
+        if (parentData && parentData.centerId) {
+          const centerData = await prisma.center.findUnique({ where: { id: parentData.centerId }, select: { dailyRate: true } });
+          if (centerData && centerData.dailyRate != null) ratePerDay = centerData.dailyRate;
+        }
+        const newDetails = [];
         if (kids && kids.length) {
           const start = new Date(yearInt, monthInt - 1, 1);
           const end = new Date(yearInt, monthInt, 0);
           for (const k of kids) {
+            const child = await prisma.child.findUnique({ where: { id: k.id }, select: { name: true } });
             const days = await prisma.assignment.count({ where: { childId: k.id, date: { gte: start, lte: end } } });
-            actual += days * RATE_PER_DAY;
+            const subtotal = days * ratePerDay;
+            actual += subtotal;
+            newDetails.push({ childName: child ? child.name : k.id, daysPresent: days, ratePerDay, subtotal });
           }
         }
         actual -= rec.adjustment || 0;
         if (actual < 0) actual = 0;
-        if (rec.total !== actual) {
-          // fix the DB so future requests are correct
-          await prisma.paymentHistory.update({ where: { id: rec.id }, data: { total: actual } });
-          rec.total = actual;
+        if (rec.adjustment > 0) {
+          newDetails.push({ childName: 'Réduction', daysPresent: 0, ratePerDay: 0, subtotal: -(rec.adjustment || 0) });
         }
+        // always update details to reflect current ratePerDay
+        await prisma.paymentHistory.update({ where: { id: rec.id }, data: { total: actual, details: newDetails } });
+        rec.total = actual;
+        rec.details = newDetails;
       } catch (e) {
         // ignore calculation errors, leave rec.total as-is
         console.error('reconciliation error for paymentHistory', rec.id, e);

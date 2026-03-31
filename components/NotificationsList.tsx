@@ -23,6 +23,7 @@ const SWIPE_THRESHOLD = 60; // px needed to reveal the delete button
 const DELETE_REVEAL = 72; // px width of the delete button
 
 function SwipeableItem({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+  const { t } = useI18n();
   const startXRef = useRef<number | null>(null);
   const [offset, setOffset] = useState(0);
   const [swiped, setSwiped] = useState(false);
@@ -72,14 +73,14 @@ function SwipeableItem({ onDelete, children }: { onDelete: () => void; children:
         <button
           onClick={() => { close(); onDelete(); }}
           className="flex flex-col items-center justify-center w-full h-full text-white gap-1"
-          aria-label="Supprimer"
+          aria-label={t('notifications.swipe_delete', 'Supprimer')}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
             <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <span className="text-[10px] font-semibold">Supprimer</span>
+          <span className="text-[10px] font-semibold">{t('notifications.swipe_delete', 'Supprimer')}</span>
         </button>
       </div>
       {/* Swipeable content */}
@@ -186,7 +187,18 @@ export default function NotificationsList({ items = [], loading = false, onRefre
     <ul className="space-y-4">
       {items.map((n: NotificationItem, idx: number) => {
   const maybeData = n.data && typeof n.data === 'object' ? n.data as Record<string, unknown> : null;
-  const dtype = (maybeData && typeof maybeData.type === 'string') ? (maybeData.type as string) : '';
+  const nestedData = maybeData && maybeData.data && typeof maybeData.data === 'object' ? maybeData.data as Record<string, unknown> : null;
+  const dtype = (nestedData && typeof nestedData.type === 'string') ? (nestedData.type as string) : ((maybeData && typeof maybeData.type === 'string') ? (maybeData.type as string) : '');
+  const defaultTitle = t('notifications.review.created', 'New review to moderate');
+  const defaultBody = t('notifications.review.created.description', 'A new user review is waiting for approval');
+  const payloadTitle = maybeData && typeof maybeData.title === 'string' ? maybeData.title : '';
+  const payloadBody = maybeData && typeof maybeData.body === 'string' ? maybeData.body : '';
+  const title = (dtype === 'review.created')
+    ? defaultTitle
+    : (n.title || payloadTitle || '');
+  const body = (dtype === 'review.created')
+    ? (n.body || payloadBody || defaultBody)
+    : (n.body || payloadBody || '');
         const map: Record<string, string> = {
           activity: 'bg-emerald-500',
           message: 'bg-sky-500',
@@ -254,8 +266,8 @@ export default function NotificationsList({ items = [], loading = false, onRefre
               </div>
 
               <div className="flex-1 px-3">
-                <div className="text-sm font-semibold" title={n.title}>{n.title}</div>
-                {n.body ? <div className="text-sm text-gray-600 mt-1 break-words">{n.body}</div> : null}
+                <div className="text-sm font-semibold" title={title}>{title}</div>
+                {body ? <div className="text-sm text-gray-600 mt-1 break-words">{body}</div> : null}
                 {tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {tags.map((tg) => (

@@ -277,12 +277,15 @@ export default function Dashboard() {
     setCurrentDate(next);
   };
 
+  function formatDateLocal(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
   const handleQuickAdd = (date: Date) => {
     // Parents are not allowed to add assignments — prevent opening the modal
     if (user && user.role === 'parent') return;
-    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-      .toISOString().split('T')[0];
-    console.error('handleQuickAdd called', { localDate, userRole: user?.role, userNannyId: user?.nannyId });
+    const localDate = formatDateLocal(date);
+    console.debug('handleQuickAdd called', { localDate, userRole: user?.role, userNannyId: user?.nannyId });
     setModalInitial({ date: localDate, childId: '', nannyId: user && user.nannyId ? user.nannyId : '' });
     setModalOpen(true);
   };
@@ -290,109 +293,62 @@ export default function Dashboard() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const successTimer = useRef<number | null>(null);
-  const handleSave = async (data: AssignmentForm) => {
+  const handleSave = async (data: AssignmentForm | AssignmentForm[]) => {
     setSaveError(null);
-    const utcDate = new Date(data.date + 'T00:00:00Z').toISOString().split('T')[0];
-    const dataToSend = { ...data, date: utcDate };
-    const duplicate = assignments.some(a =>
-      a.child.id === data.childId &&
-      a.date.split('T')[0] === utcDate &&
-      (!selectedId || a.id !== selectedId)
-    );
-    if (duplicate) {
-      setSaveError("Cet enfant est déjà affecté ce jour-là.");
-      return;
-    }
-    if (selectedId) {
+    const entries: AssignmentForm[] = Array.isArray(data) ? data : [data];
+
+    // Edit mode (single entry with selectedId)
+    if (selectedId && entries.length === 1) {
+      const item = entries[0];
+      const utcDate = new Date(item.date + 'T00:00:00Z').toISOString().split('T')[0];
       try {
         const putRes = await fetchWithRefresh(`${API_URL}/assignments/${selectedId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify(dataToSend),
+          body: JSON.stringify({ ...item, date: utcDate }),
         });
-        if (!putRes.ok) {
-          setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
-          return;
-        }
-
-        // close modal and refresh assignments
-        setModalOpen(false);
-        setSelectedId(null);
-        setModalInitial(null);
-
-        const yearF = currentDate.getFullYear();
-        const monthIdxF = currentDate.getMonth();
-        const first = new Date(yearF, monthIdxF, 1);
-        const last = new Date(yearF, monthIdxF + 1, 0);
-        fetchAssignments(first, last);
+        if (!putRes.ok) { setSaveError("Erreur lors de la modification. Veuillez réessayer."); return; }
+        setModalOpen(false); setSelectedId(null); setModalInitial(null);
+        const yearF = currentDate.getFullYear(), monthIdxF = currentDate.getMonth();
+        fetchAssignments(new Date(yearF, monthIdxF, 1), new Date(yearF, monthIdxF + 1, 0));
         notifyPaymentHistory();
-
-        // fetch child name to show feedback
-        try {
-          let childName = "l'enfant";
-          const childrenRes = await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' });
-          if (childrenRes.ok) {
-            const childrenArr = await childrenRes.json();
-            const found = Array.isArray(childrenArr) ? childrenArr.find((c: { id?: string; name?: string }) => c.id === data.childId) : undefined;
-            if (found && found.name) childName = String(found.name);
-          }
-          setSuccessMessage(`${childName} a bien été ajouté au planning.`);
-          if (successTimer.current) window.clearTimeout(successTimer.current);
-          successTimer.current = window.setTimeout(() => setSuccessMessage(null), 4000);
-        } catch (err) {
-          console.error('feedback child name fetch error', err);
-        }
-      } catch (err) {
-        console.error('assignment update error', err);
-        setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
-      }
+        setSuccessMessage("Affectation modifiée.");
+        if (successTimer.current) window.clearTimeout(successTimer.current);
+        successTimer.current = window.setTimeout(() => setSuccessMessage(null), 4000);
+      } catch (err) { console.error('assignment update error', err); setSaveError("Erreur lors de la modification. Veuillez réessayer."); }
+      return;
     }
-    else {
-      // create new assignment
+
+    // Create mode (one or multiple entries)
+    let added = 0, skipped = 0;
+    for (const item of entries) {
+      const utcDate = new Date(item.date + 'T00:00:00Z').toISOString().split('T')[0];
+      const duplicate = assignments.some(a => a.child.id === item.childId && a.date.split('T')[0] === utcDate);
+      if (duplicate) { skipped++; continue; }
       try {
         const postRes = await fetchWithRefresh(`${API_URL}/assignments`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify(dataToSend),
+          body: JSON.stringify({ ...item, date: utcDate }),
         });
-        if (!postRes.ok) {
-          setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
-          return;
-        }
-
-        // close modal and refresh assignments
-        setModalOpen(false);
-        setSelectedId(null);
-        setModalInitial(null);
-        const yearF = currentDate.getFullYear();
-        const monthIdxF = currentDate.getMonth();
-        const first = new Date(yearF, monthIdxF, 1);
-        const last = new Date(yearF, monthIdxF + 1, 0);
-        fetchAssignments(first, last);
-        notifyPaymentHistory();
-
-        // fetch child name to show feedback
-        try {
-          let childName = "l'enfant";
-          const childrenRes = await fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' });
-          if (childrenRes.ok) {
-            const childrenArr = await childrenRes.json();
-            const found = Array.isArray(childrenArr) ? childrenArr.find((c: { id?: string; name?: string }) => c.id === data.childId) : undefined;
-            if (found && found.name) childName = String(found.name);
-          }
-          setSuccessMessage(`${childName} a bien été ajouté au planning.`);
-          if (successTimer.current) window.clearTimeout(successTimer.current);
-          successTimer.current = window.setTimeout(() => setSuccessMessage(null), 4000);
-        } catch (err) {
-          console.error('feedback child name fetch error', err);
-        }
-      } catch (err) {
-        console.error('assignment create error', err);
-        setSaveError("Erreur lors de l'ajout. Veuillez réessayer.");
-      }
+        if (postRes.ok) added++;
+        else skipped++;
+      } catch { skipped++; }
     }
+
+    setModalOpen(false); setSelectedId(null); setModalInitial(null);
+    const yearF = currentDate.getFullYear(), monthIdxF = currentDate.getMonth();
+    fetchAssignments(new Date(yearF, monthIdxF, 1), new Date(yearF, monthIdxF + 1, 0));
+    notifyPaymentHistory();
+
+    const msg = added > 1
+      ? `${added} affectation${added > 1 ? 's' : ''} ajoutée${added > 1 ? 's' : ''}${skipped > 0 ? ` (${skipped} ignorée${skipped > 1 ? 's' : ''} car déjà existante${skipped > 1 ? 's' : ''})` : ''}.`
+      : added === 1 ? "Affectation ajoutée." : "Aucune affectation ajoutée (déjà existantes).";
+    setSuccessMessage(msg);
+    if (successTimer.current) window.clearTimeout(successTimer.current);
+    successTimer.current = window.setTimeout(() => setSuccessMessage(null), 4000);
   };
 
   useEffect(() => {

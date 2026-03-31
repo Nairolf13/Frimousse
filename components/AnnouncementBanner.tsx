@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 
 type Announcement = {
@@ -51,6 +52,7 @@ const TYPE_CONFIG = {
 const LS_KEY = (id: string) => `announcement_dismissed_${id}`;
 
 export default function AnnouncementBanner() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [current, setCurrent] = useState<Announcement | null>(null);
@@ -121,12 +123,12 @@ export default function AnnouncementBanner() {
       <div className="relative flex items-center justify-between px-6 pt-8 pb-4 flex-shrink-0">
         <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white/70 bg-white/10 border border-white/20 px-3 py-1.5 rounded-full">
           {cfg.icon && <span className="opacity-80">{cfg.icon}</span>}
-          {cfg.badgeText}
+          {t(`announcements.type.${current.type}`, cfg.badgeText)}
         </span>
         <button
           onClick={dismiss}
           className="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 transition-colors flex items-center justify-center text-white"
-          aria-label="Fermer"
+          aria-label={t('announcements.banner.close', 'Fermer')}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -161,7 +163,7 @@ export default function AnnouncementBanner() {
 
         {/* Date */}
         <p className="text-white/40 text-xs text-center mb-10">
-          Publié le {new Date(current.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+          {t('announcements.banner.published', 'Publié le')} {new Date(current.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
 
@@ -169,7 +171,7 @@ export default function AnnouncementBanner() {
       {canScrollDown && (
         <div className="relative flex justify-center py-2 pointer-events-none flex-shrink-0">
           <div className="flex flex-col items-center gap-1 animate-bounce">
-            <span className="text-white/50 text-[11px] font-medium">Défiler pour lire la suite</span>
+            <span className="text-white/50 text-[11px] font-medium">{t('announcements.banner.scrollHint', 'Défiler pour lire la suite')}</span>
             <svg className="w-5 h-5 text-white/50" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
@@ -183,7 +185,7 @@ export default function AnnouncementBanner() {
           onClick={dismiss}
           className="w-full py-4 rounded-2xl bg-white text-gray-900 font-extrabold text-base shadow-lg hover:bg-white/90 active:scale-[0.98] transition-all"
         >
-          J'ai compris
+          {t('announcements.banner.cta', 'J\'ai compris')}
         </button>
       </div>
     </div>

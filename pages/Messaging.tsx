@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useMessagingWS } from '../src/hooks/useMessagingWS';
@@ -78,6 +79,7 @@ const SWIPE_THRESHOLD = 60;
 const DELETE_REVEAL = 72;
 
 function SwipeableItem({ onDelete, children }: { onDelete: () => void; children: React.ReactNode }) {
+  const { t } = useI18n();
   const startXRef = useRef<number | null>(null);
   const [offset, setOffset] = useState(0);
   const [swiped, setSwiped] = useState(false);
@@ -135,14 +137,14 @@ function SwipeableItem({ onDelete, children }: { onDelete: () => void; children:
         <button
           onClick={() => { close(); onDelete(); }}
           className="flex flex-col items-center justify-center w-full h-full text-white gap-1"
-          aria-label="Supprimer"
+          aria-label={t('messages.delete', 'Supprimer')}
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
             <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M8 6v14a2 2 0 002 2h4a2 2 0 002-2V6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <span className="text-[10px] font-semibold">Supprimer</span>
+          <span className="text-[10px] font-semibold">{t('messages.delete', 'Supprimer')}</span>
         </button>
       </div>
     </div>
@@ -151,11 +153,12 @@ function SwipeableItem({ onDelete, children }: { onDelete: () => void; children:
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function getRoleLabel(role: string) {
-  if (role === 'admin') return 'Admin';
-  if (role === 'super-admin') return 'Super Admin';
-  if (role === 'parent') return 'Parent';
-  return 'Nounou';
+function getRoleLabel(role: string, t?: (key: string, fallback?: string) => string) {
+  const translate = t ?? ((key: string, fallback = '') => fallback || key);
+  if (role === 'admin') return translate('messages.role.admin', 'Admin');
+  if (role === 'super-admin') return translate('messages.role.superAdmin', 'Super Admin');
+  if (role === 'parent') return translate('messages.role.parent', 'Parent');
+  return translate('messages.role.nanny', 'Nounou');
 }
 
 function getInitials(name: string) {
@@ -219,6 +222,7 @@ function Avatar({
 
 export default function Messaging() {
   const { user } = useAuth();
+  const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   useEffect(() => {
@@ -627,11 +631,11 @@ export default function Messaging() {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-5 pb-3 border-b border-gray-100">
-          <h1 className="text-xl font-bold text-gray-900">Messages</h1>
+          <h1 className="text-xl font-bold text-gray-900">{t('page.messages', 'Messages')}</h1>
           <button
             onClick={() => setShowNewConv(true)}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-[#0b5566]"
-            title="Nouveau message"
+            title={t('messages.new.title', 'Nouveau message')}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -646,7 +650,7 @@ export default function Messaging() {
             <input
               value={convSearch}
               onChange={(e) => setConvSearch(e.target.value)}
-              placeholder="Rechercher un message"
+              placeholder={t('messages.search.placeholder', 'Rechercher un message')}
               className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none"
             />
           </div>
@@ -661,8 +665,8 @@ export default function Messaging() {
           ) : filteredConvs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <HiOutlineChatAlt2 className="w-10 h-10 text-gray-300 mb-3" />
-              <p className="text-gray-500 text-sm font-medium">Aucun message</p>
-              <p className="text-gray-400 text-xs mt-1">Commencez une nouvelle conversation</p>
+              <p className="text-gray-500 text-sm font-medium">{t('messages.empty', 'Aucun message')}</p>
+              <p className="text-gray-400 text-xs mt-1">{t('messages.empty.action', 'Commencez une nouvelle conversation')}</p>
             </div>
           ) : (
             filteredConvs.map((conv) => {
@@ -680,7 +684,7 @@ export default function Messaging() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <span className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
-                          {other?.name ?? 'Inconnu'}
+                          {other?.name ?? t('messages.unknown', 'Inconnu')}
                         </span>
                         {lastMsg && (
                           <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
@@ -691,8 +695,8 @@ export default function Messaging() {
                       <div className="flex items-center justify-between mt-0.5">
                         <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
                           {lastMsg
-                            ? (lastMsg.senderId === user?.id ? 'Vous : ' : '') + (lastMsg.mediaUrl && !lastMsg.content ? (lastMsg.mediaType === 'video' ? '🎥 Vidéo' : '📷 Photo') : lastMsg.content)
-                            : getRoleLabel(other?.role ?? '')}
+                            ? (lastMsg.senderId === user?.id ? `${t('messages.you', 'Vous')} : ` : '') + (lastMsg.mediaUrl && !lastMsg.content ? (lastMsg.mediaType === 'video' ? t('messages.media.video', '🎥 Vidéo') : t('messages.media.image', '📷 Photo')) : lastMsg.content)
+                            : getRoleLabel(other?.role ?? '', t)}
                         </p>
                         {conv.unreadCount > 0 && (
                           <span className="ml-2 flex-shrink-0 w-5 h-5 rounded-full bg-[#0b5566] text-white text-xs flex items-center justify-center font-bold">
@@ -732,9 +736,9 @@ export default function Messaging() {
                     <p className="font-bold text-gray-900 text-sm leading-tight">{otherParticipant.name}</p>
                     <p className="text-xs text-gray-400">
                       {onlineUserIds.has(otherParticipant.id) ? (
-                        <span className="text-green-500">En ligne</span>
+                        <span className="text-green-500">{t('messages.online', 'En ligne')}</span>
                       ) : (
-                        getRoleLabel(otherParticipant.role)
+                        getRoleLabel(otherParticipant.role, t)
                       )}
                     </p>
                   </div>
@@ -750,7 +754,7 @@ export default function Messaging() {
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <p className="text-gray-400 text-sm">Aucun message. Commencez la conversation !</p>
+                  <p className="text-gray-400 text-sm">{t('messages.empty.conversation', 'Aucun message. Commencez la conversation !')}</p>
                 </div>
               ) : (
                 <>
@@ -859,7 +863,7 @@ export default function Messaging() {
                   type="button"
                   onClick={() => setShowEmoji(v => !v)}
                   className="text-gray-400 hover:text-[#0b5566] transition-colors flex-shrink-0 mb-0.5"
-                  title="Emoji"
+                  title={t('messages.emoji', 'Emoji')}
                 >
                   <HiOutlineEmojiHappy className="w-5 h-5" />
                 </button>
@@ -868,7 +872,7 @@ export default function Messaging() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="text-gray-400 hover:text-[#0b5566] transition-colors flex-shrink-0 mb-0.5"
-                  title="Joindre une image ou vidéo"
+                  title={t('messages.attach', 'Joindre une image ou vidéo')}
                 >
                   <HiOutlinePhotograph className="w-5 h-5" />
                 </button>
@@ -884,7 +888,7 @@ export default function Messaging() {
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={handleKeyDown}
-                  placeholder="Écrivez un message…"
+                  placeholder={t('messages.input.placeholder', 'Écrivez un message…')}
                   rows={1}
                   className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none resize-none max-h-32 py-1"
                   style={{ minHeight: '24px' }}
@@ -905,7 +909,7 @@ export default function Messaging() {
                   <EmojiPicker onSelect={(e) => { setInput(v => v + e); setShowEmoji(false); inputRef.current?.focus(); }} />
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1 ml-1">Entrée pour envoyer · Maj+Entrée pour un saut de ligne</p>
+              <p className="text-xs text-gray-400 mt-1 ml-1">{t('messages.input.helper', 'Entrée pour envoyer · Maj+Entrée pour un saut de ligne')}</p>
             </div>
       </div>
 
@@ -933,7 +937,7 @@ export default function Messaging() {
                 <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Modifier
+                {t('messages.action.edit', 'Modifier')}
               </button>
             )}
             {contextMenu.isMe && (
@@ -944,12 +948,12 @@ export default function Messaging() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Supprimer
+                {t('messages.delete', 'Supprimer')}
               </button>
             )}
             {!contextMenu.isMe && (
               <div className="px-4 py-3 text-xs text-gray-400 text-center">
-                Vous ne pouvez pas modifier ce message
+                {t('messages.cannot_edit', 'Vous ne pouvez pas modifier ce message')}
               </div>
             )}
           </div>
@@ -961,7 +965,7 @@ export default function Messaging() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h2 className="font-bold text-gray-900 text-base">Nouveau message</h2>
+              <h2 className="font-bold text-gray-900 text-base">{t('messages.new.title', 'Nouveau message')}</h2>
               <button
                 onClick={() => { setShowNewConv(false); setContactSearch(''); setCenterFilter(''); }}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400"
@@ -976,7 +980,7 @@ export default function Messaging() {
                   autoFocus
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
-                  placeholder="Rechercher une personne…"
+                  placeholder={t('messages.contactSearch.placeholder', 'Rechercher une personne…')}
                   className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none"
                 />
               </div>
@@ -986,7 +990,7 @@ export default function Messaging() {
                   onChange={(e) => setCenterFilter(e.target.value)}
                   className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30"
                 >
-                  <option value="">Tous les centres</option>
+                  <option value="">{t('messages.center.all', 'Tous les centres')}</option>
                   {centers.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -995,7 +999,7 @@ export default function Messaging() {
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
               {filteredContacts.length === 0 ? (
-                <p className="text-center text-gray-400 text-sm py-8">Aucun contact trouvé</p>
+                <p className="text-center text-gray-400 text-sm py-8">{t('messages.contacts.empty', 'Aucun contact trouvé')}</p>
               ) : (
                 filteredContacts.map((contact) => (
                   <button
@@ -1011,7 +1015,7 @@ export default function Messaging() {
                     />
                     <div>
                       <p className="font-semibold text-gray-900 text-sm">{contact.name}</p>
-                      <p className="text-xs text-gray-400">{getRoleLabel(contact.role)}</p>
+                      <p className="text-xs text-gray-400">{getRoleLabel(contact.role, t)}</p>
                     </div>
                   </button>
                 ))

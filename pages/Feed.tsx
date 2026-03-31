@@ -300,7 +300,8 @@ export default function Feed() {
         if (!res || !res.ok) return;
         const data = await res.json();
         if (!mounted) return;
-        if (Array.isArray(data)) setCenters(data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+        if (list.length > 0) setCenters(list.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
       } catch (e) {
         if (import.meta.env.DEV) console.error('Failed to load centers for filter', e);
       }
@@ -774,7 +775,7 @@ export default function Feed() {
         {currentUser && currentUser.role === 'super-admin' && (
           <div className="mb-4">
             <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 w-full sm:w-auto">
-              <option value="">Tous les centres</option>
+              <option value="">{t('activities.center.all', 'Tous les centres')}</option>
               {centers.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}

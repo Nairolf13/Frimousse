@@ -43,7 +43,7 @@ function generateEntries(year, month, defaultArrival = '08h30', defaultDeparture
 // GET /api/presence-sheets — liste les feuilles (nanny: ses feuilles, parent: feuilles de ses enfants, admin: toutes)
 router.get('/', auth, async (req, res) => {
   try {
-    const { month, year, childId, nannyId: qNannyId } = req.query;
+    const { month, year, childId, nannyId: qNannyId, centerId: qCenterId, parentId: qParentId } = req.query;
     const where = {};
 
     if (!isAdmin(req.user)) {
@@ -70,7 +70,22 @@ router.get('/', auth, async (req, res) => {
         return res.status(403).json({ error: 'Accès interdit' });
       }
     } else {
-      if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;
+      if (isSuperAdmin(req.user)) {
+        if (qCenterId) where.centerId = qCenterId;
+      } else {
+        where.centerId = req.user.centerId;
+      }
+    }
+
+    if (qParentId && (isAdmin(req.user) || isSuperAdmin(req.user))) {
+      const parentChildren = await prisma.parentChild.findMany({ where: { parentId: qParentId }, select: { childId: true } });
+      const childIds = parentChildren.map(pc => pc.childId);
+      if (childIds.length > 0) {
+        where.childId = { in: childIds };
+      } else {
+        // no children for this parent, return empty list
+        return res.json([]);
+      }
     }
 
     if (month) where.month = parseInt(month, 10);

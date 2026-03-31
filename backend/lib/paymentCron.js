@@ -5,12 +5,23 @@ const { sendTemplatedMail } = require('./email');
 const { generateInvoiceBuffer } = require('./invoiceGenerator');
 const { notifyUsers } = require('./pushNotifications');
 
-const RATE_PER_DAY = 2;
+const DEFAULT_RATE_PER_DAY = 2;
 
 async function calculatePaymentsForMonth(year, monthIndex) {
   const parents = await prisma.parent.findMany({
     include: { children: { include: { child: true } } }
   });
+
+  // Cache dailyRate per centerId to avoid repeated DB queries
+  const centerRateCache = {};
+  async function getRateForCenter(centerId) {
+    if (!centerId) return DEFAULT_RATE_PER_DAY;
+    if (centerRateCache[centerId] !== undefined) return centerRateCache[centerId];
+    const center = await prisma.center.findUnique({ where: { id: centerId }, select: { dailyRate: true } });
+    const rate = (center && center.dailyRate != null) ? center.dailyRate : DEFAULT_RATE_PER_DAY;
+    centerRateCache[centerId] = rate;
+    return rate;
+  }
 
   // Compteurs pour le rapport final
   let totalInvoices = 0;
@@ -21,6 +32,7 @@ async function calculatePaymentsForMonth(year, monthIndex) {
   for (const parent of parents) {
       let total = 0;
       const details = [];
+      const ratePerDay = await getRateForCenter(parent.centerId);
 
       for (const pc of parent.children) {
         const child = pc.child;
@@ -35,13 +47,13 @@ async function calculatePaymentsForMonth(year, monthIndex) {
           }
         });
 
-        const subtotal = days * RATE_PER_DAY;
+        const subtotal = days * ratePerDay;
         total += subtotal;
 
         details.push({
           childName: child.name,
           daysPresent: days,
-          ratePerDay: RATE_PER_DAY,
+          ratePerDay,
           subtotal
         });
       }
@@ -228,14 +240,16 @@ async function calculatePaymentsForMonth(year, monthIndex) {
 async function upsertPaymentsForParentForMonth(parentId, year, monthIndex) {
   const parent = await prisma.parent.findUnique({ where: { id: parentId }, include: { children: { include: { child: true } } } });
   if (!parent) return;
+  const centerData = parent.centerId ? await prisma.center.findUnique({ where: { id: parent.centerId }, select: { dailyRate: true } }) : null;
+  const ratePerDay = (centerData && centerData.dailyRate != null) ? centerData.dailyRate : DEFAULT_RATE_PER_DAY;
   let total = 0;
   const details = [];
   for (const pc of parent.children) {
     const child = pc.child;
     const days = await prisma.assignment.count({ where: { childId: child.id, date: { gte: new Date(year, monthIndex, 1), lte: new Date(year, monthIndex + 1, 0) } } });
-    const subtotal = days * RATE_PER_DAY;
+    const subtotal = days * ratePerDay;
     total += subtotal;
-    details.push({ childName: child.name, daysPresent: days, ratePerDay: RATE_PER_DAY, subtotal });
+    details.push({ childName: child.name, daysPresent: days, ratePerDay, subtotal });
   }
 
   // apply any adjustments/discounts just like the monthly cron does
