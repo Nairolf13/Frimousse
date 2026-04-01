@@ -475,8 +475,7 @@ export default function Settings() {
   const [language, setLanguage] = useState(() => {
     try {
       const saved = localStorage.getItem('site_language');
-      if (saved === 'en') return 'en';
-      if (saved === 'es') return 'es';
+      if (['en', 'es', 'ar'].includes(saved ?? '')) return saved!;
       return 'fr';
     } catch { return 'fr'; }
   });
@@ -485,7 +484,7 @@ export default function Settings() {
 
   useEffect(() => {
     // Ensure that the i18n provider always matches the current language selection
-    setLocale(language === 'en' ? 'en' : language === 'es' ? 'es' : 'fr');
+    setLocale(['en', 'es', 'ar'].includes(language) ? language as 'en' | 'es' | 'ar' : 'fr');
 
     try {
       document.documentElement.lang = language;
@@ -1134,7 +1133,7 @@ export default function Settings() {
             {/* Language cards */}
             <div className="bg-white rounded-2xl shadow border border-gray-100 p-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t('settings.language.choose', 'Choisissez votre langue')}</p>
-              <LanguageDropdown value={language} onChange={(code) => { setLanguage(code); setLocale(code === 'en' ? 'en' : code === 'es' ? 'es' : 'fr'); }} />
+              <LanguageDropdown value={language} onChange={(code) => { setLanguage(code); setLocale(['en', 'es', 'ar'].includes(code) ? code as 'en' | 'es' | 'ar' : 'fr'); }} />
             </div>
           </div>
         )}
