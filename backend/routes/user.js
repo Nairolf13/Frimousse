@@ -370,7 +370,7 @@ router.put('/preferences', auth, async (req, res) => {
       data.cookieConsent = cookieConsent;
     }
     if (language !== undefined) {
-      if (!['fr', 'en', 'es'].includes(language)) return res.status(400).json({ error: 'language invalide' });
+      if (!['fr', 'en', 'es', 'ar'].includes(language)) return res.status(400).json({ error: 'language invalide' });
       data.language = language;
     }
     if (Object.keys(data).length === 0) return res.status(400).json({ error: 'Aucune donnée' });

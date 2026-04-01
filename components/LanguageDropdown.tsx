@@ -4,6 +4,7 @@ const LANGS: Lang[] = [
   { code: 'fr', label: 'Français', nativeLabel: 'Français', emoji: '🇫🇷', description: 'Langue par défaut' },
   { code: 'en', label: 'English', nativeLabel: 'English', emoji: '🇬🇧', description: 'Default language' },
   { code: 'es', label: 'Español', nativeLabel: 'Español', emoji: '🇪🇸', description: 'Idioma disponible' },
+  { code: 'ar', label: 'العربية', nativeLabel: 'العربية', emoji: '🇲🇦', description: 'اللغة العربية' },
 ];
 
 export default function LanguageDropdown({ value, onChange }: { value: string; onChange: (code: string) => void }) {

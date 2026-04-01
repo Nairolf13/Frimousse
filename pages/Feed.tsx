@@ -825,10 +825,10 @@ export default function Feed() {
               </div>
             )}
             <button type="submit" disabled={loading || uploading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="ml-auto flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
-              {(loading || uploading) ? <><Spinner size={16} /><span>Envoi...</span></> : 'Publier'}
+              {(loading || uploading) ? <><Spinner size={16} /><span>{t('feed.sending')}</span></> : t('feed.publish')}
             </button>
           </div>
-          {showIdentifyWarning && <div className="mt-2 text-xs text-red-500" role="alert">Veuillez identifier les enfants.</div>}
+          {showIdentifyWarning && <div className="mt-2 text-xs text-red-500" role="alert">{t('feed.identify_warning')}</div>}
           {selectedChildIds.length > 0 && Object.keys(consentMap).length > 0 && (() => {
             const lacking = selectedChildIds.filter(id => !consentMap[id]);
             if (lacking.length === 0) return null;
@@ -900,7 +900,7 @@ export default function Feed() {
                 </button>
                 <div className="text-center">
                   <span className="text-sm font-bold text-gray-800 capitalize">{monthLabel}</span>
-                  <span className="ml-2 text-xs text-gray-400">{filteredPosts.length} publication{filteredPosts.length !== 1 ? 's' : ''}</span>
+                  <span className="ml-2 text-xs text-gray-400">{t('feed.posts_count', { count: String(filteredPosts.length), s: filteredPosts.length !== 1 ? 's' : '' })}</span>
                 </div>
                 <button
                   onClick={() => hasNext && setSelectedMonth(allMonths[currentIdx - 1])}
@@ -918,7 +918,7 @@ export default function Feed() {
                     <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
                       <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     </div>
-                    <p className="text-sm font-medium text-gray-500">Aucune publication ce mois-ci</p>
+                    <p className="text-sm font-medium text-gray-500">{t('feed.empty_month')}</p>
                   </div>
                 )}
                 {filteredPosts.map((post, idx) => (
@@ -1064,6 +1064,7 @@ export default function Feed() {
 }
 
 function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, onUpdateComment, onDeleteComment }: { onClose: () => void; comments: Comment[]; loading?: boolean; currentUser: (AuthUser & { id?: string; role?: string; name?: string; email?: string; centerId?: string }) | null; onAddComment: (text: string, parentId?: string) => Promise<void>; onUpdateComment: (commentId: string, newText: string) => Promise<void>; onDeleteComment: (commentId: string) => Promise<void>; position?: { top: number; left: number; width: number } | null; }) {
+  const { t } = useI18n();
   const [val, setVal] = useState('');
   const [focused, setFocused] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -1175,7 +1176,7 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
                     }}
                     className="px-4 py-1.5 rounded-full bg-[#0b5566] text-white text-xs font-bold disabled:opacity-40 hover:bg-[#08323a] transition-colors"
                   >
-                    Publier
+                    {t('feed.publish')}
                   </button>
                 </div>
               )}
@@ -1960,18 +1961,18 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                   setStagedPreviewsLocal([]);
                   setStagedFilesLocal([]);
                 }
-              }} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs font-medium hover:opacity-90 transition-opacity">Sauvegarder</button>
+              }} className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs font-medium hover:opacity-90 transition-opacity">{t('feed.save')}</button>
             </div>
             {showIdentifyWarningLocal && (
-              <div className="mt-2 text-sm text-red-600">Veuillez identifier les enfants ou cocher "Pas d'enfant" avant de sauvegarder les images.</div>
+              <div className="mt-2 text-sm text-red-600">{t('feed.identify_warning_full')}</div>
             )}
           </div>
         </div>
       )}
       {showConfirm && (
         <ConfirmationModal
-          title="Supprimer la publication"
-          description="Voulez-vous vraiment supprimer cette publication ?"
+          title={t('feed.delete_post')}
+          description={t('feed.delete_post.confirm')}
           onCancel={() => setShowConfirm(false)}
           onConfirm={doDelete}
         />
