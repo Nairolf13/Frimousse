@@ -31,9 +31,7 @@ function SkeletonCard() {
 function CenterCard({ center }: { center: Center }) {
   const { t } = useI18n();
 
-  const addressLine = center.address
-    ? `${center.address}, ${center.postalCode ?? ''} ${center.city ?? ''}`.trim().replace(/,\s*$/, '')
-    : null;
+  const addressLine = [center.city, center.country].filter(Boolean).join(', ') || null;
 
   return (
     <div className="bg-white rounded-2xl shadow border border-gray-100 p-6 flex flex-col gap-3 hover:shadow-md transition-shadow">
@@ -216,6 +214,10 @@ export default function DirectoryPage() {
               ))}
             </div>
           )}
+
+          <div className="mt-6 text-sm text-gray-500 text-center">
+            <span className="font-semibold">*</span> {t('directory.note.show_in_directory', 'Une fois inscrit, vous pouvez choisir d\'apparaître ou non sur cette page.')}
+          </div>
         </div>
       </main>
 

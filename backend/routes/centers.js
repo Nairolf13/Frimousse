@@ -26,6 +26,8 @@ router.get('/public', async (req, res) => {
       };
     }
 
+    where.showInDirectory = true;
+
     const centers = await prisma.center.findMany({
       where,
       select: {
@@ -184,13 +186,14 @@ router.get('/settings', requireAuth, async (req, res) => {
     if (!centerId) return res.status(400).json({ error: 'Aucun centre associé' });
     const center = await prisma.center.findUnique({
       where: { id: centerId },
-      select: { dailyRate: true, childCotisationAmount: true, nannyCotisationAmount: true }
+      select: { dailyRate: true, childCotisationAmount: true, nannyCotisationAmount: true, showInDirectory: true }
     });
     if (!center) return res.status(404).json({ error: 'Centre non trouvé' });
     res.json({
       dailyRate: center.dailyRate ?? 2.0,
       childCotisationAmount: center.childCotisationAmount ?? 15.0,
       nannyCotisationAmount: center.nannyCotisationAmount ?? 10.0,
+      showInDirectory: center.showInDirectory ?? true,
     });
   } catch (e) {
     console.error(e);
@@ -210,7 +213,7 @@ router.put('/settings', requireAuth, async (req, res) => {
       centerId = first?.id;
     }
     if (!centerId) return res.status(400).json({ error: 'Aucun centre associé' });
-    const { dailyRate, childCotisationAmount, nannyCotisationAmount } = req.body;
+    const { dailyRate, childCotisationAmount, nannyCotisationAmount, showInDirectory } = req.body;
     const data = {};
     if (dailyRate !== undefined) {
       const v = parseFloat(dailyRate);
@@ -226,6 +229,18 @@ router.put('/settings', requireAuth, async (req, res) => {
       const v = parseFloat(nannyCotisationAmount);
       if (isNaN(v) || v < 0) return res.status(400).json({ error: 'Cotisation nounou invalide' });
       data.nannyCotisationAmount = v;
+    }
+    if (showInDirectory !== undefined) {
+      if (typeof showInDirectory === 'boolean') {
+        data.showInDirectory = showInDirectory;
+      } else if (typeof showInDirectory === 'string') {
+        const normalized = showInDirectory.trim().toLowerCase();
+        if (normalized === 'true' || normalized === '1') {
+          data.showInDirectory = true;
+        } else if (normalized === 'false' || normalized === '0') {
+          data.showInDirectory = false;
+        }
+      }
     }
     await prisma.center.update({ where: { id: centerId }, data });
     res.json({ ok: true });

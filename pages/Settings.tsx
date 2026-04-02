@@ -501,7 +501,8 @@ export default function Settings() {
   }, [language]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteError, setDeleteError] = useState('');
-  const [tarifs, setTarifs] = useState({ dailyRate: 2, childCotisationAmount: 15, nannyCotisationAmount: 10 });
+  const [tarifs, setTarifs] = useState({ dailyRate: 2, childCotisationAmount: 15, nannyCotisationAmount: 10, showInDirectory: true });
+  const [directoryToggleSaving, setDirectoryToggleSaving] = useState(false);
   const [tarifsSaving, setTarifsSaving] = useState(false);
   const [tarifsSuccess, setTarifsSuccess] = useState(false);
   const [tarifsError, setTarifsError] = useState<string | null>(null);
@@ -529,7 +530,7 @@ export default function Settings() {
     if (!isAdmin) return;
     fetchWithRefresh(`${API_URL}/centers/settings`, { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setTarifs({ dailyRate: d.dailyRate ?? 2, childCotisationAmount: d.childCotisationAmount ?? 0, nannyCotisationAmount: d.nannyCotisationAmount ?? 0 }); })
+      .then(d => { if (d) setTarifs({ dailyRate: d.dailyRate ?? 2, childCotisationAmount: d.childCotisationAmount ?? 0, nannyCotisationAmount: d.nannyCotisationAmount ?? 0, showInDirectory: d.showInDirectory ?? true }); })
       .catch(() => {});
   }, [isAdmin]);
 
@@ -1157,6 +1158,45 @@ export default function Settings() {
             <SectionHeader title={t('settings.section.account', 'Profil & Compte')} />
             <div className="bg-white rounded-2xl shadow p-6">
               <ProfileEditor onClose={() => setActiveSection(null)} />
+              {isAdmin && (
+                <div className="border-t mt-6 pt-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="text-sm font-semibold text-gray-800">{t('settings.account.show_in_directory', 'Apparaître dans l\'annuaire')}</div>
+                      <div className="text-xs text-gray-400 mt-0.5">{t('settings.account.show_in_directory.desc', 'Votre structure sera visible dans l\'annuaire public')}</div>
+                    </div>
+                    <button
+                      role="switch"
+                      aria-checked={tarifs.showInDirectory}
+                      onClick={async () => {
+                        if (directoryToggleSaving) return;
+                        const next = !tarifs.showInDirectory;
+                        setTarifs(prev => ({ ...prev, showInDirectory: next }));
+                        setDirectoryToggleSaving(true);
+                        try {
+                          const res = await fetchWithRefresh(`${API_URL}/centers/settings`, {
+                            method: 'PUT',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ showInDirectory: next }),
+                          });
+                          if (!res.ok) {
+                            setTarifs(prev => ({ ...prev, showInDirectory: !next }));
+                          }
+                        } catch {
+                          setTarifs(prev => ({ ...prev, showInDirectory: !next }));
+                        } finally {
+                          setDirectoryToggleSaving(false);
+                        }
+                      }}
+                      disabled={directoryToggleSaving}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${tarifs.showInDirectory ? 'bg-brand-500' : 'bg-gray-200'} ${directoryToggleSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${tarifs.showInDirectory ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="border-t mt-6 pt-4">
                 <button className="flex items-center gap-2 text-sm text-red-600 font-medium hover:text-red-700 transition" onClick={() => setShowDeleteModal(true)}>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>

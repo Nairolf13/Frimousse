@@ -240,6 +240,7 @@ model Center {
   dailyRate               Float           @default(2.0)
   childCotisationAmount   Float           @default(15.0)
   nannyCotisationAmount   Float           @default(10.0)
+  showInDirectory         Boolean         @default(true)
 }
 
 model Subscription {
