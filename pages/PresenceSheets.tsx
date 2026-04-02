@@ -8,7 +8,7 @@ import { usePresenceSheetWS } from '../src/hooks/usePresenceSheetWS';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-type Child = { id: string; name: string };
+type Child = { id: string; name: string; photoUrl?: string | null };
 type Nanny = { id: string; name: string };
 type Entry = {
   id: string;
@@ -589,9 +589,16 @@ export default function PresenceSheets() {
                     className="bg-white rounded-2xl shadow border-2 border-transparent transition-all hover:border-[#0b5566]/40 hover:shadow-md">
                     <button className="w-full text-left p-4" onClick={() => openSheet(sheet)}>
                       <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="font-semibold text-gray-900 text-sm">{sheet.child?.name}</div>
-                          <div className="text-xs text-gray-500 mt-0.5">{monthNames[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-xs font-bold text-[#0b5566]">
+                            {sheet.child?.photoUrl
+                              ? <img src={sheet.child.photoUrl} alt={sheet.child.name} className="w-full h-full object-cover" />
+                              : sheet.child?.name?.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-900 text-sm">{sheet.child?.name}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">{monthNames[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</div>
+                          </div>
                         </div>
                         {statusBadge(sheet.status, t)}
                       </div>
@@ -621,6 +628,11 @@ export default function PresenceSheets() {
                       <button onClick={() => setSelectedSheet(null)} className="lg:hidden mr-1 p-1.5 rounded-lg hover:bg-gray-100 transition" title={t('common.back', 'Retour')}>
                         <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                       </button>
+                      <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-xs font-bold text-[#0b5566]">
+                        {selectedSheet.child.photoUrl
+                          ? <img src={selectedSheet.child.photoUrl} alt={selectedSheet.child.name} className="w-full h-full object-cover" />
+                          : selectedSheet.child.name.charAt(0).toUpperCase()}
+                      </div>
                       <h2 className="font-bold text-[#0b5566] text-base">{selectedSheet.child.name}</h2>
                       {statusBadge(selectedSheet.status, t)}
                     </div>
@@ -1012,7 +1024,11 @@ export default function PresenceSheets() {
                 const sheet = sheets.find(s => s.id === confirmDeleteId);
                 return sheet ? (
                   <div className="bg-gray-50 rounded-xl px-4 py-3 mb-5 flex items-center gap-3">
-                    <HiOutlineDocumentText className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-xs font-bold text-[#0b5566]">
+                      {sheet.child?.photoUrl
+                        ? <img src={sheet.child.photoUrl} alt={sheet.child.name} className="w-full h-full object-cover" />
+                        : sheet.child?.name?.charAt(0).toUpperCase()}
+                    </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-800">{sheet.child?.name}</p>
                       <p className="text-xs text-gray-500">{monthNames[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</p>

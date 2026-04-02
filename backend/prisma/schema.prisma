@@ -148,6 +148,8 @@ model Child {
   // Prescription storage: public URL and storage path in Supabase
   prescriptionUrl     String?
   prescriptionPath    String?
+  photoUrl            String?
+  photoPath           String?
   parents             ParentChild[]
   allergies           String?
   cotisationPaidUntil DateTime?

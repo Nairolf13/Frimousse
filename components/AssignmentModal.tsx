@@ -9,10 +9,12 @@ interface Child {
   name: string;
   nannyIds?: string[];
   childNannies?: Array<{ nanny?: { id: string; name?: string } }>;
+  photoUrl?: string | null;
 }
 interface Nanny {
   id: string;
   name: string;
+  avatarUrl?: string | null;
 }
 export interface AssignmentEntry {
   date: string;
@@ -186,18 +188,30 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
                     {t('assignment.modal.child')} <span className="text-red-400">*</span>
                   </label>
-                  <div className="relative">
-                    <select
-                      value={form.childId}
-                      onChange={e => setForm(f => ({ ...f, childId: e.target.value }))}
-                      required
-                      className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566] transition"
-                    >
-                      <option value="">{t('assignment.modal.select')}</option>
-                      {children.map(child => <option key={child.id} value={child.id}>{child.name}</option>)}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const selected = children.find(c => c.id === form.childId);
+                      return selected ? (
+                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-sm font-bold text-[#0b5566]">
+                          {selected.photoUrl
+                            ? <img src={selected.photoUrl} alt={selected.name} className="w-full h-full object-cover" />
+                            : selected.name.charAt(0).toUpperCase()}
+                        </div>
+                      ) : null;
+                    })()}
+                    <div className="relative flex-1">
+                      <select
+                        value={form.childId}
+                        onChange={e => setForm(f => ({ ...f, childId: e.target.value }))}
+                        required
+                        className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566] transition"
+                      >
+                        <option value="">{t('assignment.modal.select')}</option>
+                        {children.map(child => <option key={child.id} value={child.id}>{child.name}</option>)}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -215,7 +229,11 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
                           <button key={nanny.id} type="button" onClick={() => setForm(f => ({ ...f, nannyId: nanny.id }))}
                             className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${selected ? 'bg-[#0b5566] text-white border-[#0b5566] shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0b5566] hover:text-[#0b5566]'}`}>
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>{nanny.name.charAt(0).toUpperCase()}</div>
+                                  <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                                {nanny.avatarUrl
+                                  ? <img src={nanny.avatarUrl} alt={nanny.name} className="w-full h-full object-cover" />
+                                  : nanny.name.charAt(0).toUpperCase()}
+                              </div>
                               <span className="truncate">{nanny.name}</span>
                             </div>
                             {selected && <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -301,7 +319,11 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
                           <button key={child.id} type="button" onClick={() => toggleChild(child.id)}
                             className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${selected ? 'bg-[#0b5566] text-white border-[#0b5566] shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0b5566] hover:text-[#0b5566]'}`}>
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>{child.name.charAt(0).toUpperCase()}</div>
+                              <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                                {child.photoUrl
+                                  ? <img src={child.photoUrl} alt={child.name} className="w-full h-full object-cover" />
+                                  : child.name.charAt(0).toUpperCase()}
+                              </div>
                               <span className="truncate">{child.name}</span>
                             </div>
                             {selected && <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -327,7 +349,11 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
                           <button key={nanny.id} type="button" onClick={() => setSelectedNannyId(nanny.id)}
                             className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${selected ? 'bg-[#0b5566] text-white border-[#0b5566] shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0b5566] hover:text-[#0b5566]'}`}>
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>{nanny.name.charAt(0).toUpperCase()}</div>
+                                  <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                                {nanny.avatarUrl
+                                  ? <img src={nanny.avatarUrl} alt={nanny.name} className="w-full h-full object-cover" />
+                                  : nanny.name.charAt(0).toUpperCase()}
+                              </div>
                               <span className="truncate">{nanny.name}</span>
                             </div>
                             {selected && <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>}

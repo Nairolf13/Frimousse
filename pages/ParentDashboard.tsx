@@ -25,6 +25,7 @@ type UserInfo = {
   phone?: string | null;
   role?: string | null;
   nannyId?: string | null;
+  avatarUrl?: string | null;
 } | null;
 
 const ParentDashboard: React.FC = () => {
@@ -288,6 +289,7 @@ const ParentDashboard: React.FC = () => {
         lastName: userInfo.lastName ?? null,
         email: userInfo.email ?? null,
         phone: userInfo.phone ?? null,
+        avatarUrl: userInfo.avatarUrl ?? null,
         children: children.map(c => ({ child: c }))
       } : null;
 

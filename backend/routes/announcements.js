@@ -79,18 +79,33 @@ router.post('/', requireAuth, async (req, res) => {
         });
         const emails = users.map(u => u.email).filter(Boolean);
         if (emails.length > 0) {
-          const htmlBody = `
+          const linkedMessage = message
+          .replace(/\n/g, '<br/>')
+          .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#6366f1;word-break:break-all;">$1</a>');
+        const htmlBody = `
             <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
               <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;padding:32px;color:white;text-align:center;margin-bottom:24px;">
                 <img src="https://lesfrimousses.com/imgs/LogoFrimousse.webp" alt="Frimousse" style="width:60px;height:60px;object-fit:contain;margin-bottom:16px;border-radius:12px;background:white;padding:4px;" />
                 <h1 style="margin:0;font-size:22px;font-weight:800;">${title}</h1>
               </div>
               <div style="background:#f8fafc;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
-                <p style="margin:0;font-size:15px;color:#374151;line-height:1.7;">${message.replace(/\n/g, '<br/>')}</p>
+                <p style="margin:0;font-size:15px;color:#374151;line-height:1.7;">${linkedMessage}</p>
               </div>
               <p style="text-align:center;margin-top:24px;">
                 <a href="${process.env.FRONTEND_URL || 'https://lesfrimousses.com'}/dashboard" style="background:#6366f1;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Ouvrir Frimousse</a>
               </p>
+              <div style="text-align:center;margin-top:24px;padding-top:20px;border-top:1px solid #e2e8f0;">
+                <p style="margin:0 0 12px;font-size:13px;color:#6b7280;">Suivez-nous sur les réseaux sociaux</p>
+                <a href="https://www.instagram.com/lesfrimousses13/" style="display:inline-block;margin:0 6px 8px;text-decoration:none;">
+                  <span style="display:inline-block;background:#e1306c;color:white;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;">📸 Instagram</span>
+                </a>
+                <a href="https://www.facebook.com/profile.php?id=61577468283486" style="display:inline-block;margin:0 6px 8px;text-decoration:none;">
+                  <span style="display:inline-block;background:#1877f2;color:white;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;">📘 Facebook</span>
+                </a>
+                <a href="https://www.linkedin.com/groups/17963103/" style="display:inline-block;margin:0 6px 8px;text-decoration:none;">
+                  <span style="display:inline-block;background:#0a66c2;color:white;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;">💼 LinkedIn</span>
+                </a>
+              </div>
               <p style="text-align:center;margin-top:16px;font-size:12px;color:#9ca3af;">Vous recevez cet email car vous êtes utilisateur de Frimousse.</p>
             </div>
           `;

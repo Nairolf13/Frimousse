@@ -96,7 +96,7 @@ router.get('/', auth, async (req, res) => {
     const sheets = await prisma.presenceSheet.findMany({
       where,
       include: {
-        child: { select: { id: true, name: true } },
+        child: { select: { id: true, name: true, photoUrl: true } },
         nanny: { select: { id: true, name: true } },
         entries: { orderBy: { date: 'asc' } },
       },
@@ -138,7 +138,7 @@ router.post('/', auth, async (req, res) => {
         entries: { create: entries },
       },
       include: {
-        child: { select: { id: true, name: true } },
+        child: { select: { id: true, name: true, photoUrl: true } },
         nanny: { select: { id: true, name: true } },
         entries: { orderBy: { date: 'asc' } },
       },
@@ -157,7 +157,7 @@ router.get('/:id', auth, async (req, res) => {
     const sheet = await prisma.presenceSheet.findUnique({
       where: { id: req.params.id },
       include: {
-        child: { select: { id: true, name: true, birthDate: true } },
+        child: { select: { id: true, name: true, birthDate: true, photoUrl: true } },
         nanny: { select: { id: true, name: true } },
         entries: { orderBy: { date: 'asc' } },
       },
@@ -208,7 +208,7 @@ router.put('/:id', auth, async (req, res) => {
     const updated = await prisma.presenceSheet.update({
       where: { id: req.params.id },
       data: { ...(status ? { status } : {}) },
-      include: { child: { select: { id: true, name: true } }, nanny: { select: { id: true, name: true } }, entries: { orderBy: { date: 'asc' } } },
+      include: { child: { select: { id: true, name: true, photoUrl: true } }, nanny: { select: { id: true, name: true } }, entries: { orderBy: { date: 'asc' } } },
     });
     res.json(updated);
   } catch (err) {
@@ -285,7 +285,7 @@ router.patch('/:id/entries', auth, async (req, res) => {
 
     const updated = await prisma.presenceSheet.findUnique({
       where: { id: req.params.id },
-      include: { entries: { orderBy: { date: 'asc' } }, child: { select: { id: true, name: true } }, nanny: { select: { id: true, name: true } } },
+      include: { entries: { orderBy: { date: 'asc' } }, child: { select: { id: true, name: true, photoUrl: true } }, nanny: { select: { id: true, name: true } } },
     });
     res.json(updated);
   } catch (err) {
@@ -512,7 +512,7 @@ router.get('/:id/pdf', auth, async (req, res) => {
     const sheet = await prisma.presenceSheet.findUnique({
       where: { id: req.params.id },
       include: {
-        child: { select: { id: true, name: true } },
+        child: { select: { id: true, name: true, photoUrl: true } },
         nanny: { select: { id: true, name: true } },
         center: { select: { name: true } },
         entries: { orderBy: { date: 'asc' } },

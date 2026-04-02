@@ -54,6 +54,7 @@ function normalizeChild(raw: unknown): Child {
       if (cn['nannyId']) return String(cn['nannyId']);
       return '';
     }).filter(Boolean) : [],
+    photoUrl: base['photoUrl'] ? String(base['photoUrl']) : undefined,
   };
   return typedChild;
 }
@@ -70,6 +71,7 @@ import { useAuth } from '../src/context/AuthContext';
 import { useCenterSettings } from '../src/context/CenterSettingsContext';
 import '../styles/filter-responsive.css';
 import '../styles/children-responsive.css';
+import AvatarCropper from '../components/AvatarCropper';
 
 function PhotoConsentToggle({ childId, initialConsent, onChange }: { childId: string; initialConsent?: boolean | null; onChange?: (newVal: boolean) => void }) {
   const { user } = useAuth();
@@ -149,6 +151,7 @@ interface Child {
   cotisationPaidUntil?: string;
   birthDate?: string;
   nannyIds?: string[];
+  photoUrl?: string;
 }
 
 interface Assignment {
@@ -212,6 +215,11 @@ export default function Children() {
   const [photoConsentMap, setPhotoConsentMap] = useState<Record<string, boolean>>({});
   const [prescriptionModal, setPrescriptionModal] = useState<{ open: boolean; url?: string | null; childName?: string | null }>({ open: false, url: null, childName: null });
   const [emptyPrescriptionModal, setEmptyPrescriptionModal] = useState<{ open: boolean; childName?: string | null }>({ open: false, childName: null });
+  const [photoUploadingId, setPhotoUploadingId] = useState<string | null>(null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoUploadTargetId = useRef<string | null>(null);
   const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
   const [centerFilter, setCenterFilter] = useState<string | null>(null);
   
@@ -668,8 +676,47 @@ export default function Children() {
   const inputCls = "border border-gray-200 rounded-xl px-3 py-2 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition w-full";
   const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1";
 
+  const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    const url = URL.createObjectURL(file);
+    setCropImageSrc(url);
+    setCropModalOpen(true);
+  };
+
+  const closeCropModal = () => {
+    setCropModalOpen(false);
+    if (cropImageSrc) URL.revokeObjectURL(cropImageSrc);
+    setCropImageSrc(null);
+  };
+
+  const onCropApply = async (croppedFile: File) => {
+    const childId = photoUploadTargetId.current;
+    closeCropModal();
+    if (!childId) return;
+    setPhotoUploadingId(childId);
+    try {
+      const fd = new FormData();
+      fd.append('photo', croppedFile);
+      const res = await fetchWithRefresh(`${API_URL}/children/${childId}/photo`, { method: 'POST', credentials: 'include', body: fd });
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      setChildren(prev => prev.map(c => c.id === childId ? { ...c, photoUrl: data.photoUrl } : c));
+    } catch (err) {
+      console.error('Failed to upload child photo', err);
+    } finally {
+      setPhotoUploadingId(null);
+      photoUploadTargetId.current = null;
+    }
+  };
+
   return (
     <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoFileChange} />
+      {cropModalOpen && cropImageSrc && (
+        <AvatarCropper imageSrc={cropImageSrc} onCancel={closeCropModal} onApply={onCropApply} />
+      )}
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4 children-responsive-row">
 
         {/* Header */}
@@ -953,9 +1000,38 @@ export default function Children() {
 
                 {/* Card header with gradient avatar */}
                 <div className={`px-5 pt-5 pb-4 bg-gradient-to-r ${gradient} flex items-center gap-3`}>
-                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                    <span className="text-white font-bold text-lg">{initials}</span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isAdminUser && user?.role !== 'nanny') return;
+                      photoUploadTargetId.current = child.id;
+                      photoInputRef.current?.click();
+                    }}
+                    className="relative w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden group focus:outline-none"
+                    title={isAdminUser || user?.role === 'nanny' ? t('children.photo.upload_hint', 'Changer la photo') : undefined}
+                  >
+                    {child.photoUrl ? (
+                      <img src={child.photoUrl} alt={child.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-white font-bold text-lg">{initials}</span>
+                    )}
+                    {(isAdminUser || user?.role === 'nanny') && (
+                      <>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          {photoUploadingId === child.id ? (
+                            <svg className="w-5 h-5 text-white animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          ) : (
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                          )}
+                        </div>
+                        {photoUploadingId !== child.id && (
+                          <div className="absolute bottom-0.5 right-0.5 w-4 h-4 rounded-full bg-black/50 flex items-center justify-center group-hover:opacity-0 transition-opacity">
+                            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-white text-base truncate">{child.name}</span>
