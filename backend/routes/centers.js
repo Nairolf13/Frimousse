@@ -39,6 +39,7 @@ router.get('/public', async (req, res) => {
           },
           select: {
             name: true,
+            email: true,
             phone: true,
             address: true,
             city: true,
@@ -59,6 +60,7 @@ router.get('/public', async (req, res) => {
         return {
           id: center.id,
           name: center.name,
+          email: admin?.email || null,
           phone: admin?.phone || null,
           address: admin?.address || null,
           city: admin?.city || null,

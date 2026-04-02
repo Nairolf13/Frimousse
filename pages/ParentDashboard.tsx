@@ -10,7 +10,7 @@ import PageLoader from '../components/PageLoader';
 
 
 type Child = { id: string; name: string; group?: string };
-type Parent = { id: string; name?: string | null; firstName?: string | null; lastName?: string | null; email?: string | null; phone?: string | null; children?: { child: Child }[]; createdAt?: string | null };
+type Parent = { id: string; name?: string | null; firstName?: string | null; lastName?: string | null; email?: string | null; phone?: string | null; children?: { child: Child }[]; createdAt?: string | null; avatarUrl?: string | null };
 type AdminStats = { parentsCount: number; childrenCount: number; presentToday: number };
 type AdminData = { stats: AdminStats; parents: Parent[] } | null;
 type AuthUser = { role?: string | null; nannyId?: string | null } | null;
