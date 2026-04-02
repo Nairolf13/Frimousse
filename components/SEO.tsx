@@ -27,14 +27,19 @@ export type SEOProps = {
   breadcrumbs?: Breadcrumb[];
   ldJson?: JsonLdObject | JsonLdObject[]; // additional structured data
 };
+/** Strip www. so all canonicals point to the bare domain. */
+function normalizeWww(url: string): string {
+  return url.replace(/^(https?:\/\/)www\./, '$1');
+}
+
 function makeAbsoluteUrl(u?: string): string | undefined {
   if (!u) return undefined;
   try {
     const parsed = new URL(u);
-    return parsed.toString();
+    return normalizeWww(parsed.toString());
   } catch {
-    const path = u.startsWith('/') ? u : `/${u}`;
-    return `${SITE_URL}${path}`;
+    const p = u.startsWith('/') ? u : `/${u}`;
+    return `${SITE_URL}${p}`;
   }
 }
 
@@ -56,7 +61,7 @@ export default function SEO({
   ldJson,
 }: SEOProps): ReactElement {
   const resolvedUrl = makeAbsoluteUrl(url);
-  const canonical = resolvedUrl ?? (typeof window !== 'undefined' ? window.location.href : SITE_URL + '/');
+  const canonical = resolvedUrl ?? (typeof window !== 'undefined' ? normalizeWww(window.location.href) : SITE_URL + '/');
   const absImage = makeAbsoluteUrl(image);
 
   const finalLd = buildJsonLd({

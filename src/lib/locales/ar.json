@@ -1,5 +1,17 @@
 {
   "nav.home": "الرئيسية",
+  "nav.directory": "الدليل",
+  "directory.title": "دليل المراكز",
+  "directory.description": "ابحث عن مركز رعاية أطفال بالقرب منك",
+  "directory.search_placeholder": "ابحث عن مركز...",
+  "directory.filter.region": "كل المناطق",
+  "directory.filter.city": "المدينة...",
+  "directory.results": "{count} مركز",
+  "directory.empty": "لم يتم العثور على مراكز",
+  "directory.call": "اتصال",
+  "directory.loading": "جارٍ التحميل...",
+  "directory.no_phone": "لا يوجد رقم هاتف",
+  "directory.no_address": "لا يوجد عنوان",
   "nav.features": "المزايا",
   "nav.pricing": "الأسعار",
   "nav.support": "الدعم",
@@ -891,5 +903,7 @@
   "feed.delete_post": "حذف المنشور",
   "feed.delete_post.confirm": "هل أنت متأكد من رغبتك في حذف هذا المنشور؟",
   "page.notifications.desc": "سجل الإشعارات.",
-  "notifications.stats.today": "اليوم"
+  "notifications.stats.today": "اليوم",
+  "supportpage.community.description": "تواصل مع مستخدمين آخرين وشارك أفضل الممارسات.",
+  "supportpage.cta.secondary": "العودة إلى الرئيسية"
 }

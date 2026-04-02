@@ -60,7 +60,7 @@ export default function ProtectedLayout() {
     <div className="flex items-center justify-center h-screen bg-gray-50">
       <div className="flex flex-col items-center gap-4 animate-fade-in">
         <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
-          <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-16 h-16 object-contain" />
+          <img src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-16 h-16 object-contain" />
         </div>
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-brand-300 animate-bounce [animation-delay:0ms]"></div>

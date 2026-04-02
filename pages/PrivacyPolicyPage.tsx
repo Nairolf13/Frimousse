@@ -10,7 +10,7 @@ export default function PrivacyPolicyPage() {
       <SEO
         title={"Politique de confidentialité | Frimousse Association"}
         description={"Politique de confidentialité de Frimousse : protection des données, RGPD, droits des utilisateurs, sécurité et gestion des informations personnelles."}
-        url={"https://lesfrimousses.com/politique-confidentialite"}
+        url={"https://lesfrimousses.com/confidentialite"}
       />
       <PublicNavbar />
       <main className="flex-1 w-full">

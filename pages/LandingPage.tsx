@@ -88,8 +88,8 @@ import ConfirmDialog from '../components/ConfirmDialog';
           return (
           <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
             <SEO
-              title={"Frimousse — Application de gestion de garde d'enfants | Creche, micro-creche, MAM"}
-              description={"Frimousse : logiciel de gestion pour creches, micro-creches, MAM et garderies. Planning, fiches enfants, communication parents, rapports d'activite, facturation. Essai gratuit 7 jours, conforme RGPD."}
+              title={"Logiciel gestion crèche, MAM, micro-crèche | Les Frimousses"}
+              description={"Les Frimousses : logiciel de gestion pour crèches, MAM et micro-crèches. Planning, fiches enfants, communication parents, facturation. Essai gratuit, conforme RGPD."}
               url={"https://lesfrimousses.com/"}
               image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
               tags={["application garde enfant", "logiciel creche", "gestion micro-creche", "application MAM", "planning creche", "communication parents creche", "logiciel petite enfance", "gestion assistante maternelle"]}
@@ -119,13 +119,13 @@ import ConfirmDialog from '../components/ConfirmDialog';
                 </div>
 
                 <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-white leading-[1.08] tracking-tight mb-6 animate-scale-in">
-                  Simplifiez la gestion
+                  Logiciel de gestion
                   <br />
-                  <span className="bg-gradient-to-r from-brand-200 via-brand-100 to-cream-100 bg-clip-text text-transparent">de votre structure</span>
+                  <span className="bg-gradient-to-r from-brand-200 via-brand-100 to-cream-100 bg-clip-text text-transparent">crèche, MAM, micro-crèche</span>
                 </h1>
 
                 <p className="text-lg md:text-xl text-white max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in">
-                  La plateforme tout-en-un pour crèches associatives, micro-crèches, MAM et garderies. Planning, suivi, communication — tout en un clic.
+                  La plateforme pour crèches associatives, MAM et micro-crèches. Planning, fiches enfants, communication parents et facturation tout en un clic.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in">

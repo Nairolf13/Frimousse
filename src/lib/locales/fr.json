@@ -1,5 +1,17 @@
 {
   "nav.home": "Accueil",
+  "nav.directory": "Annuaire",
+  "directory.title": "Annuaire des structures",
+  "directory.description": "Trouvez une structure d'accueil près de chez vous",
+  "directory.search_placeholder": "Rechercher une structure...",
+  "directory.filter.region": "Toutes les régions",
+  "directory.filter.city": "Ville...",
+  "directory.results": "{count} structure{s} trouvée{s}",
+  "directory.empty": "Aucune structure trouvée",
+  "directory.call": "Appeler",
+  "directory.loading": "Chargement...",
+  "directory.no_phone": "Numéro non renseigné",
+  "directory.no_address": "Adresse non renseignée",
   "nav.features": "Fonctionnalités",
   "nav.pricing": "Tarifs",
   "nav.support": "Support",
@@ -889,5 +901,7 @@
   "feed.delete_post": "Supprimer la publication",
   "feed.delete_post.confirm": "Voulez-vous vraiment supprimer cette publication ?",
   "page.notifications.desc": "Historique des notifications.",
-  "notifications.stats.today": "Aujourd'hui"
+  "notifications.stats.today": "Aujourd'hui",
+  "supportpage.community.description": "Échangez avec d'autres utilisateurs et partagez les bonnes pratiques.",
+  "supportpage.cta.secondary": "Retour à l'accueil"
 }

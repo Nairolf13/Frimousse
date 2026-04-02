@@ -1,4 +1,3 @@
-const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
 
@@ -119,19 +118,13 @@ async function sendTemplatedMail({ templateName, lang, to, subject, text, substi
     recipients = await filterOptedOutEmails(prisma, recipients);
   }
   if (!recipients.length) return;
-  // merge attachments: logo + extraAttachments
-  const attachments = [];
-  try {
-    const localLogoPath = path.join(__dirname, '..', '..', 'public', 'imgs', 'ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp');
-    if (fs.existsSync(localLogoPath)) {
-      substitutions.logoUrl = `cid:logo-frimousse`;
-      attachments.push({ filename: 'ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp', path: localLogoPath, cid: 'logo-frimousse' });
-    }
-  } catch (e) {
-    // ignore
+  // Use public URL for logo — no inline attachment to avoid spam filters
+  if (!substitutions.logoUrl) {
+    substitutions.logoUrl = 'https://lesfrimousses.com/imgs/FrimousseLogo.webp';
   }
+
+  const attachments = [];
   if (Array.isArray(extraAttachments) && extraAttachments.length) {
-    // expected extraAttachments items to follow nodemailer's attachment spec (filename, content, contentType, contentDisposition, content etc.)
     for (const a of extraAttachments) attachments.push(a);
   }
 

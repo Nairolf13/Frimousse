@@ -11,12 +11,12 @@
   "categories": ["business", "education", "productivity"],
   "icons": [
     {
-      "src": "/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp",
+      "src": "/imgs/FrimousseLogo.webp",
       "sizes": "192x192",
       "type": "image/webp"
     },
     {
-      "src": "/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp",
+      "src": "/imgs/FrimousseLogo.webp",
       "sizes": "512x512",
       "type": "image/webp",
       "purpose": "maskable any"

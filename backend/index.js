@@ -22,6 +22,28 @@ const app = express();
 // Trust first proxy (nginx) for correct IP detection with rate limiting
 app.set('trust proxy', 1);
 
+// Redirect http -> https and www -> non-www (301 permanent)
+// Only active when behind nginx (X-Forwarded-Proto header present).
+// In local dev, nginx is absent so X-Forwarded-Proto is never set → no redirect.
+app.use((req, res, next) => {
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const forwardedHost = req.headers['x-forwarded-host'];
+
+  // Only redirect when nginx is forwarding the request (production)
+  if (!forwardedProto) return next();
+
+  const isHttp = forwardedProto === 'http';
+  const host = (forwardedHost || req.hostname || '').toLowerCase();
+  const isWww = host.startsWith('www.');
+
+  if (isHttp || isWww) {
+    const cleanHost = isWww ? host.slice(4) : host;
+    const target = `https://${cleanHost}${req.originalUrl}`;
+    return res.redirect(301, target);
+  }
+  next();
+});
+
 // STRIPE_WEBHOOK_SECRET est optionnel au démarrage — le webhook refusera les requêtes si absent,
 // mais cela ne bloque pas le serveur (utile tant que Stripe n'est pas encore configuré en prod).
 const requiredEnvs = ['JWT_SECRET', 'REFRESH_TOKEN_SECRET', 'STRIPE_SECRET_KEY'];
@@ -49,9 +71,6 @@ const parentRoutes = require('./routes/parent');
 
 
 app.use(compression());
-app.use(helmet());
-
-app.use(rateLimit({ windowMs: 60 * 1000, max: 600 }));
 
 const isProd = process.env.NODE_ENV === 'production';
 const allowedOrigins = isProd
@@ -66,10 +85,11 @@ const allowedOrigins = isProd
       'https://www.lesfrimousses.com',
     ];
 
+// CORS must be before helmet so Access-Control-Allow-Origin is set before
+// helmet's Cross-Origin-Resource-Policy header is evaluated by the browser.
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (curl, same-origin) and be permissive in dev
       if (!origin) return callback(null, true);
       if (!isProd) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
@@ -78,6 +98,15 @@ app.use(
     credentials: true,
   })
 );
+
+// helmet after cors — disable HSTS in dev (would force HTTPS on localhost)
+// and set crossOriginResourcePolicy to cross-origin to allow cross-origin fetches.
+app.use(helmet({
+  hsts: isProd,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+app.use(rateLimit({ windowMs: 60 * 1000, max: 600 }));
 
 // Webhook Stripe doit recevoir le body RAW — monté avant express.json()
 const subscriptionsRoutes = require('./routes/subscriptions');

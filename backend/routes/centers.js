@@ -5,6 +5,75 @@ const requireAuth = require('../middleware/authMiddleware');
 // small debug wrapper: enable birthday logs only when SHOW_BIRTHDAY_LOGS=1
 const debug = process.env.SHOW_BIRTHDAY_LOGS === '1' ? console.debug.bind(console) : () => {};
 
+// GET /api/centers/public - Public directory of centers (no auth required)
+router.get('/public', async (req, res) => {
+  try {
+    const { region, city, name } = req.query;
+
+    const where = {};
+
+    if (name) {
+      where.name = { contains: name, mode: 'insensitive' };
+    }
+
+    if (region || city) {
+      where.users = {
+        some: {
+          role: 'admin',
+          ...(region ? { region: { contains: region, mode: 'insensitive' } } : {}),
+          ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
+        }
+      };
+    }
+
+    const centers = await prisma.center.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        users: {
+          where: {
+            role: 'admin'
+          },
+          select: {
+            name: true,
+            phone: true,
+            address: true,
+            city: true,
+            postalCode: true,
+            region: true,
+            country: true,
+          },
+          take: 1
+        }
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    // Flatten admin info into center object, filter out centers with no address AND no phone
+    const result = centers
+      .map(center => {
+        const admin = center.users[0] || null;
+        return {
+          id: center.id,
+          name: center.name,
+          phone: admin?.phone || null,
+          address: admin?.address || null,
+          city: admin?.city || null,
+          postalCode: admin?.postalCode || null,
+          region: admin?.region || null,
+          country: admin?.country || null,
+        };
+      })
+      .filter(c => c.address || c.phone);
+
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 // GET /api/centers - Get all centers with admin info (super-admin only)
 router.get('/', requireAuth, async (req, res) => {
   try {

@@ -95,7 +95,7 @@ export default function LoginPage() {
         <div className="absolute -top-20 -left-20 w-72 h-72 bg-white/5 rounded-full" />
         <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-white/5 rounded-full" />
         <div className="absolute top-1/3 right-10 w-28 h-28 bg-white/10 rounded-full" />
-        <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-24 h-24 object-contain drop-shadow-lg mb-8 relative z-10" />
+        <img src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-24 h-24 object-contain drop-shadow-lg mb-8 relative z-10" />
         <h1 className="text-3xl lg:text-4xl font-extrabold text-white text-center tracking-tight leading-tight relative z-10">
           Bienvenue sur<br />Frimousse
         </h1>
@@ -131,7 +131,7 @@ export default function LoginPage() {
         {/* Mobile header */}
         <div className="flex flex-col items-center mb-6">
           <div className="w-16 h-16 mb-3 md:hidden">
-            <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo" className="w-full h-full object-contain" />
+            <img src="/imgs/FrimousseLogo.webp" alt="Logo" className="w-full h-full object-contain" />
           </div>
           <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Connexion</h2>
           <p className="mt-1 text-gray-500 text-sm">Connectez-vous à votre espace Frimousse</p>

@@ -60,7 +60,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null);
   useEffect(() => {
     // Skip authentication check on public pages to avoid 401 errors in console
-    const publicPaths = ['/', '/about', '/fonctionnalites', '/tarifs', '/support', '/confidentialite', '/cgu', '/mentions-legales', '/guide-demarrage', '/guide-ajouter-enfant', '/guide-planning', '/guide-export-rapport', '/guide-securite', '/login', '/register', '/reset-password', '/invite'];
+    const publicPaths = ['/', '/about', '/fonctionnalites', '/tarifs', '/support', '/confidentialite', '/cgu', '/mentions-legales', '/guide-demarrage', '/guide-ajouter-enfant', '/guide-planning', '/guide-export-rapport', '/guide-securite', '/login', '/register', '/reset-password', '/invite', '/annuaire'];
     if (typeof window !== 'undefined' && publicPaths.includes(window.location.pathname)) {
       return;
     }
