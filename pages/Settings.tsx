@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 import { useCenterSettings } from '../src/context/CenterSettingsContext';
@@ -8,6 +8,7 @@ import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe';
 import { useI18n } from '../src/lib/useI18n';
 import LanguageDropdown from '../components/LanguageDropdown';
+import AvatarCropper from '../components/AvatarCropper';
 import { HiOutlineChat, HiOutlinePaperAirplane, HiOutlineClock, HiOutlineCheckCircle } from 'react-icons/hi';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -455,9 +456,16 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
 
 
 export default function Settings() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, setUser } = useAuth();
   const navigate = useNavigate();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(authUser?.avatarUrl ?? null);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
     const mql = window.matchMedia('(max-height: 600px) and (orientation: landscape)');
@@ -499,6 +507,54 @@ export default function Settings() {
       }).catch(() => { /* ignore */ });
     }
   }, [language]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    setLocalAvatarUrl(authUser?.avatarUrl ?? null);
+  }, [authUser?.avatarUrl]);
+
+  const uploadProfileAvatar = async (file: File) => {
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const res = await fetchWithRefresh(`${API_URL}/user/me/avatar`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.error('Avatar upload failed', text);
+        return;
+      }
+      const data = await res.json();
+      if (data && data.avatarUrl) {
+        setLocalAvatarUrl(data.avatarUrl);
+        if (setUser && authUser) setUser({ ...authUser, avatarUrl: data.avatarUrl });
+      }
+    } catch (e) {
+      console.error('Error uploading avatar', e);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const onAvatarFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    setCropImageSrc(url);
+    setCropModalOpen(true);
+  };
+
+  const closeCropModal = () => {
+    setCropModalOpen(false);
+    if (cropImageSrc) URL.revokeObjectURL(cropImageSrc);
+    setCropImageSrc(null);
+  };
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [tarifs, setTarifs] = useState({ dailyRate: 2, childCotisationAmount: 15, nannyCotisationAmount: 10, showInDirectory: true });
@@ -511,6 +567,8 @@ export default function Settings() {
   const isAdmin = !!(authUser && typeof authUser.role === 'string' && (authUser.role === 'admin' || authUser.role.toLowerCase().includes('super')));
   const { reload: reloadCenterSettings } = useCenterSettings();
   const isSuperAdmin = !!(authUser && typeof authUser.role === 'string' && authUser.role.toLowerCase().includes('super'));
+  const displayName = authUser?.name || 'Utilisateur';
+  const accountInitials = displayName.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState<string | null>(searchParams.get('section'));
   const [showSupportModal, setShowSupportModal] = useState(false);
@@ -1157,6 +1215,40 @@ export default function Settings() {
           <div>
             <SectionHeader title={t('settings.section.account', 'Profil & Compte')} />
             <div className="bg-white rounded-2xl shadow p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center text-lg font-bold text-blue-800">
+                    {localAvatarUrl ? (
+                      <img src={localAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      accountInitials
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                    className="absolute -right-1 -bottom-1 w-7 h-7 rounded-full bg-white border border-gray-200 text-xs text-[#0b5566] flex items-center justify-center shadow-sm hover:bg-gray-50"
+                  >
+                    {avatarUploading ? '...' : '✎'}
+                  </button>
+                  <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onAvatarFileChange} />
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-800">{t('settings.profile.avatar', 'Photo de profil')}</div>
+                  <div className="text-xs text-gray-500">{t('settings.profile.avatar_desc', 'Téléchargez ou modifiez votre photo de profil')}</div>
+                </div>
+              </div>
+              {cropModalOpen && cropImageSrc && (
+                <AvatarCropper
+                  imageSrc={cropImageSrc}
+                  onCancel={closeCropModal}
+                  onApply={(croppedFile) => {
+                    closeCropModal();
+                    uploadProfileAvatar(croppedFile);
+                  }}
+                />
+              )}
               <ProfileEditor onClose={() => setActiveSection(null)} />
               {isAdmin && (
                 <div className="border-t mt-6 pt-6">

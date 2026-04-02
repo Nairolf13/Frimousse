@@ -321,6 +321,8 @@
   "availability.sick": "Sick",
   "settings.password.all_required": "All password fields are required",
   "settings.password.mismatch": "Passwords do not match",
+  "settings.profile.avatar": "Profile photo",
+  "settings.profile.avatar_desc": "Upload or update your profile photo",
   "common.show_password": "Show password",
   "common.hide_password": "Hide password",
   "label.firstName": "First name",

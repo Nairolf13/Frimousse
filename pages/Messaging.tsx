@@ -40,6 +40,7 @@ type Contact = {
   id: string;
   name: string;
   role: string;
+  avatarUrl?: string | null;
   centerId?: string | null;
 };
 
@@ -50,7 +51,7 @@ type Center = {
 
 type Participant = {
   userId: string;
-  user: { id: string; name: string; role: string };
+  user: { id: string; name: string; role: string; avatarUrl?: string | null };
   lastReadAt: string | null;
 };
 
@@ -62,7 +63,7 @@ type ConvMessage = {
   mediaUrl?: string | null;
   mediaType?: string | null;
   createdAt: string;
-  sender: { id: string; name: string; role: string };
+  sender: { id: string; name: string; role: string; avatarUrl?: string | null };
 };
 
 type Conversation = {
@@ -194,21 +195,36 @@ function formatFullTime(dateStr: string) {
 
 function Avatar({
   name,
+  avatarUrl,
   online,
   size = 'md',
 }: {
   name: string;
+  avatarUrl?: string | null;
   online?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }) {
   const dims = size === 'sm' ? 'w-8 h-8 text-xs' : size === 'lg' ? 'w-12 h-12 text-base' : 'w-10 h-10 text-sm';
   return (
     <div className="relative inline-block flex-shrink-0">
-      <div
-        className={`${dims} rounded-full bg-gradient-to-br from-[#0b5566] to-[#1a8fa6] flex items-center justify-center font-bold text-white select-none`}
-      >
-        {getInitials(name)}
-      </div>
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={`${name} avatar`}
+          className={`${dims} rounded-full object-cover border-2 border-white`}
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement;
+            target.onerror = null;
+            target.src = '';
+          }}
+        />
+      ) : (
+        <div
+          className={`${dims} rounded-full bg-gradient-to-br from-[#0b5566] to-[#1a8fa6] flex items-center justify-center font-bold text-white select-none`}
+        >
+          {getInitials(name)}
+        </div>
+      )}
       {online !== undefined && (
         <span
           className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${online ? 'bg-green-400' : 'bg-gray-300'}`}
@@ -680,7 +696,7 @@ export default function Messaging() {
                     onClick={() => setSelectedConvId(conv.id)}
                     className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${isActive ? 'bg-[#0b5566]/5' : ''}`}
                   >
-                    <Avatar name={other?.name ?? '?'} online={isOnline} size="md" />
+                    <Avatar name={other?.name ?? '?'} avatarUrl={other?.avatarUrl} online={isOnline} size="md" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <span className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
@@ -729,6 +745,7 @@ export default function Messaging() {
                 <>
                   <Avatar
                     name={otherParticipant.name}
+                    avatarUrl={otherParticipant.avatarUrl}
                     online={onlineUserIds.has(otherParticipant.id)}
                     size="md"
                   />
@@ -761,7 +778,6 @@ export default function Messaging() {
                   {messages.map((msg, i) => {
                     const isMe = msg.senderId === user?.id;
                     const prevMsg = messages[i - 1];
-                    const showAvatar = !isMe && (!prevMsg || prevMsg.senderId !== msg.senderId);
                     const showTime =
                       !prevMsg ||
                       new Date(msg.createdAt).getTime() - new Date(prevMsg.createdAt).getTime() > 5 * 60 * 1000;
@@ -772,11 +788,6 @@ export default function Messaging() {
                           <div className="text-center text-xs text-gray-400 py-2">{formatFullTime(msg.createdAt)}</div>
                         )}
                         <div className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          {!isMe && (
-                            <div className={`w-6 flex-shrink-0 ${showAvatar ? '' : 'invisible'}`}>
-                              <Avatar name={msg.sender.name} size="sm" />
-                            </div>
-                          )}
                           {isEditing ? (
                             <div className="flex items-center gap-2 max-w-xs lg:max-w-md">
                               <input
@@ -825,9 +836,6 @@ export default function Messaging() {
                   {/* Typing indicator */}
                   {isOtherTyping && (
                     <div className="flex items-end gap-2 justify-start">
-                      <div className="w-6 flex-shrink-0">
-                        <Avatar name={otherParticipant?.name ?? '?'} size="sm" />
-                      </div>
                       <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1">
                         <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
                         <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
@@ -1010,6 +1018,7 @@ export default function Messaging() {
                   >
                     <Avatar
                       name={contact.name}
+                      avatarUrl={contact.avatarUrl}
                       online={onlineUserIds.has(contact.id)}
                       size="md"
                     />

@@ -433,6 +433,8 @@
   "availability.sick": "مريضة",
   "settings.password.all_required": "جميع حقول كلمة المرور مطلوبة",
   "settings.password.mismatch": "كلمتا المرور غير متطابقتين",
+  "settings.profile.avatar": "صورة الملف الشخصي",
+  "settings.profile.avatar_desc": "قم بتحميل أو تحديث صورتك الشخصية",
   "common.show_password": "إظهار كلمة المرور",
   "common.hide_password": "إخفاء كلمة المرور",
   "label.firstName": "الاسم الأول",

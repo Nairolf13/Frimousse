@@ -97,6 +97,7 @@ model User {
   feedLikes                FeedLike[]
   feedComments             FeedComment[]
   notifyByEmail            Boolean                   @default(true)
+  avatarUrl                String?
   tutorialSeen             Boolean                   @default(false)
   tutorialCompleted        String[]
   cookieConsent            String?

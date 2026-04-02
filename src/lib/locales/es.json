@@ -648,6 +648,8 @@
   "settings.delete_error": "Error al eliminar la cuenta",
   "settings.password.all_required": "Todos los campos de contraseña son obligatorios",
   "settings.password.mismatch": "Las contraseñas no coinciden",
+  "settings.profile.avatar": "Foto de perfil",
+  "settings.profile.avatar_desc": "Sube o actualiza tu foto de perfil",
   "availability.available": "Disponible",
   "availability.on_leave": "De baja",
   "availability.sick": "Enfermedad",

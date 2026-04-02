@@ -433,6 +433,8 @@
   "availability.sick": "Maladie",
   "settings.password.all_required": "Tous les champs du mot de passe sont obligatoires",
   "settings.password.mismatch": "Les mots de passe ne correspondent pas",
+  "settings.profile.avatar": "Photo de profil",
+  "settings.profile.avatar_desc": "Téléchargez ou modifiez votre photo de profil",
   "common.show_password": "Afficher le mot de passe",
   "common.hide_password": "Masquer le mot de passe",
   "label.firstName": "Prénom",
