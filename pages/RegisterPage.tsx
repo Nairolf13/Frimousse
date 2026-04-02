@@ -546,7 +546,7 @@ export default function RegisterPage() {
         <div className="absolute -bottom-16 -right-16 w-64 h-64 bg-white/5 rounded-full" />
         <div className="absolute top-1/3 right-10 w-28 h-28 bg-white/10 rounded-full" />
         
-        <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-24 h-24 object-contain drop-shadow-lg mb-8 relative z-10" />
+        <img src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-24 h-24 object-contain drop-shadow-lg mb-8 relative z-10" />
         <h1 className="text-3xl lg:text-4xl font-extrabold text-white text-center tracking-tight leading-tight relative z-10">
           Bienvenue sur<br />Frimousse
         </h1>

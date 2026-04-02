@@ -155,7 +155,7 @@ router.get('/contacts', async (req, res) => {
 
     const users = await prisma.user.findMany({
       where: { id: { in: allowedIds } },
-      select: { id: true, name: true, role: true, nannyId: true, parentId: true, centerId: true },
+      select: { id: true, name: true, role: true, avatarUrl: true, nannyId: true, parentId: true, centerId: true },
     });
     res.json(users);
   } catch (e) {
@@ -172,7 +172,7 @@ router.get('/conversations', async (req, res) => {
       where: { participants: { some: { userId: req.user.id } } },
       include: {
         participants: {
-          include: { user: { select: { id: true, name: true, role: true } } },
+          include: { user: { select: { id: true, name: true, role: true, avatarUrl: true } } },
         },
         messages: {
           orderBy: { createdAt: 'desc' },
@@ -280,7 +280,7 @@ router.get('/conversations/:id/messages', async (req, res) => {
     const [messages, total] = await Promise.all([
       prisma.message.findMany({
         where: { conversationId: id },
-        include: { sender: { select: { id: true, name: true, role: true } } },
+        include: { sender: { select: { id: true, name: true, role: true, avatarUrl: true } } },
         orderBy: { createdAt: 'asc' },
         skip,
         take: pageSize,
@@ -324,7 +324,7 @@ router.post('/conversations/:id/messages', async (req, res) => {
           mediaUrl: mediaUrl || null,
           mediaType: mediaType || null,
         },
-        include: { sender: { select: { id: true, name: true, role: true } } },
+        include: { sender: { select: { id: true, name: true, role: true, avatarUrl: true } } },
       }),
       prisma.conversation.update({
         where: { id },
@@ -429,7 +429,7 @@ router.patch('/messages/:id', async (req, res) => {
     const updated = await prisma.message.update({
       where: { id },
       data: { content: content.trim() },
-      include: { sender: { select: { id: true, name: true, role: true } } },
+      include: { sender: { select: { id: true, name: true, role: true, avatarUrl: true } } },
     });
 
     const participants = await prisma.conversationParticipant.findMany({

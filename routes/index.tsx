@@ -87,6 +87,10 @@ const AdminSupport = lazyWithRetry(() => import('../pages/AdminSupport'));
 const AdminAnnouncements = lazyWithRetry(() => import('../pages/AdminAnnouncements'));
 const PresenceSheets = lazyWithRetry(() => import('../pages/PresenceSheets'));
 const Messaging = lazyWithRetry(() => import('../pages/Messaging'));
+const DirectoryPage = lazyWithRetry(() => import('../pages/DirectoryPage'));
+const LandingMAMPage = lazyWithRetry(() => import('../pages/LandingMAMPage'));
+const LandingCrechePage = lazyWithRetry(() => import('../pages/LandingCrechePage'));
+const LandingMicroCrechePage = lazyWithRetry(() => import('../pages/LandingMicroCrechePage'));
 
 const LoadingFallback = () => (
   <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
@@ -131,6 +135,10 @@ export default function AppRoutes() {
           <Route path="/confidentialite" element={<PrivacyPolicyPage />} />
           <Route path="/cgu" element={<TermsPage />} />
           <Route path="/mentions-legales" element={<LegalNoticePage />} />
+          <Route path="/annuaire" element={<DirectoryPage />} />
+          <Route path="/logiciel-mam" element={<LandingMAMPage />} />
+          <Route path="/logiciel-creche" element={<LandingCrechePage />} />
+          <Route path="/logiciel-micro-creche" element={<LandingMicroCrechePage />} />
           <Route path="/guide-demarrage" element={<GuideStartPage />} />
           <Route path="/guide-ajouter-enfant" element={<GuideAddChildPage />} />
           <Route path="/guide-planning" element={<GuidePlanningPage />} />

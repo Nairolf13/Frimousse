@@ -153,7 +153,7 @@ router.post('/', auth, async (req, res) => {
         const parentLink = baseUrl + '/dashboard';
         const adminLink = baseUrl + '/dashboard';
         const nannyLink = baseUrl + '/mon-planning';
-        const logoUrl = baseUrl + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp';
+        const logoUrl = baseUrl + '/imgs/FrimousseLogo.webp';
 
         const subject = emailSubject('assignment', lang, { childName: child.name });
         const text = (lang === 'fr') ? `Bonjour,\n\nVotre enfant ${child.name} a une affectation pour ${formattedDate}.` : `Hello,\n\nYour child ${child.name} has an assignment for ${formattedDate}.`;
@@ -360,7 +360,7 @@ router.put('/:id', auth, async (req, res) => {
         const parentLink = baseUrl + '/dashboard';
         const adminLink = baseUrl + '/dashboard';
         const nannyLink = baseUrl + '/mon-planning';
-        const logoUrl = baseUrl + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp';
+        const logoUrl = baseUrl + '/imgs/FrimousseLogo.webp';
 
         const subject = emailSubject('assignment_updated', lang, { childName: child.name });
         const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été mise à jour pour ${formattedDate}.` : `Hello,\n\nThe assignment for ${child.name} has been updated for ${formattedDate}.`;
@@ -605,7 +605,7 @@ router.delete('/:id', auth, async (req, res) => {
         const parentLink = baseUrl + '/dashboard';
         const adminLink = baseUrl + '/dashboard';
         const nannyLink = baseUrl + '/mon-planning';
-        const logoUrl = baseUrl + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp';
+        const logoUrl = baseUrl + '/imgs/FrimousseLogo.webp';
 
         const subject = emailSubject('assignment_deleted', lang, { childName: child.name });
         const text = (lang === 'fr') ? `Bonjour,\n\nL'affectation pour ${child.name} a été supprimée.` : `Hello,\n\nThe assignment for ${child.name} has been removed.`;

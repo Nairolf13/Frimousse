@@ -15,6 +15,7 @@ export interface User {
   cookieConsent?: string | null;
   language?: string | null;
   profileCompleted?: boolean;
+  avatarUrl?: string | null;
 }
 
 export const AuthContext = createContext<{ user: User | null; setUser: (user: User | null) => void }>({ user: null, setUser: () => {} });

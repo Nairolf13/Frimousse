@@ -18,6 +18,7 @@ router.get('/', requireAuth, async (req, res) => {
           tutorialCompleted: true,
           cookieConsent: true,
           language: true,
+          avatarUrl: true,
           parent: { select: { id: true, phone: true, centerId: true } },
           nanny: { select: { id: true, birthDate: true, contact: true } },
         },

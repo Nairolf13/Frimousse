@@ -15,6 +15,7 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
     { to: '/', label: t('nav.home', 'Accueil') },
     { to: '/fonctionnalites', label: t('nav.features', 'Fonctionnalités') },
     { to: '/tarifs', label: t('nav.pricing', 'Tarifs') },
+    { to: '/annuaire', label: t('nav.directory', 'Annuaire') },
     { to: '/support', label: t('nav.support', 'Support') },
     { to: '/about', label: t('nav.about', 'À propos') },
   ];
@@ -43,7 +44,7 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
 
   const ctaBtn = isDark
     ? 'bg-white text-brand-700 hover:shadow-lg hover:shadow-white/20 hover:scale-[1.03] active:scale-[0.98]'
-    : 'bg-brand-500 text-white hover:bg-brand-600 shadow-sm hover:shadow-md';
+    : 'bg-brand-500 !text-white hover:bg-brand-600 shadow-sm hover:shadow-md';
 
   const hamburgerColor = isDark ? 'text-white' : 'text-gray-700';
 
@@ -54,7 +55,7 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-1 group pl-0 sm:pl-2">
             <div className="flex items-center justify-center transition-all mt-1 sm:-ml-4">
-              <img loading="lazy" src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-12 h-12 object-contain" />
+              <img loading="lazy" src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-12 h-12 object-contain" />
             </div>
             <span className={`font-bold text-[15px] hidden sm:inline tracking-tight ${logoText}`}>Les frimousses</span>
           </Link>

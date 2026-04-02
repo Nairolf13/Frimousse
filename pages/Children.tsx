@@ -606,11 +606,10 @@ export default function Children() {
         credentials: 'include',
       });
       if (!res.ok) {
-        // try to extract a helpful error from the server response
         let serverMsg = 'Erreur lors de la suppression';
         try {
           const body = await res.json();
-          if (body) serverMsg = body.error || body.message || JSON.stringify(body);
+          if (body) serverMsg = body.code ? t(body.code) : (body.error || body.message || JSON.stringify(body));
         } catch {
           // ignore parse errors
         }

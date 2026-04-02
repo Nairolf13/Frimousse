@@ -1,7 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 import type { User as AuthUser } from '../src/context/AuthContext';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, type ChangeEvent } from 'react';
+import AvatarCropper from './AvatarCropper';
 import { useI18n } from '../src/lib/useI18n';
 import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell, HiOutlineCurrencyDollar, HiOutlineChatAlt, HiOutlineOfficeBuilding, HiOutlineCreditCard, HiOutlineChatAlt2 } from 'react-icons/hi';
 import { FaRobot } from 'react-icons/fa';
@@ -74,10 +75,15 @@ function getNavLinks(user: AuthUser | null, t: (k: string, p?: Record<string, st
 
 export default function Sidebar() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const { t } = useI18n();
   const [supportCount, setSupportCount] = useState<number | null>(null);
   const [isShortLandscape, setIsShortLandscape] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+
   
   // consume the global notifications context (single-tab polling)
   const { unreadCount, unreadReviews } = useNotificationsContext();
@@ -152,6 +158,49 @@ export default function Sidebar() {
       window.removeEventListener('orientationchange', onResize);
     };
   }, []);
+
+  const uploadAvatar = async (file: File) => {
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const res = await fetchWithRefresh('/api/user/me/avatar', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        console.error('Avatar upload failed', text);
+        return;
+      }
+      const json = await res.json();
+      if (json && json.avatarUrl && user) {
+        setUser({ ...user, avatarUrl: json.avatarUrl });
+      }
+    } catch (e) {
+      console.error('Error uploading avatar', e);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const onAvatarFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+    setCropImageSrc(url);
+    setCropModalOpen(true);
+  };
+
+  const closeCropModal = () => {
+    setCropModalOpen(false);
+    if (cropImageSrc) URL.revokeObjectURL(cropImageSrc);
+    setCropImageSrc(null);
+  };
+
   function displayCenterName(name: string | null) {
     if (!name) return 'Frimousse';
     const trimmed = name.trim();
@@ -173,7 +222,7 @@ export default function Sidebar() {
         <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white/95 backdrop-blur-sm shadow-lg flex-col p-0 border-r border-gray-100/80 z-30">
          <div className="flex items-center gap-3 px-6 pt-7 pb-5">
           <div className="w-14 h-14 rounded-2xl overflow-hidden bg-brand-50 flex items-center justify-center ring-1 ring-brand-100 shadow-sm">
-            <img src="/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp" alt="Logo Frimousse" className="w-14 h-14 object-contain" />
+            <img src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-14 h-14 object-contain" />
           </div>
          <div className="flex flex-col">
            <span data-tour="sidebar-logo" className="font-extrabold text-lg text-gray-900 leading-tight">{displayCenterName(centerName)}</span>
@@ -208,11 +257,46 @@ export default function Sidebar() {
         </nav>
         <div className="mx-4 border-t border-gray-100"></div>
         <div className="flex items-center gap-3 px-5 py-5">
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-sm font-semibold text-[#0b5566]">{
+              user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                userName.split(' ').map((w) => w[0] ?? '').join('').slice(0, 2).toUpperCase()
+              )
+            }</div>
+            <button
+              type="button"
+              onClick={() => avatarInputRef.current?.click()}
+              disabled={avatarUploading}
+              className="absolute -right-1 -bottom-1 w-6 h-6 rounded-full bg-white border border-gray-200 text-xs text-[#0b5566] flex items-center justify-center shadow-sm hover:bg-gray-50"
+              title="Modifier la photo de profil"
+            >
+              {avatarUploading ? '...' : '✎'}
+            </button>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="hidden"
+              onChange={onAvatarFileChange}
+            />
+          </div>
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-gray-900 leading-tight text-sm truncate">{userName}</div>
             <div className="text-xs text-gray-400 capitalize">{userRole}</div>
           </div>
         </div>
+        {cropModalOpen && cropImageSrc && (
+          <AvatarCropper
+            imageSrc={cropImageSrc}
+            onCancel={closeCropModal}
+            onApply={(croppedFile) => {
+              closeCropModal();
+              uploadAvatar(croppedFile);
+            }}
+          />
+        )}
         </aside>
       )}
     </>

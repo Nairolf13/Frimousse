@@ -1,10 +1,30 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const sharp = require('sharp');
+const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 const auth = require('../middleware/authMiddleware');
 
 const prisma = require('../lib/prismaClient');
 const bcrypt = require('bcryptjs');
 const { validatePassword } = require('../lib/validatePassword');
+
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'PrivacyPictures';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false }, global: { fetch: globalThis.fetch || require('node-fetch') } });
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.mimetype)) {
+      return cb(new Error('Unsupported file type'), false);
+    }
+    cb(null, true);
+  },
+});
 
 function isSuperAdmin(user) {
   if (!user || !user.role) return false;
@@ -35,7 +55,7 @@ async function resolveUserCenter(prismaClient, userRecord) {
 router.get('/me', auth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
-    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true, profileCompleted: true, oauthProvider: true, language: true }
+    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true, profileCompleted: true, oauthProvider: true, language: true, avatarUrl: true }
   });
   if (!user) return res.status(404).json({ message: 'User not found' });
   try {
@@ -230,8 +250,8 @@ router.post('/complete-profile', auth, async (req, res) => {
 // Update current user's basic info (name, email, address, etc.)
 router.put('/me', auth, async (req, res) => {
   try {
-    const { name, email, notifyByEmail, address, postalCode, city, region, country, phone, birthDate } = req.body || {};
-    if (!name && !email && typeof notifyByEmail === 'undefined' && typeof address === 'undefined' && typeof postalCode === 'undefined' && typeof city === 'undefined' && typeof region === 'undefined' && typeof country === 'undefined' && typeof phone === 'undefined' && typeof birthDate === 'undefined') {
+    const { name, email, notifyByEmail, address, postalCode, city, region, country, phone, birthDate, avatarUrl } = req.body || {};
+    if (!name && !email && typeof notifyByEmail === 'undefined' && typeof address === 'undefined' && typeof postalCode === 'undefined' && typeof city === 'undefined' && typeof region === 'undefined' && typeof country === 'undefined' && typeof phone === 'undefined' && typeof birthDate === 'undefined' && typeof avatarUrl === 'undefined') {
       return res.status(400).json({ error: 'No fields to update' });
     }
     if (name && String(name).length > 100) return res.status(400).json({ error: 'Nom trop long (max 100 caractères).' });
@@ -246,8 +266,9 @@ router.put('/me', auth, async (req, res) => {
     if (typeof city !== 'undefined') data.city = city || null;
     if (typeof region !== 'undefined') data.region = region || null;
     if (typeof country !== 'undefined') data.country = country || null;
+    if (typeof avatarUrl !== 'undefined') data.avatarUrl = avatarUrl || null;
 
-    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, parentId: true, nannyId: true } });
+    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, avatarUrl: true, parentId: true, nannyId: true } });
 
     // If phone provided, update linked Parent or Nanny contact as appropriate
     try {
@@ -271,11 +292,59 @@ router.put('/me', auth, async (req, res) => {
     }
 
     // Return freshly updated user (including address fields)
-    const fresh = await prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true } });
+    const fresh = await prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, avatarUrl: true } });
     res.json(fresh);
   } catch (e) {
     const msg = e && e.code === 'P2002' ? 'Email déjà utilisé' : (e && e.message ? e.message : String(e));
     res.status(400).json({ error: msg });
+  }
+});
+
+router.post('/me/avatar', auth, avatarUpload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier reçu' });
+    }
+    if (!SUPABASE_URL || !SUPABASE_KEY || !SUPABASE_BUCKET) {
+      return res.status(503).json({ error: 'Stockage non configuré' });
+    }
+
+    const cleanFilename = `${req.user.id}-${Date.now()}.webp`;
+    const objectPath = path.posix.join('avatars', cleanFilename);
+
+    const optimized = await sharp(req.file.buffer)
+      .rotate()
+      .resize(320, 320, { fit: 'cover' })
+      .webp({ quality: 85 })
+      .toBuffer();
+
+    const { error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(objectPath, optimized, {
+      contentType: 'image/webp',
+      upsert: true
+    });
+    if (uploadError) {
+      console.error('Avatar upload error', uploadError);
+      return res.status(500).json({ error: 'Échec du téléversement de l’image' });
+    }
+
+    const publicUrlData = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(objectPath);
+    const publicUrl = publicUrlData?.data?.publicUrl || publicUrlData?.data?.publicURL || null;
+
+    if (!publicUrl) {
+      console.error('Avatar public URL not available', publicUrlData);
+      return res.status(500).json({ error: 'Impossible de générer l’URL publique de l’avatar' });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { avatarUrl: publicUrl },
+      select: { avatarUrl: true }
+    });
+
+    res.json({ avatarUrl: updated.avatarUrl });
+  } catch (e) {
+    console.error('Failed to upload avatar', e);
+    res.status(500).json({ error: 'Erreur serveur lors de l’envoi de l’avatar' });
   }
 });
 

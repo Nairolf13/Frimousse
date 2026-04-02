@@ -1,6 +1,7 @@
 # Robots.txt - lesfrimousses.com
 
 User-agent: *
+# Pages applicatives protégées
 Disallow: /admin
 Disallow: /api
 Disallow: /backend
@@ -13,6 +14,10 @@ Disallow: /notifications
 Disallow: /complete-profile
 Disallow: /verify-email
 Disallow: /reset-password
+Disallow: /invite
+# Pages d'auth sans valeur SEO
+Disallow: /login
+Disallow: /register
 Allow: /
 
 # Google
@@ -26,7 +31,6 @@ Allow: /
 Crawl-delay: 2
 
 # Autoriser les crawlers IA pour AEO (Answer Engine Optimization)
-# Ces bots alimentent les reponses des modeles IA
 User-agent: GPTBot
 Allow: /
 Allow: /fonctionnalites

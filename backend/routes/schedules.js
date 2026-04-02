@@ -160,7 +160,7 @@ router.put('/schedules/:scheduleId', auth, async (req, res) => {
           if (!parentEmails.length) return;
           const subject = emailSubject('activity_updated', lang, { name: name || '' });
           const text = (lang === 'fr') ? `Une activité a été mise à jour pour ${formatDate(date, lang, { dateStyle: 'full' })}` : `An activity has been updated for ${formatDate(date, lang, { dateStyle: 'full' })}`;
-          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: name || '', comment: comment || '', date: formatDate(date, lang, { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp' }, prisma });
+          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: name || '', comment: comment || '', date: formatDate(date, lang, { dateStyle: 'full' }), startTime: startTime || '', endTime: endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/FrimousseLogo.webp' }, prisma });
         } catch (err) {
           console.error('Failed to send activity update notification', err && err.message ? err.message : err);
         }
@@ -192,7 +192,7 @@ router.delete('/schedules/:scheduleId', auth, async (req, res) => {
           if (!parentEmails.length) return;
           const subject = emailSubject('activity_deleted', lang, { name: existing.name || '' });
           const text = (lang === 'fr') ? `Une activité a été supprimée pour ${existing.date ? formatDate(existing.date, lang, { dateStyle: 'full' }) : ''}` : `An activity has been removed for ${existing.date ? formatDate(existing.date, lang, { dateStyle: 'full' }) : ''}`;
-          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: existing.name || '', comment: existing.comment || '', date: existing.date ? formatDate(existing.date, lang, { dateStyle: 'full' }) : '', startTime: existing.startTime || '', endTime: existing.endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp' }, prisma });
+          await sendTemplatedMail({ templateName: 'activity', lang, to: parentEmails, subject, text, substitutions: { activityName: existing.name || '', comment: existing.comment || '', date: existing.date ? formatDate(existing.date, lang, { dateStyle: 'full' }) : '', startTime: existing.startTime || '', endTime: existing.endTime || '', link: process.env.FRONTEND_URL || 'http://localhost:5173', logoUrl: (process.env.FRONTEND_URL || 'http://localhost:5173') + '/imgs/FrimousseLogo.webp' }, prisma });
         } catch (err) {
           console.error('Failed to send activity deletion notification', err && err.message ? err.message : err);
         }

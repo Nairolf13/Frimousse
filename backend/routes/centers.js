@@ -5,6 +5,77 @@ const requireAuth = require('../middleware/authMiddleware');
 // small debug wrapper: enable birthday logs only when SHOW_BIRTHDAY_LOGS=1
 const debug = process.env.SHOW_BIRTHDAY_LOGS === '1' ? console.debug.bind(console) : () => {};
 
+// GET /api/centers/public - Public directory of centers (no auth required)
+router.get('/public', async (req, res) => {
+  try {
+    const { region, city, name } = req.query;
+
+    const where = {};
+
+    if (name) {
+      where.name = { contains: name, mode: 'insensitive' };
+    }
+
+    if (region || city) {
+      where.users = {
+        some: {
+          role: 'admin',
+          ...(region ? { region: { contains: region, mode: 'insensitive' } } : {}),
+          ...(city ? { city: { contains: city, mode: 'insensitive' } } : {}),
+        }
+      };
+    }
+
+    where.showInDirectory = true;
+
+    const centers = await prisma.center.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        users: {
+          where: {
+            role: 'admin'
+          },
+          select: {
+            name: true,
+            phone: true,
+            address: true,
+            city: true,
+            postalCode: true,
+            region: true,
+            country: true,
+          },
+          take: 1
+        }
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    // Flatten admin info into center object, filter out centers with no address AND no phone
+    const result = centers
+      .map(center => {
+        const admin = center.users[0] || null;
+        return {
+          id: center.id,
+          name: center.name,
+          phone: admin?.phone || null,
+          address: admin?.address || null,
+          city: admin?.city || null,
+          postalCode: admin?.postalCode || null,
+          region: admin?.region || null,
+          country: admin?.country || null,
+        };
+      })
+      .filter(c => c.address || c.phone);
+
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 // GET /api/centers - Get all centers with admin info (super-admin only)
 router.get('/', requireAuth, async (req, res) => {
   try {
@@ -115,13 +186,14 @@ router.get('/settings', requireAuth, async (req, res) => {
     if (!centerId) return res.status(400).json({ error: 'Aucun centre associé' });
     const center = await prisma.center.findUnique({
       where: { id: centerId },
-      select: { dailyRate: true, childCotisationAmount: true, nannyCotisationAmount: true }
+      select: { dailyRate: true, childCotisationAmount: true, nannyCotisationAmount: true, showInDirectory: true }
     });
     if (!center) return res.status(404).json({ error: 'Centre non trouvé' });
     res.json({
       dailyRate: center.dailyRate ?? 2.0,
       childCotisationAmount: center.childCotisationAmount ?? 15.0,
       nannyCotisationAmount: center.nannyCotisationAmount ?? 10.0,
+      showInDirectory: center.showInDirectory ?? true,
     });
   } catch (e) {
     console.error(e);
@@ -141,7 +213,7 @@ router.put('/settings', requireAuth, async (req, res) => {
       centerId = first?.id;
     }
     if (!centerId) return res.status(400).json({ error: 'Aucun centre associé' });
-    const { dailyRate, childCotisationAmount, nannyCotisationAmount } = req.body;
+    const { dailyRate, childCotisationAmount, nannyCotisationAmount, showInDirectory } = req.body;
     const data = {};
     if (dailyRate !== undefined) {
       const v = parseFloat(dailyRate);
@@ -157,6 +229,18 @@ router.put('/settings', requireAuth, async (req, res) => {
       const v = parseFloat(nannyCotisationAmount);
       if (isNaN(v) || v < 0) return res.status(400).json({ error: 'Cotisation nounou invalide' });
       data.nannyCotisationAmount = v;
+    }
+    if (showInDirectory !== undefined) {
+      if (typeof showInDirectory === 'boolean') {
+        data.showInDirectory = showInDirectory;
+      } else if (typeof showInDirectory === 'string') {
+        const normalized = showInDirectory.trim().toLowerCase();
+        if (normalized === 'true' || normalized === '1') {
+          data.showInDirectory = true;
+        } else if (normalized === 'false' || normalized === '0') {
+          data.showInDirectory = false;
+        }
+      }
     }
     await prisma.center.update({ where: { id: centerId }, data });
     res.json({ ok: true });

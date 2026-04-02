@@ -609,7 +609,9 @@ const ParentDashboard: React.FC = () => {
                       let respBody: Record<string, unknown> | null = null;
                       try { respBody = respText ? JSON.parse(respText) : null; } catch { respBody = respText as unknown as Record<string, unknown>; }
                       if (!res.ok) {
-                        const message = respBody && typeof respBody === 'object' && ('message' in respBody || 'error' in respBody) ? (respBody.message || respBody.error) : (typeof respBody === 'string' ? respBody : 'Erreur suppression');
+                        const message = respBody && typeof respBody === 'object'
+                          ? ('code' in respBody && respBody.code ? t(String(respBody.code)) : (respBody.message || respBody.error || 'Erreur suppression'))
+                          : (typeof respBody === 'string' ? respBody : 'Erreur suppression');
                         throw new Error(String(message));
                       }
                       const reload = await fetchWithRefresh(`api/parent/admin`, { credentials: 'include' });
@@ -623,7 +625,7 @@ const ParentDashboard: React.FC = () => {
                       successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
                     } catch (err) {
                       console.error('Delete parent failed', err);
-                      setFormError(err instanceof Error ? ('Suppression échouée: ' + err.message) : 'Suppression échouée');
+                      setFormError(err instanceof Error ? err.message : 'Suppression échouée');
                       setDeletingParentId(null);
                     }
                   }} className="flex-1 bg-red-600 text-white rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-red-700 transition">{t('children.action.delete')}</button>

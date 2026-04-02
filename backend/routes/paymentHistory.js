@@ -276,14 +276,19 @@ router.get('/:year/:month/group-by-nanny', async (req, res) => {
     const nannyIds = Array.from(groups.keys());
     let nannies = [];
     if (nannyIds.length > 0) {
-      // fetch basic nanny info
-      nannies = await prisma.nanny.findMany({ where: { id: { in: nannyIds } } });
+      // fetch basic nanny info including user avatar
+      nannies = await prisma.nanny.findMany({ where: { id: { in: nannyIds } }, include: { user: true } });
     }
 
     // Merge nanny info into groups and build final array
     const result = [];
     for (const [nid, group] of groups.entries()) {
-      const nanny = nannies.find(n => String(n.id) === String(nid)) || { id: nid, name: '—' };
+      const nannyRecord = nannies.find(n => String(n.id) === String(nid));
+      const nanny = nannyRecord ? {
+        id: nannyRecord.id,
+        name: nannyRecord.name,
+        ...(nannyRecord.user && nannyRecord.user.avatarUrl ? { avatarUrl: nannyRecord.user.avatarUrl } : {}),
+      } : { id: nid, name: '—' };
       result.push({ nanny, payments: group.payments, total: group.total });
     }
 
