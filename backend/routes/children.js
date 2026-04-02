@@ -914,7 +914,7 @@ router.post('/:id/photo', auth, photoUpload.single('photo'), async (req, res) =>
       .webp({ quality: 85 })
       .toBuffer();
 
-    const storagePath = path.posix.join('children-photos', `${id}-${Date.now()}.webp`);
+    const storagePath = path.posix.join('avatars', `child-${id}-${Date.now()}.webp`);
     const { error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(storagePath, optimized, {
       contentType: 'image/webp',
       upsert: false,

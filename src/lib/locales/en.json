@@ -717,6 +717,7 @@
   "children.parent.label": "Parent :",
   "children.call_parent_title": "Call parent",
   "children.email_parent_title": "Email parent",
+  "children.photo.upload_hint": "Change photo",
   "children.photo_consent.yes": "Photo consent: Yes",
   "children.photo_consent.no": "Photo consent: No",
   "children.photo_consent.unknown": "Photo consent: —",
