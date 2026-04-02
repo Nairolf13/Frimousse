@@ -589,27 +589,34 @@ export default function Nannies() {
           }
 
           // Insert or replace the (possibly fetched) full nanny.
-          // If we previously inserted an optimistic nanny, replace that entry so the UI shows the real saved data.
+          // Deduplicate by ID and remove optimistic placeholder.
           setNannies(prev => {
-            try {
-              const optId = optimisticIdRef.current;
-              if (optId) {
-                const replaced = prev.map(n => (String(n.id) === String(optId) ? (fullNanny as Nanny) : n));
-                return replaced;
-              }
-            } catch (err) { void err; }
-            return [fullNanny as Nanny, ...prev];
+            const map = new Map<string, Nanny>();
+            const fullId = fullNanny ? String(fullNanny.id || '') : '';
+            if (fullNanny && fullId) map.set(fullId, fullNanny);
+            for (const n of prev) {
+              const nid = String(n.id || '');
+              if (!nid) continue;
+              if (nid.startsWith('optimistic-')) continue;
+              if (fullId && nid === fullId) continue;
+              if (!map.has(nid)) map.set(nid, n);
+            }
+            return Array.from(map.values());
           });
           try {
             const cacheKey = `${API_URL}/nannies${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
             const existing = getCached<Nanny[]>(cacheKey) || [];
-            const optId = optimisticIdRef.current;
-            if (optId) {
-              const replaced = existing.map(n => (String(n.id) === String(optId) ? (fullNanny as Nanny) : n));
-              setCached(cacheKey, replaced);
-            } else {
-              setCached(cacheKey, [fullNanny as Nanny, ...existing]);
+            const map = new Map<string, Nanny>();
+            const fullId = fullNanny ? String(fullNanny.id || '') : '';
+            if (fullNanny && fullId) map.set(fullId, fullNanny);
+            for (const n of existing) {
+              const nid = String(n.id || '');
+              if (!nid) continue;
+              if (nid.startsWith('optimistic-')) continue;
+              if (fullId && nid === fullId) continue;
+              if (!map.has(nid)) map.set(nid, n);
             }
+            setCached(cacheKey, Array.from(map.values()));
           } catch (err) { void err; }
 
           // fetch additional data for the new nanny (cotisation & parents totals)
@@ -626,12 +633,15 @@ export default function Nannies() {
         } else {
           // fallback: refresh full list if response did not include created object or id
           fetchNannies();
+          // clear optimistic id for fallback path
+          optimisticIdRef.current = null;
           // show inline success banner
           setSuccessMessage(t('nanny.added_success') || 'Nounou ajoutée.');
           if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
           successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
         }
         // creation path: show inline success banner
+        optimisticIdRef.current = null;
         setSuccessMessage(t('nanny.added_success') || 'Nounou ajoutée.');
         if (successTimer.current) { window.clearTimeout(successTimer.current); successTimer.current = null; }
         successTimer.current = window.setTimeout(() => { setSuccessMessage(null); successTimer.current = null; }, 3500) as unknown as number;
@@ -752,6 +762,11 @@ export default function Nannies() {
       (availabilityFilter === 'En congé' && (n.availability === 'En_congé' || n.availability === 'En congé')) ||
       availabilityFilter === '') &&
     (!experienceFilter || (experienceFilter === 'junior' ? n.experience < 3 : n.experience >= 3))
+  );
+
+  const filteredVisible = filtered.filter(n => visibleNannies.some(v => String(v.id) === String(n.id)));
+  const uniqueDisplayedNannies = Array.from(
+    new Map(filteredVisible.map(n => [String(n.id), n])).values()
   );
 
   const inputCls = "border border-gray-200 rounded-xl px-3 py-2 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition w-full";
@@ -1010,9 +1025,7 @@ export default function Nannies() {
           <div className="bg-white rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-gray-400"><svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/><path d="M12 4v4m0 12v4M4 12H0m24 0h-4"/></svg>Chargement…</div>
         ) : (
           <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full">
-            {filtered
-              .filter(n => visibleNannies.some(v => String(v.id) === String(n.id)))
-              .map((nanny, idx) => {
+            {uniqueDisplayedNannies.map((nanny, idx) => {
               const cotisation = cotisationStatus[nanny.id];
               const daysRemaining = cotisation && cotisation.paidUntil ? Math.max(0, Math.ceil((new Date(cotisation.paidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
               const isDeleting = deleteId === nanny.id;

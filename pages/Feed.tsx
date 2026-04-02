@@ -14,8 +14,8 @@ import { getCached, setCached, DEFAULT_TTL } from '../src/utils/apiCache';
 import { publishRateLimit, subscribeRateLimit } from '../src/utils/rateLimitSync';
 
 type Media = { id: string; url: string; thumbnailUrl?: string };
-type Comment = { id?: string; authorName: string; authorId?: string; timeAgo: string; text: string; parentId?: string | null };
-type Post = { id: string; text?: string; createdAt: string; author?: { name?: string }; authorId?: string; medias?: Media[]; likes?: number; hasLiked?: boolean; commentsCount?: number; shares?: number; comments?: Comment[] };
+type Comment = { id?: string; authorName: string; authorAvatarUrl?: string; authorId?: string; timeAgo: string; text: string; parentId?: string | null };
+type Post = { id: string; text?: string; createdAt: string; author?: { name?: string; avatarUrl?: string }; authorId?: string; medias?: Media[]; likes?: number; hasLiked?: boolean; commentsCount?: number; shares?: number; comments?: Comment[] };
 
 import FeedImage from '../src/components/FeedImage';
 import ChildSelector from '../components/ChildSelector';
@@ -139,7 +139,7 @@ export default function Feed() {
   });
   const [loading, setLoading] = useState(false);
   const [likesModalOpen, setLikesModalOpen] = useState(false);
-  const [likers, setLikers] = useState<{ id: string; name: string }[]>([]);
+  const [likers, setLikers] = useState<{ id: string; name: string; avatarUrl?: string }[]>([]);
   const pressTimerRef = useRef<number | null>(null);
   const [likesModalPos, setLikesModalPos] = useState<{ top: number; left: number; width: number } | null>(null);
   // filter removed - not used anymore
@@ -202,7 +202,7 @@ export default function Feed() {
         return;
       }
       const body = await res.json();
-  const mapped: Comment[] = (body.comments || []).map((c: { id: string; authorName: string; authorId?: string; createdAt: string; text: string }) => ({ id: c.id, authorName: c.authorName, authorId: c.authorId, timeAgo: timeAgo(c.createdAt), text: c.text }));
+  const mapped: Comment[] = (body.comments || []).map((c: { id: string; authorName: string; authorAvatarUrl?: string; authorId?: string; createdAt: string; text: string }) => ({ id: c.id, authorName: c.authorName, authorAvatarUrl: c.authorAvatarUrl, authorId: c.authorId, timeAgo: timeAgo(c.createdAt), text: c.text }));
       setCommentsForPost(prev => ({ ...prev, [postId]: mapped }));
     } catch (e) {
       const err = e as unknown;
@@ -786,8 +786,12 @@ export default function Feed() {
         {/* Composer */}
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 mb-5">
           <div className="flex items-start gap-3 mb-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-              {(currentUser?.name || 'U').slice(0,1).toUpperCase()}
+            <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+              {currentUser?.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.name ? `${currentUser.name} avatar` : 'Avatar'} className="w-full h-full object-cover" />
+              ) : (
+                (currentUser?.name || 'U').slice(0,1).toUpperCase()
+              )}
             </div>
             <div className="flex-1">
               <div className="text-sm font-semibold text-gray-800">{currentUser?.name || 'Utilisateur'}</div>
@@ -991,8 +995,8 @@ export default function Feed() {
                     <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-900">J'aime</h3>
-                    <p className="text-xs text-gray-400">{likers.length} personne{likers.length > 1 ? 's' : ''}</p>
+                    <h3 className="text-base font-bold text-gray-900">{t('feed.likes_title', "J'aime")}</h3>
+                    <p className="text-xs text-gray-400">{t('feed.likes_count', { count: String(likers.length), s: likers.length > 1 ? 's' : '' })}</p>
                   </div>
                 </div>
                 <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
@@ -1007,14 +1011,14 @@ export default function Feed() {
                     <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
                       <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
                     </div>
-                    <p className="text-sm text-gray-400">Aucun j'aime pour le moment</p>
+                    <p className="text-sm text-gray-400">{t('feed.no_likes_yet', "Aucun j'aime pour le moment")}</p>
                   </div>
                 ) : (
                   <ul className="space-y-1">
                     {likers.map(u => (
                       <li key={u.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
-                          {(u.name || '?').split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase()}
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-xs font-bold text-[#0b5566]">
+                          {u.avatarUrl ? <img src={u.avatarUrl} alt={u.name ? `${u.name} avatar` : 'Avatar'} className="w-full h-full object-cover" /> : (u.name || 'U').slice(0,1).toUpperCase()}
                         </div>
                         <span className="text-sm font-medium text-gray-800">{u.name}</span>
                       </li>
@@ -1102,10 +1106,10 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-3 pb-3 border-b border-gray-100 flex-shrink-0">
           <div>
-            <h3 className="text-base font-bold text-gray-900">Commentaires</h3>
-            <div className="text-xs text-gray-400">{comments.length} commentaire{comments.length !== 1 ? 's' : ''}</div>
+            <h3 className="text-base font-bold text-gray-900">{t('feed.comments_title', 'Commentaires')}</h3>
+            <div className="text-xs text-gray-400">{t('feed.comments_count', { count: String(comments.length), s: comments.length !== 1 ? 's' : '' })}</div>
           </div>
-          <button onClick={onClose} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+          <button onClick={onClose} aria-label={t('feed.close', 'Fermer')} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -1115,15 +1119,15 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
           {loading ? (
             <div className="flex items-center justify-center py-10 gap-2 text-sm text-gray-400">
               <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity=".2"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4"/></svg>
-              Chargement…
+              {t('feed.loading', 'Chargement…')}
             </div>
           ) : comments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
               <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
                 <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
               </div>
-              <p className="text-sm text-gray-500 font-medium">Aucun commentaire</p>
-              <p className="text-xs text-gray-400 mt-0.5">Soyez le premier à commenter</p>
+              <p className="text-sm text-gray-500 font-medium">{t('feed.no_comments', 'Aucun commentaire')}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t('feed.first_comment', 'Soyez le premier à commenter')}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -1146,8 +1150,12 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
         {/* Reply box */}
         <div className="border-t border-gray-100 px-4 py-3 flex-shrink-0">
           <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-[#e6f4f7] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[#0b5566] mt-0.5">
-              {authorInitial}
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-[#e6f4f7] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[#0b5566] mt-0.5">
+              {currentUser?.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.name ? `${currentUser.name} avatar` : 'Avatar'} className="w-full h-full object-cover" />
+              ) : (
+                authorInitial
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <textarea
@@ -1157,13 +1165,13 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
                 onChange={e => { setVal(e.target.value); autoResize(); }}
                 onFocus={() => setFocused(true)}
                 onBlur={() => { if (!val.trim()) setFocused(false); }}
-                placeholder="Ajouter un commentaire…"
+                placeholder={t('feed.add_comment_placeholder', 'Ajouter un commentaire…')}
                 className="w-full resize-none bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-400 leading-relaxed overflow-hidden"
                 style={{ fontSize: '16px', minHeight: '24px' }}
               />
               {focused && (
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                  <span className="text-xs text-gray-400">{val.length > 0 ? `${val.length} caractère${val.length > 1 ? 's' : ''}` : ''}</span>
+                  <span className="text-xs text-gray-400">{val.length > 0 ? t('feed.chars_count', { count: String(val.length), s: val.length > 1 ? 's' : '' }) : ''}</span>
                   <button
                     type="button"
                     disabled={!val.trim()}
@@ -1189,6 +1197,7 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
 }
 
 function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, authorInitial, isReply }: { comment: Comment; currentUser: (AuthUser & { id?: string; role?: string }) | null; onUpdate: (commentId: string, newText: string) => Promise<void>; onDelete: (commentId: string) => Promise<void>; onReply?: (text: string, parentId?: string) => Promise<void>; authorInitial?: string; isReply?: boolean; }) {
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [val, setVal] = useState(comment.text);
@@ -1256,8 +1265,12 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
 
   return (
     <div className={`flex items-start gap-2 ${isReply ? 'gap-1.5' : ''}`}>
-      <div className={`${avatarSize} rounded-full bg-[#e6f4f7] flex items-center justify-center font-bold text-[#0b5566] flex-shrink-0 mt-0.5`}>
-        {(comment.authorName || 'U').slice(0,1).toUpperCase()}
+      <div className={`${avatarSize} rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 mt-0.5 bg-[#e6f4f7] text-[#0b5566] font-bold`}>
+        {comment.authorAvatarUrl ? (
+          <img src={comment.authorAvatarUrl} alt={comment.authorName ? `${comment.authorName} avatar` : 'Avatar'} className="w-full h-full object-cover" />
+        ) : (
+          (comment.authorName || 'U').slice(0,1).toUpperCase()
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
@@ -1275,11 +1288,11 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
                     <div className="p-1">
                       <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-gray-50">
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        Modifier
+                        {t('children.form.edit', 'Modifier')}
                       </button>
                       <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-red-500 rounded-lg hover:bg-gray-50">
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 9a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4 0a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zM4 6a1 1 0 011-1h10l-.6 9.6A2 2 0 0112.4 17H7.6a2 2 0 01-1.99-1.99L5 5zM9 3a1 1 0 00-1 1v1h4V4a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
-                        Supprimer
+                        {t('global.delete', 'Supprimer')}
                       </button>
                     </div>
                   </div>
@@ -1295,8 +1308,8 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
           <div className="mt-1">
             <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2 text-sm min-h-[64px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" style={{ fontSize: '16px' }} />
             <div className="mt-2 flex gap-2 justify-end">
-              <button type="button" onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1.5 rounded-xl bg-gray-100 text-xs font-medium">Annuler</button>
-              <button onClick={save} className="px-3 py-1.5 rounded-xl bg-[#0b5566] text-white text-xs font-medium">Sauvegarder</button>
+              <button type="button" onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1.5 rounded-xl bg-gray-100 text-xs font-medium">{t('global.cancel', 'Annuler')}</button>
+              <button onClick={save} className="px-3 py-1.5 rounded-xl bg-[#0b5566] text-white text-xs font-medium">{t('global.save', 'Sauvegarder')}</button>
             </div>
           </div>
         )}
@@ -1307,7 +1320,7 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
             onClick={() => { setReplyOpen(o => !o); setTimeout(() => replyRef.current?.focus(), 50); }}
             className="mt-1.5 text-xs text-gray-400 hover:text-[#0b5566] font-medium transition-colors"
           >
-            Répondre
+            {t('feed.reply', 'Répondre')}
           </button>
         )}
 
@@ -1323,25 +1336,25 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
                 value={replyVal}
                 rows={1}
                 onChange={e => { setReplyVal(e.target.value); autoResizeReply(); }}
-                placeholder={`Répondre à ${comment.authorName}…`}
+                placeholder={t('feed.reply_to', { author: comment.authorName })}
                 className="w-full resize-none bg-transparent border-none outline-none text-xs text-gray-800 placeholder-gray-400 leading-relaxed overflow-hidden"
                 style={{ fontSize: '16px', minHeight: '20px' }}
               />
               <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-gray-100">
-                <button onClick={() => { setReplyOpen(false); setReplyVal(''); }} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Annuler</button>
+                <button onClick={() => { setReplyOpen(false); setReplyVal(''); }} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">{t('global.cancel', 'Annuler')}</button>
                 <button
                   onClick={submitReply}
                   disabled={!replyVal.trim()}
                   className="px-3 py-1 rounded-full bg-[#0b5566] text-white text-xs font-bold disabled:opacity-40 hover:bg-[#08323a] transition-colors"
                 >
-                  Publier
+                  {t('feed.publish')}
                 </button>
               </div>
             </div>
           </div>
         )}
       </div>
-      {showConfirm && <ConfirmationModal title="Supprimer le commentaire" description='Voulez-vous vraiment supprimer ce commentaire ?' onCancel={() => setShowConfirm(false)} onConfirm={doDelete} />}
+      {showConfirm && <ConfirmationModal title={t('feed.delete_comment_title', 'Supprimer le commentaire')} description={t('feed.delete_comment_desc', 'Voulez-vous vraiment supprimer ce commentaire ?')} onCancel={() => setShowConfirm(false)} onConfirm={doDelete} />}
     </div>
   );
 }
@@ -1739,8 +1752,12 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
     <>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-            {(post.author?.name || 'U').slice(0,1).toUpperCase()}
+          <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-[#0b5566] to-[#08323a] text-white font-bold text-sm">
+            {post.author?.avatarUrl ? (
+              <img src={post.author.avatarUrl} alt={post.author.name ? `${post.author.name} avatar` : 'Avatar'} className="w-full h-full object-cover" />
+            ) : (
+              (post.author?.name || 'U').slice(0,1).toUpperCase()
+            )}
           </div>
           <div>
             <div className="font-semibold text-gray-800 text-sm leading-tight">{post.author?.name || 'Utilisateur'}</div>

@@ -387,13 +387,18 @@ router.get('/', async (req, res) => {
       id: p.id,
       text: p.text,
       createdAt: p.createdAt,
-      author: { name: p.author?.name },
+      author: { name: p.author?.name, avatarUrl: p.author?.avatarUrl },
       authorId: p.author?.id,
       medias: p.medias,
       likes: p._count?.likes || 0,
       commentsCount: p._count?.comments || 0,
       // defensive: author may be null if the user was deleted; don't throw
-      comments: p.comments.map(c => ({ authorName: c.author?.name || 'Utilisateur', timeAgo: c.createdAt, text: c.text })),
+      comments: p.comments.map(c => ({
+        authorName: c.author?.name || 'Utilisateur',
+        authorAvatarUrl: c.author?.avatarUrl,
+        timeAgo: c.createdAt,
+        text: c.text,
+      })),
       hasLiked: !!userLikes.find(l => l.postId === p.id),
     }));
     res.set('Cache-Control', 'private, max-age=10');
@@ -449,7 +454,7 @@ router.get('/:id/likes', async (req, res) => {
   try {
     // find likes and include user info
     const likes = await prisma.feedLike.findMany({ where: { postId }, include: { user: true } });
-    const users = likes.map(l => ({ id: l.user?.id, name: l.user?.name || 'Utilisateur' }));
+    const users = likes.map(l => ({ id: l.user?.id, name: l.user?.name || 'Utilisateur', avatarUrl: l.user?.avatarUrl }));
     return res.json({ users });
   } catch (e) {
     console.error('Failed to list likers', e);
@@ -501,7 +506,7 @@ router.get('/:id/comments', async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { author: true },
     });
-    const mapped = comments.map(c => ({ id: c.id, text: c.text, authorName: c.author?.name, authorId: c.authorId, createdAt: c.createdAt, parentId: c.parentId || null }));
+    const mapped = comments.map(c => ({ id: c.id, text: c.text, authorName: c.author?.name, authorAvatarUrl: c.author?.avatarUrl, authorId: c.authorId, createdAt: c.createdAt, parentId: c.parentId || null }));
     return res.json({ comments: mapped });
   } catch (e) {
     console.error('Failed to list comments', e);

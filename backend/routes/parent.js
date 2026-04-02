@@ -45,7 +45,7 @@ router.get('/children', requireAuth, async (req, res) => {
 router.get('/admin', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
     const user = req.user || {};
-    if (!canManageParents(user)) return res.status(403).json({ message: 'Forbidden' });
+    if (!canManageParents(user)) return res.status(403).json({ message: 'Interdit' });
 
     let parents = [];
     if (prisma.parent && typeof prisma.parent.findMany === 'function') {
@@ -96,7 +96,20 @@ router.get('/admin', requireAuth, requireActiveSubscription, async (req, res) =>
         const childrenFromName = fullName ? (byName.get(fullName) || []) : [];
         const merged = [...childrenFromEmail, ...childrenFromName];
         const unique = Array.from(new Map(merged.map(item => [item.child.id, item])).values());
-        return { id: u.id, firstName: u.name, lastName: '', email: u.email, phone: u.parentPhone || u.phone || null, children: unique, address: u.address || null, postalCode: u.postalCode || null, city: u.city || null, region: u.region || null, country: u.country || null };
+        return {
+          id: u.id,
+          firstName: u.name,
+          lastName: '',
+          email: u.email,
+          phone: u.parentPhone || u.phone || null,
+          avatarUrl: u.avatarUrl || null,
+          children: unique,
+          address: u.address || null,
+          postalCode: u.postalCode || null,
+          city: u.city || null,
+          region: u.region || null,
+          country: u.country || null
+        };
       });
     }
 
@@ -111,7 +124,7 @@ router.get('/admin', requireAuth, requireActiveSubscription, async (req, res) =>
     if (!isSuperAdmin(user) && user.centerId) assignmentWhere.centerId = user.centerId;
     const presentAssignments = await prisma.assignment.count({ where: assignmentWhere });
 
-    // ensure address fields come from linked user when present
+    // ensure address fields come from linked user when present and support avatarUrl
     const normalizedParents = (parents || []).map(p => {
       try {
         const rec = Object.assign({}, p);
@@ -121,6 +134,7 @@ router.get('/admin', requireAuth, requireActiveSubscription, async (req, res) =>
         rec.city = (userRec && userRec.city) ? userRec.city : (p.city || null);
         rec.region = (userRec && userRec.region) ? userRec.region : (p.region || null);
         rec.country = (userRec && userRec.country) ? userRec.country : (p.country || null);
+        rec.avatarUrl = (userRec && userRec.avatarUrl) ? userRec.avatarUrl : (p.avatarUrl || null);
         if (rec.user) delete rec.user;
         return rec;
       } catch (e) {
@@ -142,17 +156,17 @@ router.get('/:id/adjustments', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const month = String(req.query.month || '').trim();
-    if (month && !/^[0-9]{4}-[0-9]{2}$/.test(month)) return res.status(400).json({ message: 'Invalid month parameter, expected YYYY-MM' });
+    if (month && !/^[0-9]{4}-[0-9]{2}$/.test(month)) return res.status(400).json({ message: 'Paramètre de mois invalide, attendu AAAA-MM' });
     const userReq = req.user || {};
     const isOwner = userReq.parentId && String(userReq.parentId) === String(id);
-    if (!canManageParents(userReq) && !isOwner) return res.status(403).json({ message: 'Forbidden' });
+    if (!canManageParents(userReq) && !isOwner) return res.status(403).json({ message: 'Interdit' });
     const where = { parentId: id };
     if (month) where.month = month;
     const adj = await prisma.invoiceAdjustment.findMany({ where, orderBy: { createdAt: 'desc' } });
     res.json(adj);
   } catch (err) {
     console.error('/adjustments GET error', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 });
 
@@ -188,9 +202,9 @@ router.post('/:id/adjustments', requireAuth, async (req, res) => {
 router.delete('/:id/adjustments/:adjId', requireAuth, async (req, res) => {
   try {
     const { id, adjId } = req.params;
-    if (!canManageParents(req.user || {})) return res.status(403).json({ message: 'Forbidden' });
+    if (!canManageParents(req.user || {})) return res.status(403).json({ message: 'Interdit' });
     const adj = await prisma.invoiceAdjustment.findUnique({ where: { id: adjId } });
-    if (!adj || adj.parentId !== id) return res.status(404).json({ message: 'Adjustment not found' });
+    if (!adj || adj.parentId !== id) return res.status(404).json({ message: 'Ajustement non trouvé' });
     // revert paymentHistory if exists
     const [y, m] = adj.month.split('-').map(Number);
     const ph = await prisma.paymentHistory.findFirst({ where: { parentId: id, year: y, month: m } });
@@ -201,7 +215,7 @@ router.delete('/:id/adjustments/:adjId', requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('/adjustments DELETE error', err);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Erreur serveur' });
   }
 });
 
@@ -209,9 +223,9 @@ router.delete('/:id/adjustments/:adjId', requireAuth, async (req, res) => {
 router.get('/billing', requireAuth, async (req, res) => {
   try {
     const userReq = req.user || {};
-    if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
+    if (!canManageParents(userReq)) return res.status(403).json({ message: 'Interdit' });
     const month = String(req.query.month || '').trim();
-    if (!/^[0-9]{4}-[0-9]{2}$/.test(month)) return res.status(400).json({ message: 'Invalid month parameter, expected YYYY-MM' });
+    if (!/^[0-9]{4}-[0-9]{2}$/.test(month)) return res.status(400).json({ message: 'Paramètre de mois invalide, attendu AAAA-MM' });
     const [year, mon] = month.split('-').map(Number);
     const startDate = new Date(year, mon - 1, 1);
     const endDate = new Date(year, mon, 1);
@@ -279,13 +293,13 @@ router.get('/:id', requireAuth, async (req, res) => {
     const userReq = req.user || {};
     // allow if user can manage parents or it's their own parent record
     if (!(canManageParents(userReq) || (userReq.parentId && String(userReq.parentId) === String(id)))) {
-      return res.status(403).json({ message: 'Forbidden' });
+      return res.status(403).json({ message: 'Interdit' });
     }
     const parent = await prisma.parent.findUnique({ where: { id } });
-    if (!parent) return res.status(404).json({ message: 'Parent not found' });
+    if (!parent) return res.status(404).json({ message: 'Parent non trouvé' });
     // If manager but not super-admin, ensure same center
     if (!isSuperAdmin(userReq) && canManageParents(userReq) && userReq.centerId && parent.centerId !== userReq.centerId) {
-      return res.status(404).json({ message: 'Parent not found' });
+      return res.status(404).json({ message: 'Parent non trouvé' });
     }
     res.json(parent);
   } catch (err) {
@@ -297,12 +311,12 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'), async (req, res) => {
   try {
   const userReq = req.user || {};
-  if (!isAdminRole(userReq) && !isSuperAdmin(userReq)) return res.status(403).json({ message: 'Forbidden: seuls les administrateurs peuvent créer des parents' });
+  if (!isAdminRole(userReq) && !isSuperAdmin(userReq)) return res.status(403).json({ message: 'Interdit : seuls les administrateurs peuvent créer des parents' });
 
   // normalize email to avoid case-sensitivity issues
   const { name, phone, password, address, postalCode, city, region, country } = req.body;
   const email = String(req.body.email || '').trim().toLowerCase();
-    if (!name || !email) return res.status(400).json({ message: 'Missing fields: name and email required' });
+    if (!name || !email) return res.status(400).json({ message: 'Champs manquants : nom et email requis' });
 
     const parts = name.trim().split(/\s+/);
     const firstName = parts.shift() || '';
@@ -382,7 +396,7 @@ router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'
 
     res.status(201).json(result);
   } catch (err) {
-    if (err && err.code === 'P2002') return res.status(409).json({ message: 'Parent or user with this email already exists' });
+    if (err && err.code === 'P2002') return res.status(409).json({ message: 'Parent ou utilisateur avec cet email existe déjà' });
     console.error('POST /api/parent error', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -393,7 +407,7 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
     const { id } = req.params;
     const userReq = req.user || {};
     // allow if user can manage parents (admin/nanny/super-admin) OR the parent is updating their own record
-    if (!(canManageParents(userReq) || (userReq.parentId && String(userReq.parentId) === String(id)))) return res.status(403).json({ message: 'Forbidden' });
+    if (!(canManageParents(userReq) || (userReq.parentId && String(userReq.parentId) === String(id)))) return res.status(403).json({ message: 'Interdit' });
   const { name, phone, firstName, lastName, address, postalCode, city, region, country } = req.body;
   const email = req.body.email !== undefined ? String(req.body.email || '').trim().toLowerCase() : undefined;
     let data = {};
@@ -410,7 +424,7 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
     // Ensure the parent belongs to the same center (unless super-admin)
     if (!isSuperAdmin(userReq)) {
       const existing = await prisma.parent.findUnique({ where: { id } });
-      if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent not found' });
+      if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
     }
     const updated = await prisma.parent.update({ where: { id }, data });
 
@@ -459,7 +473,7 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
     res.json(updated);
   } catch (err) {
     console.error('PUT /api/parent/:id error', err);
-    if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent not found' });
+    if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent non trouvé' });
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -469,15 +483,15 @@ router.get('/by-email', requireAuth, async (req, res) => {
   try {
     const userReq = req.user || {};
   const email = (req.query.email || '').toString().trim().toLowerCase();
-    if (!email) return res.status(400).json({ message: 'Missing email' });
+    if (!email) return res.status(400).json({ message: 'Email manquant' });
 
     // allow if user can manage parents or if requesting their own email
     if (!(canManageParents(userReq) || (userReq.email && String(userReq.email).toLowerCase() === email.toLowerCase()))) {
-      return res.status(403).json({ message: 'Forbidden' });
+      return res.status(403).json({ message: 'Interdit' });
     }
 
   const parent = await prisma.parent.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
-    if (!parent) return res.status(404).json({ message: 'Parent not found' });
+    if (!parent) return res.status(404).json({ message: 'Parent non trouvé' });
     res.json(parent);
   } catch (err) {
     console.error('GET /api/parent/by-email error', err);
@@ -488,15 +502,26 @@ router.get('/by-email', requireAuth, async (req, res) => {
 router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
   const userReq = req.user || {};
-  if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
+  if (userReq.role === 'nanny') return res.status(403).json({ code: 'errors.nanny_cannot_delete' });
+  if (!canManageParents(userReq)) return res.status(403).json({ message: 'Interdit' });
     const { id } = req.params;
     if (!isSuperAdmin(userReq)) {
       const existing = await prisma.parent.findUnique({ where: { id } });
-      if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent not found' });
+      if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
     }
     await prisma.$transaction(async (tx) => {
-      // unlink users
-      await tx.user.updateMany({ where: { parentId: id }, data: { parentId: null } });
+      // Si l'utilisateur est admin → on retire juste le lien parentId
+      // Sinon → on supprime complètement le compte utilisateur
+      const parentUsers = await tx.user.findMany({ where: { parentId: id } });
+      for (const user of parentUsers) {
+        const isAdmin = user.role && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'));
+        if (isAdmin) {
+          await tx.user.update({ where: { id: user.id }, data: { parentId: null } });
+        } else {
+          try { await tx.refreshToken.deleteMany({ where: { userId: user.id } }); } catch (e) { /* ignore */ }
+          await tx.user.delete({ where: { id: user.id } });
+        }
+      }
       // delete parent-child relations
       await tx.parentChild.deleteMany({ where: { parentId: id } });
       // delete photo consents referencing this parent
@@ -506,10 +531,10 @@ router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) =
       // finally delete the parent
       await tx.parent.delete({ where: { id } });
     });
-    res.json({ message: 'Parent deleted' });
+    res.json({ message: 'Parent supprimé' });
   } catch (err) {
     console.error('DELETE /api/parent/:id error', err);
-    if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent not found' });
+    if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent non trouvé' });
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
@@ -523,7 +548,7 @@ router.post('/accept-invite', async (req, res) => {
     try {
       payload = jwt.verify(token, inviteSecret);
     } catch (err) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
+      return res.status(400).json({ message: 'Token invalide ou expiré' });
     }
     if (payload.type !== 'invite' || !payload.userId) return res.status(400).json({ message: 'Invalid token payload' });
   const hash = await bcrypt.hash(password, 10);
@@ -531,7 +556,7 @@ router.post('/accept-invite', async (req, res) => {
   const userToUpdate = await prisma.user.findUnique({ where: { id: String(payload.userId) } });
   if (!userToUpdate) return res.status(404).json({ message: 'User not found' });
   await prisma.user.update({ where: { id: userToUpdate.id }, data: { password: hash } });
-  res.json({ message: 'Password set successfully' });
+  res.json({ message: 'Mot de passe défini avec succès' });
   } catch (err) {
     console.error('POST /api/parent/accept-invite error', err);
     res.status(500).json({ error: 'Erreur serveur' });

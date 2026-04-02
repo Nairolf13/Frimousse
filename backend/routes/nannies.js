@@ -327,6 +327,7 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
     await prisma.$transaction(async (tx) => {
       await tx.assignment.deleteMany({ where: { nannyId: id } });
       await tx.report.deleteMany({ where: { nannyId: id } });
+      await tx.presenceSheet.deleteMany({ where: { nannyId: id } });
 
       const schedules = await tx.schedule.findMany({ where: { nannies: { some: { id } } }, select: { id: true } });
       for (const s of schedules) {
@@ -336,8 +337,16 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
       const users = await tx.user.findMany({ where: { nannyId: id } });
       for (const user of users) {
         await tx.refreshToken.deleteMany({ where: { userId: user.id } });
+
+        if (user.role && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'))) {
+          // If the user is also an admin, keep the account and unlink nanny role only
+          await tx.user.update({ where: { id: user.id }, data: { nannyId: null } });
+        } else {
+          // For pure nanny accounts, delete the user entirely (and related data is already cleaned up above)
+          await tx.user.delete({ where: { id: user.id } });
+        }
       }
-      await tx.user.deleteMany({ where: { nannyId: id } });
+
       await tx.nanny.delete({ where: { id } });
     });
     res.json({ success: true });

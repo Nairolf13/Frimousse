@@ -9,7 +9,7 @@ const API_URL = meta?.env?.VITE_API_URL ?? '/api';
 type Detail = { childName: string; daysPresent: number; ratePerDay: number; subtotal: number };
 type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string; adjustment?: number };
 type NannyGroup = {
-  nanny: { id: string; name?: string | null };
+  nanny: { id: string; name?: string | null; avatarUrl?: string | null };
   payments: Array<{ id: string; amount: number; createdAt?: string | null; parent?: { firstName?: string | null; lastName?: string | null; email?: string | null }; invoiceNumber?: string | null; adjustment?: number }>;
   total: number;
 };
@@ -364,7 +364,13 @@ export default function PaymentHistoryPage() {
           <div key={String(g.nanny?.id || Math.random())} className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden mb-4">
             {/* Nanny card header */}
             <div className="bg-gradient-to-r from-violet-600 to-violet-800 px-5 py-4 flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl bg-white/20 text-white flex items-center justify-center font-bold text-base flex-shrink-0">{initials}</div>
+              <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/20 text-white flex items-center justify-center font-bold text-base flex-shrink-0">
+                {g.nanny?.avatarUrl ? (
+                  <img src={g.nanny.avatarUrl} alt={`${g.nanny.name || 'Nounou'} avatar`} className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="font-bold text-white text-base leading-tight">{g.nanny?.name || '—'}</div>
                 <div className="text-xs text-white/70 mt-0.5">{(g.payments || []).length} {t('payments.by_nanny.payments') || 'paiements'}</div>

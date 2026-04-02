@@ -24,7 +24,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       document.documentElement.lang = locale;
-      document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.dir = 'ltr';
       localStorage.setItem('site_language', locale);
       document.cookie = `site_language=${locale};path=/;max-age=${60 * 60 * 24 * 365}`;
       try {

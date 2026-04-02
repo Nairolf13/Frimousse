@@ -455,6 +455,9 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
 
 router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
   const { id } = req.params;
+  if (req.user && req.user.role === 'nanny') {
+    return res.status(403).json({ code: 'errors.nanny_cannot_delete' });
+  }
   if (req.user && req.user.role === 'parent') {
     return res.status(403).json({ error: 'Forbidden: parents cannot delete children' });
   }

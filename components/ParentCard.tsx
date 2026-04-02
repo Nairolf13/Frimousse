@@ -15,6 +15,7 @@ type Parent = {
   lastName?: string | null;
   email?: string | null;
   phone?: string | null;
+  avatarUrl?: string | null;
   children?: ChildRef[];
 };
 
@@ -138,7 +139,11 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
         {/* Header carte */}
         <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-black/5">
           <div className="w-11 h-11 rounded-2xl flex items-center justify-center text-base font-extrabold text-white flex-shrink-0 shadow-sm" style={{ background: 'linear-gradient(135deg,#0b5566,#1a8fa8)' }}>
-            {initials}
+            {parent.avatarUrl ? (
+              <img src={parent.avatarUrl} alt={`${parent.firstName || parent.name || 'Utilisateur'} avatar`} className="w-full h-full object-cover rounded-2xl" />
+            ) : (
+              initials
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="font-bold text-gray-900 truncate text-base leading-tight">

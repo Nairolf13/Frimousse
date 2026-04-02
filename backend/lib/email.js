@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const nodemailer = require('nodemailer');
 
 function renderTemplate(templateName, lang, substitutions = {}) {
@@ -109,6 +110,10 @@ async function filterOptedOutEmails(prisma, emails) {
 
 async function sendTemplatedMail({ templateName, lang, to, subject, text, substitutions = {}, prisma = null, attachments: extraAttachments = [], respectOptOut = true, paymentHistoryId = null, bypassOptOut = false, recipientsText = null }) {
 
+  // Set logoUrl before rendering so it gets substituted in the template
+  if (!substitutions.logoUrl) {
+    substitutions.logoUrl = 'https://lesfrimousses.com/imgs/FrimousseLogo.webp';
+  }
   const html = renderTemplate(templateName, lang, substitutions);
   // normalize 'to' into array
   let recipients = Array.isArray(to) ? to.slice() : (to ? [to] : []);
@@ -118,10 +123,6 @@ async function sendTemplatedMail({ templateName, lang, to, subject, text, substi
     recipients = await filterOptedOutEmails(prisma, recipients);
   }
   if (!recipients.length) return;
-  // Use public URL for logo — no inline attachment to avoid spam filters
-  if (!substitutions.logoUrl) {
-    substitutions.logoUrl = 'https://lesfrimousses.com/imgs/FrimousseLogo.webp';
-  }
 
   const attachments = [];
   if (Array.isArray(extraAttachments) && extraAttachments.length) {
