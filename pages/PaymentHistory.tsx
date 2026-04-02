@@ -6,8 +6,8 @@ import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 const meta = import.meta as { env?: { VITE_API_URL?: string } };
 const API_URL = meta?.env?.VITE_API_URL ?? '/api';
 
-type Detail = { childName: string; daysPresent: number; ratePerDay: number; subtotal: number };
-type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string; adjustment?: number };
+type Detail = { childName: string; childPhotoUrl?: string | null; daysPresent: number; ratePerDay: number; subtotal: number };
+type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null; user?: { avatarUrl?: string | null } | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string; adjustment?: number };
 type NannyGroup = {
   nanny: { id: string; name?: string | null; avatarUrl?: string | null };
   payments: Array<{ id: string; amount: number; createdAt?: string | null; parent?: { firstName?: string | null; lastName?: string | null; email?: string | null }; invoiceNumber?: string | null; adjustment?: number }>;
@@ -269,7 +269,11 @@ export default function PaymentHistoryPage() {
             {/* Card header */}
             <div className="bg-gradient-to-r from-[#0b5566] to-[#08323a] px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-white/20 text-white flex items-center justify-center font-bold text-base flex-shrink-0">{initials}</div>
+                <div className="w-11 h-11 rounded-full overflow-hidden bg-white/20 text-white flex items-center justify-center font-bold text-base flex-shrink-0">
+                  {rec.parent?.user?.avatarUrl
+                    ? <img src={rec.parent.user.avatarUrl} alt={parentName} className="w-full h-full object-cover" />
+                    : initials}
+                </div>
                 <div className="min-w-0">
                   <div className="font-bold text-white text-base leading-tight truncate">{parentName}</div>
                   <div className="text-xs text-white/70 mt-0.5 truncate">{rec.parent?.email ?? ''}{rec.parent?.phone ? ` • ${rec.parent?.phone}` : ''}</div>
@@ -302,7 +306,11 @@ export default function PaymentHistoryPage() {
                     return visible.map((d, idx) => (
                       <div key={idx} className="bg-gray-50 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm flex-shrink-0">{(d.childName || '').slice(0,1).toUpperCase()}</div>
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                            {d.childPhotoUrl
+                              ? <img src={d.childPhotoUrl} alt={d.childName} className="w-full h-full object-cover" />
+                              : (d.childName || '').slice(0,1).toUpperCase()}
+                          </div>
                           <span className="font-semibold text-gray-800 text-sm">{d.childName}</span>
                         </div>
                         <div className="text-right text-sm">

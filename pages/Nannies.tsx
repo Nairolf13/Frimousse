@@ -1080,7 +1080,7 @@ export default function Nannies() {
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPlanningNanny(nanny); } }}
                     aria-label={`Voir le planning de ${nanny.name}`}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {nanny.avatarUrl ? (
                         <img src={nanny.avatarUrl} alt={nanny.name} className="w-full h-full object-cover" />
                       ) : (

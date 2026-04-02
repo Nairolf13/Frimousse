@@ -717,6 +717,7 @@
   "notifications.loading": "Chargement...",
   "notifications.none": "Aucune notification.",
   "notifications.confirm_delete.title": "Confirmer la suppression",
+  "notifications.confirm_delete.body": "Voulez-vous vraiment supprimer cette notification ?",
   "notifications.confirm_delete.cancel": "Annuler",
   "notifications.confirm_delete.confirm": "Supprimer",
   "notifications.deleting": "Suppression...",

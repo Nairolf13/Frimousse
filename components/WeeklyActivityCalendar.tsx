@@ -20,6 +20,7 @@ interface Activity {
 interface Nanny {
   id: string;
   name: string;
+  avatarUrl?: string | null;
 }
 
 interface Center {
@@ -623,8 +624,10 @@ export default function WeeklyActivityCalendar() {
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
-                              {n.name.charAt(0).toUpperCase()}
+                            <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                              {n.avatarUrl
+                                ? <img src={n.avatarUrl} alt={n.name} className="w-full h-full object-cover" />
+                                : n.name.charAt(0).toUpperCase()}
                             </div>
                             <span className="truncate">{n.name}</span>
                           </div>

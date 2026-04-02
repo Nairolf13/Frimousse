@@ -45,7 +45,7 @@ router.get('/:year/:month', async (req, res) => {
     let data;
     if (isSuperAdmin) {
       // Super-admin: full access
-      data = await prisma.paymentHistory.findMany({ where: whereBase, include: { parent: true } });
+      data = await prisma.paymentHistory.findMany({ where: whereBase, include: { parent: { include: { user: { select: { avatarUrl: true } } } } } });
     } else if (isAdmin) {
       // Regular admin: only parents belonging to the same center as the admin
       if (!user || !user.centerId) return res.status(403).json({ message: 'Accès refusé' });
@@ -54,13 +54,13 @@ router.get('/:year/:month', async (req, res) => {
           ...whereBase,
           parent: { is: { centerId: user.centerId } }
         },
-        include: { parent: true }
+        include: { parent: { include: { user: { select: { avatarUrl: true } } } } }
       });
     } else if (user && user.parentId) {
       // Parent: only their own records
       data = await prisma.paymentHistory.findMany({
         where: { ...whereBase, parentId: user.parentId },
-        include: { parent: true }
+        include: { parent: { include: { user: { select: { avatarUrl: true } } } } }
       });
     } else if (user && user.nannyId) {
       // Nanny: only parents who have at least one child that has an assignment or an explicit childNanny with this nanny
@@ -80,7 +80,7 @@ router.get('/:year/:month', async (req, res) => {
             }
           }
         },
-        include: { parent: true }
+        include: { parent: { include: { user: { select: { avatarUrl: true } } } } }
       });
     } else {
       // Other authenticated users: deny
@@ -114,11 +114,11 @@ router.get('/:year/:month', async (req, res) => {
           const start = new Date(yearInt, monthInt - 1, 1);
           const end = new Date(yearInt, monthInt, 0);
           for (const k of kids) {
-            const child = await prisma.child.findUnique({ where: { id: k.id }, select: { name: true } });
+            const child = await prisma.child.findUnique({ where: { id: k.id }, select: { name: true, photoUrl: true } });
             const days = await prisma.assignment.count({ where: { childId: k.id, date: { gte: start, lte: end } } });
             const subtotal = days * ratePerDay;
             actual += subtotal;
-            newDetails.push({ childName: child ? child.name : k.id, daysPresent: days, ratePerDay, subtotal });
+            newDetails.push({ childName: child ? child.name : k.id, childPhotoUrl: child?.photoUrl || null, daysPresent: days, ratePerDay, subtotal });
           }
         }
         actual -= rec.adjustment || 0;

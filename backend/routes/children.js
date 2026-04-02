@@ -26,6 +26,14 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => cb(null, `${Date.now()}_${Math.random().toString(36).slice(2,8)}${path.extname(file.originalname)}`)
 });
 const upload = multer({ storage, limits: { fileSize: PER_FILE_LIMIT } }); // per-file limit set via PER_FILE_LIMIT (1GB)
+const photoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.mimetype)) return cb(new Error('Unsupported file type'), false);
+    cb(null, true);
+  },
+});
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
@@ -136,7 +144,8 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
             include: { nanny: true }
           }
             ,
-            prescriptionUrl: true
+            prescriptionUrl: true,
+            photoUrl: true,
         }
       });
       return res.json(children);
@@ -173,7 +182,8 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
           allergies: true,
           parents: { include: { parent: true } },
             childNannies: { include: { nanny: true } },
-            prescriptionUrl: true
+            prescriptionUrl: true,
+            photoUrl: true,
         }
       });
       res.set('Cache-Control', 'private, max-age=15');
@@ -191,11 +201,12 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
   birthDate: true,
   cotisationPaidUntil: true,
         allergies: true,
-        parents: { 
-          include: { parent: true } 
+        parents: {
+          include: { parent: true }
         },
     childNannies: { include: { nanny: true } },
-    prescriptionUrl: true
+    prescriptionUrl: true,
+    photoUrl: true,
       }
     });
     res.set('Cache-Control', 'private, max-age=15');
@@ -881,6 +892,51 @@ router.post('/:id/prescription', auth, upload.single('prescription'), async (req
   return res.json({ url: publicUrl });
   } catch (e) {
     console.error('Failed to upload prescription', e);
+    return res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Upload profile photo for a child (admin or nanny only)
+router.post('/:id/photo', auth, photoUpload.single('photo'), async (req, res) => {
+  const { id } = req.params;
+  const user = req.user;
+  if (!user || (user.role !== 'admin' && user.role !== 'nanny' && !isSuperAdmin(user))) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+  try {
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: 'No file provided' });
+    if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ message: 'Storage not configured' });
+
+    const optimized = await sharp(file.buffer)
+      .rotate()
+      .resize(320, 320, { fit: 'cover' })
+      .webp({ quality: 85 })
+      .toBuffer();
+
+    const storagePath = path.posix.join('children-photos', `${id}-${Date.now()}.webp`);
+    const { error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(storagePath, optimized, {
+      contentType: 'image/webp',
+      upsert: false,
+    });
+    if (uploadError) {
+      console.error('Child photo upload error', uploadError);
+      return res.status(500).json({ message: 'Upload failed', details: uploadError.message });
+    }
+
+    const publicUrl = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath)?.data?.publicUrl || null;
+    if (!publicUrl) return res.status(500).json({ message: 'Could not get public URL' });
+
+    const existing = await prisma.child.findUnique({ where: { id }, select: { photoPath: true } });
+    if (!existing) return res.status(404).json({ message: 'Child not found' });
+    if (existing.photoPath) {
+      supabase.storage.from(SUPABASE_BUCKET).remove([existing.photoPath]).catch(e => console.error('Failed to remove old child photo', e));
+    }
+
+    await prisma.child.update({ where: { id }, data: { photoUrl: publicUrl, photoPath: storagePath } });
+    return res.json({ photoUrl: publicUrl });
+  } catch (e) {
+    console.error('Failed to upload child photo', e);
     return res.status(500).json({ message: 'Server error' });
   }
 });
