@@ -177,6 +177,7 @@
   "children.action.edit": "تعديل",
   "children.action.delete": "حذف",
   "children.deleting": "جارٍ الحذف...",
+  "children.photo.upload_hint": "تغيير الصورة",
   "children.photo_consent.yes": "إذن التصوير: نعم",
   "children.photo_consent.no": "إذن التصوير: لا",
   "children.photo_consent.unknown": "الإذن: —",

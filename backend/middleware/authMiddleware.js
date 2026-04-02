@@ -13,8 +13,10 @@ function generateRefreshTokenForMiddleware(user) {
 }
 
 function cookieOptions() {
+  // SameSite=Lax works since frontend and API share the same domain.
+  // Safari PWA (ITP) rejects SameSite=None even for first-party cookies.
   const base = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production' };
-  base.sameSite = process.env.NODE_ENV === 'production' ? 'None' : 'lax';
+  base.sameSite = 'lax';
   return base;
 }
 

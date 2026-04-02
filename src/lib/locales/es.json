@@ -515,6 +515,7 @@
   "children.action.edit": "Editar",
   "children.action.delete": "Eliminar",
   "children.deleting": "Eliminando...",
+  "children.photo.upload_hint": "Cambiar foto",
   "children.photo_consent.yes": "Autorización fotos: Sí",
   "children.photo_consent.no": "Autorización fotos: No",
   "children.photo_consent.unknown": "Autorización: —",

@@ -24,9 +24,10 @@ function generateRefreshToken(user) {
 }
 
 function cookieOptions() {
-  // For cross-site auth (frontend on a different origin) we must use SameSite=None and Secure in production.
+  // Frontend and API share the same domain (lesfrimousses.com) so SameSite=Lax works in prod
+  // and is required for Safari PWA (ITP blocks SameSite=None even for first-party cookies).
   const base = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production' };
-  base.sameSite = process.env.NODE_ENV === 'production' ? 'None' : 'lax';
+  base.sameSite = 'lax';
   return base;
 }
 

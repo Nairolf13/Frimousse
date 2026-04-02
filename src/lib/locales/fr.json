@@ -177,6 +177,7 @@
   "children.action.edit": "Éditer",
   "children.action.delete": "Supprimer",
   "children.deleting": "Suppression...",
+  "children.photo.upload_hint": "Changer la photo",
   "children.photo_consent.yes": "Autorisation photos: Oui",
   "children.photo_consent.no": "Autorisation photos: Non",
   "children.photo_consent.unknown": "Autorisation: —",
