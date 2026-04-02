@@ -141,8 +141,9 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
           }
         }
 
-        // If no parentId is present but we have the user's email, try to find a parent record by email
-        if (u && u.email) {
+        // If no parentId is present, try to find a parent record by email — skip for pure admins (already handled above if they have parentId/nannyId)
+        const isAdminRole = u && u.role && (String(u.role).toLowerCase().includes('admin') || String(u.role).toLowerCase().includes('super'));
+        if (u && u.email && !isAdminRole) {
           try {
             const r2 = await fetchWithRefresh(`${API_URL}/parent/by-email?email=${encodeURIComponent(String(u.email))}`, { credentials: 'include' });
             if (r2.ok) {
@@ -229,32 +230,11 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
   );
   if (!form) return <div className="text-sm text-gray-500">{t('no_profile')}</div>;
 
-  const displayName = form.role === 'parent' ? `${(form as ParentForm).firstName || ''} ${(form as ParentForm).lastName || ''}`.trim()
-    : form.role === 'nanny' ? (form as NannyForm).name || ''
-    : (form as UserForm).name || '';
-  const initials = displayName.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
-
-  const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition placeholder:text-gray-300";
+const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition placeholder:text-gray-300";
   const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1";
 
   return (
     <div className="space-y-6">
-      {/* Avatar + nom */}
-      <div className="flex items-center gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08a7c4] flex items-center justify-center text-white text-xl font-bold shadow-lg flex-shrink-0">
-          {initials}
-        </div>
-        <div>
-          <div className="font-bold text-gray-800 text-base">{displayName || '—'}</div>
-          <div className="text-xs text-gray-400 mt-0.5 capitalize">
-            {form.role === 'nanny'
-              ? t('settings.profile.role.nanny', 'Assistante maternelle')
-              : form.role === 'parent'
-                ? t('settings.profile.role.parent', 'Parent')
-                : t('settings.profile.role.user', 'Utilisateur')}
-          </div>
-        </div>
-      </div>
 
       {/* Champs parent */}
       {form.role === 'parent' && (
@@ -1235,8 +1215,22 @@ export default function Settings() {
                   <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onAvatarFileChange} />
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-800">{t('settings.profile.avatar', 'Photo de profil')}</div>
-                  <div className="text-xs text-gray-500">{t('settings.profile.avatar_desc', 'Téléchargez ou modifiez votre photo de profil')}</div>
+                  <div className="font-semibold text-gray-800">{displayName}</div>
+                  <div className="text-xs text-gray-400 capitalize mt-0.5">
+                    {authUser?.role === 'nanny'
+                      ? t('settings.profile.role.nanny', 'Assistante maternelle')
+                      : authUser?.role === 'parent'
+                        ? t('settings.profile.role.parent', 'Parent')
+                        : t('settings.profile.role.user', 'Utilisateur')}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={avatarUploading}
+                    className="mt-1.5 text-xs text-[#0b5566] hover:underline"
+                  >
+                    {t('settings.profile.avatar', 'Modifier la photo')}
+                  </button>
                 </div>
               </div>
               {cropModalOpen && cropImageSrc && (

@@ -286,6 +286,27 @@ router.get('/billing', requireAuth, async (req, res) => {
   }
 });
 
+// Find parent by email (must be before '/:id' so 'by-email' isn't treated as an id)
+router.get('/by-email', requireAuth, async (req, res) => {
+  try {
+    const userReq = req.user || {};
+  const email = (req.query.email || '').toString().trim().toLowerCase();
+    if (!email) return res.status(400).json({ message: 'Email manquant' });
+
+    // allow if user can manage parents or if requesting their own email
+    if (!(canManageParents(userReq) || (userReq.email && String(userReq.email).toLowerCase() === email.toLowerCase()))) {
+      return res.status(403).json({ message: 'Interdit' });
+    }
+
+  const parent = await prisma.parent.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+    if (!parent) return res.status(404).json({ message: 'Parent non trouvé' });
+    res.json(parent);
+  } catch (err) {
+    console.error('GET /api/parent/by-email error', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 // Get parent by id (allow owner or managers)
 router.get('/:id', requireAuth, async (req, res) => {
   try {
@@ -474,27 +495,6 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
   } catch (err) {
     console.error('PUT /api/parent/:id error', err);
     if (err && err.code === 'P2025') return res.status(404).json({ message: 'Parent non trouvé' });
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
-// Find parent by email (allow parent to fetch their own record by their email, or admins)
-router.get('/by-email', requireAuth, async (req, res) => {
-  try {
-    const userReq = req.user || {};
-  const email = (req.query.email || '').toString().trim().toLowerCase();
-    if (!email) return res.status(400).json({ message: 'Email manquant' });
-
-    // allow if user can manage parents or if requesting their own email
-    if (!(canManageParents(userReq) || (userReq.email && String(userReq.email).toLowerCase() === email.toLowerCase()))) {
-      return res.status(403).json({ message: 'Interdit' });
-    }
-
-  const parent = await prisma.parent.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
-    if (!parent) return res.status(404).json({ message: 'Parent non trouvé' });
-    res.json(parent);
-  } catch (err) {
-    console.error('GET /api/parent/by-email error', err);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

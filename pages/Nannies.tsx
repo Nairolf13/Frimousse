@@ -48,6 +48,7 @@ interface Nanny {
   city?: string | null;
   region?: string | null;
   country?: string | null;
+  avatarUrl?: string | null;
 }
 
 const emptyForm: Omit<Nanny, 'id' | 'assignedChildren'> & { email?: string; password?: string } = {
@@ -1079,8 +1080,12 @@ export default function Nannies() {
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPlanningNanny(nanny); } }}
                     aria-label={`Voir le planning de ${nanny.name}`}
                   >
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-white font-bold text-lg">{initials}</span>
+                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {nanny.avatarUrl ? (
+                        <img src={nanny.avatarUrl} alt={nanny.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-white font-bold text-lg">{initials}</span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">

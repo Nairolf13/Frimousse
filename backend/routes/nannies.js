@@ -35,6 +35,7 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
       city: u.city || null,
       region: u.region || null,
       country: u.country || null,
+      avatarUrl: u.avatarUrl || null,
     });
   });
   res.set('Cache-Control', 'private, max-age=15');
@@ -64,6 +65,7 @@ router.post('/batch/details', auth, async (req, res) => {
         city: u.city || null,
         region: u.region || null,
         country: u.country || null,
+        avatarUrl: u.avatarUrl || null,
       });
     });
 

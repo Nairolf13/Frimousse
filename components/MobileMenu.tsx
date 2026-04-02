@@ -312,6 +312,13 @@ export default function MobileMenu() {
           </nav>
           <div className="mx-4 border-t border-gray-100"></div>
           <div className="flex items-center gap-3 px-5 py-5">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-sm font-semibold text-[#0b5566] flex-shrink-0">
+              {(user as { avatarUrl?: string } | null)?.avatarUrl ? (
+                <img src={(user as { avatarUrl?: string }).avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                (user?.name || 'U').split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
+              )}
+            </div>
             <div>
               <div className="font-semibold text-gray-900 leading-tight text-sm">{user?.name || 'Utilisateur'}</div>
               <div className="text-xs text-gray-400 capitalize">{user?.role ? user.role.replace('_', ' ') : 'Utilisateur'}</div>
