@@ -360,7 +360,7 @@ router.post('/me/avatar', auth, avatarUpload.single('avatar'), async (req, res) 
 
     const { error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(objectPath, optimized, {
       contentType: 'image/webp',
-      upsert: true
+      upsert: false
     });
     if (uploadError) {
       console.error('Avatar upload error', uploadError);
