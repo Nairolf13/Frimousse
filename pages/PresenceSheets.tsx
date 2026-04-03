@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '../src/context/AuthContext';
+import { useTutorial } from '../src/context/useTutorial';
 import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import PageLoader from '../components/PageLoader';
@@ -118,6 +119,7 @@ function SignaturePad({ onSave, onCancel, t }: { onSave: (sig: string) => void; 
 
 export default function PresenceSheets() {
   const { user } = useAuth();
+  const { activeTour, currentStep, nextStep, goToStep } = useTutorial();
   const { t, locale } = useI18n();
   const monthNames: string[] = useMemo(() => {
     const localeCode = locale === 'fr' ? 'fr-FR' : locale === 'en' ? 'en-US' : locale === 'es' ? 'es-ES' : locale || 'en-US';
@@ -137,6 +139,8 @@ export default function PresenceSheets() {
   const [showCreate, setShowCreate] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sheetOpenedForTutorial, setSheetOpenedForTutorial] = useState(false);
+  const [simulatedSheet, setSimulatedSheet] = useState(false);
   // { entryId, role: 'nanny'|'parent' }
   const [signingEntry, setSigningEntry] = useState<{ entryId: string; role: 'nanny' | 'parent' } | null>(null);
   const [signingSheet, setSigningSheet] = useState<'nanny' | 'parent' | null>(null);
@@ -200,6 +204,65 @@ export default function PresenceSheets() {
     fetchWithRefresh(`${API_URL}/children`, { credentials: 'include' })
       .then(r => r.json()).then(setChildren).catch(() => {});
   }, [showCreate, isNannyUser, isAdminUser]);
+
+  // Historique : plus besoin du bridge timing ici car goToStep() prend le contrôle
+  useEffect(() => {
+    if (activeTour?.id !== 'presence-sheets' || currentStep !== 3 || !selectedSheet || !sheetOpenedForTutorial) return;
+    nextStep();
+    setSheetOpenedForTutorial(false);
+  }, [activeTour, currentStep, selectedSheet, sheetOpenedForTutorial, nextStep]);
+
+  // Si le tuto est en étape 3, on simule une feuille existante pour visualiser le contenu
+  useEffect(() => {
+    if (activeTour?.id !== 'presence-sheets' || currentStep !== 3) return;
+    if (!selectedSheet && !simulatedSheet) {
+      const child = { id: 'demo-child', name: 'Petit Paul' };
+      const nanny = { id: 'demo-nanny', name: 'Nounou Julie' };
+      const month = new Date().getMonth() + 1;
+      const year = new Date().getFullYear();
+      const entries = Array.from({ length: 22 }, (_, i) => {
+        const day = i + 1;
+        const date = new Date(year, month - 1, day);
+        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+        return {
+          id: `demo-entry-${day}`,
+          date: date.toISOString().split('T')[0],
+          arrivalTime: isWeekend ? null : '08h30',
+          departureTime: isWeekend ? null : '17h30',
+          absent: false,
+          comment: day === 5 ? 'Arrivée retardée de 15 min' : null,
+          nannySignature: null,
+          nannySignedAt: null,
+          parentSignature: null,
+          parentSignedAt: null,
+        };
+      });
+      const demoSheet = {
+        id: 'demo-sheet', childId: child.id, nannyId: nanny.id, centerId: null,
+        month, year, status: 'draft' as const, entries, child, nanny,
+        sentAt: null, joursContrat: 22, joursPresence: 20, joursAbsence: 2,
+        heuresCompl: 0, nannySignature: null, nannySignedAt: null, parentSignature: null, parentSignedAt: null,
+      };
+      setSelectedSheet(demoSheet);
+      setEditingEntries(entries);
+      setBillingData({ joursContrat: '22', joursPresence: '20', joursAbsence: '2', heuresCompl: '0' });
+      setSimulatedSheet(true);
+      setSheetOpenedForTutorial(true);
+    }
+  }, [activeTour, currentStep, selectedSheet, simulatedSheet]);
+
+  // Forcer le statut de la feuille selon les étapes de tuto (avant envoi / après envoi)
+  useEffect(() => {
+    if (activeTour?.id !== 'presence-sheets' || !selectedSheet) return;
+
+    if (currentStep === 5 && selectedSheet.status !== 'draft') {
+      setSelectedSheet(prev => prev ? { ...prev, status: 'draft', sentAt: null } : prev);
+    }
+
+    if (currentStep === 6 && selectedSheet.status !== 'sent') {
+      setSelectedSheet(prev => prev ? { ...prev, status: 'sent', sentAt: new Date().toISOString() } : prev);
+    }
+  }, [activeTour, currentStep, selectedSheet]);
 
   useEffect(() => {
     if (!u || u.role !== 'super-admin') return;
@@ -381,6 +444,19 @@ export default function PresenceSheets() {
       setSheets(prev => [sheet, ...prev]);
       setShowCreate(false);
       openSheet(sheet);
+
+      if (activeTour?.id === 'presence-sheets') {
+        const viewStepIndex = activeTour.steps.findIndex(s => s.target === 'presence-sheet-view');
+        if (viewStepIndex !== -1) {
+          goToStep(viewStepIndex);
+        }
+      }
+
+      setTimeout(() => {
+        const el = document.querySelector('[data-tour="presence-sheet-view"]');
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+
     } catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur lors de la création'); }
     finally { setSaving(false); }
   }
@@ -421,7 +497,7 @@ export default function PresenceSheets() {
 
   if (loading) return <PageLoader title={t('page.presenceSheets', 'Feuilles de présence')} icon={<HiOutlineDocumentText className="w-6 h-6 text-white" />} />;
 
-  const canEdit = isNannyUser || isAdminUser;
+  const canEdit = isNannyUser || isAdminUser || simulatedSheet;
 
   const parentChildIds = parentFilter ? (parents.find(p => p.id === parentFilter)?.children?.map(c => c.id) || []) : [];
   const filteredSheets = sheets.filter(s =>
@@ -450,7 +526,7 @@ export default function PresenceSheets() {
             </div>
           </div>
           {canEdit && (
-            <button onClick={() => { setShowCreate(true); setError(''); }}
+            <button data-tour="presence-sheets-new" onClick={() => { setShowCreate(true); setError(''); }}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow hover:opacity-90 transition"
               style={{ background: 'linear-gradient(135deg,#0b5566,#1a8fa8)' }}>
               <HiOutlinePlus className="w-4 h-4" /> {t('presenceSheets.new_sheet', 'Nouvelle feuille')}
@@ -561,7 +637,7 @@ export default function PresenceSheets() {
               </div>
               <div className="flex gap-2 mt-5">
                 <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">{t('global.cancel', 'Annuler')}</button>
-                <button onClick={createSheet} disabled={!createForm.childId || saving}
+                <button data-tour="presence-sheets-create" onClick={createSheet} disabled={!createForm.childId || saving}
                   className="flex-1 py-2.5 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
                   {saving ? t('presenceSheets.creating', 'Création…') : t('presenceSheets.create', 'Créer')}
                 </button>
@@ -575,7 +651,7 @@ export default function PresenceSheets() {
           <div className="space-y-2 mb-4">
             <p className="text-sm text-gray-400 text-center mb-3">{t('presenceSheets.select_sheet', 'Sélectionnez une feuille pour la consulter')}</p>
             {filteredSheets.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow p-8 text-center text-gray-400">
+              <div data-tour="presence-sheets-empty" className="bg-white rounded-2xl shadow p-8 text-center text-gray-400">
                 <HiOutlineDocumentText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">
                   {filterMonth || filterYear ? t('presenceSheets.select_sheet.empty.date', 'Aucune feuille pour cette période') : t('presenceSheets.select_sheet.empty', 'Aucune feuille de présence')}
@@ -620,7 +696,7 @@ export default function PresenceSheets() {
 
         {/* Détail feuille sélectionnée */}
         {selectedSheet && (
-              <div className="bg-white rounded-2xl shadow overflow-hidden">
+              <div data-tour="presence-sheet-view" className="bg-white rounded-2xl shadow overflow-hidden">
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
@@ -633,27 +709,27 @@ export default function PresenceSheets() {
                           ? <img src={selectedSheet.child.photoUrl} alt={selectedSheet.child.name} className="w-full h-full object-cover" />
                           : selectedSheet.child.name.charAt(0).toUpperCase()}
                       </div>
-                      <h2 className="font-bold text-[#0b5566] text-base">{selectedSheet.child.name}</h2>
+                      <h2 data-tour="presence-sheet-view" className="font-bold text-[#0b5566] text-base">{selectedSheet.child.name}</h2>
                       {statusBadge(selectedSheet.status, t)}
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">{monthNames[selectedSheet.month - 1]} {selectedSheet.year} · {selectedSheet.nanny.name}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {canEdit && selectedSheet.status !== 'signed' && (
-                      <button onClick={saveEntries} disabled={saving}
+                      <button data-tour="presence-sheet-save" onClick={saveEntries} disabled={saving}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#0b5566]/30 text-[#0b5566] text-xs font-semibold hover:bg-[#0b5566]/5 disabled:opacity-50">
                         <HiOutlinePencil className="w-3.5 h-3.5" />
                         {saving ? t('presenceSheets.saving', 'Sauvegarde…') : t('presenceSheets.save', 'Sauvegarder')}
                       </button>
                     )}
                     {canEdit && selectedSheet.status === 'draft' && (
-                      <button onClick={sendSheet} disabled={sending}
+                      <button data-tour="presence-sheet-send" onClick={sendSheet} disabled={sending}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:opacity-90 disabled:opacity-50">
                         <HiOutlinePaperAirplane className="w-3.5 h-3.5" />
                         {sending ? t('presenceSheets.sending', 'Envoi…') : t('presenceSheets.send', 'Envoyer aux parents')}
                       </button>
                     )}
-                    <button onClick={() => downloadPdf(selectedSheet)} disabled={downloadingPdf}
+                    <button data-tour="presence-sheet-pdf" onClick={() => downloadPdf(selectedSheet)} disabled={downloadingPdf}
                       className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 disabled:opacity-50">
                       <HiOutlineDownload className="w-3.5 h-3.5" /> {downloadingPdf ? '…' : t('presenceSheets.pdf', 'PDF')}
                     </button>
@@ -973,7 +1049,7 @@ export default function PresenceSheets() {
                           <span className="text-[10px] text-gray-400">{t('presenceSheets.signature.signedAt', { date: new Date(selectedSheet.nannySignedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR') })}</span>
                         )}
                         {(isNannyUser || isAdminUser) && !selectedSheet.nannySignature && (
-                          <button
+                          <button data-tour="presence-sheet-sign" 
                             onClick={() => setSigningSheet('nanny')}
                             className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-[#0b5566]/40 text-xs text-[#0b5566] hover:bg-[#0b5566]/5 transition">
                             <HiOutlinePencil className="w-3 h-3" /> {t('presenceSheets.signature.btn', 'Signer')}
@@ -993,7 +1069,7 @@ export default function PresenceSheets() {
                           <span className="text-[10px] text-gray-400">{t('presenceSheets.signature.signedAt', { date: new Date(selectedSheet.parentSignedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR') })}</span>
                         )}
                         {isParentUser && !selectedSheet.parentSignature && (
-                          <button
+                          <button data-tour="presence-sheet-sign-parent"
                             onClick={() => setSigningSheet('parent')}
                             className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-emerald-400/60 text-xs text-emerald-600 hover:bg-emerald-50 transition">
                             <HiOutlinePencil className="w-3 h-3" /> {t('presenceSheets.signature.btn', 'Signer')}

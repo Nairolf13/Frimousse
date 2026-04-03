@@ -76,6 +76,18 @@ const ParentDashboard: React.FC = () => {
   const [showChildModal, setShowChildModal] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editingParent, setEditingParent] = useState<Parent | null>(null);
+
+  // Open form automatically when tutorial targets a form field
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { target, tourId } = (e as CustomEvent).detail ?? {};
+      if (tourId === 'add-parent' && typeof target === 'string' && target.startsWith('parent-form-')) {
+        setAdding(true);
+      }
+    };
+    window.addEventListener('tutorial:step', handler);
+    return () => window.removeEventListener('tutorial:step', handler);
+  }, []);
   const [deletingParentId, setDeletingParentId] = useState<string | null>(null);
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' });
   // --- geodata/autocomplete (copied from RegisterPage for address suggestions) ---
@@ -452,15 +464,16 @@ const ParentDashboard: React.FC = () => {
               </div>
               <div className="p-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {/* Identité */}
-                <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-3" data-tour="parent-form-identity">
                   <div><label htmlFor="parent-firstName" className={labelCls}>{t('parent.form.firstName')} <span className="text-red-500">*</span></label><input id="parent-firstName" name="firstName" value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} placeholder={t('parent.form.firstName')} required className={inputCls} /></div>
                   <div><label htmlFor="parent-lastName" className={labelCls}>{t('parent.form.lastName')} <span className="text-red-500">*</span></label><input id="parent-lastName" name="lastName" value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} placeholder={t('parent.form.lastName')} required className={inputCls} /></div>
                   <div><label htmlFor="parent-phone" className={labelCls}>{t('parent.form.phone')}</label><input id="parent-phone" name="phone" type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder={t('parent.form.phone')} className={inputCls} /></div>
                 </div>
                 {/* Email */}
-                <div className="sm:col-span-2 lg:col-span-1"><label htmlFor="parent-email" className={labelCls}>{t('parent.form.email')} <span className="text-red-500">*</span></label><input id="parent-email" name="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={t('parent.form.email')} required className={inputCls} /></div>
+                <div data-tour="parent-form-email" className="sm:col-span-2 lg:col-span-1"><label htmlFor="parent-email" className={labelCls}>{t('parent.form.email')} <span className="text-red-500">*</span></label><input id="parent-email" name="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder={t('parent.form.email')} required className={inputCls} /><p className="text-xs text-gray-500 mt-1">{t('tour.add-parent.email.description', "L'e-mail sera l'identifiant de connexion du parent.")}</p></div>
                 {/* Adresse */}
-                <div id="parent-form-address" className="relative md:col-span-2">
+                <div id="parent-form-address" data-tour="parent-form-address" className="relative md:col-span-2">
+                  <p className="text-xs text-gray-500 mb-2">{t('tour.add-parent.address.description', "Renseignez l’adresse complète (adresse, code postal, ville, région, pays) pour la facturation et les dossiers administratifs.")}</p>
                   <label htmlFor="parent-address" className={labelCls}>{t('parent.form.address')}</label>
                   <input id="parent-address" name="address" value={form.address} onChange={e => { setForm({ ...form, address: e.target.value }); setOpenAddress(true); }} onFocus={() => setOpenAddress(true)} placeholder={t('parent.form.address') || 'Adresse'} className={inputCls} autoComplete="off" />
                   {geodataError && <div className="text-xs text-red-500 mt-1">{geodataError}</div>}
@@ -489,7 +502,7 @@ const ParentDashboard: React.FC = () => {
 
                 {/* Mot de passe — masqué si l'email correspond au compte admin connecté */}
                 {!(form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase()) && (<>
-                <div>
+                <div data-tour="parent-form-password">
                   <label htmlFor="parent-password" className={labelCls}>{t('parent.form.password.placeholder')}</label>
                   <div className="relative"><input id="parent-password" name="password" type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={t('parent.form.password.placeholder')} className={inputCls + ' pr-10'} /><button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>{showPw ? '🙈' : '👁️'}</button></div>
                 </div>

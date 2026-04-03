@@ -28,6 +28,7 @@ export interface TutorialContextValue {
   startTour: (tourId: string) => void;
   nextStep: () => void;
   prevStep: () => void;
+  goToStep: (index: number) => void;
   stopTour: () => void;
   toggleMenu: () => void;
   closeMenu: () => void;

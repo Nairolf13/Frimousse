@@ -784,7 +784,7 @@ export default function Feed() {
         )}
 
         {/* Composer */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 mb-5">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 mb-5" data-tour="feed-compose">
           <div className="flex items-start gap-3 mb-3">
             <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {currentUser?.avatarUrl ? (
@@ -828,7 +828,7 @@ export default function Feed() {
                 <ChildSelector open={showTagMenu} onClose={() => setShowTagMenu(false)} availableChildren={availableChildren} selectedChildIds={selectedChildIds} setSelectedChildIds={setSelectedChildIds} noChildSelected={noChildSelected} setNoChildSelected={setNoChildSelected} consentMap={consentMap} title={t('feed.tag_children')} confirmLabel={t('common.confirm')} />
               </div>
             )}
-            <button type="submit" disabled={loading || uploading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="ml-auto flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+            <button type="submit" data-tour="feed-publish-btn" disabled={loading || uploading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="ml-auto flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
               {(loading || uploading) ? <><Spinner size={16} /><span>{t('feed.sending')}</span></> : t('feed.publish')}
             </button>
           </div>

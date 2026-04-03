@@ -194,6 +194,18 @@ export default function Nannies() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+
+  // Open form automatically when tutorial targets a form field
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { target, tourId } = (e as CustomEvent).detail ?? {};
+      if (tourId === 'add-nanny' && typeof target === 'string' && target.startsWith('nanny-form-')) {
+        setAdding(true);
+      }
+    };
+    window.addEventListener('tutorial:step', handler);
+    return () => window.removeEventListener('tutorial:step', handler);
+  }, []);
   const optimisticIdRef = useRef<string | null>(null);
   const [error, setError] = useState('');
   const [planningNanny, setPlanningNanny] = useState<Nanny|null>(null);
@@ -854,13 +866,13 @@ export default function Nannies() {
             </div>
             <div className="p-6 grid gap-4 md:grid-cols-2">
             {/* Name */}
-            <div className="flex flex-col">
+            <div className="flex flex-col" data-tour="nanny-form-identity">
               <label className={labelCls}>{t('nanny.form.name')} <span className="text-red-500">*</span></label>
               <input name="name" value={form.name} onChange={handleChange} placeholder={t('nanny.form.name')} required className={inputCls} />
             </div>
 
             {/* Availability */}
-            <div className="flex flex-col">
+            <div className="flex flex-col" data-tour="nanny-form-availability">
               <label className={labelCls}>{t('nanny.form.availability') || t('nanny.availability.available')} <span className="text-red-500">*</span></label>
               <select name="availability" value={form.availability} onChange={handleChange} required className={inputCls}>
                 <option value="Disponible">{t('nanny.availability.available')}</option>
@@ -870,7 +882,8 @@ export default function Nannies() {
             </div>
 
             {/* Address */}
-            <div id="nanny-form-address" className="md:col-span-2">
+            <div id="nanny-form-address" data-tour="nanny-form-address" className="md:col-span-2">
+              <p className="text-xs text-gray-500 mb-2">{t('tour.add-nanny.address.description', 'Renseignez l’adresse complète (adresse, code postal, ville, région, pays) pour assurer un suivi précis et une facturation correcte.')}</p>
               <label className={labelCls}>{t('parent.form.address')} <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input name="address" value={form.address || ''} onChange={(e) => { setForm({ ...form, address: e.target.value }); setOpenAddress(true); }} placeholder={t('parent.form.address')} className={inputCls} onFocus={() => setOpenAddress(true)} />
@@ -945,27 +958,28 @@ export default function Nannies() {
               <input name="contact" type="tel" value={form.contact || ''} onChange={handleChange} placeholder={t('nanny.form.contact')} className={inputCls} />
             </div>
 
-            {/* Email */}
-            <div className="flex flex-col">
-              <label className={labelCls}>{t('nanny.form.email')} <span className="text-gray-400 font-normal text-xs ml-1">(optionnel)</span></label>
-              <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className={inputCls} />
-              <p className="text-xs text-gray-400 mt-1">Vous pouvez utiliser votre propre email. Laissez vide pour créer sans compte de connexion.</p>
-            </div>
-
-            {/* Message si l'email saisi est celui du compte admin connecté */}
-            {form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase() && (
-              <div className="md:col-span-2 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
-                <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span>Vous utilisez votre propre email. <strong>Il n'est pas nécessaire de saisir un mot de passe</strong> — vous vous connecterez toujours avec votre compte administrateur.</span>
+            {/* Credentials (email + password) */}
+            <div className="md:col-span-2" data-tour="nanny-form-credentials">
+              <div className="flex flex-col">
+                <label className={labelCls}>{t('nanny.form.email')} <span className="text-gray-400 font-normal text-xs ml-1">(optionnel)</span></label>
+                <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className={inputCls} />
+                <p className="text-xs text-gray-400 mt-1">Vous pouvez utiliser votre propre email. Laissez vide pour créer sans compte de connexion.</p>
               </div>
-            )}
 
-            {/* Password — masqué si l'email correspond au compte admin connecté */}
-            {!(form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase()) && (<>
-            <div className="relative flex flex-col">
-              <label className={labelCls}>{t('nanny.form.password')}</label>
-              <input name="password" autoComplete="new-password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className={`${inputCls} pr-10`} />
-              <button type="button" tabIndex={-1} className="absolute right-3 bottom-2.5 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>
+              {/* Message si l'email saisi est celui du compte admin connecté */}
+              {form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase() && (
+                <div className="mt-3 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                  <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <span>Vous utilisez votre propre email. <strong>Il n'est pas nécessaire de saisir un mot de passe</strong> — vous vous connecterez toujours avec votre compte administrateur.</span>
+                </div>
+              )}
+
+              {/* Password — masqué si l'email correspond au compte admin connecté */}
+              {!(form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase()) && (<>
+                <div className="relative flex flex-col mt-4">
+                  <label className={labelCls}>{t('nanny.form.password')}</label>
+                  <input name="password" autoComplete="new-password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className={`${inputCls} pr-10`} />
+                  <button type="button" tabIndex={-1} className="absolute right-3 bottom-2.5 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>
                 {showPw ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
               </button>
             </div>
@@ -998,6 +1012,7 @@ export default function Nannies() {
                 </div>
               </div>
             )}
+            </div>
             </div>
 
             {/* Form footer */}

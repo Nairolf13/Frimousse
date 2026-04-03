@@ -38,13 +38,6 @@
   }
 
   @keyframes tutorial-backdrop {
-
-.rtl-text {
-  direction: rtl;
-  unicode-bidi: isolate;
-  text-align: right;
-}
-
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
@@ -52,9 +45,30 @@
     0% { opacity: 0; transform: translateY(16px) scale(0.96); }
     100% { opacity: 1; transform: translateY(0) scale(1); }
   }
+  @keyframes tutorial-card-up {
+    0% { opacity: 0; transform: translateY(-16px) scale(0.96); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
   @keyframes tutorial-ring {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--color-brand-400), 0.4); }
-    50% { box-shadow: 0 0 0 8px rgba(var(--color-brand-400), 0); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(47, 168, 209, 0.5); }
+    50% { box-shadow: 0 0 0 10px rgba(47, 168, 209, 0); }
+  }
+  @keyframes tutorial-beacon {
+    0% { transform: scale(1); opacity: 0.6; }
+    70% { transform: scale(2.8); opacity: 0; }
+    100% { transform: scale(2.8); opacity: 0; }
+  }
+  @keyframes tutorial-bounce-y {
+    0%, 100% { transform: translateY(0) translateX(-50%); }
+    50% { transform: translateY(-5px) translateX(-50%); }
+  }
+  @keyframes tutorial-bounce-x {
+    0%, 100% { transform: translateX(0) translateY(-50%); }
+    50% { transform: translateX(5px) translateY(-50%); }
+  }
+  @keyframes tutorial-indicator-in {
+    0% { opacity: 0; transform: scale(0.7) translateX(-50%); }
+    100% { opacity: 1; transform: scale(1) translateX(-50%); }
   }
 }
 
@@ -102,8 +116,23 @@
   .tutorial-card-in {
     animation: tutorial-card 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+  .tutorial-card-up-in {
+    animation: tutorial-card-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
   .tutorial-ring-pulse {
-    animation: tutorial-ring 2s ease-in-out infinite;
+    animation: tutorial-ring 1.8s ease-in-out infinite;
+  }
+  .tutorial-beacon {
+    animation: tutorial-beacon 1.8s ease-out infinite;
+  }
+  .tutorial-bounce-y {
+    animation: tutorial-bounce-y 1.2s ease-in-out infinite;
+  }
+  .tutorial-bounce-x {
+    animation: tutorial-bounce-x 1.2s ease-in-out infinite;
+  }
+  .tutorial-indicator-in {
+    animation: tutorial-indicator-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
   }
 }
 
