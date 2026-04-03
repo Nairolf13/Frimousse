@@ -700,7 +700,11 @@ export default function Children() {
       const fd = new FormData();
       fd.append('photo', croppedFile);
       const res = await fetchWithRefresh(`${API_URL}/children/${childId}/photo`, { method: 'POST', credentials: 'include', body: fd });
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        console.error('Child photo upload server error', res.status, errBody);
+        throw new Error(errBody.details || errBody.message || 'Upload failed');
+      }
       const data = await res.json();
       setChildren(prev => prev.map(c => c.id === childId ? { ...c, photoUrl: data.photoUrl } : c));
     } catch (err) {

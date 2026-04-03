@@ -132,6 +132,19 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
     const { priority, type, status, childId, nannyId, summary, details, date, time, duration, childrenInvolved } = req.body;
     if (summary && String(summary).length > 500) return res.status(400).json({ message: 'Résumé trop long (max 500 caractères).' });
     if (details && String(details).length > 5000) return res.status(400).json({ message: 'Détails trop longs (max 5000 caractères).' });
+
+    // Verify new childId/nannyId belong to the same center before updating
+    if (!isSuperAdmin(req.user) && req.user.centerId) {
+      if (childId && childId !== existing.childId) {
+        const child = await prisma.child.findUnique({ where: { id: childId } });
+        if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ message: 'Child not found' });
+      }
+      if (nannyId && nannyId !== existing.nannyId) {
+        const nanny = await prisma.nanny.findUnique({ where: { id: nannyId } });
+        if (!nanny || nanny.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
+      }
+    }
+
     let isoDate = date;
     if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
       isoDate = new Date(date + 'T' + (time || '00:00') + ':00.000Z').toISOString();

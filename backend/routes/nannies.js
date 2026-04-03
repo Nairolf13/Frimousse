@@ -362,6 +362,7 @@ router.get('/:id', auth, async (req, res) => {
   const { id } = req.params;
   const nanny = await prisma.nanny.findUnique({ where: { id }, include: { assignedChildren: true, user: true } });
   if (!nanny) return res.status(404).json({ message: 'Not found' });
+  if (!isSuperAdmin(req.user) && nanny.centerId !== req.user.centerId) return res.status(404).json({ message: 'Not found' });
   const u = nanny.user || {};
   const mapped = Object.assign({}, nanny, {
     address: u.address || null,

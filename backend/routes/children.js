@@ -38,7 +38,35 @@ const photoUpload = multer({
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'PrivacyPictures';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false } });
+let fetchFn;
+try { fetchFn = globalThis.fetch || require('node-fetch'); } catch (e) { fetchFn = globalThis.fetch; }
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { autoRefreshToken: false }, global: { fetch: globalThis.fetch || require('node-fetch') } });
+
+async function uploadViaJwtFallback(bucket, objectPath, buffer, contentType) {
+  if (!process.env.SUPABASE_JWT_SECRET) return { ok: false, body: 'SUPABASE_JWT_SECRET non configuré' };
+  if (!fetchFn) return { ok: false, body: 'fetch non disponible' };
+  try {
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { role: 'service_role', exp: Math.floor(Date.now() / 1000) + 60 * 5 },
+      process.env.SUPABASE_JWT_SECRET,
+      { algorithm: 'HS256' }
+    );
+    const url = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/${encodeURIComponent(bucket)}/${objectPath}`;
+    const headers = { Authorization: `Bearer ${token}` };
+    if (contentType) headers['Content-Type'] = contentType;
+    const fallbackRes = await fetchFn(url, { method: 'POST', headers, body: buffer });
+    const bodyText = await (fallbackRes.text ? fallbackRes.text() : Promise.resolve(''));
+    if (!fallbackRes.ok) {
+      console.error('JWT fallback upload failed', { status: fallbackRes.status, body: bodyText?.slice ? bodyText.slice(0, 300) : bodyText });
+      return { ok: false, status: fallbackRes.status, body: bodyText };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error('JWT fallback upload exception', e && e.message ? e.message : e);
+    return { ok: false, body: String(e) };
+  }
+}
 
 function validatePrescriptionMime(mimetype) {
   return ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(mimetype);
@@ -921,10 +949,19 @@ router.post('/:id/photo', auth, photoUpload.single('photo'), async (req, res) =>
     });
     if (uploadError) {
       console.error('Child photo upload error', uploadError);
-      return res.status(500).json({ message: 'Upload failed', details: uploadError.message });
+      const errMessage = String(uploadError.message || uploadError || 'unknown');
+      if (errMessage.toLowerCase().includes('invalid compact jws') || errMessage.toLowerCase().includes('jwt') || errMessage.toLowerCase().includes('auth') || errMessage.toLowerCase().includes('forbidden')) {
+        const fallback = await uploadViaJwtFallback(SUPABASE_BUCKET, storagePath, optimized, 'image/webp');
+        if (!fallback.ok) {
+          return res.status(500).json({ message: 'Upload failed', details: errMessage, fallback: fallback.body });
+        }
+      } else {
+        return res.status(500).json({ message: 'Upload failed', details: errMessage });
+      }
     }
 
-    const publicUrl = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath)?.data?.publicUrl || null;
+    const publicUrlData = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath);
+    const publicUrl = publicUrlData?.data?.publicUrl || null;
     if (!publicUrl) return res.status(500).json({ message: 'Could not get public URL' });
 
     const existing = await prisma.child.findUnique({ where: { id }, select: { photoPath: true } });
@@ -936,8 +973,9 @@ router.post('/:id/photo', auth, photoUpload.single('photo'), async (req, res) =>
     await prisma.child.update({ where: { id }, data: { photoUrl: publicUrl, photoPath: storagePath } });
     return res.json({ photoUrl: publicUrl });
   } catch (e) {
-    console.error('Failed to upload child photo', e);
-    return res.status(500).json({ message: 'Server error' });
+    const msg = e && e.message ? e.message : String(e);
+    console.error('Failed to upload child photo', msg, e);
+    return res.status(500).json({ message: 'Server error', details: msg });
   }
 });
 

@@ -297,6 +297,18 @@ router.put('/:id', auth, async (req, res) => {
 
     if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
 
+    // Verify new childId/nannyId belong to the same center before updating
+    if (!isSuperAdmin(req.user) && req.user.centerId) {
+      if (childId && childId !== existing.childId) {
+        const child = await prisma.child.findUnique({ where: { id: childId } });
+        if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ message: 'Child not found' });
+      }
+      if (nannyId && nannyId !== existing.nannyId) {
+        const nanny = await prisma.nanny.findUnique({ where: { id: nannyId } });
+        if (!nanny || nanny.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
+      }
+    }
+
     // Check if assignment date has passed (compare dates without time) and user is not admin or super-admin
     if (!isSuperAdmin(req.user) && !isAdminRole(req.user)) {
       const existingDate = new Date(existing.date);

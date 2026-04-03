@@ -520,4 +520,26 @@ router.put('/tutorial-completed', auth, async (req, res) => {
   }
 });
 
+// DELETE /api/user/:id/delete-orphan — super-admin only, deletes an admin user with no centerId
+router.delete('/:id/delete-orphan', auth, async (req, res) => {
+  try {
+    if (!isSuperAdmin(req.user)) return res.status(403).json({ error: 'Forbidden' });
+    const { id } = req.params;
+    const target = await prisma.user.findUnique({ where: { id } });
+    if (!target) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+    if (target.centerId) return res.status(400).json({ error: 'Cet utilisateur est rattaché à un centre. Supprimez le centre à la place.' });
+    if (target.role === 'super-admin') return res.status(400).json({ error: 'Impossible de supprimer un super-admin.' });
+
+    // Delete dependent records (RefreshToken, PushSubscription, Notification, SupportTicket cascade automatically)
+    await prisma.subscription.deleteMany({ where: { userId: id } });
+    await prisma.pushSubscription.deleteMany({ where: { userId: id } });
+    await prisma.user.delete({ where: { id } });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('DELETE /api/user/:id/delete-orphan error', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 module.exports = router;
