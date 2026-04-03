@@ -565,8 +565,9 @@ router.patch('/:postId', async (req, res) => {
   try {
     const existing = await prisma.feedPost.findUnique({ where: { id: postId } });
     if (!existing) return res.status(404).json({ message: 'Post not found' });
-    if (existing.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (existing.authorId !== user.id) {
+      if (!['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
+      if (user.role === 'admin' && existing.centerId !== user.centerId) return res.status(403).json({ message: 'Forbidden' });
     }
     const updated = await prisma.feedPost.update({ where: { id: postId }, data: { text } });
 
@@ -595,8 +596,9 @@ router.delete('/:postId', async (req, res) => {
   try {
     const existing = await prisma.feedPost.findUnique({ where: { id: postId } });
     if (!existing) return res.status(404).json({ message: 'Post not found' });
-    if (existing.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (existing.authorId !== user.id) {
+      if (!['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
+      if (user.role === 'admin' && existing.centerId !== user.centerId) return res.status(403).json({ message: 'Forbidden' });
     }
     // delete associated rows in correct order to avoid foreign-key constraint errors
     // remove medias, likes, comments then the post itself inside a transaction
@@ -629,9 +631,10 @@ router.post('/:postId/media', checkContentLength, upload.array('images', 6), asy
   try {
     const post = await prisma.feedPost.findUnique({ where: { id: postId } });
     if (!post) return res.status(404).json({ message: 'Post not found' });
-    // Only the author or admins can add media
-    if (post.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+    // Only the author or admins of the same center can add media
+    if (post.authorId !== user.id) {
+      if (!['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
+      if (user.role === 'admin' && post.centerId !== user.centerId) return res.status(403).json({ message: 'Forbidden' });
     }
 
     const files = req.files || [];

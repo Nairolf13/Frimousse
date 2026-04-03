@@ -35,6 +35,13 @@ type Center = {
   };
 };
 
+type OrphanAdmin = {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+};
+
 function SubBadge({ sub }: { sub: Subscription | null | undefined }) {
   const { t } = useI18n();
   if (!sub) return <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">{t('centers.subbadge.no_subscription', 'Aucun abonnement')}</span>;
@@ -62,8 +69,10 @@ export default function AdminCenters() {
   const { t } = useI18n();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   const [centers, setCenters] = useState<Center[]>([]);
+  const [orphanAdmins, setOrphanAdmins] = useState<OrphanAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingOrphanId, setDeletingOrphanId] = useState<string | null>(null);
   const [editingCenter, setEditingCenter] = useState<Center | null>(null);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -111,6 +120,7 @@ export default function AdminCenters() {
         if (!res.ok) throw new Error('Erreur serveur');
         const json = await res.json();
         setCenters(Array.isArray(json.data) ? json.data : []);
+        setOrphanAdmins(Array.isArray(json.orphanAdmins) ? json.orphanAdmins : []);
       } catch (e: unknown) {
         if (typeof e === 'object' && e !== null && 'name' in e && (e as { name?: unknown }).name === 'AbortError') return;
         const msg = e instanceof Error ? e.message : String(e);
@@ -514,6 +524,62 @@ export default function AdminCenters() {
                 </table>
               </div>
             </div>
+          {/* Admins orphelins (sans centre) */}
+          {orphanAdmins.length > 0 && (
+            <div className="mt-8">
+              <h2 className="text-base font-bold text-red-600 mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                Comptes admin sans centre ({orphanAdmins.length})
+              </h2>
+              <div className="bg-red-50 border border-red-100 rounded-2xl overflow-hidden">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-red-100 bg-red-100/40">
+                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-2.5 px-5">Nom</th>
+                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-2.5 px-5">Email</th>
+                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-2.5 px-5">Inscrit le</th>
+                      <th className="py-2.5 px-5" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-red-100">
+                    {orphanAdmins.map(admin => (
+                      <tr key={admin.id} className="hover:bg-red-50/60">
+                        <td className="py-3 px-5 text-sm font-medium text-gray-800">{admin.name}</td>
+                        <td className="py-3 px-5 text-sm text-gray-600">{admin.email}</td>
+                        <td className="py-3 px-5 text-xs text-gray-400">{new Date(admin.createdAt).toLocaleDateString('fr-FR')}</td>
+                        <td className="py-3 px-5">
+                          <button
+                            disabled={deletingOrphanId === admin.id}
+                            onClick={async () => {
+                              if (!window.confirm(`Supprimer définitivement le compte de ${admin.name} (${admin.email}) ?`)) return;
+                              setDeletingOrphanId(admin.id);
+                              try {
+                                const res = await fetchWithRefresh(`${API_URL}/user/${admin.id}/delete-orphan`, { method: 'DELETE', credentials: 'include' });
+                                if (res.ok) {
+                                  setOrphanAdmins(prev => prev.filter(a => a.id !== admin.id));
+                                } else {
+                                  const json = await res.json().catch(() => ({}));
+                                  alert(json.error || 'Erreur lors de la suppression');
+                                }
+                              } catch {
+                                alert('Erreur réseau');
+                              } finally {
+                                setDeletingOrphanId(null);
+                              }
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-100 text-red-600 hover:bg-red-200 transition-colors disabled:opacity-50"
+                          >
+                            <HiOutlineTrash className="w-3.5 h-3.5" />
+                            {deletingOrphanId === admin.id ? 'Suppression...' : 'Supprimer'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
           </>
         )}
       </div>

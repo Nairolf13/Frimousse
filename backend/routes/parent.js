@@ -298,7 +298,12 @@ router.get('/by-email', requireAuth, async (req, res) => {
       return res.status(403).json({ message: 'Interdit' });
     }
 
-  const parent = await prisma.parent.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
+  const where = { email: { equals: email, mode: 'insensitive' } };
+  // Non-super-admins can only find parents within their own center
+  if (!isSuperAdmin(userReq) && userReq.centerId) {
+    where.centerId = userReq.centerId;
+  }
+  const parent = await prisma.parent.findFirst({ where });
     if (!parent) return res.status(404).json({ message: 'Parent non trouvé' });
     res.json(parent);
   } catch (err) {

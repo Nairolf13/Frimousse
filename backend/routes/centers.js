@@ -166,7 +166,13 @@ router.get('/', requireAuth, async (req, res) => {
       };
     });
 
-    res.json({ data: formattedCenters });
+    // Fetch orphan admins (role=admin but centerId=null) — they are invisible in the center list
+    const orphanAdmins = await prisma.user.findMany({
+      where: { role: 'admin', centerId: null },
+      select: { id: true, name: true, email: true, phone: true, address: true, city: true, postalCode: true, region: true, country: true, createdAt: true },
+    });
+
+    res.json({ data: formattedCenters, orphanAdmins });
   } catch (e) {
     console.error(e);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -453,28 +459,16 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
     const { id } = req.params;
 
-    // Verify center exists
-    const center = await prisma.center.findUnique({
-      where: { id },
-      select: { id: true }
-    });
-
-    if (!center) {
-      return res.status(404).json({ error: 'Centre non trouvé' });
-    }
-
-    // Delete center (cascade will handle related data based on schema)
-    await prisma.center.delete({
-      where: { id }
-    });
+    const { deleteCenter } = require('../lib/deleteCenter');
+    await deleteCenter(prisma, id);
 
     res.json({ message: 'Centre supprimé' });
   } catch (e) {
-    console.error(e);
-    if (e.code === 'P2003') {
-      return res.status(400).json({ error: 'Impossible de supprimer le centre car il contient encore des données. Veuillez d\'abord supprimer les utilisateurs, parents, enfants et nounous associés.' });
+    console.error('DELETE /api/centers/:id error', e);
+    if (e.code === 'NOT_FOUND' || e.code === 'P2025') {
+      return res.status(404).json({ error: 'Centre non trouvé' });
     }
-    res.status(500).json({ message: 'Erreur serveur' });
+    res.status(500).json({ message: 'Erreur serveur lors de la suppression du centre' });
   }
 });
 

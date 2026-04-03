@@ -114,6 +114,10 @@ app.use('/api/subscriptions/webhook', express.raw({ type: 'application/json' }))
 app.use(express.json({ limit: '50kb' }));
 app.use(cookieParser());
 
+// Block admin accounts without a centerId — they would bypass all center-scoping filters
+const requireCenterId = require('./middleware/requireCenterId');
+app.use('/api', requireCenterId);
+
 // Serve frontend static files in production with appropriate Cache-Control headers.
 const distPath = isProd ? path.resolve(__dirname, '..', 'build') : null;
 if (isProd && distPath) {

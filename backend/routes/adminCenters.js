@@ -3,6 +3,7 @@ const router = express.Router();
 
 const prisma = require('../lib/prismaClient');
 const requireAuth = require('../middleware/authMiddleware');
+const { deleteCenter } = require('../lib/deleteCenter');
 
 // GET /api/admin/centers
 router.get('/centers', requireAuth, async (req, res) => {
@@ -158,21 +159,15 @@ router.delete('/centers/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Centre non trouvé' });
     }
 
-    // Supprimer en cascade (Prisma devrait gérer les relations automatiquement selon le schéma)
-    await prisma.center.delete({
-      where: { id }
-    });
+    await deleteCenter(prisma, id);
 
     res.json({ message: 'Centre supprimé avec succès' });
   } catch (e) {
-    console.error(e);
-    if (e.code === 'P2025') {
+    console.error('DELETE /api/admin/centers/:id error', e);
+    if (e.code === 'NOT_FOUND' || e.code === 'P2025') {
       return res.status(404).json({ error: 'Centre non trouvé' });
     }
-    if (e.code === 'P2003') {
-      return res.status(400).json({ error: 'Impossible de supprimer le centre car il contient des données liées' });
-    }
-    res.status(500).json({ error: 'Erreur serveur' });
+    res.status(500).json({ error: 'Erreur serveur lors de la suppression du centre' });
   }
 });
 
