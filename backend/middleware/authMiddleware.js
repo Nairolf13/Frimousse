@@ -35,12 +35,25 @@ module.exports = async function (req, res, next) {
     };
   };
 
+  // Block admin accounts without a centerId immediately after authentication.
+  // A null centerId bypasses all center-scoping filters in every route.
+  const blockOrphanAdmin = (user) => {
+    const role = String(user.role || '').toLowerCase();
+    const isSuperAdmin = role === 'super-admin' || role === 'super_admin' || role === 'superadmin' || role.includes('super');
+    if (role === 'admin' && !isSuperAdmin && !user.centerId) {
+      console.warn(`[authMiddleware] orphan admin blocked: ${user.id} (${user.email})`);
+      return true;
+    }
+    return false;
+  };
+
   // Try verify access token first
   if (token) {
     try {
       const payload = jwt.verify(token, JWT_SECRET);
       const user = await prisma.user.findUnique({ where: { id: payload.id } });
       if (!user) return res.status(401).json({ message: 'Invalid token - user not found' });
+      if (blockOrphanAdmin(user)) return res.status(403).json({ error: 'Votre compte admin n\'est pas rattaché à un centre. Contactez le support.' });
       setUserOnRequest(user);
       return next();
     } catch (err) {
@@ -100,6 +113,7 @@ module.exports = async function (req, res, next) {
     res.cookie('accessToken', newAccessToken, Object.assign({ maxAge: 15 * 60 * 1000 }, cookieOptions()));
     res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: 7 * 24 * 60 * 60 * 1000 }, cookieOptions()));
 
+    if (blockOrphanAdmin(user)) return res.status(403).json({ error: 'Votre compte admin n\'est pas rattaché à un centre. Contactez le support.' });
     setUserOnRequest(user);
     return next();
   } catch (err) {

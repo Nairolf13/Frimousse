@@ -527,27 +527,92 @@ export default function AdminCenters() {
           {/* Admins orphelins (sans centre) */}
           {orphanAdmins.length > 0 && (
             <div className="mt-8">
-              <h2 className="text-base font-bold text-red-600 mb-3 flex items-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
-                Comptes admin sans centre ({orphanAdmins.length})
-              </h2>
-              <div className="bg-red-50 border border-red-100 rounded-2xl overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900">Comptes admin sans centre</h2>
+                  <p className="text-xs text-gray-500">Ces comptes sont bloqués et ne peuvent plus se connecter</p>
+                </div>
+                <span className="ml-auto inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">{orphanAdmins.length}</span>
+              </div>
+
+              {/* Mobile : cards */}
+              <div className="md:hidden space-y-3">
+                {orphanAdmins.map(admin => (
+                  <div key={admin.id} className="bg-white border border-red-100 rounded-2xl shadow-sm overflow-hidden">
+                    <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                          <span className="text-red-600 font-bold text-sm">{admin.name.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 text-sm truncate">{admin.name}</div>
+                          <a href={`mailto:${admin.email}`} className="text-xs text-gray-500 hover:text-[#0b5566] hover:underline truncate block">{admin.email}</a>
+                        </div>
+                      </div>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-500 flex-shrink-0">Sans centre</span>
+                    </div>
+                    <div className="px-4 pb-4 flex items-center justify-between gap-3 border-t border-red-50 pt-3">
+                      <span className="text-xs text-gray-400">Inscrit le {new Date(admin.createdAt).toLocaleDateString('fr-FR')}</span>
+                      <button
+                        disabled={deletingOrphanId === admin.id}
+                        onClick={async () => {
+                          if (!window.confirm(`Supprimer définitivement le compte de ${admin.name} (${admin.email}) ?`)) return;
+                          setDeletingOrphanId(admin.id);
+                          try {
+                            const res = await fetchWithRefresh(`${API_URL}/user/${admin.id}/delete-orphan`, { method: 'DELETE', credentials: 'include' });
+                            if (res.ok) { setOrphanAdmins(prev => prev.filter(a => a.id !== admin.id)); }
+                            else { const json = await res.json().catch(() => ({})); alert(json.error || 'Erreur lors de la suppression'); }
+                          } catch { alert('Erreur réseau'); }
+                          finally { setDeletingOrphanId(null); }
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                      >
+                        <HiOutlineTrash className="w-3.5 h-3.5" />
+                        {deletingOrphanId === admin.id ? 'Suppression...' : 'Supprimer'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop : table */}
+              <div className="hidden md:block bg-white border border-red-100 rounded-2xl shadow-sm overflow-hidden">
                 <table className="min-w-full">
                   <thead>
-                    <tr className="border-b border-red-100 bg-red-100/40">
-                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-2.5 px-5">Nom</th>
-                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-2.5 px-5">Email</th>
-                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-2.5 px-5">Inscrit le</th>
-                      <th className="py-2.5 px-5" />
+                    <tr className="border-b border-red-100 bg-red-50/60">
+                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-3 px-5">Compte</th>
+                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-3 px-5">Email</th>
+                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-3 px-5">Inscrit le</th>
+                      <th className="text-left text-xs font-semibold text-red-700 uppercase tracking-wider py-3 px-5">Statut</th>
+                      <th className="py-3 px-5" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-red-100">
+                  <tbody className="divide-y divide-red-50">
                     {orphanAdmins.map(admin => (
-                      <tr key={admin.id} className="hover:bg-red-50/60">
-                        <td className="py-3 px-5 text-sm font-medium text-gray-800">{admin.name}</td>
-                        <td className="py-3 px-5 text-sm text-gray-600">{admin.email}</td>
-                        <td className="py-3 px-5 text-xs text-gray-400">{new Date(admin.createdAt).toLocaleDateString('fr-FR')}</td>
-                        <td className="py-3 px-5">
+                      <tr key={admin.id} className="hover:bg-red-50/40 transition-colors">
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                              <span className="text-red-600 font-bold text-xs">{admin.name.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <span className="text-sm font-medium text-gray-800">{admin.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-5">
+                          <a href={`mailto:${admin.email}`} className="text-sm text-gray-600 hover:text-[#0b5566] hover:underline">{admin.email}</a>
+                        </td>
+                        <td className="py-3.5 px-5 text-xs text-gray-400">{new Date(admin.createdAt).toLocaleDateString('fr-FR')}</td>
+                        <td className="py-3.5 px-5">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-600">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                            Bloqué — sans centre
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-5">
                           <button
                             disabled={deletingOrphanId === admin.id}
                             onClick={async () => {
@@ -555,19 +620,12 @@ export default function AdminCenters() {
                               setDeletingOrphanId(admin.id);
                               try {
                                 const res = await fetchWithRefresh(`${API_URL}/user/${admin.id}/delete-orphan`, { method: 'DELETE', credentials: 'include' });
-                                if (res.ok) {
-                                  setOrphanAdmins(prev => prev.filter(a => a.id !== admin.id));
-                                } else {
-                                  const json = await res.json().catch(() => ({}));
-                                  alert(json.error || 'Erreur lors de la suppression');
-                                }
-                              } catch {
-                                alert('Erreur réseau');
-                              } finally {
-                                setDeletingOrphanId(null);
-                              }
+                                if (res.ok) { setOrphanAdmins(prev => prev.filter(a => a.id !== admin.id)); }
+                                else { const json = await res.json().catch(() => ({})); alert(json.error || 'Erreur lors de la suppression'); }
+                              } catch { alert('Erreur réseau'); }
+                              finally { setDeletingOrphanId(null); }
                             }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-100 text-red-600 hover:bg-red-200 transition-colors disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
                           >
                             <HiOutlineTrash className="w-3.5 h-3.5" />
                             {deletingOrphanId === admin.id ? 'Suppression...' : 'Supprimer'}
