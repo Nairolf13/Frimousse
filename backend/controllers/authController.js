@@ -258,6 +258,11 @@ exports.login = async (req, res) => {
     const subscribeToken = jwt.sign({ id: user.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '5m' });
     return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.', subscribeToken });
   }
+  // Block orphan admins (role=admin but no centerId) — they would see data from all centers
+  if (user.role === 'admin' && !user.centerId) {
+    return res.status(403).json({ error: 'Votre compte admin n\'est pas rattaché à un centre. Contactez le support.' });
+  }
+
   const accessToken = generateAccessToken(user);
   const refreshToken = generateRefreshToken(user);
   await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
