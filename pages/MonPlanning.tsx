@@ -113,7 +113,7 @@ export default function MonPlanning() {
               </button>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 border border-gray-100 w-full">
+          <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 border border-gray-100 w-full" data-tour="planning-calendar">
             <NannyCalendar nannyId={nannyId} />
           </div>
       </div>

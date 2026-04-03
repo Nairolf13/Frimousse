@@ -18,14 +18,19 @@ export default function TutorialMenu() {
   if (!showMenu || isActive) return null;
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center" onClick={handleClose}>
+    <div className="fixed inset-0 z-[10000] flex items-end md:items-center justify-center" onClick={handleClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm tutorial-backdrop-in" />
       <div
-        className="relative z-10 bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden tutorial-card-in"
+        className="relative z-10 bg-white rounded-t-3xl md:rounded-3xl shadow-2xl max-w-lg w-full mx-0 md:mx-4 overflow-hidden tutorial-card-in"
         onClick={e => e.stopPropagation()}
       >
+        {/* Drag handle (mobile only) */}
+        <div className="flex justify-center pt-3 pb-1 md:hidden bg-white">
+          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        </div>
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-brand-600 to-brand-500 px-8 py-7 text-white">
+        <div className="bg-gradient-to-r from-brand-600 to-brand-500 px-6 md:px-8 py-6 md:py-7 text-white">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
@@ -58,7 +63,7 @@ export default function TutorialMenu() {
         </div>
 
         {/* Tour list */}
-        <div className="p-4 max-h-[60vh] overflow-auto">
+        <div className="p-4 max-h-[55vh] overflow-auto">
           <div className="space-y-2">
             {tours.map(tour => {
               const isDone = completed.includes(tour.id);
@@ -98,7 +103,7 @@ export default function TutorialMenu() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 pb-5 pt-2">
+        <div className="px-6 pb-5 pt-2 safe-area-bottom">
           <p className="text-center text-xs text-gray-400">
             {t(
               'settings.tutorials.menu.footer',

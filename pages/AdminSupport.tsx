@@ -63,7 +63,7 @@ export default function AdminSupportPage() {
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [ticketToClose, setTicketToClose] = useState<Ticket | null>(null);
   const [closingTicketId, setClosingTicketId] = useState<string | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [expandedTicketIds, setExpandedTicketIds] = useState<Set<string>>(new Set());
   const replyRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const modalContainerRef = useRef<HTMLDivElement | null>(null);

@@ -125,21 +125,24 @@ export default function MobileMenu() {
   const navigate = useNavigate();
 
   // Ferme le menu dès que la navigation est effective (nouvelle page chargée)
-  // ou quand on reclique sur la page courante (pathname inchangé mais on veut fermer quand même)
+  // sauf si un tutoriel garde le menu ouvert (tutorialKeepOpenRef.current = true)
   useEffect(() => {
+    if (tutorialKeepOpenRef.current) return;
     setOpen(false);
   }, [location]);
   const { user } = useAuth();
   const { t } = useI18n();
 
   // Ouvre le menu quand le tutoriel en a besoin sur mobile
+  // tutorialKeepOpen empêche le menu de se fermer lors d'un changement de route pendant un tuto
+  const tutorialKeepOpenRef = useRef(false);
   useEffect(() => {
-    const handler = () => setOpen(true);
-    const closeHandler = () => setOpen(false);
-    window.addEventListener('tutorial:open-mobile-menu', handler);
+    const openHandler = () => { tutorialKeepOpenRef.current = true; setOpen(true); };
+    const closeHandler = () => { tutorialKeepOpenRef.current = false; setOpen(false); };
+    window.addEventListener('tutorial:open-mobile-menu', openHandler);
     window.addEventListener('tutorial:close-mobile-menu', closeHandler);
     return () => {
-      window.removeEventListener('tutorial:open-mobile-menu', handler);
+      window.removeEventListener('tutorial:open-mobile-menu', openHandler);
       window.removeEventListener('tutorial:close-mobile-menu', closeHandler);
     };
   }, []);
@@ -291,8 +294,9 @@ export default function MobileMenu() {
                 <li key={link.to}>
                   <Link
                     to={link.to}
+                    data-tour={`nav-${link.to.replace(/^\//, '').replace(/\//g, '-') || 'dashboard'}`}
                     className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-150 text-base ${location.pathname === link.to ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
-                    onClick={(e) => { e.preventDefault(); setOpen(false); navigate(link.to); }}
+                    onClick={(e) => { e.preventDefault(); if (!tutorialKeepOpenRef.current) setOpen(false); navigate(link.to); }}
                   >
                     {link.icon}
                     <span className="flex-1">{link.label}</span>

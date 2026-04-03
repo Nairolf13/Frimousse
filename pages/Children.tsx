@@ -209,6 +209,18 @@ export default function Children() {
   const [groupFilter, setGroupFilter] = useState('');
   const [sort, setSort] = useState('name');
   const [showForm, setShowForm] = useState(false);
+
+  // Open form automatically when tutorial targets a form field
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { target, tourId } = (e as CustomEvent).detail ?? {};
+      if (tourId === 'add-child' && typeof target === 'string' && target.startsWith('child-form-')) {
+        setShowForm(true);
+      }
+    };
+    window.addEventListener('tutorial:step', handler);
+    return () => window.removeEventListener('tutorial:step', handler);
+  }, []);
   const successTimer = useRef<number | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
@@ -795,7 +807,7 @@ export default function Children() {
             <h2 className="text-white font-semibold text-base">{editingId ? t('children.form.edit') : t('children.add')}</h2>
           </div>
           <div className="p-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <div className="flex flex-col">
+          <div className="flex flex-col" data-tour="child-form-info">
             <label htmlFor="child-name" className={labelCls}>{t('children.form.name_label')} <span className="text-red-500">*</span></label>
             <input id="child-name" name="name" value={form.name} onChange={handleChange} placeholder={t('children.form.name')} required className={inputCls} />
           </div>
@@ -817,7 +829,7 @@ export default function Children() {
               {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
             </select>
           </div>
-          <div className="relative w-full flex flex-col">
+          <div className="relative w-full flex flex-col" data-tour="child-form-parent">
             <label htmlFor="parent-name" className={labelCls}>{t('children.form.parentName_label')}</label>
             <input
               id="parent-name"
@@ -871,7 +883,7 @@ export default function Children() {
             <label htmlFor="parent-mail" className={labelCls}>{t('children.form.parentEmail_label')}</label>
             <input id="parent-mail" name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder={t('children.form.parentEmail_placeholder')} className={inputCls} />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col" data-tour="child-form-medical">
             <label htmlFor="child-allergies" className={labelCls}>{t('children.form.allergies_label')}</label>
             <input id="child-allergies" name="allergies" value={form.allergies} onChange={handleChange} placeholder={t('children.form.allergies_placeholder')} className={inputCls} />
           </div>

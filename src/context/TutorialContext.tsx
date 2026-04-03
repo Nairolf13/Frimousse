@@ -43,9 +43,10 @@ const TOURS_RAW: RawTour[] = [
       { target: '_modal_', titleKey: 'tour.add-nanny.step0.title', contentKey: 'tour.add-nanny.step0.content', modal: true },
       { target: 'nav-nannies', titleKey: 'tour.add-nanny.step1.title', contentKey: 'tour.add-nanny.step1.content', placement: 'right', route: '/nannies' },
       { target: 'btn-add-nanny', titleKey: 'tour.add-nanny.step2.title', contentKey: 'tour.add-nanny.step2.content', placement: 'bottom' },
-      { target: '_modal_', titleKey: 'tour.add-nanny.step3.title', contentKey: 'tour.add-nanny.step3.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.add-nanny.step4.title', contentKey: 'tour.add-nanny.step4.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.add-nanny.step5.title', contentKey: 'tour.add-nanny.step5.content', modal: true },
+      { target: 'nanny-form-identity', titleKey: 'tour.add-nanny.step3.title', contentKey: 'tour.add-nanny.step3.content', placement: 'bottom' },
+      { target: 'nanny-form-availability', titleKey: 'tour.add-nanny.step4.title', contentKey: 'tour.add-nanny.step4.content', placement: 'bottom' },
+      { target: 'nanny-form-address', titleKey: 'tour.add-nanny.step5.title', contentKey: 'tour.add-nanny.step5.content', placement: 'bottom' },
+      { target: 'nanny-form-credentials', titleKey: 'tour.add-nanny.step6.title', contentKey: 'tour.add-nanny.step6.content', placement: 'bottom' },
     ],
   },
   {
@@ -55,9 +56,11 @@ const TOURS_RAW: RawTour[] = [
       { target: '_modal_', titleKey: 'tour.add-parent.step0.title', contentKey: 'tour.add-parent.step0.content', modal: true },
       { target: 'nav-parent', titleKey: 'tour.add-parent.step1.title', contentKey: 'tour.add-parent.step1.content', placement: 'right', route: '/parent' },
       { target: 'btn-add-parent', titleKey: 'tour.add-parent.step2.title', contentKey: 'tour.add-parent.step2.content', placement: 'bottom' },
-      { target: '_modal_', titleKey: 'tour.add-parent.step3.title', contentKey: 'tour.add-parent.step3.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.add-parent.step4.title', contentKey: 'tour.add-parent.step4.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.add-parent.step5.title', contentKey: 'tour.add-parent.step5.content', modal: true },
+      { target: 'parent-form-identity', titleKey: 'tour.add-parent.step3.title', contentKey: 'tour.add-parent.step3.content', placement: 'bottom' },
+      { target: 'parent-form-email', titleKey: 'tour.add-parent.step4.title', contentKey: 'tour.add-parent.step4.content', placement: 'bottom' },
+      { target: 'parent-form-address', titleKey: 'tour.add-parent.step5.title', contentKey: 'tour.add-parent.step5.content', placement: 'bottom' },
+      { target: 'parent-form-password', titleKey: 'tour.add-parent.step6.title', contentKey: 'tour.add-parent.step6.content', placement: 'bottom' },
+      { target: '_modal_', titleKey: 'tour.add-parent.step7.title', contentKey: 'tour.add-parent.step7.content', modal: true },
     ],
   },
   {
@@ -67,9 +70,9 @@ const TOURS_RAW: RawTour[] = [
       { target: '_modal_', titleKey: 'tour.add-child.step0.title', contentKey: 'tour.add-child.step0.content', modal: true },
       { target: 'nav-children', titleKey: 'tour.add-child.step1.title', contentKey: 'tour.add-child.step1.content', placement: 'right', route: '/children' },
       { target: 'btn-add-child', titleKey: 'tour.add-child.step2.title', contentKey: 'tour.add-child.step2.content', placement: 'bottom' },
-      { target: '_modal_', titleKey: 'tour.add-child.step3.title', contentKey: 'tour.add-child.step3.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.add-child.step4.title', contentKey: 'tour.add-child.step4.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.add-child.step5.title', contentKey: 'tour.add-child.step5.content', modal: true },
+      { target: 'child-form-info', titleKey: 'tour.add-child.step3.title', contentKey: 'tour.add-child.step3.content', placement: 'bottom' },
+      { target: 'child-form-parent', titleKey: 'tour.add-child.step4.title', contentKey: 'tour.add-child.step4.content', placement: 'bottom' },
+      { target: 'child-form-medical', titleKey: 'tour.add-child.step5.title', contentKey: 'tour.add-child.step5.content', placement: 'bottom' },
       { target: '_modal_', titleKey: 'tour.add-child.step6.title', contentKey: 'tour.add-child.step6.content', modal: true },
     ],
   },
@@ -79,8 +82,9 @@ const TOURS_RAW: RawTour[] = [
     steps: [
       { target: '_modal_', titleKey: 'tour.planning.step0.title', contentKey: 'tour.planning.step0.content', modal: true },
       { target: 'nav-dashboard', titleKey: 'tour.planning.step1.title', contentKey: 'tour.planning.step1.content', placement: 'right', route: '/dashboard' },
-      { target: '_modal_', titleKey: 'tour.planning.step2.title', contentKey: 'tour.planning.step2.content', modal: true },
-      { target: 'nav-activites', titleKey: 'tour.planning.step3.title', contentKey: 'tour.planning.step3.content', placement: 'right', route: '/activites' },
+      { target: 'planning-calendar', titleKey: 'tour.planning.step2.title', contentKey: 'tour.planning.step2.content', placement: 'bottom', route: '/mon-planning' },
+      { target: '_modal_', titleKey: 'tour.planning.step3.title', contentKey: 'tour.planning.step3.content', modal: true },
+      { target: 'nav-activites', titleKey: 'tour.planning.step4.title', contentKey: 'tour.planning.step4.content', placement: 'right', route: '/activites' },
     ],
   },
   {
@@ -89,12 +93,13 @@ const TOURS_RAW: RawTour[] = [
     steps: [
       { target: '_modal_', titleKey: 'tour.presence-sheets.step0.title', contentKey: 'tour.presence-sheets.step0.content', modal: true },
       { target: 'nav-presence-sheets', titleKey: 'tour.presence-sheets.step1.title', contentKey: 'tour.presence-sheets.step1.content', placement: 'right', route: '/presence-sheets' },
-      { target: '_modal_', titleKey: 'tour.presence-sheets.step2.title', contentKey: 'tour.presence-sheets.step2.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.presence-sheets.step3.title', contentKey: 'tour.presence-sheets.step3.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.presence-sheets.step4.title', contentKey: 'tour.presence-sheets.step4.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.presence-sheets.step5.title', contentKey: 'tour.presence-sheets.step5.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.presence-sheets.step6.title', contentKey: 'tour.presence-sheets.step6.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.presence-sheets.step7.title', contentKey: 'tour.presence-sheets.step7.content', modal: true },
+      { target: 'presence-sheets-new', titleKey: 'tour.presence-sheets.step2.title', contentKey: 'tour.presence-sheets.step2.content', placement: 'bottom' },
+      { target: 'presence-sheets-empty', titleKey: 'tour.presence-sheets.step3.title', contentKey: 'tour.presence-sheets.step3.content', placement: 'bottom' },
+      { target: 'presence-sheet-save', titleKey: 'tour.presence-sheets.step4.title', contentKey: 'tour.presence-sheets.step4.content', placement: 'bottom' },
+      { target: 'presence-sheet-send', titleKey: 'tour.presence-sheets.step5.title', contentKey: 'tour.presence-sheets.step5.content', placement: 'bottom' },
+      { target: 'presence-sheet-sign', titleKey: 'tour.presence-sheets.step6.title', contentKey: 'tour.presence-sheets.step6.content', placement: 'bottom' },
+      { target: 'presence-sheet-pdf', titleKey: 'tour.presence-sheets.step7.title', contentKey: 'tour.presence-sheets.step7.content', placement: 'bottom' },
+      { target: '_modal_', titleKey: 'tour.presence-sheets.step8.title', contentKey: 'tour.presence-sheets.step8.content', modal: true },
     ],
   },
   {
@@ -103,13 +108,13 @@ const TOURS_RAW: RawTour[] = [
     steps: [
       { target: '_modal_', titleKey: 'tour.messaging.step0.title', contentKey: 'tour.messaging.step0.content', modal: true },
       { target: 'nav-messages', titleKey: 'tour.messaging.step1.title', contentKey: 'tour.messaging.step1.content', placement: 'right', route: '/messages' },
-      { target: '_modal_', titleKey: 'tour.messaging.step2.title', contentKey: 'tour.messaging.step2.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.messaging.step3.title', contentKey: 'tour.messaging.step3.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.messaging.step4.title', contentKey: 'tour.messaging.step4.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.messaging.step5.title', contentKey: 'tour.messaging.step5.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.messaging.step6.title', contentKey: 'tour.messaging.step6.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.messaging.step7.title', contentKey: 'tour.messaging.step7.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.messaging.step8.title', contentKey: 'tour.messaging.step8.content', modal: true },
+      { target: 'msg-conv-list', titleKey: 'tour.messaging.step2.title', contentKey: 'tour.messaging.step2.content', placement: 'bottom' },
+      { target: 'msg-new-btn', titleKey: 'tour.messaging.step3.title', contentKey: 'tour.messaging.step3.content', placement: 'bottom' },
+      { target: 'msg-avatar-status', titleKey: 'tour.messaging.step4.title', contentKey: 'tour.messaging.step4.content', placement: 'right' },
+      { target: 'msg-input', titleKey: 'tour.messaging.step5.title', contentKey: 'tour.messaging.step5.content', placement: 'top' },
+      { target: 'msg-typing-indicator', titleKey: 'tour.messaging.step6.title', contentKey: 'tour.messaging.step6.content', placement: 'top' },
+      { target: 'msg-action-hint', titleKey: 'tour.messaging.step7.title', contentKey: 'tour.messaging.step7.content', placement: 'right' },
+
     ],
   },
   {
@@ -118,8 +123,8 @@ const TOURS_RAW: RawTour[] = [
     steps: [
       { target: '_modal_', titleKey: 'tour.feed-reports.step0.title', contentKey: 'tour.feed-reports.step0.content', modal: true },
       { target: 'nav-feed', titleKey: 'tour.feed-reports.step1.title', contentKey: 'tour.feed-reports.step1.content', placement: 'right', route: '/feed' },
-      { target: '_modal_', titleKey: 'tour.feed-reports.step2.title', contentKey: 'tour.feed-reports.step2.content', modal: true },
-      { target: '_modal_', titleKey: 'tour.feed-reports.step3.title', contentKey: 'tour.feed-reports.step3.content', modal: true },
+      { target: 'feed-compose', titleKey: 'tour.feed-reports.step2.title', contentKey: 'tour.feed-reports.step2.content', placement: 'bottom' },
+      { target: 'feed-publish-btn', titleKey: 'tour.feed-reports.step3.title', contentKey: 'tour.feed-reports.step3.content', placement: 'top' },
       { target: '_modal_', titleKey: 'tour.feed-reports.step4.title', contentKey: 'tour.feed-reports.step4.content', modal: true },
     ],
   },
@@ -173,6 +178,28 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     }
   }, [TOURS, navigate, location.pathname, isAdmin]);
 
+  const goToStep = useCallback((index: number) => {
+    if (!activeTour || index < 0 || index >= activeTour.steps.length) return;
+    const step = activeTour.steps[index];
+    if (!step) return;
+
+    const doSet = () => {
+      setCurrentStep(index);
+      window.dispatchEvent(new CustomEvent('tutorial:step', { detail: { target: step.target, tourId: activeTour.id } }));
+    };
+
+    if (step.route && location.pathname !== step.route) {
+      pendingRoute.current = step.route;
+      navigate(step.route);
+      setTimeout(() => {
+        doSet();
+        pendingRoute.current = null;
+      }, 140);
+    } else {
+      doSet();
+    }
+  }, [activeTour, navigate, location.pathname]);
+
   const stopTour = useCallback(() => {
     setActiveTour(null);
     setCurrentStep(0);
@@ -205,16 +232,19 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
       return;
     }
     const nextIdx = currentStep + 1;
-    const nextRoute = activeTour.steps[nextIdx]?.route;
+    const nextStep = activeTour.steps[nextIdx];
+    const nextRoute = nextStep?.route;
     if (nextRoute && location.pathname !== nextRoute) {
       pendingRoute.current = nextRoute;
       navigate(nextRoute);
       setTimeout(() => {
         setCurrentStep(nextIdx);
+        window.dispatchEvent(new CustomEvent('tutorial:step', { detail: { target: nextStep?.target, tourId: activeTour.id } }));
         pendingRoute.current = null;
-      }, 300);
+      }, 100);
     } else {
       setCurrentStep(nextIdx);
+      window.dispatchEvent(new CustomEvent('tutorial:step', { detail: { target: nextStep?.target, tourId: activeTour.id } }));
     }
   }, [activeTour, currentStep, location.pathname, navigate, user, setUser]);
 
@@ -224,7 +254,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     const prevRoute = activeTour.steps[prevIdx]?.route;
     if (prevRoute && location.pathname !== prevRoute) {
       navigate(prevRoute);
-      setTimeout(() => setCurrentStep(prevIdx), 300);
+      setTimeout(() => setCurrentStep(prevIdx), 100);
     } else {
       setCurrentStep(prevIdx);
     }
@@ -251,6 +281,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
       startTour,
       nextStep,
       prevStep,
+      goToStep,
       stopTour,
       toggleMenu,
       closeMenu,

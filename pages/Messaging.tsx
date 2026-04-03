@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
+import { useTutorial } from '../src/context/useTutorial';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useMessagingWS } from '../src/hooks/useMessagingWS';
 import type { WSMessage } from '../src/hooks/useMessagingWS';
@@ -303,6 +304,224 @@ export default function Messaging() {
   const selectedConv = conversations.find((c) => c.id === selectedConvId) ?? null;
   const otherParticipant = selectedConv?.participants.find((p) => p.userId !== user?.id)?.user ?? null;
 
+  const { activeTour, currentStep } = useTutorial();
+  const DEMO_TOUR_CONV_ID = 'tour-demo-conv';
+
+  const isTutorialMessagingStep = activeTour?.id === 'messaging' && currentStep >= 4 && currentStep <= 7;
+  const isTutorialMessageStep4 = activeTour?.id === 'messaging' && currentStep === 4;
+  const isTutorialMessageStep5 = activeTour?.id === 'messaging' && currentStep === 5;
+  const isTutorialMessageStep6 = activeTour?.id === 'messaging' && currentStep === 6;
+  const isTutorialMessageStep7 = activeTour?.id === 'messaging' && currentStep === 7;
+
+  const [demoStatusPhase, setDemoStatusPhase] = useState<'offline' | 'online' | 'highlight'>('offline');
+  const demoTypingTriggeredRef = useRef(false);
+  const demoStep7TriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!isTutorialMessageStep4) return;
+
+    const meId = user?.id ?? 'me';
+    const otherUser = {
+      id: 'tour-demo-user',
+      name: t('tour.messaging.demoUserName', 'Marie Durand'),
+      role: 'parent',
+      avatarUrl: null,
+    };
+    const now = new Date().toISOString();
+    const demoMessages: ConvMessage[] = [
+      {
+        id: 'tour-msg-1',
+        conversationId: DEMO_TOUR_CONV_ID,
+        senderId: otherUser.id,
+        content: t('tour.messaging.demoMessage1', 'Bonjour ! Nous avons bien reçu votre message.'),
+        createdAt: now,
+        sender: otherUser,
+      },
+    ];
+    const demoConversation: Conversation = {
+      id: DEMO_TOUR_CONV_ID,
+      participants: [
+        { userId: meId, user: { id: meId, name: user?.name ?? t('tour.messaging.you', 'Vous'), role: user?.role ?? 'admin', avatarUrl: user?.avatarUrl ?? null }, lastReadAt: now },
+        { userId: otherUser.id, user: otherUser, lastReadAt: null },
+      ],
+      messages: demoMessages,
+      lastMessageAt: demoMessages[demoMessages.length - 1].createdAt,
+      unreadCount: 1,
+    };
+
+    setConversations((prev) => (prev.some((c) => c.id === DEMO_TOUR_CONV_ID) ? prev : [demoConversation, ...prev]));
+    setSelectedConvId(DEMO_TOUR_CONV_ID);
+    setMessages(demoMessages);
+    setLoadingMessages(false);
+    // Step4: statut hors ligne (gris)
+    setDemoStatusPhase('offline');
+    setOnlineUserIds(new Set());
+
+    const toOnline = setTimeout(() => {
+      setOnlineUserIds(new Set(['tour-demo-user']));
+      setDemoStatusPhase('online');
+    }, 300);
+
+    const toHighlight = setTimeout(() => {
+      setDemoStatusPhase('highlight');
+    }, 600);
+
+    return () => {
+      clearTimeout(toOnline);
+      clearTimeout(toHighlight);
+    };
+  }, [isTutorialMessageStep4, user, t]);
+
+  useEffect(() => {
+    if (!isTutorialMessageStep5) return;
+    if (selectedConvId !== DEMO_TOUR_CONV_ID) return;
+    // Step5: on passe le contact en ligne pour afficher le point vert
+    setOnlineUserIds(new Set(['tour-demo-user']));
+  }, [isTutorialMessageStep5, selectedConvId]);
+
+  useEffect(() => {
+    if (!isTutorialMessageStep5) return;
+    if (selectedConvId === DEMO_TOUR_CONV_ID) return;
+
+    const meId = user?.id ?? 'me';
+    const otherUser = {
+      id: 'tour-demo-user',
+      name: t('tour.messaging.demoUserName', 'Marie Durand'),
+      role: 'parent',
+      avatarUrl: null,
+    };
+    const now = new Date().toISOString();
+
+    const demoMessages: ConvMessage[] = [
+      {
+        id: 'tour-msg-1',
+        conversationId: DEMO_TOUR_CONV_ID,
+        senderId: otherUser.id,
+        content: t('tour.messaging.demoMessage1', 'Bonjour ! Nous avons bien reçu votre message.'),
+        createdAt: now,
+        sender: otherUser,
+      },
+      {
+        id: 'tour-msg-2',
+        conversationId: DEMO_TOUR_CONV_ID,
+        senderId: meId,
+        content: t('tour.messaging.demoMessage2', 'Merci Marie, je souhaite demander une autorisation pour la sortie du mercredi.'),
+        createdAt: new Date(Date.now() + 1000).toISOString(),
+        sender: {
+          id: meId,
+          name: user?.name ?? t('tour.messaging.you', 'Vous'),
+          role: user?.role ?? 'admin',
+          avatarUrl: user?.avatarUrl ?? null,
+        },
+      },
+    ];
+
+    const demoConversation: Conversation = {
+      id: DEMO_TOUR_CONV_ID,
+      participants: [
+        { userId: meId, user: { id: meId, name: user?.name ?? t('tour.messaging.you', 'Vous'), role: user?.role ?? 'admin', avatarUrl: user?.avatarUrl ?? null }, lastReadAt: now },
+        { userId: otherUser.id, user: otherUser, lastReadAt: null },
+      ],
+      messages: demoMessages,
+      lastMessageAt: demoMessages[demoMessages.length - 1].createdAt,
+      unreadCount: 0,
+    };
+
+    setConversations((prev) => (prev.some((c) => c.id === DEMO_TOUR_CONV_ID) ? prev : [demoConversation, ...prev]));
+    setSelectedConvId(DEMO_TOUR_CONV_ID);
+    setMessages(demoMessages);
+    setLoadingMessages(false);
+  }, [isTutorialMessageStep5, selectedConvId, user, t]);
+
+  useEffect(() => {
+    if (!isTutorialMessageStep6 || selectedConvId !== DEMO_TOUR_CONV_ID) return;
+    if (demoTypingTriggeredRef.current) return;
+    demoTypingTriggeredRef.current = true;
+
+    const typingUserId = 'tour-demo-user';
+    setTypingUsers((prev) => ({ ...prev, [typingUserId]: true }));
+    const stopTyping = setTimeout(() => {
+      setTypingUsers((prev) => ({ ...prev, [typingUserId]: false }));
+    }, 2200);
+
+    const incomingMsg = {
+      id: 'tour-msg-3',
+      conversationId: DEMO_TOUR_CONV_ID,
+      senderId: typingUserId,
+      content: t('tour.messaging.demoMessage3', "Super, on a reçu votre demande. Je m'en occupe."),
+      createdAt: new Date(Date.now() + 2800).toISOString(),
+      sender: {
+        id: 'tour-demo-user',
+        name: t('tour.messaging.demoUserName', 'Marie Durand'),
+        role: 'parent',
+        avatarUrl: null,
+      },
+    };
+
+    const addMessage = setTimeout(() => {
+      setTypingUsers((prev) => ({ ...prev, [typingUserId]: false }));
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+        return [...prev, incomingMsg];
+      });
+      setConversations((prev) => prev.map((c) =>
+        c.id === DEMO_TOUR_CONV_ID
+          ? { ...c, lastMessageAt: incomingMsg.createdAt, messages: [incomingMsg], unreadCount: 0 }
+          : c
+      ));
+    }, 1000);
+
+    return () => {
+      clearTimeout(stopTyping);
+      clearTimeout(addMessage);
+    };
+  }, [isTutorialMessageStep6, selectedConvId, otherParticipant?.id, t]);
+
+  useEffect(() => {
+    if (!isTutorialMessageStep7 || selectedConvId !== DEMO_TOUR_CONV_ID) return;
+    if (demoStep7TriggeredRef.current) return;
+    demoStep7TriggeredRef.current = true;
+
+    // Support du menu contextuel “réel” comme sur page messages (décalé à droite)
+    const x = typeof window !== 'undefined' ? Math.max(120, window.innerWidth - 220) : 90;
+    setContextMenu({ msgId: 'tour-msg-2', x, y: 260, isMe: true });
+
+    const editTimer = setTimeout(() => {
+      setMessages((prev) => prev.map((m) =>
+        m.id === 'tour-msg-2'
+          ? { ...m, content: t('tour.messaging.demoMessage2Edited', 'Merci Marie, c’est noté. Puis-je ajouter une autorisation de sortie?') }
+          : m
+      ));
+      setConversations((prev) => prev.map((c) =>
+        c.id === DEMO_TOUR_CONV_ID
+          ? { ...c, messages: c.messages.map((m) =>
+              m.id === 'tour-msg-2'
+                ? { ...m, content: t('tour.messaging.demoMessage2Edited', 'Merci Marie, c’est noté. Puis-je ajouter une autorisation de sortie?') }
+                : m
+            ), lastMessageAt: new Date().toISOString() }
+          : c
+      ));
+    }, 1000);
+
+    const deleteTimer = setTimeout(() => {
+      setMessages((prev) => prev.filter((m) => m.id !== 'tour-msg-2'));
+      setConversations((prev) => prev.map((c) =>
+        c.id === DEMO_TOUR_CONV_ID
+          ? { ...c, messages: c.messages.filter((m) => m.id !== 'tour-msg-2'), lastMessageAt: new Date().toISOString() }
+          : c
+      ));
+
+      // Garde visible pendant tutoriel jusqu'à fin étape 7 pour cliquabilité visuelle
+      setContextMenu({ msgId: 'tour-msg-2', x: 90, y: 260, isMe: true });
+    }, 2800);
+
+    return () => {
+      clearTimeout(editTimer);
+      clearTimeout(deleteTimer);
+      setContextMenu(null);
+    };
+  }, [isTutorialMessageStep7, selectedConvId, t]);
+
   // ── WS ──
   const { sendTyping } = useMessagingWS({
     userId: user?.id ?? null,
@@ -410,6 +629,12 @@ export default function Messaging() {
       setMessages([]);
       return;
     }
+
+    if (isTutorialMessagingStep && selectedConvId === 'tour-demo-conv') {
+      setLoadingMessages(false);
+      return;
+    }
+
     setLoadingMessages(true);
     fetchWithRefresh(`/api/messaging/conversations/${selectedConvId}/messages`, { credentials: 'include' })
       .then((r) => (r && r.ok ? r.json() : null))
@@ -426,7 +651,7 @@ export default function Messaging() {
     setConversations((prev) =>
       prev.map((c) => (c.id === selectedConvId ? { ...c, unreadCount: 0 } : c))
     );
-  }, [selectedConvId]);
+  }, [selectedConvId, isTutorialMessagingStep]);
 
   // ── Scroll to bottom on new messages ──
   useEffect(() => {
@@ -649,6 +874,7 @@ export default function Messaging() {
         <div className="flex items-center justify-between px-4 pt-5 pb-3 border-b border-gray-100">
           <h1 className="text-xl font-bold text-gray-900">{t('page.messages', 'Messages')}</h1>
           <button
+            data-tour="msg-new-btn"
             onClick={() => setShowNewConv(true)}
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-[#0b5566]"
             title={t('messages.new.title', 'Nouveau message')}
@@ -673,7 +899,7 @@ export default function Messaging() {
         </div>
 
         {/* Conversation list */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" data-tour="msg-conv-list">
           {loadingConvs ? (
             <div className="flex items-center justify-center py-12">
               <div className="w-6 h-6 border-2 border-[#0b5566] border-t-transparent rounded-full animate-spin" />
@@ -743,12 +969,21 @@ export default function Messaging() {
               </button>
               {otherParticipant && (
                 <>
-                  <Avatar
-                    name={otherParticipant.name}
-                    avatarUrl={otherParticipant.avatarUrl}
-                    online={onlineUserIds.has(otherParticipant.id)}
-                    size="md"
-                  />
+                  <div data-tour="msg-avatar-status" className="relative">
+                    <Avatar
+                      name={otherParticipant.name}
+                      avatarUrl={otherParticipant.avatarUrl}
+                      online={onlineUserIds.has(otherParticipant.id)}
+                      size="md"
+                    />
+                    <span
+                      className={`absolute right-0 bottom-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
+                        demoStatusPhase === 'offline' ? 'bg-gray-400 animate-pulse' :
+                        demoStatusPhase === 'online' ? 'bg-green-400' :
+                        'bg-green-400 ring-2 ring-blue-400 shadow-lg animate-pulse'
+                      }`}
+                    />
+                  </div>
                   <div>
                     <p className="font-bold text-gray-900 text-sm leading-tight">{otherParticipant.name}</p>
                     <p className="text-xs text-gray-400">
@@ -834,15 +1069,19 @@ export default function Messaging() {
                   })}
 
                   {/* Typing indicator */}
-                  {isOtherTyping && (
-                    <div className="flex items-end gap-2 justify-start">
-                      <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                        <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                  <div data-tour="msg-typing-indicator" className="mb-1">
+                    {(isOtherTyping || isTutorialMessageStep6) ? (
+                      <div className="flex items-end gap-2 justify-start">
+                        <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="h-9" />
+                    )}
+                  </div>
 
                   <div ref={messagesEndRef} />
                 </>
@@ -865,7 +1104,7 @@ export default function Messaging() {
                   >✕</button>
                 </div>
               )}
-              <div className="relative flex items-end gap-2 bg-gray-50 rounded-2xl px-3 py-2">
+              <div className="relative flex items-end gap-2 bg-gray-50 rounded-2xl px-3 py-2" data-tour="msg-input">
                 {/* Emoji button */}
                 <button
                   type="button"
@@ -926,11 +1165,14 @@ export default function Messaging() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <div
+            data-tour={isTutorialMessageStep7 ? 'msg-action-hint' : undefined}
             className="fixed z-50 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100"
             style={{
-              top: Math.min(contextMenu.y, window.innerHeight - 120),
-              left: Math.min(Math.max(contextMenu.x - 80, 8), window.innerWidth - 176),
+              top: isTutorialMessageStep7
+                ? Math.max(24, Math.min(contextMenu.y - 14, window.innerHeight - 120))
+                : Math.min(contextMenu.y, window.innerHeight - 120),
               minWidth: 160,
+              ...(isTutorialMessageStep7 ? { right: 16 } : { left: Math.min(Math.max(contextMenu.x - 80, 8), window.innerWidth - 176) }),
             }}
           >
             {contextMenu.isMe && (
