@@ -37,7 +37,7 @@ export default function PrivacyPolicyPage() {
           <div className="max-w-3xl mx-auto">
             <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8">
               <h2 className="text-2xl font-bold text-brand-700 mb-6 text-center">Politique de confidentialité</h2>
-              <p className="mb-4 text-gray-700 text-center">Dernière mise à jour : 7 août 2025</p>
+              <p className="mb-4 text-gray-700 text-center">Dernière mise à jour : 4 avril 2026</p>
               <p className="mb-4 text-gray-700">Cette politique de confidentialité décrit comment Frimousse collecte, utilise, protège et partage vos données personnelles conformément au Règlement Général sur la Protection des Données (RGPD) et à la législation française.</p>
               <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">1. Responsable du traitement</h3>
               <p className="mb-4 text-gray-700">L’application Les Frimousse, 19 chemin de la gélatine, 13400 Aubagne, est responsable du traitement des données collectées via l’application Les Frimousse.</p>
@@ -64,11 +64,27 @@ export default function PrivacyPolicyPage() {
                 <li>Droit à la portabilité et à la limitation du traitement</li>
                 <li>Exercice des droits : contact@frimousse-asso.fr</li>
               </ul>
-              <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">7. Cookies</h3>
-              <p className="mb-4 text-gray-700">L’application utilise des cookies techniques nécessaires à son fonctionnement. Aucun cookie publicitaire n’est utilisé.</p>
-              <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">8. Modifications</h3>
+              <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">7. Durées de conservation</h3>
+              <p className="mb-2 text-gray-700">Vos données sont conservées uniquement le temps nécessaire aux finalités pour lesquelles elles ont été collectées :</p>
+              <ul className="list-disc list-inside text-gray-700 mb-4 space-y-1">
+                <li><strong>Compte utilisateur actif</strong> : pendant toute la durée de la relation contractuelle</li>
+                <li><strong>Compte inactif</strong> : anonymisé automatiquement après 2 ans sans connexion</li>
+                <li><strong>Messages</strong> : supprimés automatiquement après 3 ans</li>
+                <li><strong>Publications du fil d’actualité</strong> : supprimées automatiquement après 3 ans</li>
+                <li><strong>Notifications</strong> : supprimées automatiquement après 6 mois</li>
+                <li><strong>Abonnements aux notifications push</strong> : supprimés automatiquement après 2 ans</li>
+                <li><strong>Données de facturation</strong> : conservées 10 ans (obligation légale comptable)</li>
+              </ul>
+              <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">8. Cookies</h3>
+              <p className="mb-2 text-gray-700">L’application utilise deux catégories de cookies :</p>
+              <ul className="list-disc list-inside text-gray-700 mb-4 space-y-1">
+                <li><strong>Cookies essentiels</strong> : nécessaires au fonctionnement de l’application (authentification, session). Ils ne requièrent pas votre consentement.</li>
+                <li><strong>Cookies analytiques</strong> : Google Analytics 4 (GA4) pour mesurer l’audience de manière anonymisée. Ces cookies ne sont déposés qu’après votre consentement explicite via la bannière cookie.</li>
+              </ul>
+              <p className="mb-4 text-gray-700">Vous pouvez retirer votre consentement à tout moment. Aucun cookie publicitaire ou de ciblage n’est utilisé.</p>
+              <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">9. Modifications</h3>
               <p className="mb-4 text-gray-700">Frimousse se réserve le droit de modifier la présente politique. Les utilisateurs seront informés de toute modification importante.</p>
-              <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">9. Réclamations</h3>
+              <h3 className="font-bold text-lg text-brand-700 mt-8 mb-2">10. Réclamations</h3>
               <p className="mb-4 text-gray-700">En cas de litige, vous pouvez contacter la CNIL (www.cnil.fr).</p>
               <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <button

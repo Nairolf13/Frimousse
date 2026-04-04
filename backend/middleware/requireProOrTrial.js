@@ -1,10 +1,9 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const resolveSubscription = require('../utils/resolveSubscription');
 
 /**
  * Allows access only when:
  *  - user is super-admin
- *  - the center's subscription is trialing (essai gratuit)
+ *  - the center's subscription is trialing (essai gratuit, non expiré)
  *  - the center's subscription is active AND plan = 'pro'
  */
 module.exports = async function requireProOrTrial(req, res, next) {
@@ -13,36 +12,12 @@ module.exports = async function requireProOrTrial(req, res, next) {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
     if (user.role === 'super-admin') return next();
 
-    // Find the subscription for this user's center
-    let adminIds = [];
-
-    if (user.role === 'admin') {
-      adminIds = [user.id];
-    } else {
-      let centerId = user.centerId;
-      if (!centerId && user.parentId) {
-        const parent = await prisma.parent.findUnique({ where: { id: user.parentId } });
-        if (parent) centerId = parent.centerId;
-      }
-      if (centerId) {
-        const admins = await prisma.user.findMany({ where: { centerId }, select: { id: true, role: true } });
-        adminIds = admins.filter(a => String(a.role || '').toLowerCase().includes('admin')).map(a => a.id);
-      }
-    }
-
-    if (adminIds.length === 0) {
-      return res.status(403).json({ error: 'Cette fonctionnalité est réservée au plan Pro ou à la période d\'essai.' });
-    }
-
-    const sub = await prisma.subscription.findFirst({
-      where: { userId: { in: adminIds }, status: { in: ['trialing', 'active'] } },
-    });
+    const { sub } = await resolveSubscription(user, req);
 
     if (!sub) {
       return res.status(403).json({ error: 'Cette fonctionnalité est réservée au plan Pro ou à la période d\'essai.' });
     }
 
-    // trialing → always OK (within trial period)
     if (sub.status === 'trialing') {
       if (sub.trialEnd && new Date(sub.trialEnd) < new Date()) {
         return res.status(403).json({ error: 'Votre période d\'essai a expiré. Passez au plan Pro pour accéder à la messagerie.' });
@@ -50,7 +25,6 @@ module.exports = async function requireProOrTrial(req, res, next) {
       return next();
     }
 
-    // active → must be pro plan
     if (sub.status === 'active' && (sub.plan || '').toLowerCase() === 'pro') {
       return next();
     }

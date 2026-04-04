@@ -3,6 +3,7 @@ import { useI18n } from '../src/lib/useI18n';
 import '../styles/filter-responsive.css';
 import NannyCalendar from '../components/NannyCalendar';
 import { useAuth } from '../src/context/AuthContext';
+import PlanLimitBadge from '../components/PlanLimitBadge';
 import { useCenterSettings } from '../src/context/CenterSettingsContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
@@ -802,15 +803,18 @@ export default function Nannies() {
             </div>
           </div>
           {(user && typeof user.role === 'string' && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'))) && (
-            <button
-              type="button"
-              data-tour="btn-add-nanny"
-              onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
-              className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
-            >
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              {t('nanny.add')}
-            </button>
+            <div className="flex items-center gap-2">
+              <PlanLimitBadge resource="nanny" count={nannies.length} />
+              <button
+                type="button"
+                data-tour="btn-add-nanny"
+                onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
+                className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                {t('nanny.add')}
+              </button>
+            </div>
           )}
         </div>
 

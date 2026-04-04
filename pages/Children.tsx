@@ -68,6 +68,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { getCached, setCached, invalidate } from '../src/utils/apiCache';
 import { useI18n } from '../src/lib/useI18n';
 import { useAuth } from '../src/context/AuthContext';
+import PlanLimitBadge from '../components/PlanLimitBadge';
 import { useCenterSettings } from '../src/context/CenterSettingsContext';
 import '../styles/filter-responsive.css';
 import '../styles/children-responsive.css';
@@ -747,15 +748,18 @@ export default function Children() {
             </div>
           </div>
           {isAdminUser && (
-            <button
-              type="button"
-              data-tour="btn-add-child"
-              onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
-              className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
-            >
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              {t('children.add')}
-            </button>
+            <div className="flex items-center gap-2">
+              <PlanLimitBadge resource="child" count={children.length} />
+              <button
+                type="button"
+                data-tour="btn-add-child"
+                onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
+                className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
+              >
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                {t('children.add')}
+              </button>
+            </div>
           )}
         </div>
 

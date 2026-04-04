@@ -94,7 +94,7 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
         if (adminIssuer.email) doc.fontSize(10).fillColor('#2563eb').text(adminIssuer.email);
       } else {
         doc.font('Helvetica').fontSize(12).fillColor('#2563eb').text('Crèche & Garderie');
-        doc.fontSize(10).fillColor('#2563eb').text('lespetitesfrimoussesdu13@gmail.com');
+        doc.fontSize(10).fillColor('#2563eb').text('contact@lesfrimousses.com');
       }
 
       // meta boxes

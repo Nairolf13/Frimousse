@@ -199,7 +199,7 @@ router.post('/:id/adjustments', requireAuth, async (req, res) => {
   }
 });
 
-router.delete('/:id/adjustments/:adjId', requireAuth, async (req, res) => {
+router.delete('/:id/adjustments/:adjId', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
     const { id, adjId } = req.params;
     if (!canManageParents(req.user || {})) return res.status(403).json({ message: 'Interdit' });

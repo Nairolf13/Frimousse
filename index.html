@@ -2,16 +2,13 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-  <!-- Google tag (gtag.js) -->
-  <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-7HTQYHMFDQ"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);} 
-      gtag('js', new Date());
-
-      // gtag('config', 'G-7HTQYHMFDQ'); // Delayed until consent is granted
-    </script>
+  <!-- Google Analytics — script injected only after explicit consent (CNIL compliance) -->
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    // Default: deny all analytics until user consents
+    gtag('consent', 'default', { 'ad_storage': 'denied', 'analytics_storage': 'denied', 'wait_for_update': 500 });
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
   <meta name="keywords" content="application garde enfant, logiciel creche, gestion micro-creche, application MAM, logiciel garderie, gestion creche associative, planning creche, suivi enfant creche, application creche gratuite, logiciel petite enfance, gestion assistante maternelle, communication parents creche, RGPD creche, facturation micro-creche, application garde d'enfants" />
   <meta name="author" content="Les Frimousses" />

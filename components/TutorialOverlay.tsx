@@ -215,13 +215,14 @@ function NavButtons({
   compact?: boolean;
 }) {
   const isLast = currentStep === totalSteps - 1;
+  const isFirst = currentStep === 0;
   return (
     <div className={`flex items-center justify-between ${compact ? 'mt-4' : 'mt-6 md:mt-8'}`}>
       <button
         onClick={onStop}
         className={`text-gray-400 hover:text-gray-600 transition-colors font-medium ${compact ? 'text-xs' : 'text-sm'}`}
       >
-        Quitter
+        {isFirst ? 'Passer le tutoriel' : 'Quitter'}
       </button>
       <div className="flex items-center gap-2">
         {currentStep > 0 && (

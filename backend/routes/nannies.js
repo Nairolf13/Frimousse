@@ -461,7 +461,7 @@ router.get('/:id/cotisation-total', auth, async (req, res) => {
   }
 });
 
-router.put('/:id/cotisation', auth, async (req, res) => {
+router.put('/:id/cotisation', auth, requireActiveSubscription, async (req, res) => {
   try {
     const where = { id: req.params.id };
     if (!isSuperAdmin(req.user)) where.centerId = req.user.centerId;

@@ -295,3 +295,11 @@ try {
 } catch (err) {
   console.error('Failed to load subscription alert cron', err);
 }
+
+// Start data retention cron (RGPD — purge expired data daily at 02:00)
+try {
+  require('./lib/dataRetentionCron');
+  console.log('Data retention cron loaded');
+} catch (err) {
+  console.error('Failed to load data retention cron', err);
+}

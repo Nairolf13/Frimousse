@@ -203,13 +203,41 @@ async function sendPaymentSucceededAlert(stripeSubscriptionId) {
 }
 
 // ---------------------------------------------------------------------------
-// Schedule daily check at 08:00
+// Trial expiration cleanup — marks expired trialing subscriptions as canceled
+// ---------------------------------------------------------------------------
+
+async function expireTrials() {
+  try {
+    const now = new Date();
+    const result = await prisma.subscription.updateMany({
+      where: {
+        status: 'trialing',
+        trialEnd: { lt: now },
+      },
+      data: {
+        status: 'canceled',
+        canceledAt: now,
+      },
+    });
+    if (result.count > 0) {
+      console.log(`[subscriptionAlertCron] Expired ${result.count} trial(s) → status set to canceled`);
+    }
+  } catch (e) {
+    console.error('[subscriptionAlertCron] expireTrials failed', e && e.message ? e.message : e);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Schedule daily jobs
 // ---------------------------------------------------------------------------
 
 const cronEnabled = process.env.ENABLE_PAYMENT_CRON !== 'false';
 
 let task = null;
+let expireTask = null;
+
 if (cronEnabled) {
+  // 08:00 — send trial expiry alerts (7 days and 1 day before end)
   task = cron.schedule('0 8 * * *', async () => {
     console.log('[subscriptionAlertCron] Running trial expiry check...');
     try {
@@ -218,7 +246,14 @@ if (cronEnabled) {
       console.error('[subscriptionAlertCron] checkTrialAlerts failed', e);
     }
   }, { scheduled: true, timezone: cronTimezone });
-  console.log(`Subscription alert cron scheduled (daily 08:00, tz=${cronTimezone})`);
+
+  // 00:05 — expire trials that ended since last run
+  expireTask = cron.schedule('5 0 * * *', async () => {
+    console.log('[subscriptionAlertCron] Running trial expiration cleanup...');
+    await expireTrials();
+  }, { scheduled: true, timezone: cronTimezone });
+
+  console.log(`Subscription alert cron scheduled (daily 08:00 alerts + 00:05 cleanup, tz=${cronTimezone})`);
 }
 
-module.exports = { checkTrialAlerts, sendPaymentFailedAlert, sendPaymentSucceededAlert, task };
+module.exports = { checkTrialAlerts, expireTrials, sendPaymentFailedAlert, sendPaymentSucceededAlert, task, expireTask };

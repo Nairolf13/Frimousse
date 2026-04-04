@@ -94,6 +94,10 @@ router.get('/me', auth, async (req, res) => {
           const parent = await prisma.parent.findUnique({ where: { id: user.parentId } });
           if (parent) centerId = parent.centerId;
         }
+        if (!centerId && user.nannyId) {
+          const nanny = await prisma.nanny.findUnique({ where: { id: user.nannyId } });
+          if (nanny) centerId = nanny.centerId;
+        }
         if (centerId) {
           const admins = await prisma.user.findMany({ where: { centerId }, select: { id: true, role: true } });
           const adminIds = admins.filter(a => { const r = String(a.role || '').toLowerCase(); return r.includes('admin') || r.includes('super'); }).map(a => a.id);
@@ -530,14 +534,99 @@ router.delete('/:id/delete-orphan', auth, async (req, res) => {
     if (target.centerId) return res.status(400).json({ error: 'Cet utilisateur est rattaché à un centre. Supprimez le centre à la place.' });
     if (target.role === 'super-admin') return res.status(400).json({ error: 'Impossible de supprimer un super-admin.' });
 
-    // Delete dependent records (RefreshToken, PushSubscription, Notification, SupportTicket cascade automatically)
+    // Delete dependent records not covered by cascade
     await prisma.subscription.deleteMany({ where: { userId: id } });
     await prisma.pushSubscription.deleteMany({ where: { userId: id } });
+    await prisma.feedComment.deleteMany({ where: { authorId: id } });
+    await prisma.feedLike.deleteMany({ where: { userId: id } });
+    // Delete feed posts (+ their media/likes/comments)
+    const posts = await prisma.feedPost.findMany({ where: { authorId: id }, select: { id: true } });
+    if (posts.length > 0) {
+      const postIds = posts.map(p => p.id);
+      await prisma.feedComment.deleteMany({ where: { postId: { in: postIds } } });
+      await prisma.feedLike.deleteMany({ where: { postId: { in: postIds } } });
+      await prisma.feedMedia.deleteMany({ where: { postId: { in: postIds } } });
+      await prisma.feedPost.deleteMany({ where: { id: { in: postIds } } });
+    }
+    // RefreshToken, Notification, SupportTicket, ConversationParticipant, Message cascade automatically
     await prisma.user.delete({ where: { id } });
 
     res.json({ ok: true });
   } catch (e) {
     console.error('DELETE /api/user/:id/delete-orphan error', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+/* ─── RGPD: export personal data ─── */
+router.get('/me/export', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, role: true, createdAt: true, centerId: true, nannyId: true, parentId: true },
+    });
+
+    const [nanny, parent, notifications, pushSubscriptions, messages, feedPosts, feedComments] = await Promise.all([
+      user.nannyId ? prisma.nanny.findUnique({ where: { id: user.nannyId }, select: { id: true, name: true, email: true, contact: true, availability: true, experience: true, birthDate: true } }) : null,
+      user.parentId ? prisma.parent.findUnique({ where: { id: user.parentId }, select: { id: true, firstName: true, lastName: true, email: true, phone: true, centerId: true, createdAt: true } }) : null,
+      prisma.notification.findMany({ where: { userId }, select: { title: true, body: true, createdAt: true }, orderBy: { createdAt: 'desc' }, take: 200 }),
+      prisma.pushSubscription.findMany({ where: { userId }, select: { id: true, createdAt: true } }),
+      prisma.message.findMany({ where: { senderId: userId }, select: { content: true, createdAt: true, conversationId: true }, orderBy: { createdAt: 'desc' }, take: 500 }),
+      prisma.feedPost.findMany({ where: { authorId: userId }, select: { id: true, text: true, visibility: true, createdAt: true, childId: true }, orderBy: { createdAt: 'desc' }, take: 200 }),
+      prisma.feedComment.findMany({ where: { authorId: userId }, select: { text: true, createdAt: true, postId: true }, orderBy: { createdAt: 'desc' }, take: 200 }),
+    ]);
+
+    // Photo consents given by this parent
+    const photoConsents = user.parentId
+      ? await prisma.photoConsent.findMany({
+          where: { parentId: user.parentId },
+          select: { childId: true, consent: true, grantedAt: true, createdAt: true },
+        })
+      : [];
+
+    // Payment history for this parent
+    const paymentHistory = user.parentId
+      ? await prisma.paymentHistory.findMany({
+          where: { parentId: user.parentId },
+          select: { month: true, year: true, total: true, paid: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        })
+      : [];
+
+    // Children linked to this parent (with medical data)
+    const children = user.parentId
+      ? await prisma.parentChild.findMany({
+          where: { parentId: user.parentId },
+          select: {
+            child: {
+              select: { id: true, name: true, birthDate: true, allergies: true, prescriptionUrl: true, sexe: true, group: true },
+            },
+          },
+        }).then(rows => rows.map(r => r.child))
+      : [];
+
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      account: user,
+      profile: nanny || parent || null,
+      children,
+      photoConsents,
+      paymentHistory,
+      messages,
+      feedPosts,
+      feedComments,
+      notifications,
+      devices: pushSubscriptions.map(s => ({ id: s.id, registeredAt: s.createdAt })),
+    };
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="frimousse-mes-donnees-${new Date().toISOString().slice(0,10)}.json"`);
+    res.json(exportData);
+  } catch (e) {
+    console.error('GET /api/user/me/export error', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });

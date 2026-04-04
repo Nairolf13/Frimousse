@@ -169,12 +169,27 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
       ...tour,
       steps: tour.steps.filter(s => !s.adminOnly || isAdmin),
     };
+
+    // Restore saved progress if any
+    let resumeStep = 0;
+    try {
+      const saved = localStorage.getItem(`tutorial_progress_${tourId}`);
+      if (saved !== null) {
+        const idx = parseInt(saved, 10);
+        if (!isNaN(idx) && idx > 0 && idx < filteredTour.steps.length) {
+          resumeStep = idx;
+        }
+      }
+    } catch { /* ignore */ }
+
     setActiveTour(filteredTour);
-    setCurrentStep(0);
+    setCurrentStep(resumeStep);
     setShowMenu(false);
-    const firstRoute = tour.steps[0]?.route;
-    if (firstRoute && location.pathname !== firstRoute) {
-      navigate(firstRoute);
+
+    const targetStep = filteredTour.steps[resumeStep];
+    const targetRoute = targetStep?.route ?? filteredTour.steps[0]?.route;
+    if (targetRoute && location.pathname !== targetRoute) {
+      navigate(targetRoute);
     }
   }, [TOURS, navigate, location.pathname, isAdmin]);
 
@@ -201,11 +216,14 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
   }, [activeTour, navigate, location.pathname]);
 
   const stopTour = useCallback(() => {
+    if (activeTour) {
+      try { localStorage.removeItem(`tutorial_progress_${activeTour.id}`); } catch { /* ignore */ }
+    }
     setActiveTour(null);
     setCurrentStep(0);
     pendingRoute.current = null;
     setShowMenu(true);
-  }, []);
+  }, [activeTour]);
 
   const nextStep = useCallback(() => {
     if (!activeTour) return;
@@ -217,6 +235,7 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tourId }),
       }).catch(() => { /* ignore */ });
+      try { localStorage.removeItem(`tutorial_progress_${tourId}`); } catch { /* ignore */ }
       if (user) {
         const prev = user.tutorialCompleted || [];
         if (!prev.includes(tourId)) {
@@ -234,6 +253,8 @@ export function TutorialProvider({ children }: { children: ReactNode }) {
     const nextIdx = currentStep + 1;
     const nextStep = activeTour.steps[nextIdx];
     const nextRoute = nextStep?.route;
+    try { localStorage.setItem(`tutorial_progress_${activeTour.id}`, String(nextIdx)); } catch { /* ignore */ }
+
     if (nextRoute && location.pathname !== nextRoute) {
       pendingRoute.current = nextRoute;
       navigate(nextRoute);

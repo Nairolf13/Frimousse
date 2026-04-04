@@ -1283,7 +1283,28 @@ export default function Settings() {
                   </div>
                 </div>
               )}
-              <div className="border-t mt-6 pt-4">
+              <div className="border-t mt-6 pt-4 flex flex-col gap-3">
+                <button
+                  className="flex items-center gap-2 text-sm text-brand-600 font-medium hover:text-brand-700 transition"
+                  onClick={async () => {
+                    try {
+                      const res = await fetchWithRefresh('/api/user/me/export', { credentials: 'include' });
+                      if (!res.ok) throw new Error('Export failed');
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `frimousse-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      alert(t('settings.export_error', 'Erreur lors de l\'export de vos données.'));
+                    }
+                  }}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                  {t('settings.export_data', 'Télécharger mes données (RGPD)')}
+                </button>
                 <button className="flex items-center gap-2 text-sm text-red-600 font-medium hover:text-red-700 transition" onClick={() => setShowDeleteModal(true)}>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                   {t('settings.account.delete')}

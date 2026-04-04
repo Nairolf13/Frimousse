@@ -1,0 +1,5 @@
+Terms of Service
+By subscribing to a Brevo account or by using the platform or the services provided by Brevo you accept, on behalf of your organization, Brevo’s General Conditions of Use as well as our Privacy Policy and Anti-Spam Policy.
+
+Data Processing Agreement
+In accordance with article 28 of the General Data Protection Regulation (GDPR), a Data Processing Agreement (DPA) forms part with Brevo's General Conditions of Use. The DPA is entered into by your organization and is applicable upon subscription to a Brevo account or upon usage of Brevo's services or platform. Brevo provides a SaaS standard solution, without any possibility of specific developments, allowing its hundreds of thousands of users to benefit from features that are available "as is" on Brevo's platform. The DPA provides a ready-to-use agreement that reflects the standard processing of personal data at Brevo.
