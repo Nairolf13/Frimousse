@@ -10,7 +10,7 @@
     gtag('consent', 'default', { 'ad_storage': 'denied', 'analytics_storage': 'denied', 'wait_for_update': 500 });
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <meta name="keywords" content="application garde enfant, logiciel creche, gestion micro-creche, application MAM, logiciel garderie, gestion creche associative, planning creche, suivi enfant creche, application creche gratuite, logiciel petite enfance, gestion assistante maternelle, communication parents creche, RGPD creche, facturation micro-creche, application garde d'enfants" />
+  <meta name="keywords" content="logiciel creche, application micro-creche, gestion MAM, logiciel assistante maternelle, application garde enfant, planning creche, suivi enfant creche, logiciel petite enfance, gestion creche associative, facturation micro-creche, communication parents creche, logiciel garderie, application creche gratuite, RGPD creche, logiciel gestion creche familiale, fiche enfant creche, rapport journalier creche, presence enfant, cotisation assistante maternelle, feuille de presence MAM" />
   <meta name="author" content="Les Frimousses" />
   <meta name="application-name" content="Frimousse" />
   <meta name="rating" content="general" />
@@ -31,7 +31,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <!-- Theme color for Android / Chrome -->
   <meta name="theme-color" content="#0b5566" />
-  <meta name="description" content="Les Frimousses Application de gestion de garde d'enfants, Creche, Micro-creche, MAM et garderies. Planning, fiches enfants, communication parents, rapports et facturation. Essai gratuit. Conforme RGPD." />
+  <meta name="description" content="Logiciel de gestion pour crèches, micro-crèches, MAM et garderies. Planning, fiches enfants, messagerie parents, rapports et facturation. Essai gratuit 15 jours — conforme RGPD." />
   <!-- canonical is injected per-page by React Helmet (SEO component) -->
   <!-- iOS home screen -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -42,21 +42,21 @@
   <!-- iOS icon -->
   <link rel="apple-touch-icon" sizes="512x512" href="/imgs/LogoFrimousse-512.png" />
   <link rel="mask-icon" href="/imgs/LogoFrimousse-512.png" color="#0b5566" />
-    <meta property="og:title" content="Les Frimousses Application de gestion de garde d'enfants, Creche, Micro-creche, MAM" />
-    <meta property="og:description" content="Application de gestion de garde d'enfants : planning, fiches enfants, communication parents, rapports. Essai gratuit, conforme RGPD." />
+    <meta property="og:title" content="Frimousse — Logiciel de gestion pour crèches, micro-crèches et MAM" />
+    <meta property="og:description" content="Gérez votre crèche, micro-crèche ou MAM simplement : planning, fiches enfants, messagerie parents, rapports et facturation. Essai gratuit 15 jours." />
     <meta property="og:image" content="https://lesfrimousses.com/imgs/og-banner.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Les Frimousses Application de gestion de garde d'enfants, Creche, Micro-creche, MAM" />
+    <meta property="og:image:alt" content="Frimousse — Logiciel de gestion pour crèches, micro-crèches et MAM" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://lesfrimousses.com/" />
-    <meta property="og:site_name" content="Frimousse" />
+    <meta property="og:site_name" content="Les Frimousses" />
     <meta property="og:locale" content="fr_FR" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Les Frimousses Application de gestion de garde d'enfants, Creche, Micro-creche, MAM" />
-    <meta name="twitter:description" content="Logiciel pour creches, micro-creches et MAM. Planning, suivi enfants, communication parents. Essai gratuit." />
+    <meta name="twitter:title" content="Frimousse — Logiciel de gestion pour crèches, micro-crèches et MAM" />
+    <meta name="twitter:description" content="Planning, fiches enfants, messagerie parents, rapports et facturation pour crèches, micro-crèches et MAM. Essai gratuit 15 jours, conforme RGPD." />
     <meta name="twitter:image" content="https://lesfrimousses.com/imgs/og-banner.png" />
-    <title>Les Frimousses Application de gestion de garde d'enfants, Creche, Micro-creche, MAM</title>
+    <title>Frimousse — Logiciel de gestion pour crèches, micro-crèches et MAM | Essai gratuit</title>
     <!-- JSON-LD structured data (Organization + WebSite + SoftwareApplication + FAQPage) -->
     <script type="application/ld+json">
     {
@@ -73,7 +73,7 @@
             "width": 512,
             "height": 512
           },
-          "description": " Les Frimousse est une application de gestion pour les structures d'accueil de jeunes enfants : creches, micro-creches, MAM et garderies.",
+          "description": "Les Frimousse est une application de gestion pour les structures d'accueil de jeunes enfants : creches, micro-creches, MAM et garderies.",
           "address": {
             "@type": "PostalAddress",
             "addressCountry": "FR"
@@ -88,6 +88,23 @@
             "https://www.instagram.com/lesfrimousses13/",
             "https://www.facebook.com/profile.php?id=61577468283486",
             "https://www.linkedin.com/groups/17963103/"
+          ],
+          "potentialAction": [
+            {
+              "@type": "RegisterAction",
+              "name": "Essai gratuit 15 jours",
+              "target": "https://lesfrimousses.com/register"
+            },
+            {
+              "@type": "ViewAction",
+              "name": "Voir les tarifs",
+              "target": "https://lesfrimousses.com/tarifs"
+            },
+            {
+              "@type": "ViewAction",
+              "name": "Fonctionnalités",
+              "target": "https://lesfrimousses.com/fonctionnalites"
+            }
           ]
         },
         {
@@ -100,6 +117,26 @@
           "publisher": {
             "@type": "Organization",
             "name": "Frimousse"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://lesfrimousses.com/annuaire?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "SiteLinksSearchBox",
+          "url": "https://lesfrimousses.com/",
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://lesfrimousses.com/annuaire?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
           }
         },
         {
@@ -161,34 +198,34 @@
           "mainEntity": [
             {
               "@type": "Question",
-              "name": "Quelle est la meilleure application de gestion pour creche ?",
+              "name": "Quelle est la meilleure application de gestion pour crèche ?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Les Frimousses est une application complete de gestion pour creches, micro-creches et MAM. Elle permet de gerer les plannings, les fiches enfants, la communication avec les parents, les rapports d'activite et la facturation. Essai gratuit de 15 jours sans engagement."
+                "text": "Les Frimousse est une application complète de gestion pour crèches, micro-crèches, MAM et garderies. Elle permet de gérer les plannings, les fiches enfants avec données médicales, la communication avec les parents, les rapports d'activité journaliers et la facturation. Essai gratuit de 15 jours sans engagement ni carte bancaire."
               }
             },
             {
               "@type": "Question",
-              "name": "Comment gerer une micro-creche avec un logiciel ?",
+              "name": "Comment gérer une micro-crèche avec un logiciel ?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Avec les frimousse, vous pouvez gerer votre micro-creche de A a Z : inscriptions des enfants, plannings des intervenants, suivi des presences, communication avec les familles, generation de rapports et facturation automatisee. L'interface est simple et intuitive."
+                "text": "Avec Les Frimousse, vous gérez votre micro-crèche de A à Z : inscriptions des enfants avec fiches santé, plannings hebdomadaires des intervenants, suivi des présences avec feuilles de présence signées électroniquement, communication avec les familles via messagerie et fil d'actualité photos, génération de rapports journaliers et facturation automatisée des cotisations. L'interface est simple, sans formation nécessaire."
               }
             },
             {
               "@type": "Question",
-              "name": "Frimousse est-il conforme au RGPD ?",
+              "name": "Les Frimousse est-il conforme au RGPD ?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Oui, Les Frimousses est entierement conforme au RGPD. Les donnees sont chiffrees, les acces sont securises par authentification JWT, et toutes les informations personnelles des enfants et des familles sont protegees conformement a la reglementation europeenne."
+                "text": "Oui, Les Frimousse est entièrement conforme au RGPD. Les données sont chiffrées en transit (HTTPS), les accès sont sécurisés par authentification JWT, les photos des enfants sont stockées dans un espace privé sécurisé, et les parents disposent d'un droit d'accès, de rectification et d'export de leurs données depuis l'application. Un registre des traitements complet est tenu conformément à l'Article 30 du RGPD."
               }
             },
             {
               "@type": "Question",
-              "name": "Combien coute un logiciel de gestion de creche ?",
+              "name": "Combien coûte un logiciel de gestion de crèche ?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Les Frimousses propose un essai gratuit de 15 jours, puis des formules a partir de 29,99 euros par mois pour le plan Essentiel (jusqu'a 10 enfants) et 59,99 euros par mois pour le plan Pro (jusqu'a 30 enfants). Sans engagement."
+                "text": "Les Frimousse propose un essai gratuit de 15 jours sans carte bancaire. Ensuite, deux formules : le plan Essentiel à 29,99 €/mois (jusqu'à 10 enfants, idéal pour les MAM et micro-crèches) et le plan Pro à 59,99 €/mois (jusqu'à 30 enfants, pour les crèches et grandes structures). Sans engagement, résiliable à tout moment."
               }
             },
             {
@@ -196,15 +233,47 @@
               "name": "Quelle application pour une MAM (Maison d'Assistantes Maternelles) ?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Les Frimousses est specialement concu pour les MAM (Maisons d'Assistantes Maternelles). L'application permet de gerer les plannings de chaque assistante maternelle, suivre les enfants, communiquer avec les parents et generer les rapports necessaires."
+                "text": "Les Frimousse est spécialement adapté aux MAM (Maisons d'Assistantes Maternelles). L'application permet de gérer les plannings de chaque assistante maternelle, suivre les présences des enfants, générer les feuilles de présence mensuelles avec signature électronique des parents, calculer les cotisations et communiquer avec les familles. Conforme aux obligations réglementaires des assistantes maternelles agréées."
               }
             },
             {
               "@type": "Question",
-              "name": "Comment faciliter la communication entre parents et creche ?",
+              "name": "Comment faciliter la communication entre parents et crèche ?",
               "acceptedAnswer": {
                 "@type": "Answer",
-                "text": "Les Frimousses integre un fil d'actualite avec photos, des notifications push, un systeme de rapports quotidiens et une messagerie integree. Les parents peuvent suivre les activites de leur enfant en temps reel depuis l'application."
+                "text": "Les Frimousse intègre plusieurs outils de communication : un fil d'actualité avec partage de photos et vidéos (avec consentement photographique des parents), une messagerie interne directe, des notifications push en temps réel, et des rapports journaliers envoyés aux familles. Les parents peuvent suivre les activités de leur enfant depuis leur smartphone."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Les Frimousse fonctionne-t-il sur smartphone ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Oui, Les Frimousse est une application web progressive (PWA) accessible depuis n'importe quel navigateur sur smartphone, tablette ou ordinateur. Elle peut être installée sur l'écran d'accueil iOS et Android comme une application native, sans passer par l'App Store ou Google Play. Les notifications push fonctionnent également sur mobile."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Comment gérer les plannings d'une crèche ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Les Frimousse propose un module de planning hebdomadaire permettant d'affecter les enfants aux assistantes maternelles, de gérer les horaires de chaque intervenant, de suivre les absences et disponibilités (congés, maladie), et de générer des feuilles de présence mensuelles. Le planning est accessible en temps réel par toute l'équipe."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Peut-on gérer la facturation d'une micro-crèche avec Les Frimousse ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Oui, Les Frimousse intègre un module de facturation qui calcule automatiquement les cotisations mensuelles des familles en fonction des présences, génère les factures PDF et permet de suivre les paiements. Les ajustements manuels sont possibles et un historique complet des paiements est conservé."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Les Frimousse est-il gratuit ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Les Frimousse propose un essai gratuit de 15 jours donnant accès à toutes les fonctionnalités, sans carte bancaire ni engagement. Après l'essai, l'abonnement démarre à partir de 29,99 €/mois. Il n'existe pas de version gratuite permanente, mais le tarif est conçu pour être accessible aux petites structures comme les MAM et micro-crèches."
               }
             }
           ]
