@@ -534,9 +534,21 @@ router.delete('/:id/delete-orphan', auth, async (req, res) => {
     if (target.centerId) return res.status(400).json({ error: 'Cet utilisateur est rattaché à un centre. Supprimez le centre à la place.' });
     if (target.role === 'super-admin') return res.status(400).json({ error: 'Impossible de supprimer un super-admin.' });
 
-    // Delete dependent records (RefreshToken, PushSubscription, Notification, SupportTicket cascade automatically)
+    // Delete dependent records not covered by cascade
     await prisma.subscription.deleteMany({ where: { userId: id } });
     await prisma.pushSubscription.deleteMany({ where: { userId: id } });
+    await prisma.feedComment.deleteMany({ where: { authorId: id } });
+    await prisma.feedLike.deleteMany({ where: { userId: id } });
+    // Delete feed posts (+ their media/likes/comments)
+    const posts = await prisma.feedPost.findMany({ where: { authorId: id }, select: { id: true } });
+    if (posts.length > 0) {
+      const postIds = posts.map(p => p.id);
+      await prisma.feedComment.deleteMany({ where: { postId: { in: postIds } } });
+      await prisma.feedLike.deleteMany({ where: { postId: { in: postIds } } });
+      await prisma.feedMedia.deleteMany({ where: { postId: { in: postIds } } });
+      await prisma.feedPost.deleteMany({ where: { id: { in: postIds } } });
+    }
+    // RefreshToken, Notification, SupportTicket, ConversationParticipant, Message cascade automatically
     await prisma.user.delete({ where: { id } });
 
     res.json({ ok: true });
