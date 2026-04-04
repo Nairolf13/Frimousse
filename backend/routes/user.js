@@ -10,6 +10,7 @@ const auth = require('../middleware/authMiddleware');
 const prisma = require('../lib/prismaClient');
 const bcrypt = require('bcryptjs');
 const { validatePassword } = require('../lib/validatePassword');
+const { validateAddress } = require('../utils/validateAddress');
 
 let fetchFn;
 try {
@@ -63,7 +64,7 @@ async function resolveUserCenter(prismaClient, userRecord) {
 router.get('/me', auth, async (req, res) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
-    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true, profileCompleted: true, oauthProvider: true, language: true, avatarUrl: true }
+    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true, profileCompleted: true, oauthProvider: true, language: true, avatarUrl: true, phone: true, address: true, postalCode: true, city: true, region: true, country: true, facebookUrl: true, instagramUrl: true, linkedinUrl: true, twitterUrl: true }
   });
   if (!user) return res.status(404).json({ message: 'User not found' });
   try {
@@ -113,6 +114,11 @@ router.get('/me', auth, async (req, res) => {
     }
   } catch (e) {
     // ignore — plan stays null
+  }
+
+  // Convert stored path to proxy URL for avatars
+  if (user.avatarUrl && !user.avatarUrl.startsWith('http') && !user.avatarUrl.startsWith('/api/storage')) {
+    user.avatarUrl = `/api/storage/photo?path=${encodeURIComponent(user.avatarUrl)}`;
   }
 
   res.json({ ...user, plan, subscriptionStatus });
@@ -262,25 +268,33 @@ router.post('/complete-profile', auth, async (req, res) => {
 // Update current user's basic info (name, email, address, etc.)
 router.put('/me', auth, async (req, res) => {
   try {
-    const { name, email, notifyByEmail, address, postalCode, city, region, country, phone, birthDate, avatarUrl } = req.body || {};
-    if (!name && !email && typeof notifyByEmail === 'undefined' && typeof address === 'undefined' && typeof postalCode === 'undefined' && typeof city === 'undefined' && typeof region === 'undefined' && typeof country === 'undefined' && typeof phone === 'undefined' && typeof birthDate === 'undefined' && typeof avatarUrl === 'undefined') {
+    const { name, email, notifyByEmail, address, postalCode, city, region, country, phone, birthDate, avatarUrl, facebookUrl, instagramUrl, linkedinUrl, twitterUrl } = req.body || {};
+    if (!name && !email && typeof notifyByEmail === 'undefined' && typeof address === 'undefined' && typeof postalCode === 'undefined' && typeof city === 'undefined' && typeof region === 'undefined' && typeof country === 'undefined' && typeof phone === 'undefined' && typeof birthDate === 'undefined' && typeof avatarUrl === 'undefined' && typeof facebookUrl === 'undefined' && typeof instagramUrl === 'undefined' && typeof linkedinUrl === 'undefined' && typeof twitterUrl === 'undefined') {
       return res.status(400).json({ error: 'No fields to update' });
     }
     if (name && String(name).length > 100) return res.status(400).json({ error: 'Nom trop long (max 100 caractères).' });
+
+    // Validate and sanitize address fields
+    const addrValidation = validateAddress({ address, postalCode, city, region, country });
+    if (addrValidation.errors.length) return res.status(400).json({ error: addrValidation.errors.join(', ') });
 
     const data = {};
     if (typeof name === 'string') data.name = name;
     if (typeof email === 'string') data.email = String(email || '').trim().toLowerCase();
     if (typeof notifyByEmail === 'boolean') data.notifyByEmail = notifyByEmail;
     // allow updating address fields on the User record (User owns address)
-    if (typeof address !== 'undefined') data.address = address || null;
-    if (typeof postalCode !== 'undefined') data.postalCode = postalCode || null;
-    if (typeof city !== 'undefined') data.city = city || null;
-    if (typeof region !== 'undefined') data.region = region || null;
-    if (typeof country !== 'undefined') data.country = country || null;
+    if ('address' in addrValidation.data) data.address = addrValidation.data.address;
+    if ('postalCode' in addrValidation.data) data.postalCode = addrValidation.data.postalCode;
+    if ('city' in addrValidation.data) data.city = addrValidation.data.city;
+    if ('region' in addrValidation.data) data.region = addrValidation.data.region;
+    if ('country' in addrValidation.data) data.country = addrValidation.data.country;
     if (typeof avatarUrl !== 'undefined') data.avatarUrl = avatarUrl || null;
+    if (typeof facebookUrl !== 'undefined') data.facebookUrl = String(facebookUrl || '').trim() || null;
+    if (typeof instagramUrl !== 'undefined') data.instagramUrl = String(instagramUrl || '').trim() || null;
+    if (typeof linkedinUrl !== 'undefined') data.linkedinUrl = String(linkedinUrl || '').trim() || null;
+    if (typeof twitterUrl !== 'undefined') data.twitterUrl = String(twitterUrl || '').trim() || null;
 
-    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, avatarUrl: true, parentId: true, nannyId: true } });
+    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, avatarUrl: true, parentId: true, nannyId: true, facebookUrl: true, instagramUrl: true, linkedinUrl: true, twitterUrl: true } });
 
     // If phone provided, update linked Parent or Nanny contact as appropriate
     try {
@@ -383,21 +397,14 @@ router.post('/me/avatar', auth, avatarUpload.single('avatar'), async (req, res) 
       }
     }
 
-    const publicUrlData = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(objectPath);
-    const publicUrl = publicUrlData?.data?.publicUrl || publicUrlData?.data?.publicURL || null;
+    const proxyUrl = `/api/storage/photo?path=${encodeURIComponent(objectPath)}`;
 
-    if (!publicUrl) {
-      console.error('Avatar public URL not available', publicUrlData);
-      return res.status(500).json({ error: 'Impossible de générer l’URL publique de l’avatar' });
-    }
-
-    const updated = await prisma.user.update({
+    await prisma.user.update({
       where: { id: req.user.id },
-      data: { avatarUrl: publicUrl },
-      select: { avatarUrl: true }
+      data: { avatarUrl: objectPath },
     });
 
-    res.json({ avatarUrl: updated.avatarUrl });
+    res.json({ avatarUrl: proxyUrl });
   } catch (e) {
     console.error('Failed to upload avatar', e);
     res.status(500).json({ error: 'Erreur serveur lors de l’envoi de l’avatar' });

@@ -34,7 +34,7 @@ function cookieOptions() {
 exports.register = async (req, res) => {
   // normalize email to avoid case-sensitivity issues
   const email = String(req.body.email || '').trim().toLowerCase();
-  const { password, name, role, nannyId, centerId, centerName, plan, address, city, postalCode, region, country } = req.body;
+  const { password, name, role, nannyId, centerId, centerName, plan, address, city, postalCode, region, country, facebookUrl, instagramUrl, linkedinUrl, twitterUrl } = req.body;
   if (!email || !password || !name || !role) return res.status(400).json({ message: 'Missing fields' });
   const pwErr = validatePassword(password);
   if (pwErr) return res.status(400).json({ message: pwErr });
@@ -54,6 +54,11 @@ exports.register = async (req, res) => {
   if (region) userData.region = region;
   if (country) userData.country = country;
   if (nannyId) userData.nannyId = nannyId;
+  // optional social link fields
+  if (facebookUrl) userData.facebookUrl = String(facebookUrl).trim() || null;
+  if (instagramUrl) userData.instagramUrl = String(instagramUrl).trim() || null;
+  if (linkedinUrl) userData.linkedinUrl = String(linkedinUrl).trim() || null;
+  if (twitterUrl) userData.twitterUrl = String(twitterUrl).trim() || null;
   // Determine center assignment rules:
   // - If this is the very first user in the system, force admin role and create a new Center.
   // - If the new user's role is 'admin', always create a new Center and assign its id (unique per admin).

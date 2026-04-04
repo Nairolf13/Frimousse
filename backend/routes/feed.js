@@ -22,6 +22,24 @@ const authMiddleware = require('../middleware/authMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const { sendFeedPostNotification, sendLikeNotification, sendCommentNotification } = require('../lib/pushNotifications');
 
+// Convert a stored path (or legacy public URL) to a secure proxy URL
+function toProxyUrl(pathOrUrl) {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith('/api/storage')) return pathOrUrl;
+  if (pathOrUrl.startsWith('http')) {
+    // Legacy public URL — extract path after /object/public/BucketName/
+    const match = pathOrUrl.match(/\/object\/(?:public|sign)\/[^/]+\/(.+?)(\?.*)?$/);
+    if (match) return `/api/storage/photo?path=${encodeURIComponent(match[1])}`;
+    return pathOrUrl; // unknown format, return as-is
+  }
+  return `/api/storage/photo?path=${encodeURIComponent(pathOrUrl)}`;
+}
+
+function toProxyMedia(media) {
+  if (!media) return media;
+  return { ...media, url: toProxyUrl(media.url), thumbnailUrl: toProxyUrl(media.thumbnailUrl) };
+}
+
 // Per-file upload limit increased to 1GB. Allow up to 6 files per post.
 const PER_FILE_LIMIT = 1 * 1024 * 1024 * 1024; // 1GB
 const MAX_TOTAL_PER_POST = 1 * 1024 * 1024 * 1024; // 1GB aggregate
@@ -218,13 +236,10 @@ router.post('/', checkContentLength, upload.array('images', 6), async (req, res)
           continue;
         }
 
-        const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
-        const mainUrl = publicMain?.data?.publicUrl || null;
-
         const media = await prisma.feedMedia.create({ data: {
           postId: post.id,
           type: 'video',
-          url: mainUrl,
+          url: mainPath,
           thumbnailUrl: null,
           size: file.size,
           hash: hash,
@@ -284,18 +299,12 @@ router.post('/', checkContentLength, upload.array('images', 6), async (req, res)
         console.error('Supabase thumb upload failed after retries', err);
       }
 
-      // For public bucket: return public URLs and store storage paths so we can delete later
-      const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
-      const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
-      const mainUrl = publicMain?.data?.publicUrl || null;
-      const thumbUrl = publicThumb?.data?.publicUrl || null;
-
       const media = await prisma.feedMedia.create({
         data: {
           postId: post.id,
           type: 'image',
-          url: mainUrl,
-          thumbnailUrl: thumbUrl,
+          url: mainPath,
+          thumbnailUrl: thumbPath,
           size: file.size,
           hash: hash,
           storagePath: mainPath,
@@ -387,15 +396,15 @@ router.get('/', async (req, res) => {
       id: p.id,
       text: p.text,
       createdAt: p.createdAt,
-      author: { name: p.author?.name, avatarUrl: p.author?.avatarUrl },
+      author: { name: p.author?.name, avatarUrl: toProxyUrl(p.author?.avatarUrl) },
       authorId: p.author?.id,
-      medias: p.medias,
+      medias: p.medias.map(toProxyMedia),
       likes: p._count?.likes || 0,
       commentsCount: p._count?.comments || 0,
       // defensive: author may be null if the user was deleted; don't throw
       comments: p.comments.map(c => ({
         authorName: c.author?.name || 'Utilisateur',
-        authorAvatarUrl: c.author?.avatarUrl,
+        authorAvatarUrl: toProxyUrl(c.author?.avatarUrl),
         timeAgo: c.createdAt,
         text: c.text,
       })),
@@ -717,13 +726,7 @@ router.post('/:postId/media', checkContentLength, upload.array('images', 6), asy
         }
       }
 
-  // For public bucket: use public URLs and store storage paths
-  const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(mainPath);
-  const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
-  const mainUrl = publicMain?.data?.publicUrl || null;
-  const thumbUrl = publicThumb?.data?.publicUrl || null;
-
-  const media = await prisma.feedMedia.create({ data: { postId: postId, type: 'image', url: mainUrl, thumbnailUrl: thumbUrl, size: file.size, hash: hash, storagePath: mainPath, thumbnailPath: thumbPath } });
+  const media = await prisma.feedMedia.create({ data: { postId: postId, type: 'image', url: mainPath, thumbnailUrl: thumbPath, size: file.size, hash: hash, storagePath: mainPath, thumbnailPath: thumbPath } });
   savedMedias.push(media);
   try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
     }

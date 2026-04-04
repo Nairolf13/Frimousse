@@ -1,7 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
+const { validateAddress } = require('../utils/validateAddress');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
+
+function toProxyUrl(pathOrUrl) {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith('/api/storage')) return pathOrUrl;
+  if (pathOrUrl.startsWith('http')) {
+    const match = pathOrUrl.match(/\/object\/(?:public|sign)\/[^/]+\/(.+?)(\?.*)?$/);
+    if (match) return `/api/storage/photo?path=${encodeURIComponent(match[1])}`;
+    return pathOrUrl;
+  }
+  return `/api/storage/photo?path=${encodeURIComponent(pathOrUrl)}`;
+}
 
 const prisma = require('../lib/prismaClient');
 const { detectLang, subject: emailSubject } = require('../lib/i18n');
@@ -35,7 +47,7 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
       city: u.city || null,
       region: u.region || null,
       country: u.country || null,
-      avatarUrl: u.avatarUrl || null,
+      avatarUrl: toProxyUrl(u.avatarUrl) || null,
     });
   });
   res.set('Cache-Control', 'private, max-age=15');
@@ -65,7 +77,7 @@ router.post('/batch/details', auth, async (req, res) => {
         city: u.city || null,
         region: u.region || null,
         country: u.country || null,
-        avatarUrl: u.avatarUrl || null,
+        avatarUrl: toProxyUrl(u.avatarUrl) || null,
       });
     });
 
@@ -267,6 +279,11 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
   const { id } = req.params;
   const { name, availability, experience, contact, birthDate, newPassword, address, postalCode, city, region, country } = req.body;
   const email = req.body.email !== undefined ? String(req.body.email || '').trim().toLowerCase() : undefined;
+
+  // Validate and sanitize address fields before any DB operation
+  const addrValidation = validateAddress({ address, postalCode, city, region, country });
+  if (addrValidation.errors.length) return res.status(400).json({ message: addrValidation.errors.join(', ') });
+
   if (!isSuperAdmin(req.user)) {
     const existing = await prisma.nanny.findUnique({ where: { id } });
     if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
@@ -277,12 +294,7 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
 
   // If address fields were provided, update the linked user(s) instead (User holds address info)
   try {
-    const addrUpdate = {};
-    if (address !== undefined) addrUpdate.address = address || null;
-    if (postalCode !== undefined) addrUpdate.postalCode = postalCode || null;
-    if (city !== undefined) addrUpdate.city = city || null;
-    if (region !== undefined) addrUpdate.region = region || null;
-    if (country !== undefined) addrUpdate.country = country || null;
+    const addrUpdate = { ...addrValidation.data };
     if (Object.keys(addrUpdate).length > 0) {
       const users = await prisma.user.findMany({ where: { nannyId: id } });
       for (const u of users) {

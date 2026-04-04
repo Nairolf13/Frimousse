@@ -102,6 +102,10 @@ model User {
   tutorialCompleted        String[]
   cookieConsent            String?
   language                 String?
+  facebookUrl              String?
+  instagramUrl             String?
+  linkedinUrl              String?
+  twitterUrl               String?
   conversationParticipants ConversationParticipant[]
   sentMessages             Message[]
 }

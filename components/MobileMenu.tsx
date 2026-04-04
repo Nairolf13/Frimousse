@@ -235,7 +235,7 @@ export default function MobileMenu() {
             return;
           }
 
-          const res = await fetch(`/centers/${centerId}`, { credentials: 'include' });
+          const res = await fetch(`/api/centers/${centerId}`, { credentials: 'include' });
           if (!mounted) return;
           if (res.status === 429) {
             const ra = res.headers.get('Retry-After');
@@ -261,10 +261,21 @@ export default function MobileMenu() {
     return () => { mounted = false; };
   }, [user]);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const name = (e as CustomEvent<{ name: string }>).detail?.name ?? null;
+      setCenterName(name);
+      const centerId = user?.centerId;
+      if (centerId) setCached(`/api/centers/${centerId}`, { name }, DEFAULT_TTL);
+    };
+    window.addEventListener('center:nameUpdated', handler);
+    return () => window.removeEventListener('center:nameUpdated', handler);
+  }, [user?.centerId]);
+
   function displayCenterName(name: string | null) {
-    if (!name) return 'Frimousse';
+    if (!name) return '...';
     const trimmed = name.trim();
-    if (trimmed.length === 0) return 'Frimousse';
+    if (trimmed.length === 0) return '...';
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
   }
 

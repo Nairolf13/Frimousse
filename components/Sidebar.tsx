@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 import type { User as AuthUser } from '../src/context/AuthContext';
 import { useEffect, useState, useRef, type ChangeEvent } from 'react';
+import { createPortal } from 'react-dom';
 import AvatarCropper from './AvatarCropper';
 import { useI18n } from '../src/lib/useI18n';
 import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell, HiOutlineCurrencyDollar, HiOutlineChatAlt, HiOutlineOfficeBuilding, HiOutlineCreditCard, HiOutlineChatAlt2 } from 'react-icons/hi';
@@ -188,6 +189,8 @@ export default function Sidebar() {
 
   const onAvatarFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    // Reset input so the same file can be re-selected
+    event.target.value = '';
     if (!file) return;
 
     const url = URL.createObjectURL(file);
@@ -202,9 +205,9 @@ export default function Sidebar() {
   };
 
   function displayCenterName(name: string | null) {
-    if (!name) return 'Frimousse';
+    if (!name) return '...';
     const trimmed = name.trim();
-    if (trimmed.length === 0) return 'Frimousse';
+    if (trimmed.length === 0) return '...';
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
   }
   let userName = 'Utilisateur';
@@ -226,7 +229,6 @@ export default function Sidebar() {
           </div>
          <div className="flex flex-col">
            <span data-tour="sidebar-logo" className="font-extrabold text-lg text-gray-900 leading-tight">{displayCenterName(centerName)}</span>
-           <span className="text-xs text-gray-400 font-medium">Gestion crèche</span>
          </div>
         </div>
         <div className="mx-4 mb-3 border-t border-gray-100"></div>
@@ -287,17 +289,18 @@ export default function Sidebar() {
             <div className="text-xs text-gray-400 capitalize">{userRole}</div>
           </div>
         </div>
-        {cropModalOpen && cropImageSrc && (
-          <AvatarCropper
-            imageSrc={cropImageSrc}
-            onCancel={closeCropModal}
-            onApply={(croppedFile) => {
-              closeCropModal();
-              uploadAvatar(croppedFile);
-            }}
-          />
-        )}
         </aside>
+      )}
+      {cropModalOpen && cropImageSrc && createPortal(
+        <AvatarCropper
+          imageSrc={cropImageSrc}
+          onCancel={closeCropModal}
+          onApply={(croppedFile) => {
+            closeCropModal();
+            uploadAvatar(croppedFile);
+          }}
+        />,
+        document.getElementById('root') ?? document.body
       )}
     </>
   );

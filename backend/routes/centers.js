@@ -46,6 +46,10 @@ router.get('/public', async (req, res) => {
             postalCode: true,
             region: true,
             country: true,
+            facebookUrl: true,
+            instagramUrl: true,
+            linkedinUrl: true,
+            twitterUrl: true,
           },
           take: 1
         }
@@ -67,6 +71,10 @@ router.get('/public', async (req, res) => {
           postalCode: admin?.postalCode || null,
           region: admin?.region || null,
           country: admin?.country || null,
+          facebookUrl: admin?.facebookUrl || null,
+          instagramUrl: admin?.instagramUrl || null,
+          linkedinUrl: admin?.linkedinUrl || null,
+          twitterUrl: admin?.twitterUrl || null,
         };
       })
       .filter(c => c.address || c.phone);
@@ -194,10 +202,11 @@ router.get('/settings', requireAuth, async (req, res) => {
     if (!centerId) return res.status(400).json({ error: 'Aucun centre associé' });
     const center = await prisma.center.findUnique({
       where: { id: centerId },
-      select: { dailyRate: true, childCotisationAmount: true, nannyCotisationAmount: true, showInDirectory: true }
+      select: { name: true, dailyRate: true, childCotisationAmount: true, nannyCotisationAmount: true, showInDirectory: true }
     });
     if (!center) return res.status(404).json({ error: 'Centre non trouvé' });
     res.json({
+      name: center.name ?? '',
       dailyRate: center.dailyRate ?? 2.0,
       childCotisationAmount: center.childCotisationAmount ?? 15.0,
       nannyCotisationAmount: center.nannyCotisationAmount ?? 10.0,
@@ -221,8 +230,14 @@ router.put('/settings', requireAuth, async (req, res) => {
       centerId = first?.id;
     }
     if (!centerId) return res.status(400).json({ error: 'Aucun centre associé' });
-    const { dailyRate, childCotisationAmount, nannyCotisationAmount, showInDirectory } = req.body;
+    const { name, dailyRate, childCotisationAmount, nannyCotisationAmount, showInDirectory } = req.body;
     const data = {};
+    if (name !== undefined) {
+      const trimmed = String(name || '').trim();
+      if (!trimmed) return res.status(400).json({ error: 'Le nom du centre ne peut pas être vide' });
+      if (trimmed.length > 150) return res.status(400).json({ error: 'Nom du centre trop long (max 150 caractères)' });
+      data.name = trimmed;
+    }
     if (dailyRate !== undefined) {
       const v = parseFloat(dailyRate);
       if (isNaN(v) || v < 0) return res.status(400).json({ error: 'Tarif journalier invalide' });

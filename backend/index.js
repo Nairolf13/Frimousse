@@ -212,6 +212,9 @@ app.use('/api/feed', feedRoutes);
 const uploadsRoutes = require('./routes/uploads');
 app.use('/api/uploads', uploadsRoutes);
 
+const storageRoutes = require('./routes/storage');
+app.use('/api/storage', storageRoutes);
+
 const notificationsRoutes = require('./routes/notifications');
 app.use('/api/notifications', notificationsRoutes);
 

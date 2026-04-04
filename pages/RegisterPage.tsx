@@ -15,6 +15,10 @@ type FormType = {
   postalCode: string;
   region: string;
   country: string;
+  facebookUrl: string;
+  instagramUrl: string;
+  linkedinUrl: string;
+  twitterUrl: string;
 };
 
 type Country = { name: string; cca2?: string; cca3?: string; region?: string };
@@ -61,6 +65,10 @@ export default function RegisterPage() {
     postalCode: "",
     region: "",
     country: "",
+    facebookUrl: "",
+    instagramUrl: "",
+    linkedinUrl: "",
+    twitterUrl: "",
   });
 
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -727,7 +735,33 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* ── Section 3 : Sécurité ── */}
+        {/* ── Section 3 : Réseaux sociaux (admin) ── */}
+        <div className="flex items-center gap-2.5 mb-4 mt-6">
+          <div className="w-8 h-8 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-sky-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" /></svg>
+          </div>
+          <h3 className="text-sm font-bold text-gray-800">Réseaux sociaux <span className="text-xs font-normal text-gray-400">(optionnel)</span></h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Facebook</label>
+            <input name="facebookUrl" value={form.facebookUrl} onChange={handleChange} placeholder="https://facebook.com/mastructure" className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">Instagram</label>
+            <input name="instagramUrl" value={form.instagramUrl} onChange={handleChange} placeholder="https://instagram.com/mastructure" className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">LinkedIn</label>
+            <input name="linkedinUrl" value={form.linkedinUrl} onChange={handleChange} placeholder="https://linkedin.com/company/mastructure" className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1.5">X (Twitter)</label>
+            <input name="twitterUrl" value={form.twitterUrl} onChange={handleChange} placeholder="https://x.com/mastructure" className="w-full bg-gray-50 border border-gray-400 rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-500 focus:bg-white focus:border-brand-400 focus:ring-2 focus:ring-brand-100 focus:outline-none transition-all" />
+          </div>
+        </div>
+
+        {/* ── Section 4 : Sécurité ── */}
         <div className="flex items-center gap-2.5 mb-4 mt-6">
           <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
             <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
