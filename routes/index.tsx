@@ -88,6 +88,7 @@ const AdminAnnouncements = lazyWithRetry(() => import('../pages/AdminAnnouncemen
 const PresenceSheets = lazyWithRetry(() => import('../pages/PresenceSheets'));
 const Messaging = lazyWithRetry(() => import('../pages/Messaging'));
 const DirectoryPage = lazyWithRetry(() => import('../pages/DirectoryPage'));
+const TrialExpiredPage = lazyWithRetry(() => import('../pages/TrialExpiredPage'));
 const LandingMAMPage = lazyWithRetry(() => import('../pages/LandingMAMPage'));
 const LandingCrechePage = lazyWithRetry(() => import('../pages/LandingCrechePage'));
 const LandingMicroCrechePage = lazyWithRetry(() => import('../pages/LandingMicroCrechePage'));
@@ -136,6 +137,7 @@ export default function AppRoutes() {
           <Route path="/cgu" element={<TermsPage />} />
           <Route path="/mentions-legales" element={<LegalNoticePage />} />
           <Route path="/annuaire" element={<DirectoryPage />} />
+          <Route path="/trial-expired" element={<TrialExpiredPage />} />
           <Route path="/logiciel-mam" element={<LandingMAMPage />} />
           <Route path="/logiciel-creche" element={<LandingCrechePage />} />
           <Route path="/logiciel-micro-creche" element={<LandingMicroCrechePage />} />

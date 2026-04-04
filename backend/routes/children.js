@@ -1012,7 +1012,7 @@ router.get('/:id/prescription', auth, async (req, res) => {
 });
 
 // Delete prescription (parent only)
-router.delete('/:id/prescription', auth, async (req, res) => {
+router.delete('/:id/prescription', auth, requireActiveSubscription, async (req, res) => {
   const { id } = req.params;
   const user = req.user;
   if (!user || user.role !== 'parent') return res.status(403).json({ message: 'Forbidden' });

@@ -24,16 +24,25 @@ export default function CookieConsent() {
         body: JSON.stringify({ cookieConsent: consent }),
       }).catch(() => { /* ignore */ });
     }
-    if (typeof window.gtag === 'function' && lastGtagConsent !== consent) {
+    if (lastGtagConsent !== consent) {
       if (consent === 'all') {
-        try { window.gtag('consent', 'update', { 'ad_storage': 'granted', 'analytics_storage': 'granted' }); } catch (e) { console.warn('gtag consent update failed', e); }
-        try { window.gtag('event', 'consent_granted', { method: 'banner' }); } catch { /* ignore */ }
         if (!window.gaConfigured) {
           window.gaConfigured = true;
-          try { window.gtag('config', 'G-7HTQYHMFDQ'); } catch (e) { console.warn('gtag config failed', e); }
+          // Inject GA4 script dynamically — only after explicit consent (CNIL)
+          const s = document.createElement('script');
+          s.async = true;
+          s.src = 'https://www.googletagmanager.com/gtag/js?id=G-7HTQYHMFDQ';
+          s.onload = () => {
+            try { window.gtag!('consent', 'update', { 'ad_storage': 'granted', 'analytics_storage': 'granted' }); } catch { /* ignore */ }
+            try { window.gtag!('config', 'G-7HTQYHMFDQ'); } catch { /* ignore */ }
+            try { window.gtag!('event', 'consent_granted', { method: 'banner' }); } catch { /* ignore */ }
+          };
+          document.head.appendChild(s);
+        } else {
+          try { window.gtag!('consent', 'update', { 'ad_storage': 'granted', 'analytics_storage': 'granted' }); } catch { /* ignore */ }
         }
       } else {
-        try { window.gtag('consent', 'update', { 'ad_storage': 'denied', 'analytics_storage': 'denied' }); } catch (e) { console.warn('gtag consent update failed', e); }
+        try { window.gtag?.('consent', 'update', { 'ad_storage': 'denied', 'analytics_storage': 'denied' }); } catch { /* ignore */ }
       }
       setLastGtagConsent(consent);
     }

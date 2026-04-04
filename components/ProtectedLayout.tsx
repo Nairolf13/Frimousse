@@ -45,6 +45,14 @@ export default function ProtectedLayout() {
   }, [navigate, setUser]);
 
   useEffect(() => {
+    const handler = () => {
+      navigate('/trial-expired', { replace: true });
+    };
+    window.addEventListener('subscription:required', handler);
+    return () => window.removeEventListener('subscription:required', handler);
+  }, [navigate]);
+
+  useEffect(() => {
     if (user === null) return; // still loading in App.tsx
     if (!user) {
       navigate('/login', { replace: true });

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
+import PlanLimitBadge from '../components/PlanLimitBadge';
 import { useCenterSettings } from '../src/context/CenterSettingsContext';
 import ParentCard from '../components/ParentCard';
 import ChildOptionsModal from '../components/ChildOptionsModal';
@@ -331,15 +332,18 @@ const ParentDashboard: React.FC = () => {
               </div>
             </div>
             {(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.nannyId == null)) && (
-              <button
-                data-tour="btn-add-parent"
-                onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' }); }}
-                className="flex items-center justify-center gap-2 px-3 py-2 sm:px-5 sm:py-2.5 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-sm hover:opacity-90 transition flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg,#0b5566,#1a8fa8)' }}
-              >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
-                <span>{t('parent.add')}</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <PlanLimitBadge resource="parent" count={parents.length} />
+                <button
+                  data-tour="btn-add-parent"
+                  onClick={() => { setAdding(true); setFormError(null); setForm({ firstName: '', lastName: '', email: '', phone: '', password: '', confirmPassword: '', address: '', postalCode: '', city: '', region: '', country: '' }); }}
+                  className="flex items-center justify-center gap-2 px-3 py-2 sm:px-5 sm:py-2.5 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-sm hover:opacity-90 transition flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg,#0b5566,#1a8fa8)' }}
+                >
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
+                  <span>{t('parent.add')}</span>
+                </button>
+              </div>
             )}
           </div>
 
