@@ -5,6 +5,21 @@ const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
+function toProxyUrl(pathOrUrl) {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith('/api/storage')) return pathOrUrl;
+  if (pathOrUrl.startsWith('http')) {
+    const match = pathOrUrl.match(/\/object\/(?:public|sign)\/[^/]+\/(.+?)(\?.*)?$/);
+    if (match) return `/api/storage/photo?path=${encodeURIComponent(match[1])}`;
+    return pathOrUrl;
+  }
+  return `/api/storage/photo?path=${encodeURIComponent(pathOrUrl)}`;
+}
+
+function mapChildUrls(c) {
+  return { ...c, photoUrl: toProxyUrl(c.photoUrl), prescriptionUrl: toProxyUrl(c.prescriptionUrl) };
+}
+
 const prisma = require('../lib/prismaClient');
 const logger = require('../lib/logger');
 const { detectLang, subject: emailSubject } = require('../lib/i18n');
@@ -176,7 +191,7 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
             photoUrl: true,
         }
       });
-      return res.json(children);
+      return res.json(children.map(mapChildUrls));
     }
 
     // Base where clause for center access
@@ -215,7 +230,7 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
         }
       });
       res.set('Cache-Control', 'private, max-age=15');
-      return res.json(children);
+      return res.json(children.map(mapChildUrls));
     }
 
     const children = await prisma.child.findMany({
@@ -238,7 +253,7 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
       }
     });
     res.set('Cache-Control', 'private, max-age=15');
-    return res.json(children);
+    return res.json(children.map(mapChildUrls));
   } catch (error) {
     console.error('Error fetching children', error);
     return res.status(500).json({ error: 'Erreur lors de la lecture des enfants depuis la base de données. Vérifier les migrations et le schéma.' });
@@ -906,8 +921,6 @@ router.post('/:id/prescription', auth, upload.single('prescription'), async (req
       console.error('Supabase upload failed after retries', err);
       return res.status(500).json({ message: 'Upload failed' });
     }
-    const publicUrl = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath)?.data?.publicUrl || null;
-
     // delete previous prescription if present
     const existing = await prisma.child.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ message: 'Child not found' });
@@ -915,9 +928,9 @@ router.post('/:id/prescription', auth, upload.single('prescription'), async (req
       try { await supabase.storage.from(SUPABASE_BUCKET).remove([existing.prescriptionPath]); } catch (e) { console.error('Failed to remove old prescription', e); }
     }
 
-  const updated = await prisma.child.update({ where: { id }, data: { prescriptionUrl: publicUrl, prescriptionPath: storagePath } });
+  await prisma.child.update({ where: { id }, data: { prescriptionUrl: storagePath, prescriptionPath: storagePath } });
   try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
-  return res.json({ url: publicUrl });
+  return res.json({ url: `/api/storage/photo?path=${encodeURIComponent(storagePath)}` });
   } catch (e) {
     console.error('Failed to upload prescription', e);
     return res.status(500).json({ message: 'Server error' });
@@ -960,18 +973,14 @@ router.post('/:id/photo', auth, photoUpload.single('photo'), async (req, res) =>
       }
     }
 
-    const publicUrlData = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath);
-    const publicUrl = publicUrlData?.data?.publicUrl || null;
-    if (!publicUrl) return res.status(500).json({ message: 'Could not get public URL' });
-
     const existing = await prisma.child.findUnique({ where: { id }, select: { photoPath: true } });
     if (!existing) return res.status(404).json({ message: 'Child not found' });
     if (existing.photoPath) {
       supabase.storage.from(SUPABASE_BUCKET).remove([existing.photoPath]).catch(e => console.error('Failed to remove old child photo', e));
     }
 
-    await prisma.child.update({ where: { id }, data: { photoUrl: publicUrl, photoPath: storagePath } });
-    return res.json({ photoUrl: publicUrl });
+    await prisma.child.update({ where: { id }, data: { photoUrl: storagePath, photoPath: storagePath } });
+    return res.json({ photoUrl: `/api/storage/photo?path=${encodeURIComponent(storagePath)}` });
   } catch (e) {
     const msg = e && e.message ? e.message : String(e);
     console.error('Failed to upload child photo', msg, e);
@@ -1002,9 +1011,7 @@ router.get('/:id/prescription', auth, async (req, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
     if (!child.prescriptionPath) return res.status(404).json({ message: 'No prescription' });
-    if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ message: 'Storage not configured' });
-    const publicUrl = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(child.prescriptionPath)?.data?.publicUrl || null;
-    return res.json({ url: publicUrl });
+    return res.json({ url: `/api/storage/photo?path=${encodeURIComponent(child.prescriptionPath)}` });
   } catch (e) {
     console.error('Failed to get prescription', e);
     return res.status(500).json({ message: 'Server error' });

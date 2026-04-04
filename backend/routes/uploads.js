@@ -84,7 +84,7 @@ router.post('/supabase/sign', authMiddleware, async (req, res) => {
     // Supabase doesn't provide a direct presigned PUT url via the JS client; however we can return the storage path
     // and the frontend can use the Supabase JS client to upload directly to the bucket using anon key or signed policy.
     // For security, we expect the frontend to use the public upload flow only if configured; otherwise fallback to server upload.
-    return res.json({ storagePath, bucket: SUPABASE_BUCKET, publicUrl: supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath)?.data?.publicUrl || null });
+    return res.json({ storagePath, bucket: SUPABASE_BUCKET, publicUrl: `/api/storage/photo?path=${encodeURIComponent(storagePath)}` });
   } catch (e) {
     console.error('Failed to sign upload', e);
     return res.status(500).json({ message: 'Failed to prepare upload' });
@@ -172,17 +172,12 @@ router.post('/supabase/finalize', authMiddleware, async (req, res) => {
       console.error('Thumbnail upload failed after retries', err);
     }
 
-    const publicMain = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath);
-    const publicThumb = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(thumbPath);
-    const mainUrl = publicMain?.data?.publicUrl || null;
-    const thumbUrl = publicThumb?.data?.publicUrl || null;
-
     // Create feedMedia row
     const media = await prisma.feedMedia.create({ data: {
       postId: postId,
       type: 'image',
-      url: mainUrl,
-      thumbnailUrl: thumbUrl,
+      url: storagePath,
+      thumbnailUrl: thumbPath,
       size: size || null,
       hash: originalName ? require('crypto').createHash('md5').update(originalName + storagePath).digest('hex') : null,
       storagePath: storagePath,

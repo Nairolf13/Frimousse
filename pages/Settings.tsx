@@ -14,8 +14,8 @@ import { HiOutlineChat, HiOutlinePaperAirplane, HiOutlineClock, HiOutlineCheckCi
 const API_URL = import.meta.env.VITE_API_URL;
 
 type ParentForm = { role: 'parent'; id: string; firstName: string; lastName: string; email: string; phone?: string; address?: string; postalCode?: string; city?: string; region?: string; country?: string; birthDate?: string; lat?: number | null; lon?: number | null; geodataRaw?: unknown };
-type NannyForm = { role: 'nanny'; id: string; name: string; availability?: string; experience?: number; contact?: string; email?: string; birthDate?: string };
-type UserForm = { role: 'user'; id: string; name?: string; email?: string; phone?: string; address?: string; postalCode?: string; city?: string; region?: string; country?: string; birthDate?: string; lat?: number | null; lon?: number | null; geodataRaw?: unknown };
+type NannyForm = { role: 'nanny'; id: string; name: string; availability?: string; experience?: number; contact?: string; email?: string; birthDate?: string; address?: string; postalCode?: string; city?: string; region?: string; country?: string };
+type UserForm = { role: 'user'; id: string; name?: string; email?: string; phone?: string; address?: string; postalCode?: string; city?: string; region?: string; country?: string; birthDate?: string; lat?: number | null; lon?: number | null; geodataRaw?: unknown; facebookUrl?: string; instagramUrl?: string; linkedinUrl?: string; twitterUrl?: string };
 type ProfileForm = ParentForm | NannyForm | UserForm | null;
 
 type Ticket = {
@@ -44,11 +44,12 @@ type Reply = {
   createdAt: string;
 };
 
-function ProfileEditor({ onClose }: { onClose: () => void }) {
+function ProfileEditor({ onClose, isAdmin }: { onClose: () => void; isAdmin?: boolean }) {
   const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [centerName, setCenterName] = useState('');
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -90,11 +91,29 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
         const pa = newForm as ParentForm;
         return { ...(newForm as ParentForm), address: addr || pa.address, city: city || pa.city, postalCode: p.postcode || pa.postalCode, region: p.state || pa.region, country: p.country || pa.country, lat: p.lat ?? null, lon: p.lon ?? null, geodataRaw: p.raw ?? p };
       }
+      if (newForm.role === 'nanny') {
+        const na = newForm as NannyForm;
+        return { ...(newForm as NannyForm), address: addr || na.address, city: city || na.city, postalCode: p.postcode || na.postalCode, region: p.state || na.region, country: p.country || na.country };
+      }
       return newForm;
     });
   };
 
   const [form, setForm] = useState<ProfileForm>(null);
+
+  // load center name for admins
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/centers/settings`, { credentials: 'include' });
+        if (res.ok) {
+          const d = await res.json();
+          if (d && d.name) setCenterName(d.name);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [isAdmin]);
 
   // debounce fetch for address suggestions
   useEffect(() => {
@@ -103,6 +122,7 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
       if (!fr) return '';
       if (fr.role === 'user') return (fr as UserForm).address || '';
       if (fr.role === 'parent') return (fr as ParentForm).address || '';
+      if (fr.role === 'nanny') return (fr as NannyForm).address || '';
       return '';
     };
     const currentAddress = getAddress(form);
@@ -117,11 +137,13 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
       setLoading(true);
       setError('');
       try {
-        const resUser = await fetchWithRefresh(`${API_URL}/user/me`, { credentials: 'include' });
+        const resUser = await fetchWithRefresh(`${API_URL}/user/me`, { credentials: 'include', cache: 'no-store' });
         if (!resUser.ok) throw new Error('Impossible de récupérer l\'utilisateur');
         const u = await resUser.json();
 
-        if (u && u.parentId) {
+        const isAdminRole = u && u.role && (String(u.role).toLowerCase().includes('admin') || String(u.role).toLowerCase().includes('super'));
+
+        if (u && u.parentId && !isAdminRole) {
           const r = await fetchWithRefresh(`${API_URL}/parent/${encodeURIComponent(String(u.parentId))}`, { credentials: 'include' });
           if (r.ok) {
               const p = await r.json();
@@ -131,18 +153,17 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
             }
         }
 
-        if (u && u.nannyId) {
+        if (u && u.nannyId && !isAdminRole) {
           const r = await fetchWithRefresh(`${API_URL}/nannies/${encodeURIComponent(String(u.nannyId))}`, { credentials: 'include' });
           if (r.ok) {
             const n = await r.json();
             if (!mounted) return;
-            setForm({ role: 'nanny', id: n.id, name: n.name || '', availability: n.availability || '', experience: n.experience || 0, contact: n.contact || '', email: n.email || '', birthDate: n.birthDate ? new Date(n.birthDate).toISOString().slice(0,10) : '' });
+            setForm({ role: 'nanny', id: n.id, name: n.name || '', availability: n.availability || '', experience: n.experience || 0, contact: n.contact || '', email: n.email || '', birthDate: n.birthDate ? new Date(n.birthDate).toISOString().slice(0,10) : '', address: u.address || '', postalCode: u.postalCode || '', city: u.city || '', region: u.region || '', country: u.country || '' });
             return;
           }
         }
 
         // If no parentId is present, try to find a parent record by email — skip for pure admins (already handled above if they have parentId/nannyId)
-        const isAdminRole = u && u.role && (String(u.role).toLowerCase().includes('admin') || String(u.role).toLowerCase().includes('super'));
         if (u && u.email && !isAdminRole) {
           try {
             const r2 = await fetchWithRefresh(`${API_URL}/parent/by-email?email=${encodeURIComponent(String(u.email))}`, { credentials: 'include' });
@@ -157,7 +178,7 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
           }
         }
 
-  if (u) setForm({ role: 'user', id: u.id, name: u.name || '', email: u.email || '', phone: u.phone || '', address: u.address || '', postalCode: u.postalCode || '', city: u.city || '', region: u.region || '', country: u.country || '', birthDate: u.birthDate ? new Date(u.birthDate).toISOString().slice(0,10) : '', lat: u.lat ?? null, lon: u.lon ?? null, geodataRaw: u.geodataRaw ?? null });
+  if (u) setForm({ role: 'user', id: u.id, name: u.name || '', email: u.email || '', phone: u.phone || '', address: u.address || '', postalCode: u.postalCode || '', city: u.city || '', region: u.region || '', country: u.country || '', birthDate: u.birthDate ? new Date(u.birthDate).toISOString().slice(0,10) : '', lat: u.lat ?? null, lon: u.lon ?? null, geodataRaw: u.geodataRaw ?? null, facebookUrl: u.facebookUrl || '', instagramUrl: u.instagramUrl || '', linkedinUrl: u.linkedinUrl || '', twitterUrl: u.twitterUrl || '' });
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         setError(msg);
@@ -186,12 +207,13 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
     const res = await fetchWithRefresh(`${API_URL}/parent/${encodeURIComponent(String(form.id))}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (!res.ok) throw new Error('Erreur lors de la mise à jour du parent');
       } else if (form.role === 'nanny') {
-        const body = { name: form.name, availability: form.availability, experience: Number(form.experience || 0), contact: form.contact, email: form.email, birthDate: form.birthDate || null };
+        const nanny = form as NannyForm;
+        const body: Record<string, unknown> = { name: nanny.name, availability: nanny.availability, experience: Number(nanny.experience || 0), contact: nanny.contact, email: nanny.email, birthDate: nanny.birthDate || null, address: nanny.address, postalCode: nanny.postalCode, city: nanny.city, region: nanny.region, country: nanny.country };
         const res = await fetchWithRefresh(`${API_URL}/nannies/${encodeURIComponent(String(form.id))}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!res.ok) throw new Error('Erreur lors de la mise à jour de la nounou');
       } else {
         const u = form as UserForm;
-  const body: Record<string, unknown> = { name: u.name, email: u.email, phone: u.phone, address: u.address, postalCode: u.postalCode, city: u.city, region: u.region, country: u.country };
+  const body: Record<string, unknown> = { name: u.name, email: u.email, phone: u.phone, address: u.address, postalCode: u.postalCode, city: u.city, region: u.region, country: u.country, facebookUrl: u.facebookUrl ?? null, instagramUrl: u.instagramUrl ?? null, linkedinUrl: u.linkedinUrl ?? null, twitterUrl: u.twitterUrl ?? null };
         if (u.birthDate) body.birthDate = u.birthDate;
         if (typeof u.lat !== 'undefined') body.lat = u.lat;
         if (typeof u.lon !== 'undefined') body.lon = u.lon;
@@ -200,6 +222,15 @@ function ProfileEditor({ onClose }: { onClose: () => void }) {
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
           throw new Error(txt || 'Impossible de mettre à jour l\'utilisateur');
+        }
+        // Update center name if admin
+        if (isAdmin && centerName.trim()) {
+          const cres = await fetchWithRefresh(`${API_URL}/centers/settings`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: centerName.trim() }) });
+          if (!cres.ok) {
+            const ctxt = await cres.json().catch(() => ({}));
+            throw new Error(ctxt.error || 'Erreur lors de la mise à jour du nom du centre');
+          }
+          window.dispatchEvent(new CustomEvent('center:nameUpdated', { detail: { name: centerName.trim() } }));
         }
       }
       // If password fields are filled, attempt a password change
@@ -270,6 +301,22 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
                 </div>
               )}
             </div>
+            <div>
+              <label className={labelCls}>{t('parent.form.postalCode') || 'Code postal'}</label>
+              <input className={inputCls} placeholder="75000" value={(form as ParentForm).postalCode || ''} onChange={e => handleChange('postalCode', e.target.value)} />
+            </div>
+            <div>
+              <label className={labelCls}>{t('parent.form.city') || 'Ville'}</label>
+              <input className={inputCls} placeholder="Paris" value={(form as ParentForm).city || ''} onChange={e => handleChange('city', e.target.value)} />
+            </div>
+            <div>
+              <label className={labelCls}>{t('parent.form.region') || 'Région'}</label>
+              <input className={inputCls} placeholder="Île-de-France" value={(form as ParentForm).region || ''} onChange={e => handleChange('region', e.target.value)} />
+            </div>
+            <div>
+              <label className={labelCls}>{t('parent.form.country') || 'Pays'}</label>
+              <input className={inputCls} placeholder="France" value={(form as ParentForm).country || ''} onChange={e => handleChange('country', e.target.value)} />
+            </div>
           </div>
         </div>
       )}
@@ -279,23 +326,23 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>{t('label.name')}</label>
-            <input className={inputCls} placeholder="Nom complet" value={form.name} onChange={e => handleChange('name', e.target.value)} />
+            <input className={inputCls} placeholder="Nom complet" value={(form as NannyForm).name} onChange={e => handleChange('name', e.target.value)} />
           </div>
           <div>
             <label className={labelCls}>{t('label.email')}</label>
-            <input className={inputCls} placeholder="email@exemple.com" type="email" value={form.email || ''} onChange={e => handleChange('email', e.target.value)} />
+            <input className={inputCls} placeholder="email@exemple.com" type="email" value={(form as NannyForm).email || ''} onChange={e => handleChange('email', e.target.value)} />
           </div>
           <div>
             <label className={labelCls}>{t('label.contact')}</label>
-            <input className={inputCls} placeholder="06 00 00 00 00" value={form.contact || ''} onChange={e => handleChange('contact', e.target.value)} />
+            <input className={inputCls} placeholder="06 00 00 00 00" value={(form as NannyForm).contact || ''} onChange={e => handleChange('contact', e.target.value)} />
           </div>
           <div>
             <label className={labelCls}>{t('label.experience')} (ans)</label>
-            <input type="number" className={inputCls} value={String(form.experience || 0)} onChange={e => handleChange('experience', Number(e.target.value))} />
+            <input type="number" className={inputCls} value={String((form as NannyForm).experience || 0)} onChange={e => handleChange('experience', Number(e.target.value))} />
           </div>
           <div>
             <label className={labelCls}>{t('label.availability')}</label>
-            <select className={inputCls} value={form.availability} onChange={e => handleChange('availability', e.target.value)}>
+            <select className={inputCls} value={(form as NannyForm).availability} onChange={e => handleChange('availability', e.target.value)}>
               <option value="Disponible">{t('availability.available')}</option>
               <option value="En_congé">{t('availability.on_leave')}</option>
               <option value="Maladie">{t('availability.sick')}</option>
@@ -303,7 +350,37 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
           </div>
           <div>
             <label className={labelCls}>{t('label.birthDate')}</label>
-            <input type="date" className={inputCls} value={form.birthDate || ''} onChange={e => handleChange('birthDate', e.target.value)} />
+            <input type="date" className={inputCls} value={(form as NannyForm).birthDate || ''} onChange={e => handleChange('birthDate', e.target.value)} />
+          </div>
+          <div className="sm:col-span-2 relative">
+            <label className={labelCls}>{t('parent.form.address') || 'Adresse'}</label>
+            <input className={inputCls} placeholder="Rechercher une adresse…" value={(form as NannyForm).address || ''} onChange={e => { handleChange('address', e.target.value); setOpenAddress(true); }} />
+            {openAddress && placeSuggestions.length > 0 && (
+              <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                {placeSuggestions.map((p, i) => (
+                  <div key={i} className="px-3 py-2.5 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0" onClick={() => selectPlace(p)}>
+                    <span className="font-medium">{[p.house_number, p.street || p.name].filter(Boolean).join(' ')}</span>
+                    {p.postcode && <span className="text-gray-400 ml-1">— {p.postcode}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className={labelCls}>{t('parent.form.postalCode') || 'Code postal'}</label>
+            <input className={inputCls} placeholder="75000" value={(form as NannyForm).postalCode || ''} onChange={e => handleChange('postalCode', e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>{t('parent.form.city') || 'Ville'}</label>
+            <input className={inputCls} placeholder="Paris" value={(form as NannyForm).city || ''} onChange={e => handleChange('city', e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>{t('parent.form.region') || 'Région'}</label>
+            <input className={inputCls} placeholder="Île-de-France" value={(form as NannyForm).region || ''} onChange={e => handleChange('region', e.target.value)} />
+          </div>
+          <div>
+            <label className={labelCls}>{t('parent.form.country') || 'Pays'}</label>
+            <input className={inputCls} placeholder="France" value={(form as NannyForm).country || ''} onChange={e => handleChange('country', e.target.value)} />
           </div>
         </div>
       )}
@@ -311,6 +388,12 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
       {/* Champs user */}
       {form.role === 'user' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {isAdmin && (
+            <div className="sm:col-span-2">
+              <label className={labelCls}>Nom du centre / structure</label>
+              <input className={inputCls} placeholder="Nom de votre structure" value={centerName} onChange={e => setCenterName(e.target.value)} />
+            </div>
+          )}
           <div>
             <label className={labelCls}>{t('label.name')}</label>
             <input className={inputCls} placeholder="Nom complet" value={(form as UserForm).name || ''} onChange={e => handleChange('name', e.target.value)} />
@@ -346,9 +429,36 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
             <input className={inputCls} placeholder="Paris" value={(form as UserForm).city || ''} onChange={e => handleChange('city', e.target.value)} />
           </div>
           <div>
+            <label className={labelCls}>{t('parent.form.region') || 'Région'}</label>
+            <input className={inputCls} placeholder="Île-de-France" value={(form as UserForm).region || ''} onChange={e => handleChange('region', e.target.value)} />
+          </div>
+          <div>
             <label className={labelCls}>{t('parent.form.country') || 'Pays'}</label>
             <input className={inputCls} placeholder="France" value={(form as UserForm).country || ''} onChange={e => handleChange('country', e.target.value)} />
           </div>
+          {isAdmin && (
+            <>
+              <div className="sm:col-span-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3 mt-1">Réseaux sociaux</p>
+              </div>
+              <div>
+                <label className={labelCls}>Facebook</label>
+                <input className={inputCls} placeholder="https://facebook.com/mastructure" value={(form as UserForm).facebookUrl || ''} onChange={e => handleChange('facebookUrl', e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>Instagram</label>
+                <input className={inputCls} placeholder="https://instagram.com/mastructure" value={(form as UserForm).instagramUrl || ''} onChange={e => handleChange('instagramUrl', e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>LinkedIn</label>
+                <input className={inputCls} placeholder="https://linkedin.com/company/mastructure" value={(form as UserForm).linkedinUrl || ''} onChange={e => handleChange('linkedinUrl', e.target.value)} />
+              </div>
+              <div>
+                <label className={labelCls}>X (Twitter)</label>
+                <input className={inputCls} placeholder="https://x.com/mastructure" value={(form as UserForm).twitterUrl || ''} onChange={e => handleChange('twitterUrl', e.target.value)} />
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -549,8 +659,8 @@ export default function Settings() {
   const isSuperAdmin = !!(authUser && typeof authUser.role === 'string' && authUser.role.toLowerCase().includes('super'));
   const displayName = authUser?.name || 'Utilisateur';
   const accountInitials = displayName.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
-  const [searchParams] = useSearchParams();
-  const [activeSection, setActiveSection] = useState<string | null>(searchParams.get('section'));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeSection = searchParams.get('section');
   const [showSupportModal, setShowSupportModal] = useState(false);
   const [supportTickets, setSupportTickets] = useState<Ticket[]>([]);
   const [supportLoading, setSupportLoading] = useState(false);
@@ -775,7 +885,7 @@ export default function Settings() {
   const SectionHeader = ({ title }: { title: string }) => (
     <div className="flex items-center gap-3 mb-6">
       <button
-        onClick={() => setActiveSection(null)}
+        onClick={() => setSearchParams({})}
         className="flex items-center justify-center w-9 h-9 rounded-xl bg-white shadow border border-gray-100 text-gray-500 hover:text-[#0b5566] hover:border-[#0b5566] transition"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
@@ -804,7 +914,7 @@ export default function Settings() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
             {/* Profil & Compte */}
             <button
-              onClick={() => setActiveSection('account')}
+              onClick={() => setSearchParams({ section: 'account' })}
               className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
             >
               <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-[#0b5566] group-hover:bg-[#0b5566] group-hover:text-white transition">
@@ -818,7 +928,7 @@ export default function Settings() {
 
             {/* Notifications */}
             <button
-              onClick={() => setActiveSection('notifications')}
+              onClick={() => setSearchParams({ section: 'notifications' })}
               className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
             >
               <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition">
@@ -833,7 +943,7 @@ export default function Settings() {
             {/* Facturation — admin only */}
             {isAdmin && (
               <button
-                onClick={() => setActiveSection('tarifs')}
+                onClick={() => setSearchParams({ section: 'tarifs' })}
                 className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
               >
                 <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition">
@@ -848,7 +958,7 @@ export default function Settings() {
 
             {/* Langue */}
             <button
-              onClick={() => setActiveSection('langue')}
+              onClick={() => setSearchParams({ section: 'langue' })}
               className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
             >
               <div className="w-11 h-11 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition">
@@ -862,7 +972,7 @@ export default function Settings() {
 
             {/* Tutoriels */}
             <button
-              onClick={() => setActiveSection('tutoriels')}
+              onClick={() => setSearchParams({ section: 'tutoriels' })}
               className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
             >
               <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center text-[#0b5566] group-hover:bg-[#0b5566] group-hover:text-white transition">
@@ -877,7 +987,7 @@ export default function Settings() {
             {/* Support */}
             {!isSuperAdmin && (
               <button
-                onClick={() => setActiveSection('support')}
+                onClick={() => setSearchParams({ section: 'support' })}
                 className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
               >
                 <div className="w-11 h-11 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition">
@@ -1243,7 +1353,7 @@ export default function Settings() {
                   }}
                 />
               )}
-              <ProfileEditor onClose={() => setActiveSection(null)} />
+              <ProfileEditor onClose={() => setSearchParams({})} isAdmin={isAdmin} />
               {isAdmin && (
                 <div className="border-t mt-6 pt-6">
                   <div className="flex items-center justify-between gap-4">

@@ -32,7 +32,7 @@ export function useCenterInfo(centerId: string | null) {
         setCenter({ name: cached.name || null });
         return;
       }
-      const res = await fetch(`/centers/${centerId}`, { credentials: 'include' });
+      const res = await fetch(`/api/centers/${centerId}`, { credentials: 'include' });
       if (res.status === 429) {
         consecutive429Ref.current = Math.min(3, consecutive429Ref.current + 1);
         const backoff = Math.min(10_000 * Math.pow(2, consecutive429Ref.current - 1), 40_000);
@@ -55,6 +55,16 @@ export function useCenterInfo(centerId: string | null) {
   }, [centerId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const name = (e as CustomEvent<{ name: string }>).detail?.name ?? null;
+      if (centerId) setCached(`/api/centers/${centerId}`, { name }, 60_000);
+      setCenter({ name });
+    };
+    window.addEventListener('center:nameUpdated', handler);
+    return () => window.removeEventListener('center:nameUpdated', handler);
+  }, [centerId]);
 
   return { center, refresh: load } as const;
 }

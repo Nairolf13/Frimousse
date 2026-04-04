@@ -13,12 +13,17 @@ router.get('/', requireAuth, async (req, res) => {
         select: {
           id: true, email: true, name: true, role: true,
           nannyId: true, parentId: true, centerId: true,
+          phone: true,
           address: true, postalCode: true, city: true, region: true, country: true,
           tutorialSeen: true,
           tutorialCompleted: true,
           cookieConsent: true,
           language: true,
           avatarUrl: true,
+          facebookUrl: true,
+          instagramUrl: true,
+          linkedinUrl: true,
+          twitterUrl: true,
           parent: { select: { id: true, phone: true, centerId: true } },
           nanny: { select: { id: true, birthDate: true, contact: true } },
         },
@@ -58,7 +63,7 @@ router.get('/', requireAuth, async (req, res) => {
     } catch { /* ignore */ }
 
     const out = Object.assign({}, user);
-    out.phone = (user.parent?.phone) || (user.nanny?.contact) || null;
+    out.phone = (user.parent?.phone) || (user.nanny?.contact) || user.phone || null;
     out.birthDate = user.nanny?.birthDate || null;
     out.plan = plan;
     res.json(out);

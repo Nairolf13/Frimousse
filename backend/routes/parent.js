@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
+const { validateAddress } = require('../utils/validateAddress');
 const requireAuth = require('../middleware/authMiddleware');
 const { detectLang, subject: emailSubject } = require('../lib/i18n');
 
@@ -436,6 +437,11 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
     if (!(canManageParents(userReq) || (userReq.parentId && String(userReq.parentId) === String(id)))) return res.status(403).json({ message: 'Interdit' });
   const { name, phone, firstName, lastName, address, postalCode, city, region, country } = req.body;
   const email = req.body.email !== undefined ? String(req.body.email || '').trim().toLowerCase() : undefined;
+
+    // Validate and sanitize address fields
+    const addrValidation = validateAddress({ address, postalCode, city, region, country });
+    if (addrValidation.errors.length) return res.status(400).json({ message: addrValidation.errors.join(', ') });
+
     let data = {};
     if (name) {
       const parts = name.trim().split(/\s+/);
@@ -458,12 +464,7 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
     try {
       const linkedUsers = await prisma.user.findMany({ where: { parentId: id } });
       if (linkedUsers && linkedUsers.length > 0) {
-  const userUpdate = {};
-        if (address !== undefined) userUpdate.address = address;
-        if (postalCode !== undefined) userUpdate.postalCode = postalCode;
-        if (city !== undefined) userUpdate.city = city;
-        if (region !== undefined) userUpdate.region = region;
-        if (country !== undefined) userUpdate.country = country;
+        const userUpdate = { ...addrValidation.data };
         if (Object.keys(userUpdate).length > 0) {
           for (const u of linkedUsers) {
             try { await prisma.user.update({ where: { id: u.id }, data: userUpdate }); } catch (e) { /* ignore per-user failure */ }

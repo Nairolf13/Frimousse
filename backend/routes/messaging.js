@@ -50,9 +50,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       return res.status(500).json({ error: 'Erreur lors de l\'upload' });
     }
 
-    const { data } = supabase.storage.from(SUPABASE_BUCKET).getPublicUrl(storagePath);
     const mediaType = req.file.mimetype.startsWith('video/') ? 'video' : 'image';
-    res.json({ url: data.publicUrl, mediaType });
+    res.json({ url: `/api/storage/photo?path=${encodeURIComponent(storagePath)}`, mediaType });
   } catch (e) {
     console.error('POST /upload error', e);
     res.status(500).json({ error: 'Erreur serveur' });
