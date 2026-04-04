@@ -112,7 +112,7 @@ async function sendTemplatedMail({ templateName, lang, to, subject, text, substi
 
   // Set logoUrl before rendering so it gets substituted in the template
   if (!substitutions.logoUrl) {
-    substitutions.logoUrl = 'https://lesfrimousses.com/imgs/FrimousseLogo.webp';
+    substitutions.logoUrl = 'https://lesfrimousses.com/imgs/LogoFrimousse-192.png';
   }
   const html = renderTemplate(templateName, lang, substitutions);
   // normalize 'to' into array
