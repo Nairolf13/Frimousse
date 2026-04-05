@@ -327,7 +327,12 @@ router.post('/', checkContentLength, upload.array('images', 6), async (req, res)
       }
     })();
 
-    return res.status(201).json(result);
+    const proxiedResult = {
+      ...result,
+      medias: (result.medias || []).map(toProxyMedia),
+      author: result.author ? { ...result.author, avatarUrl: toProxyUrl(result.author.avatarUrl) } : result.author,
+    };
+    return res.status(201).json(proxiedResult);
   } catch (e) {
     console.error('Failed to create feed post', e);
     return res.status(500).json({ message: 'Failed to create post' });

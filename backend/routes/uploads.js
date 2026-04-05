@@ -184,7 +184,18 @@ router.post('/supabase/finalize', authMiddleware, async (req, res) => {
       thumbnailPath: thumbPath,
     }});
 
-    return res.json({ medias: [media] });
+    const toProxyUrl = (p) => {
+      if (!p) return null;
+      if (p.startsWith('/api/storage')) return p;
+      if (p.startsWith('http')) {
+        const match = p.match(/\/object\/(?:public|sign)\/[^/]+\/(.+?)(\?.*)?$/);
+        if (match) return `/api/storage/photo?path=${encodeURIComponent(match[1])}`;
+        return p;
+      }
+      return `/api/storage/photo?path=${encodeURIComponent(p)}`;
+    };
+    const proxiedMedia = { ...media, url: toProxyUrl(media.url), thumbnailUrl: toProxyUrl(media.thumbnailUrl) };
+    return res.json({ medias: [proxiedMedia] });
   } catch (e) {
     console.error('Failed to finalize upload', e);
     return res.status(500).json({ message: 'Failed to finalize upload' });
