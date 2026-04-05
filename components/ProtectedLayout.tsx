@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
 import Sidebar from './Sidebar';
 import { useNavigate, useOutlet } from 'react-router-dom';
 import useBirthdayCheck from '../src/hooks/useBirthdayCheck';
@@ -83,6 +84,9 @@ export default function ProtectedLayout() {
 
   return (
     <TutorialProvider>
+      <Helmet>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <AnnouncementBanner />
       <div className="flex min-h-screen">
         <Sidebar />

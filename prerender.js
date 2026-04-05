@@ -158,6 +158,16 @@ async function prerender() {
       await page.close();
     }
 
+    // Update sitemap.xml lastmod dates with today's date
+    const sitemapPath = path.join(process.cwd(), 'public', 'sitemap.xml');
+    if (fs.existsSync(sitemapPath)) {
+      const today = new Date().toISOString().slice(0, 10);
+      const sitemap = fs.readFileSync(sitemapPath, 'utf8');
+      const updated = sitemap.replace(/<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>/g, `<lastmod>${today}</lastmod>`);
+      fs.writeFileSync(sitemapPath, updated, 'utf8');
+      console.log(`Sitemap updated with lastmod ${today}`);
+    }
+
     console.log('Prerendering completed!');
   } catch (error) {
     console.error('Error during prerendering:', error);
