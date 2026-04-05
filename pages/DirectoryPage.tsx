@@ -7,13 +7,10 @@ import { useI18n } from '../src/lib/useI18n';
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 type Center = {
-  id: string;
   name: string;
   email: string | null;
   phone: string | null;
-  address: string | null;
   city: string | null;
-  postalCode: string | null;
   region: string | null;
   country: string | null;
   facebookUrl: string | null;
@@ -326,7 +323,7 @@ export default function DirectoryPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {centers.map(center => <CenterCard key={center.id} center={center} />)}
+              {centers.map((center, i) => <CenterCard key={i} center={center} />)}
             </div>
           )}
 
