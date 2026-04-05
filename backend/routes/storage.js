@@ -52,20 +52,34 @@ router.get('/photo', auth, async (req, res) => {
       return res.status(503).json({ error: 'Storage non configuré' });
     }
 
-    // Generate a signed URL and redirect the browser directly to Supabase.
-    // This avoids proxying the file through the Node process (no memory pressure,
-    // no server-side fetch issues) while keeping the file protected behind auth.
-    const { data: signedData, error: signError } = await supabase.storage
-      .from(SUPABASE_BUCKET)
-      .createSignedUrl(sanitized, 300); // 5 min expiry
+    const ext = sanitized.split('.').pop()?.toLowerCase();
+    const contentTypes = { webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', pdf: 'application/pdf', mp4: 'video/mp4', mov: 'video/quicktime' };
+    const contentType = (ext && contentTypes[ext]) || 'application/octet-stream';
 
-    if (signError || !signedData?.signedUrl) {
-      console.error('[storage] createSignedUrl error:', signError?.message, 'path:', sanitized);
-      return res.status(404).json({ error: 'Fichier introuvable' });
+    // Build the storage REST URL and call it directly with the service role key.
+    // This bypasses the JS SDK download() which buffers in memory and can fail
+    // on large files, using a direct HTTP GET instead.
+    const fileUrl = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/authenticated/${SUPABASE_BUCKET}/${sanitized}`;
+    const fetchImpl = fetchFn || globalThis.fetch;
+    if (!fetchImpl) {
+      console.error('[storage] fetch not available');
+      return res.status(500).json({ error: 'Erreur serveur' });
     }
 
-    // Redirect browser to the signed URL — Supabase serves the file directly
-    return res.redirect(302, signedData.signedUrl);
+    const upstream = await fetchImpl(fileUrl, {
+      headers: { Authorization: `Bearer ${SUPABASE_KEY}` },
+    });
+
+    if (!upstream.ok) {
+      console.error('[storage] upstream fetch failed:', upstream.status, 'path:', sanitized);
+      return res.status(upstream.status === 404 ? 404 : 502).json({ error: 'Fichier introuvable' });
+    }
+
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    const buffer = Buffer.from(await upstream.arrayBuffer());
+    return res.send(buffer);
   } catch (e) {
     console.error('[storage] Unexpected error:', e && e.message ? e.message : e);
     res.status(500).json({ error: 'Erreur serveur' });
