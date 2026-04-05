@@ -620,8 +620,9 @@ export default function Settings() {
       }
       const data = await res.json();
       if (data && data.avatarUrl) {
-        setLocalAvatarUrl(data.avatarUrl);
-        if (setUser && authUser) setUser({ ...authUser, avatarUrl: data.avatarUrl });
+        const avatarWithBuster = `${data.avatarUrl}&v=${Date.now()}`;
+        setLocalAvatarUrl(avatarWithBuster);
+        if (setUser && authUser) setUser({ ...authUser, avatarUrl: avatarWithBuster });
       }
     } catch (e) {
       console.error('Error uploading avatar', e);
