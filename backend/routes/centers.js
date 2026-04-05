@@ -99,12 +99,7 @@ router.get('/', requireAuth, async (req, res) => {
         name: true,
         createdAt: true,
         users: {
-          where: {
-            OR: [
-              { role: 'admin' },
-              { role: 'super-admin' }
-            ]
-          },
+          where: { role: 'admin' },
           select: {
             id: true,
             name: true,
@@ -345,16 +340,14 @@ router.put('/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { name, address, city, postalCode, region, country, email, phone } = req.body;
 
-    // Find center and its admin
+    // Find center and its admin (role=admin only, exclude super-admin)
     const center = await prisma.center.findUnique({
       where: { id },
       select: {
         id: true,
         name: true,
         users: {
-          where: {
-            OR: [{ role: 'admin' }, { role: 'super-admin' }]
-          },
+          where: { role: 'admin' },
           take: 1
         }
       }
@@ -377,6 +370,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       const adminId = center.users[0].id;
       const updateData = {};
       if (email !== undefined) updateData.email = email;
+      if (phone !== undefined) updateData.phone = phone;
       if (address !== undefined) updateData.address = address;
       if (city !== undefined) updateData.city = city;
       if (postalCode !== undefined) updateData.postalCode = postalCode;
