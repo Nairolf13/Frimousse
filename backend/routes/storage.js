@@ -52,34 +52,42 @@ router.get('/photo', auth, async (req, res) => {
       return res.status(503).json({ error: 'Storage non configuré' });
     }
 
-    const ext = sanitized.split('.').pop()?.toLowerCase();
-    const contentTypes = { webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', pdf: 'application/pdf', mp4: 'video/mp4', mov: 'video/quicktime' };
-    const contentType = (ext && contentTypes[ext]) || 'application/octet-stream';
-
-    // Build the storage REST URL and call it directly with the service role key.
-    // This bypasses the JS SDK download() which buffers in memory and can fail
-    // on large files, using a direct HTTP GET instead.
-    const fileUrl = `${SUPABASE_URL.replace(/\/$/, '')}/storage/v1/object/authenticated/${SUPABASE_BUCKET}/${sanitized}`;
     const fetchImpl = fetchFn || globalThis.fetch;
     if (!fetchImpl) {
       console.error('[storage] fetch not available');
       return res.status(500).json({ error: 'Erreur serveur' });
     }
 
-    const upstream = await fetchImpl(fileUrl, {
-      headers: { Authorization: `Bearer ${SUPABASE_KEY}` },
-    });
+    const base = SUPABASE_URL.replace(/\/$/, '');
 
-    if (!upstream.ok) {
-      console.error('[storage] upstream fetch failed:', upstream.status, 'path:', sanitized);
-      return res.status(upstream.status === 404 ? 404 : 502).json({ error: 'Fichier introuvable' });
+    // Use the Supabase Storage REST API to create a signed URL.
+    // The JS SDK's createSignedUrl() internally validates the service role JWT
+    // and throws "Invalid Compact JWS" when the key format differs between envs.
+    // Calling the REST endpoint directly avoids that validation entirely.
+    const signRes = await fetchImpl(
+      `${base}/storage/v1/object/sign/${SUPABASE_BUCKET}/${sanitized}`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expiresIn: 300 }),
+      }
+    );
+
+    if (!signRes.ok) {
+      console.error('[storage] sign REST failed:', signRes.status, 'path:', sanitized);
+      return res.status(404).json({ error: 'Fichier introuvable' });
     }
 
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'private, max-age=3600');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    const buffer = Buffer.from(await upstream.arrayBuffer());
-    return res.send(buffer);
+    const signJson = await signRes.json();
+    const signedPath = signJson.signedURL; // relative path like /object/sign/bucket/...?token=...
+    if (!signedPath) {
+      console.error('[storage] no signedURL in response, path:', sanitized);
+      return res.status(404).json({ error: 'Fichier introuvable' });
+    }
+
+    // Redirect the browser to the full signed URL — Supabase serves the file directly
+    const fullSignedUrl = `${base}/storage/v1${signedPath}`;
+    return res.redirect(302, fullSignedUrl);
   } catch (e) {
     console.error('[storage] Unexpected error:', e && e.message ? e.message : e);
     res.status(500).json({ error: 'Erreur serveur' });
