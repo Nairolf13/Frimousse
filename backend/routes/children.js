@@ -88,7 +88,7 @@ function validatePrescriptionMime(mimetype) {
 }
 
 // Public: used on the landing page to display total children count (no auth needed)
-router.get('/count', async (req, res) => {
+router.get('/count', auth, async (req, res) => {
   try {
     const count = await prisma.child.count();
     res.json({ count });

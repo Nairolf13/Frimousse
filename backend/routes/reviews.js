@@ -43,7 +43,7 @@ router.post('/', async (req, res) => {
     if (content.length > 2000) return res.status(400).json({ message: 'Avis trop long (max 2000 caractères).' });
     if (!email || typeof email !== 'string') return res.status(400).json({ message: 'Email requis' });
     const userExists = await prisma.user.findFirst({ where: { email: email.trim().toLowerCase() } });
-    if (!userExists) return res.status(403).json({ message: 'Cet email ne correspond à aucun compte inscrit sur Frimousse.' });
+    if (!userExists) return res.status(403).json({ message: 'Impossible de soumettre un avis avec cet email.' });
     const normalizedEmail = email.trim().toLowerCase();
     const existingReview = await prisma.review.findFirst({ where: { authorEmail: normalizedEmail } });
     if (existingReview) return res.status(409).json({ message: 'Vous avez déjà laissé un avis. Merci pour votre retour !' });
