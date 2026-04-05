@@ -53,7 +53,7 @@ export default function ProtectedLayout() {
   }, [navigate]);
 
   useEffect(() => {
-    if (user === null) return; // still loading in App.tsx
+    if (user === undefined) return; // still loading in App.tsx
     if (!user) {
       navigate('/login', { replace: true });
     } else if (user.profileCompleted === false) {
@@ -64,7 +64,7 @@ export default function ProtectedLayout() {
   }, [user, navigate]);
 
   // Still loading — App.tsx hasn't resolved /api/user/me yet
-  if (user === null) return (
+  if (user === undefined) return (
     <div className="flex items-center justify-center h-screen bg-gray-50">
       <div className="flex flex-col items-center gap-4 animate-fade-in">
         <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
