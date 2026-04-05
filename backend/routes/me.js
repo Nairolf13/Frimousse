@@ -11,7 +11,7 @@ router.get('/', requireAuth, async (req, res) => {
       prisma.user.findUnique({
         where: { id: req.user.id },
         select: {
-          id: true, email: true, name: true, role: true,
+          id: true, email: true, name: true, role: true, createdAt: true,
           nannyId: true, parentId: true, centerId: true,
           phone: true,
           address: true, postalCode: true, city: true, region: true, country: true,
@@ -20,6 +20,9 @@ router.get('/', requireAuth, async (req, res) => {
           cookieConsent: true,
           language: true,
           avatarUrl: true,
+          notifyByEmail: true,
+          profileCompleted: true,
+          oauthProvider: true,
           facebookUrl: true,
           instagramUrl: true,
           linkedinUrl: true,
@@ -32,32 +35,33 @@ router.get('/', requireAuth, async (req, res) => {
       prisma.subscription.findFirst({
         where: { userId: req.user.id, status: { in: ['trialing', 'active'] } },
         orderBy: { createdAt: 'desc' },
-        select: { plan: true },
+        select: { plan: true, status: true },
       }),
     ]);
 
     if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
 
     let plan = null;
+    let subscriptionStatus = null;
     try {
       if (user.role === 'super-admin') {
         plan = 'pro';
+        subscriptionStatus = 'active';
       } else if (user.role === 'admin') {
-        if (directSub) plan = directSub.plan;
+        if (directSub) { plan = directSub.plan; subscriptionStatus = directSub.status; }
       } else {
         // Nanny/parent : chercher le plan de l'admin du centre
         const centerId = user.centerId || user.parent?.centerId || null;
         if (centerId) {
-          // Une seule requête qui joint admins + leur sub
           const adminSub = await prisma.subscription.findFirst({
             where: {
               status: { in: ['trialing', 'active'] },
               user: { centerId, role: { in: ['admin', 'super-admin'] } },
             },
             orderBy: { createdAt: 'desc' },
-            select: { plan: true },
+            select: { plan: true, status: true },
           });
-          if (adminSub) plan = adminSub.plan;
+          if (adminSub) { plan = adminSub.plan; subscriptionStatus = adminSub.status; }
         }
       }
     } catch { /* ignore */ }
@@ -66,6 +70,20 @@ router.get('/', requireAuth, async (req, res) => {
     out.phone = (user.parent?.phone) || (user.nanny?.contact) || user.phone || null;
     out.birthDate = user.nanny?.birthDate || null;
     out.plan = plan;
+    out.subscriptionStatus = subscriptionStatus;
+
+    // Convert stored path to proxy URL for avatars
+    if (out.avatarUrl) {
+      if (out.avatarUrl.startsWith('http')) {
+        const match = out.avatarUrl.match(/\/object\/(?:public|sign)\/[^/]+\/(.+?)(\?.*)?$/);
+        if (match) {
+          out.avatarUrl = `/api/storage/photo?path=${encodeURIComponent(match[1])}`;
+        }
+      } else if (!out.avatarUrl.startsWith('/api/storage')) {
+        out.avatarUrl = `/api/storage/photo?path=${encodeURIComponent(out.avatarUrl)}`;
+      }
+    }
+
     res.json(out);
   } catch (e) {
     res.status(500).json({ error: 'Erreur serveur' });

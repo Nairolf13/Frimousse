@@ -15,6 +15,35 @@ export default function AvatarCropper({ imageSrc, size = 320, onCancel, onApply 
   const [dragStart, setDragStart] = useState<{ x: number; y: number; offsetX: number; offsetY: number } | null>(null);
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const imageRef = useRef<HTMLImageElement | null>(null);
+  const cropAreaRef = useRef<HTMLDivElement | null>(null);
+  const touchDragRef = useRef<{ startX: number; startY: number; offsetX: number; offsetY: number } | null>(null);
+  const offsetRef = useRef(offset);
+  offsetRef.current = offset;
+
+  // Register touch events with { passive: false } so preventDefault() works (suppresses warning)
+  useEffect(() => {
+    const el = cropAreaRef.current;
+    if (!el) return;
+    const onTouchStart = (e: TouchEvent) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      touchDragRef.current = { startX: touch.clientX, startY: touch.clientY, offsetX: offsetRef.current.x, offsetY: offsetRef.current.y };
+      setIsDragging(true);
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+      const drag = touchDragRef.current;
+      if (!drag) return;
+      const touch = e.touches[0];
+      setOffset({ x: drag.offsetX + (touch.clientX - drag.startX), y: drag.offsetY + (touch.clientY - drag.startY) });
+    };
+    el.addEventListener('touchstart', onTouchStart, { passive: false });
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove', onTouchMove);
+    };
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -44,6 +73,7 @@ export default function AvatarCropper({ imageSrc, size = 320, onCancel, onApply 
   const endDrag = () => {
     setIsDragging(false);
     setDragStart(null);
+    touchDragRef.current = null;
   };
 
   const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
@@ -102,7 +132,7 @@ export default function AvatarCropper({ imageSrc, size = 320, onCancel, onApply 
           <h3 className="text-base font-bold text-gray-900">Recadrer votre photo</h3>
           <button type="button" onClick={onCancel} className="text-sm text-gray-500 hover:text-gray-700">Annuler</button>
         </div>
-        <div className="relative overflow-hidden rounded-xl bg-gray-100" style={{ height: 360 }} onMouseDown={startDrag} onMouseMove={moveDrag} onTouchStart={startDrag} onTouchMove={moveDrag} onWheel={handleWheel}>
+        <div ref={cropAreaRef} className="relative overflow-hidden rounded-xl bg-gray-100" style={{ height: 360 }} onMouseDown={startDrag} onMouseMove={moveDrag} onWheel={handleWheel}>
           <img
             ref={imageRef}
             src={imageSrc}

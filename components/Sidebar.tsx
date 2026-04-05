@@ -178,7 +178,7 @@ export default function Sidebar() {
       }
       const json = await res.json();
       if (json && json.avatarUrl && user) {
-        setUser({ ...user, avatarUrl: json.avatarUrl });
+        setUser({ ...user, avatarUrl: `${json.avatarUrl}&v=${Date.now()}` });
       }
     } catch (e) {
       console.error('Error uploading avatar', e);

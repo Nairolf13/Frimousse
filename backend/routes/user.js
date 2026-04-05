@@ -61,69 +61,6 @@ async function resolveUserCenter(prismaClient, userRecord) {
   return null;
 }
 
-router.get('/me', auth, async (req, res) => {
-  const user = await prisma.user.findUnique({
-    where: { id: req.user.id },
-    select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, parentId: true, nannyId: true, notifyByEmail: true, profileCompleted: true, oauthProvider: true, language: true, avatarUrl: true, phone: true, address: true, postalCode: true, city: true, region: true, country: true, facebookUrl: true, instagramUrl: true, linkedinUrl: true, twitterUrl: true }
-  });
-  if (!user) return res.status(404).json({ message: 'User not found' });
-  try {
-    // If the user record doesn't contain a centerId, try resolving it from linked parent/nanny
-    if (!user.centerId) {
-      const resolved = await resolveUserCenter(prisma, user);
-      if (resolved) user.centerId = resolved;
-    }
-  } catch (e) {
-    // ignore resolution errors and return whatever we have
-  }
-
-  // Attach the current subscription plan so the frontend can gate features
-  let plan = null;
-  let subscriptionStatus = null;
-  try {
-    if (user.role === 'super-admin') {
-      plan = 'pro'; // super-admin has full access
-      subscriptionStatus = 'active';
-    } else {
-      let sub = null;
-      if (user.role === 'admin') {
-        sub = await prisma.subscription.findFirst({ where: { userId: user.id, status: { in: ['trialing', 'active'] } }, orderBy: { createdAt: 'desc' } });
-      } else {
-        // Non-admin: look up center admin's subscription
-        let centerId = user.centerId;
-        if (!centerId && user.parentId) {
-          const parent = await prisma.parent.findUnique({ where: { id: user.parentId } });
-          if (parent) centerId = parent.centerId;
-        }
-        if (!centerId && user.nannyId) {
-          const nanny = await prisma.nanny.findUnique({ where: { id: user.nannyId } });
-          if (nanny) centerId = nanny.centerId;
-        }
-        if (centerId) {
-          const admins = await prisma.user.findMany({ where: { centerId }, select: { id: true, role: true } });
-          const adminIds = admins.filter(a => { const r = String(a.role || '').toLowerCase(); return r.includes('admin') || r.includes('super'); }).map(a => a.id);
-          if (adminIds.length > 0) {
-            sub = await prisma.subscription.findFirst({ where: { userId: { in: adminIds }, status: { in: ['trialing', 'active'] } }, orderBy: { createdAt: 'desc' } });
-          }
-        }
-      }
-      if (sub) {
-        plan = sub.plan;
-        subscriptionStatus = sub.status;
-      }
-    }
-  } catch (e) {
-    // ignore — plan stays null
-  }
-
-  // Convert stored path to proxy URL for avatars
-  if (user.avatarUrl && !user.avatarUrl.startsWith('http') && !user.avatarUrl.startsWith('/api/storage')) {
-    user.avatarUrl = `/api/storage/photo?path=${encodeURIComponent(user.avatarUrl)}`;
-  }
-
-  res.json({ ...user, plan, subscriptionStatus });
-});
-
 router.get('/all', auth, async (req, res) => {
   try {
     if (!isSuperAdmin(req.user)) return res.status(403).json({ error: 'Forbidden' });
@@ -376,25 +313,10 @@ router.post('/me/avatar', auth, avatarUpload.single('avatar'), async (req, res) 
       .webp({ quality: 85 })
       .toBuffer();
 
-    const { error: uploadError } = await supabase.storage.from(SUPABASE_BUCKET).upload(objectPath, optimized, {
-      contentType: 'image/webp',
-      upsert: false
-    });
-    if (uploadError) {
-      console.error('Avatar upload error', uploadError);
-      const errMessage = String(uploadError.message || uploadError || 'unknown');
-
-      // Fallback path in case service-role client token is broken (JWT signing alternative)
-      if (errMessage.toLowerCase().includes('invalid compact jws') || errMessage.toLowerCase().includes('jwt') || errMessage.toLowerCase().includes('auth') || errMessage.toLowerCase().includes('forbidden')) {
-        const fallback = await uploadViaJwtFallback(SUPABASE_BUCKET, objectPath, optimized, 'image/webp');
-        if (fallback.ok) {
-          console.info('Avatar upload succeeded via JWT fallback');
-        } else {
-          return res.status(500).json({ error: 'Échec du téléversement de l’image', details: errMessage, fallback: fallback.body });
-        }
-      } else {
-        return res.status(500).json({ error: 'Échec du téléversement de l’image', details: errMessage });
-      }
+    const uploadResult = await uploadViaJwtFallback(SUPABASE_BUCKET, objectPath, optimized, 'image/webp');
+    if (!uploadResult.ok) {
+      console.error('Avatar upload failed', uploadResult);
+      return res.status(500).json({ error: "Echec du televersement de l'image", details: uploadResult.body });
     }
 
     const proxyUrl = `/api/storage/photo?path=${encodeURIComponent(objectPath)}`;
@@ -407,7 +329,7 @@ router.post('/me/avatar', auth, avatarUpload.single('avatar'), async (req, res) 
     res.json({ avatarUrl: proxyUrl });
   } catch (e) {
     console.error('Failed to upload avatar', e);
-    res.status(500).json({ error: 'Erreur serveur lors de l’envoi de l’avatar' });
+    res.status(500).json({ error: "Erreur serveur lors de l'envoi de l'avatar" });
   }
 });
 
