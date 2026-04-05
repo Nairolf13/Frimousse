@@ -82,6 +82,13 @@ export async function fetchWithRefresh(input: RequestInfo, init?: RequestInit): 
     return res;
   }
 
+  // 403 on /user/me means the session is invalid (orphan admin, deleted account, etc.)
+  // Fire session-expired so ProtectedLayout redirects to login
+  if (res.status === 403 && typeof input === 'string' && input.includes('/user/me')) {
+    try { window.dispatchEvent(new CustomEvent('auth:session-expired')); } catch { /* non-browser env */ }
+    return res;
+  }
+
   if (res.status !== 401) return res;
 
   // Skip refresh if caller opted out or if the request is the refresh itself

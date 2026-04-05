@@ -18,7 +18,8 @@ export interface User {
   avatarUrl?: string | null;
 }
 
-export const AuthContext = createContext<{ user: User | null; setUser: (user: User | null) => void }>({ user: null, setUser: () => {} });
+// undefined = still loading, null = not authenticated, User = authenticated
+export const AuthContext = createContext<{ user: User | null | undefined; setUser: (user: User | null | undefined) => void }>({ user: undefined, setUser: () => {} });
 
 export function useAuth() {
   return useContext(AuthContext);

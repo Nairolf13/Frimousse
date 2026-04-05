@@ -57,7 +57,7 @@ function prefetchRoutes() {
 }
 
 function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   useEffect(() => {
     // Skip authentication check on public pages to avoid 401 errors in console
     const publicPaths = ['/', '/about', '/fonctionnalites', '/tarifs', '/support', '/confidentialite', '/cgu', '/mentions-legales', '/guide-demarrage', '/guide-ajouter-enfant', '/guide-planning', '/guide-export-rapport', '/guide-securite', '/login', '/register', '/reset-password', '/invite', '/annuaire'];
@@ -112,7 +112,7 @@ function App() {
           // ignore association errors
         }
       })
-      .catch(() => setUser(null));
+      .catch(() => setUser(null)); // null = unauthenticated (triggers redirect)
   }, []);
   return (
     <HelmetProvider>
