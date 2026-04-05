@@ -301,7 +301,7 @@ export default function MobileMenu() {
           <div className="mx-4 mb-2 border-t border-gray-100"></div>
           <nav className="flex-1 px-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
             <ul className="space-y-0.5" style={{ paddingBottom: '96px' }}>
-              {getNavLinks(user, t).map((link) => (
+              {getNavLinks(user ?? null, t).map((link) => (
                 <li key={link.to}>
                   <Link
                     to={link.to}

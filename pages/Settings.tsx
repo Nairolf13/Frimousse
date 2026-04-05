@@ -9,6 +9,7 @@ import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe
 import { useI18n } from '../src/lib/useI18n';
 import LanguageDropdown from '../components/LanguageDropdown';
 import AvatarCropper from '../components/AvatarCropper';
+import ImportModal from '../components/ImportModal';
 import { HiOutlineChat, HiOutlinePaperAirplane, HiOutlineClock, HiOutlineCheckCircle } from 'react-icons/hi';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -647,6 +648,7 @@ export default function Settings() {
   };
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [tarifs, setTarifs] = useState({ dailyRate: 2, childCotisationAmount: 15, nannyCotisationAmount: 10, showInDirectory: true });
   const [directoryToggleSaving, setDirectoryToggleSaving] = useState(false);
@@ -1016,7 +1018,28 @@ export default function Settings() {
                 </div>
               </button>
             )}
+
+            {/* Import de données — admin uniquement */}
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowImportModal(true)}
+                className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+              >
+                <div className="w-11 h-11 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 group-hover:bg-[#0b5566] group-hover:text-white transition">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                </div>
+                <div>
+                  <div className="font-semibold text-gray-800 text-sm">Importer des données</div>
+                  <div className="text-xs text-gray-400 mt-0.5">Nounous, parents et enfants depuis Excel</div>
+                </div>
+              </button>
+            )}
           </div>
+        )}
+
+        {showImportModal && (
+          <ImportModal onClose={() => setShowImportModal(false)} />
         )}
 
         {/* ── Section: Tutoriels ── */}
