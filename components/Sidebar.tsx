@@ -234,7 +234,7 @@ export default function Sidebar() {
         <div className="mx-4 mb-3 border-t border-gray-100"></div>
         <nav className="flex-1 px-3 overflow-y-auto">
           <ul className="space-y-0.5">
-            {getNavLinks(user, t).map(link => (
+            {getNavLinks(user ?? null, t).map(link => (
               <li key={link.to}>
                 <Link
                   to={link.to}

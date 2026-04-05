@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { HiOutlineOfficeBuilding, HiOutlineUsers, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlinePencil, HiOutlineTrash, HiOutlineDocumentReport } from 'react-icons/hi';
+import ImportModal from '../components/ImportModal';
 
 type Subscription = {
   plan: string;
@@ -85,6 +86,7 @@ export default function AdminCenters() {
     phone: ''
   });
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [centerToDelete, setCenterToDelete] = useState<Center | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -286,6 +288,14 @@ export default function AdminCenters() {
               <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.centers.subtitle', { count: String(centers.length) })}</p>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowImportModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:bg-[#0a4a59] transition-colors shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            Importer des données
+          </button>
         </div>
 
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">{error}</div>}
@@ -766,6 +776,10 @@ export default function AdminCenters() {
             </div>
           </div>
         </div>
+      )}
+
+      {showImportModal && (
+        <ImportModal onClose={() => setShowImportModal(false)} />
       )}
     </div>
   );
