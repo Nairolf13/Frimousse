@@ -62,13 +62,10 @@ router.get('/public', async (req, res) => {
       .map(center => {
         const admin = center.users[0] || null;
         return {
-          id: center.id,
           name: center.name,
           email: admin?.email || null,
           phone: admin?.phone || null,
-          address: admin?.address || null,
           city: admin?.city || null,
-          postalCode: admin?.postalCode || null,
           region: admin?.region || null,
           country: admin?.country || null,
           facebookUrl: admin?.facebookUrl || null,
@@ -77,7 +74,7 @@ router.get('/public', async (req, res) => {
           twitterUrl: admin?.twitterUrl || null,
         };
       })
-      .filter(c => c.address || c.phone);
+      .filter(c => c.city || c.phone);
 
     res.json(result);
   } catch (e) {

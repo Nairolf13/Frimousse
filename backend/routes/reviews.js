@@ -22,7 +22,12 @@ router.get('/', async (req, res) => {
     const { centerId, limit = 8 } = req.query;
     const where = { approved: true };
     if (centerId) where.centerId = centerId;
-    const reviews = await prisma.review.findMany({ where, orderBy: { createdAt: 'desc' }, take: Number(limit) });
+    const reviews = await prisma.review.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: Number(limit),
+      select: { authorName: true, content: true, rating: true, createdAt: true },
+    });
     return res.json({ reviews });
   } catch (e) {
     console.error('Failed to fetch reviews', e);
