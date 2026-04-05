@@ -219,8 +219,6 @@ const notificationsRoutes = require('./routes/notifications');
 app.use('/api/notifications', notificationsRoutes);
 
 // Hugging Face parental assistant route
-const hfChatRoutes = require('./routes/hfChat');
-app.use('/api/hf-chat', hfChatRoutes);
 
 // Assistant route (Mistral proxy)
 try {

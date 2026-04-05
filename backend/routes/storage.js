@@ -12,7 +12,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
+const jwt = require('jsonwebtoken');
 const auth = require('../middleware/authMiddleware');
 
 let fetchFn;
@@ -21,14 +21,22 @@ try { fetchFn = globalThis.fetch || require('node-fetch'); } catch (e) { fetchFn
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || 'PrivacyPicture';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { autoRefreshToken: false },
-  global: { fetch: fetchFn },
-});
+const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || '';
 
 // Allowed path prefixes — only serve files from known folders
 const ALLOWED_PREFIXES = ['avatars/', 'photos/', 'prescriptions/', 'feed/', 'uploads/', 'thumbnails/', 'children/'];
+
+// Build a short-lived service_role JWT using SUPABASE_JWT_SECRET.
+// This bypasses the SDK's internal key validation (Invalid Compact JWS).
+function makeServiceToken() {
+  const secret = SUPABASE_JWT_SECRET;
+  if (!secret) return SUPABASE_KEY; // fallback to env key if secret not set
+  return jwt.sign(
+    { role: 'service_role', iss: 'supabase', iat: Math.floor(Date.now() / 1000), exp: Math.floor(Date.now() / 1000) + 60 },
+    secret,
+    { algorithm: 'HS256' }
+  );
+}
 
 router.get('/photo', auth, async (req, res) => {
   try {
@@ -47,7 +55,7 @@ router.get('/photo', auth, async (req, res) => {
       return res.status(403).json({ error: 'Accès refusé' });
     }
 
-    if (!SUPABASE_URL || !SUPABASE_KEY) {
+    if (!SUPABASE_URL || (!SUPABASE_KEY && !SUPABASE_JWT_SECRET)) {
       console.error('[storage] Supabase credentials missing');
       return res.status(503).json({ error: 'Storage non configuré' });
     }
@@ -59,27 +67,26 @@ router.get('/photo', auth, async (req, res) => {
     }
 
     const base = SUPABASE_URL.replace(/\/$/, '');
+    const token = makeServiceToken();
 
-    // Use the Supabase Storage REST API to create a signed URL.
-    // The JS SDK's createSignedUrl() internally validates the service role JWT
-    // and throws "Invalid Compact JWS" when the key format differs between envs.
-    // Calling the REST endpoint directly avoids that validation entirely.
+    // Call Supabase Storage REST API to get a signed URL using our fresh token
     const signRes = await fetchImpl(
       `${base}/storage/v1/object/sign/${SUPABASE_BUCKET}/${sanitized}`,
       {
         method: 'POST',
-        headers: { Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ expiresIn: 300 }),
       }
     );
 
     if (!signRes.ok) {
-      console.error('[storage] sign REST failed:', signRes.status, 'path:', sanitized);
+      const body = await signRes.text().catch(() => '');
+      console.error('[storage] sign REST failed:', signRes.status, body.slice(0, 200), 'path:', sanitized);
       return res.status(404).json({ error: 'Fichier introuvable' });
     }
 
     const signJson = await signRes.json();
-    const signedPath = signJson.signedURL; // relative path like /object/sign/bucket/...?token=...
+    const signedPath = signJson.signedURL;
     if (!signedPath) {
       console.error('[storage] no signedURL in response, path:', sanitized);
       return res.status(404).json({ error: 'Fichier introuvable' });
