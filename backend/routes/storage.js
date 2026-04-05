@@ -47,35 +47,25 @@ router.get('/photo', auth, async (req, res) => {
       return res.status(403).json({ error: 'Accès refusé' });
     }
 
-    // Download from private bucket using service role key
-    const { data, error } = await supabase.storage.from(SUPABASE_BUCKET).download(sanitized);
+    if (!SUPABASE_URL || !SUPABASE_KEY) {
+      console.error('[storage] Supabase credentials missing');
+      return res.status(503).json({ error: 'Storage non configuré' });
+    }
 
-    if (error || !data) {
-      console.error('[storage] Download error:', error?.message || 'no data', 'path:', sanitized);
+    // Generate a signed URL and redirect the browser directly to Supabase.
+    // This avoids proxying the file through the Node process (no memory pressure,
+    // no server-side fetch issues) while keeping the file protected behind auth.
+    const { data: signedData, error: signError } = await supabase.storage
+      .from(SUPABASE_BUCKET)
+      .createSignedUrl(sanitized, 300); // 5 min expiry
+
+    if (signError || !signedData?.signedUrl) {
+      console.error('[storage] createSignedUrl error:', signError?.message, 'path:', sanitized);
       return res.status(404).json({ error: 'Fichier introuvable' });
     }
 
-    // Determine content type from extension
-    const ext = sanitized.split('.').pop()?.toLowerCase();
-    const contentTypes = {
-      webp: 'image/webp',
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      gif: 'image/gif',
-      pdf: 'application/pdf',
-      mp4: 'video/mp4',
-      mov: 'video/quicktime',
-    };
-    const contentType = (ext && contentTypes[ext]) || 'application/octet-stream';
-
-    // Stream back with private cache headers
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Cache-Control', 'private, max-age=3600');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-
-    const arrayBuffer = await data.arrayBuffer();
-    res.send(Buffer.from(arrayBuffer));
+    // Redirect browser to the signed URL — Supabase serves the file directly
+    return res.redirect(302, signedData.signedUrl);
   } catch (e) {
     console.error('[storage] Unexpected error:', e && e.message ? e.message : e);
     res.status(500).json({ error: 'Erreur serveur' });
