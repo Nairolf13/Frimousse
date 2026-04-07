@@ -15,8 +15,8 @@ function PlanningModal({ nanny, onClose, centerId }: { nanny: Nanny; onClose: ()
   const { t } = useI18n();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
-        <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
+      <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
+        <button onClick={onClose} className="absolute top-2 right-2 text-muted hover:text-primary text-2xl">×</button>
         <h2 className="text-xl font-bold mb-4 text-center">{t('nanny.planning.of', { name: nanny.name })}</h2>
         <NannyCalendar nannyId={nanny.id} centerId={centerId} />
       </div>
@@ -783,12 +783,12 @@ export default function Nannies() {
     new Map(filteredVisible.map(n => [String(n.id), n])).values()
   );
 
-  const inputCls = "border border-gray-200 rounded-xl px-3 py-2 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition w-full";
-  const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1";
+  const inputCls = "border border-border-default rounded-xl px-3 py-2 text-primary bg-input focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition w-full";
+  const labelCls = "block text-xs font-semibold text-secondary uppercase tracking-wide mb-1";
 
   // remove desktop left padding when device is short landscape so page occupies full width
   return (
-    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
 
         {/* Header */}
@@ -799,7 +799,7 @@ export default function Nannies() {
             </div>
             <div className="pt-0.5">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.nannies')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.nannies.description')}</p>
+              <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('page.nannies.description')}</p>
             </div>
           </div>
           {(user && typeof user.role === 'string' && (user.role.toLowerCase().includes('admin') || user.role.toLowerCase().includes('super'))) && (
@@ -809,7 +809,7 @@ export default function Nannies() {
                 type="button"
                 data-tour="btn-add-nanny"
                 onClick={() => { setForm(emptyForm); setEditingId(null); setAdding(true); }}
-                className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-semibold rounded-xl shadow transition flex items-center justify-center gap-2"
               >
                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                 {t('nanny.add')}
@@ -820,16 +820,16 @@ export default function Nannies() {
 
         {/* KPI badges */}
         <div className="grid grid-cols-3 gap-3 mb-5 w-full sm:w-auto sm:flex sm:flex-row sm:gap-3">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
-            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('stats.total')}</div>
+          <div className="bg-card rounded-xl shadow-sm border border-border-default px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-muted font-medium">{t('stats.total')}</div>
             <div className="text-lg font-extrabold text-[#0b5566]">{totalNannies}</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
-            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('nanny.available_label')}</div>
+          <div className="bg-card rounded-xl shadow-sm border border-border-default px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-muted font-medium">{t('nanny.available_label')}</div>
             <div className="text-lg font-extrabold text-emerald-600">{availableToday}</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
-            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('nanny.on_leave_label')}</div>
+          <div className="bg-card rounded-xl shadow-sm border border-border-default px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-muted font-medium">{t('nanny.on_leave_label')}</div>
             <div className="text-lg font-extrabold text-amber-500">{onLeave}</div>
           </div>
         </div>
@@ -837,21 +837,21 @@ export default function Nannies() {
         {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 w-full">
           <div className="relative flex-1 min-w-0">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('nanny.search_placeholder')} className="border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-gray-700 bg-white shadow-sm text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566] transition" />
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('nanny.search_placeholder')} className="border border-border-default rounded-xl pl-9 pr-3 py-2 text-primary bg-card shadow-sm text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566] transition" />
           </div>
           {user && typeof user.role === 'string' && user.role === 'super-admin' && (
-            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
+            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-border-default rounded-xl px-3 py-2 bg-card text-primary shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
               <option value="">{t('messages.center.all', 'Tous les centres')}</option>
               {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
-          <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
+          <select value={availabilityFilter} onChange={e => setAvailabilityFilter(e.target.value)} className="border border-border-default rounded-xl px-3 py-2 bg-card text-primary shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
             <option value="">{t('nanny.filter.any')}</option>
             <option value="Disponible">{t('nanny.filter.disponible')}</option>
             <option value="En congé">{t('nanny.filter.en_conge')}</option>
           </select>
-          <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
+          <select value={experienceFilter} onChange={e => setExperienceFilter(e.target.value)} className="border border-border-default rounded-xl px-3 py-2 bg-card text-primary shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
             <option value="">{t('nanny.filter.experience_any')}</option>
             <option value="junior">{t('nanny.filter.experience_junior')}</option>
             <option value="senior">{t('nanny.filter.experience_senior')}</option>
@@ -860,13 +860,13 @@ export default function Nannies() {
 
         {/* Form */}
         {(adding || editingId) && (
-          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow-md border border-gray-100">
+          <form ref={formRef} onSubmit={handleSubmit} className="mb-6 bg-card rounded-2xl shadow-md border border-border-default">
             {/* Form header */}
-            <div className="px-6 py-4 bg-gradient-to-r from-[#0b5566] to-[#08323a] flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-                <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <div className="px-6 py-4 bg-[#0b5566] dark:bg-input border-b border-transparent dark:border-border-default flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-card/20 dark:bg-border-default flex items-center justify-center">
+                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-white dark:text-primary"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
-              <h2 className="text-white font-semibold text-base">{editingId ? t('global.save') : t('nanny.add')}</h2>
+              <h2 className="text-white dark:text-primary font-semibold text-base">{editingId ? t('global.save') : t('nanny.add')}</h2>
             </div>
             <div className="p-6 grid gap-4 md:grid-cols-2">
             {/* Name */}
@@ -887,19 +887,19 @@ export default function Nannies() {
 
             {/* Address */}
             <div id="nanny-form-address" data-tour="nanny-form-address" className="md:col-span-2">
-              <p className="text-xs text-gray-500 mb-2">{t('tour.add-nanny.address.description', 'Renseignez l’adresse complète (adresse, code postal, ville, région, pays) pour assurer un suivi précis et une facturation correcte.')}</p>
+              <p className="text-xs text-secondary mb-2">{t('tour.add-nanny.address.description', 'Renseignez l’adresse complète (adresse, code postal, ville, région, pays) pour assurer un suivi précis et une facturation correcte.')}</p>
               <label className={labelCls}>{t('parent.form.address')} <span className="text-red-500">*</span></label>
               <div className="relative">
                 <input name="address" value={form.address || ''} onChange={(e) => { setForm({ ...form, address: e.target.value }); setOpenAddress(true); }} placeholder={t('parent.form.address')} className={inputCls} onFocus={() => setOpenAddress(true)} />
                 {openAddress && placeSuggestions.length > 0 && (
-                  <ul className="absolute z-20 left-0 right-0 bg-white border border-gray-200 mt-1 max-h-56 overflow-auto rounded-xl shadow-lg">
+                  <ul className="absolute z-20 left-0 right-0 bg-card border border-border-default mt-1 max-h-56 overflow-auto rounded-xl shadow-lg">
                     {placeSuggestions.map((p, idx) => {
                       const summary = [p.house_number && `${p.house_number} ${p.street}`, p.street || p.name, p.postcode, p.state, p.country].filter(Boolean).join(', ');
                       const label = p.name || (p.house_number ? `${p.house_number} ${p.street}` : p.street || '');
                       return (
-                        <li key={idx} role="button" tabIndex={0} onClick={() => { selectPlace(p); }} className="px-3 py-2 hover:bg-gray-50 cursor-pointer">
-                          <div className="text-sm font-medium text-gray-800">{label}</div>
-                          <div className="text-xs text-gray-500">{summary}</div>
+                        <li key={idx} role="button" tabIndex={0} onClick={() => { selectPlace(p); }} className="px-3 py-2 hover:bg-input cursor-pointer">
+                          <div className="text-sm font-medium text-primary">{label}</div>
+                          <div className="text-xs text-secondary">{summary}</div>
                         </li>
                       );
                     })}
@@ -965,14 +965,14 @@ export default function Nannies() {
             {/* Credentials (email + password) */}
             <div className="md:col-span-2" data-tour="nanny-form-credentials">
               <div className="flex flex-col">
-                <label className={labelCls}>{t('nanny.form.email')} <span className="text-gray-400 font-normal text-xs ml-1">(optionnel)</span></label>
+                <label className={labelCls}>{t('nanny.form.email')} <span className="text-muted font-normal text-xs ml-1">(optionnel)</span></label>
                 <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className={inputCls} />
-                <p className="text-xs text-gray-400 mt-1">Vous pouvez utiliser votre propre email. Laissez vide pour créer sans compte de connexion.</p>
+                <p className="text-xs text-muted mt-1">Vous pouvez utiliser votre propre email. Laissez vide pour créer sans compte de connexion.</p>
               </div>
 
               {/* Message si l'email saisi est celui du compte admin connecté */}
               {form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase() && (
-                <div className="mt-3 flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
+                <div className="mt-3 flex items-start gap-2 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-4 py-3 text-sm text-blue-800 dark:text-blue-200">
                   <svg className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   <span>Vous utilisez votre propre email. <strong>Il n'est pas nécessaire de saisir un mot de passe</strong> — vous vous connecterez toujours avec votre compte administrateur.</span>
                 </div>
@@ -983,7 +983,7 @@ export default function Nannies() {
                 <div className="relative flex flex-col mt-4">
                   <label className={labelCls}>{t('nanny.form.password')}</label>
                   <input name="password" autoComplete="new-password" type={showPw ? "text" : "password"} value={form.password || ''} onChange={handleChange} placeholder={t('nanny.form.password')} className={`${inputCls} pr-10`} />
-                  <button type="button" tabIndex={-1} className="absolute right-3 bottom-2.5 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>
+                  <button type="button" tabIndex={-1} className="absolute right-3 bottom-2.5 text-muted hover:text-primary" onClick={() => setShowPw(v => !v)}>
                 {showPw ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
               </button>
             </div>
@@ -992,7 +992,7 @@ export default function Nannies() {
             <div className="relative flex flex-col">
               <label className={labelCls}>{t('nanny.form.confirmPassword')}</label>
               <input name="confirmPassword" autoComplete="new-password" type={showPw ? "text" : "password"} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder={t('nanny.form.confirmPassword')} className={`${inputCls} pr-10`} />
-              <button type="button" tabIndex={-1} className="absolute right-3 bottom-2.5 text-gray-400 hover:text-gray-700" onClick={() => setShowPw(v => !v)}>
+              <button type="button" tabIndex={-1} className="absolute right-3 bottom-2.5 text-muted hover:text-primary" onClick={() => setShowPw(v => !v)}>
                 {showPw ? <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
               </button>
             </div>
@@ -1000,7 +1000,7 @@ export default function Nannies() {
 
             {/* Password rules */}
             {(adding || editingId) && !(form.email && user?.email && form.email.toLowerCase() === user.email.toLowerCase()) && (
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 mt-2">
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { ok: hasUpper, label: t('nanny.password.requirements.upper', 'Une majuscule (A-Z)') },
@@ -1008,7 +1008,7 @@ export default function Nannies() {
                     { ok: hasSpecial, label: t('nanny.password.requirements.special', 'Un caractère spécial') },
                     { ok: hasLength, label: t('nanny.password.requirements.length', '{min} caractères min.').replace('{min}', String(minLength)) },
                   ].map(({ ok, label }) => (
-                    <div key={label} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg font-medium ${ok ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <div key={label} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg font-medium ${ok ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300' : 'bg-card-hover text-secondary'}`}>
                       <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points={ok ? "20 6 9 17 4 12" : "18 6 6 18M6 6l12 12"}/></svg>
                       {label}
                     </div>
@@ -1020,31 +1020,31 @@ export default function Nannies() {
             </div>
 
             {/* Form footer */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
-              <div className="text-xs text-gray-400">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
+            <div className="px-6 py-4 bg-input border-t border-border-default flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
+              <div className="text-xs text-muted">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
               <div className="flex gap-2">
-                <button type="button" onClick={() => { setForm(emptyForm); setConfirmPassword(''); setEditingId(null); setAdding(false); }} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition text-sm font-medium">{t('global.cancel')}</button>
-                <button type="submit" className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white font-semibold hover:opacity-90 transition text-sm shadow">
+                <button type="button" onClick={() => { setForm(emptyForm); setConfirmPassword(''); setEditingId(null); setAdding(false); }} className="px-4 py-2 rounded-xl bg-card-hover text-secondary hover:bg-border-default transition text-sm font-medium">{t('global.cancel')}</button>
+                <button type="submit" className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold transition text-sm shadow">
                   {editingId ? t('global.save') : t('global.add')}
                 </button>
               </div>
             </div>
-            {error && <div className="px-6 py-3 text-red-600 text-sm bg-red-50 border-t border-red-100">{error}</div>}
+            {error && <div className="px-6 py-3 text-red-600 text-sm bg-red-50 dark:bg-red-950 border-t border-red-100 dark:border-red-800">{error}</div>}
           </form>
         )}
 
         {/* Success banner */}
         {successMessage && (
-          <div className="mb-5 flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3">
+          <div className="mb-5 flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 rounded-xl px-4 py-3">
             <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
             <span className="font-medium text-sm">{successMessage}</span>
           </div>
         )}
 
         {loading ? (
-          <div className="bg-white rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-gray-400"><svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/><path d="M12 4v4m0 12v4M4 12H0m24 0h-4"/></svg>Chargement…</div>
+          <div className="bg-card rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-muted"><svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/><path d="M12 4v4m0 12v4M4 12H0m24 0h-4"/></svg>Chargement…</div>
         ) : (
-          <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full">
+          <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-stretch w-full">
             {uniqueDisplayedNannies.map((nanny, idx) => {
               const cotisation = cotisationStatus[nanny.id];
               const daysRemaining = cotisation && cotisation.paidUntil ? Math.max(0, Math.ceil((new Date(cotisation.paidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0;
@@ -1057,10 +1057,10 @@ export default function Nannies() {
                 ? t('nanny.availability.on_leave')
                 : (nanny.availability === 'Disponible' ? t('nanny.availability.available') : t('nanny.availability.sick'));
               const availabilityClasses = _availRaw.includes('dispon')
-                ? 'bg-emerald-100 text-emerald-700'
+                ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300'
                 : (_availRaw.includes('malad') || _availRaw.includes('cong'))
-                  ? 'bg-red-100 text-red-600'
-                  : 'bg-gray-100 text-gray-600';
+                  ? 'bg-red-100 dark:bg-red-900 text-red-600'
+                  : 'bg-card-hover text-secondary';
 
               const gradients = [
                 'from-[#0b5566] to-[#0a7c97]',
@@ -1074,54 +1074,54 @@ export default function Nannies() {
               const initials = nanny.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
 
               return (
-                <div key={nanny.id} className="relative bg-white rounded-2xl shadow-md border border-gray-100 flex flex-col overflow-hidden">
+                <div key={nanny.id} className="relative bg-card rounded-2xl shadow-md border border-border-default flex flex-col overflow-hidden min-h-[420px]">
                   {/* Delete overlay */}
                   {isDeleting && (
-                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/95 rounded-2xl p-8">
-                      <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-card/95 rounded-2xl p-8">
+                      <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-900 flex items-center justify-center mb-4">
                         <svg width="28" height="28" fill="none" stroke="#ef4444" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                       </div>
-                      <div className="text-base font-semibold text-gray-900 text-center mb-1">{t('modal.delete.title')}</div>
-                      <div className="text-sm text-gray-500 mb-6 text-center">{t('nanny.delete.confirm_body')}</div>
+                      <div className="text-base font-semibold text-primary text-center mb-1">{t('modal.delete.title')}</div>
+                      <div className="text-sm text-secondary mb-6 text-center">{t('nanny.delete.confirm_body')}</div>
                       <div className="flex gap-3 w-full">
-                        <button onClick={() => setDeleteId(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 font-medium hover:bg-gray-200 transition text-sm">{t('modal.cancel')}</button>
-                        <button onClick={handleDelete} className="flex-1 bg-red-500 text-white rounded-xl px-4 py-2 font-medium hover:bg-red-600 transition shadow text-sm">{t('children.action.delete')}</button>
+                        <button onClick={() => setDeleteId(null)} className="flex-1 bg-card-hover text-primary rounded-xl px-4 py-2 font-medium hover:bg-border-default transition text-sm">{t('modal.cancel')}</button>
+                        <button onClick={handleDelete} className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl px-4 py-2 font-medium transition shadow text-sm">{t('children.action.delete')}</button>
                       </div>
                     </div>
                   )}
 
                   {/* Card header */}
                   <div
-                    className={`px-5 pt-5 pb-4 bg-gradient-to-r ${gradient} flex items-center gap-3 cursor-pointer`}
+                    className={`px-5 pt-5 pb-4 bg-gradient-to-r ${gradient} dark:bg-none dark:bg-input dark:border-b dark:border-border-default flex items-center gap-3 cursor-pointer`}
                     onClick={() => setPlanningNanny(nanny)}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPlanningNanny(nanny); } }}
                     aria-label={`Voir le planning de ${nanny.name}`}
                   >
-                    <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    <div className="w-12 h-12 rounded-full bg-card/20 dark:bg-border-default flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {nanny.avatarUrl ? (
                         <img src={nanny.avatarUrl} alt={nanny.name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-white font-bold text-lg">{initials}</span>
+                        <span className="text-white dark:text-primary font-bold text-lg">{initials}</span>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-white text-base truncate">{nanny.name}</span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/20 text-white`}>{availabilityLabel}</span>
+                        <span className="font-bold text-white dark:text-primary text-base truncate">{nanny.name}</span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full bg-card/20 dark:bg-border-default text-white dark:text-secondary`}>{availabilityLabel}</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">
-                        <span className="text-xs text-white/80">{nanny.experience} {nanny.experience === 1 ? 'an' : 'ans'} exp.</span>
+                        <span className="text-xs text-white/80 dark:text-secondary">{nanny.experience} {nanny.experience === 1 ? 'an' : 'ans'} exp.</span>
                         {nanny.birthDate && (
                           <>
-                            <span className="text-white/40">·</span>
-                            <span className="text-xs text-white/80">{new Date(nanny.birthDate).toLocaleDateString('fr-FR')}</span>
+                            <span className="text-white/40 dark:text-border-strong">·</span>
+                            <span className="text-xs text-white/80 dark:text-secondary">{new Date(nanny.birthDate).toLocaleDateString('fr-FR')}</span>
                           </>
                         )}
                       </div>
                     </div>
-                    <div className="text-white/60 flex-shrink-0">
+                    <div className="text-white/60 dark:text-muted flex-shrink-0">
                       <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     </div>
                   </div>
@@ -1130,73 +1130,69 @@ export default function Nannies() {
                   <div className="flex-1 flex flex-col p-5 gap-4">
 
                     {/* Contact info */}
-                    <div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-1.5">
-                      {(nanny.address || nanny.city) && (
-                        <div className="flex items-start gap-2 text-sm text-gray-700">
-                          <svg className="text-gray-400 flex-shrink-0 mt-0.5" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                          <div className="leading-snug">
-                            {nanny.address && <div className="truncate">{nanny.address}</div>}
-                            {(nanny.postalCode || nanny.city) && <div className="text-gray-500 text-xs">{[nanny.postalCode, nanny.city].filter(Boolean).join(' ')}</div>}
-                          </div>
+                    <div className="bg-input rounded-xl p-3 flex flex-col gap-1.5">
+                      <div className="flex items-start gap-2 text-sm text-primary">
+                        <svg className="text-muted flex-shrink-0 mt-0.5" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <div className="leading-snug">
+                          <div className="truncate">{nanny.address || <span className="text-muted text-xs">—</span>}</div>
+                          <div className="text-secondary text-xs">{[nanny.postalCode, nanny.city].filter(Boolean).join(' ') || <span className="text-muted">—</span>}</div>
                         </div>
-                      )}
-                      {nanny.email && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                          <a href={`mailto:${nanny.email}`} onClick={(e) => e.stopPropagation()} className="text-[#0b5566] hover:underline truncate">{nanny.email}</a>
-                        </div>
-                      )}
-                      {nanny.contact && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                          <a href={`tel:${nanny.contact}`} onClick={(e) => e.stopPropagation()} className="text-[#0b5566] hover:underline">{nanny.contact}</a>
-                        </div>
-                      )}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg className="text-muted flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        {nanny.email ? <a href={`mailto:${nanny.email}`} onClick={(e) => e.stopPropagation()} className="text-[#0b5566] dark:text-accent hover:underline truncate">{nanny.email}</a> : <span className="text-muted text-xs">—</span>}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <svg className="text-muted flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        {nanny.contact ? <a href={`tel:${nanny.contact}`} onClick={(e) => e.stopPropagation()} className="text-[#0b5566] dark:text-accent hover:underline">{nanny.contact}</a> : <span className="text-muted text-xs">—</span>}
+                      </div>
                     </div>
 
-                    {/* Specializations */}
-                    {nanny.specializations && nanny.specializations.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {nanny.specializations.map((spec, i) => (
-                          <span key={i} className="bg-violet-50 text-violet-700 px-2 py-1 rounded-lg text-xs font-medium border border-violet-100">{spec}</span>
-                        ))}
-                      </div>
-                    )}
+                    {/* Specializations - always rendered */}
+                    <div className="flex flex-wrap gap-1.5 min-h-[28px] items-center">
+                      {nanny.specializations && nanny.specializations.length > 0 ? (
+                        nanny.specializations.map((spec, i) => (
+                          <span key={i} className="bg-violet-50 dark:bg-violet-950 text-violet-700 dark:text-violet-300 px-2 py-1 rounded-lg text-xs font-medium border border-violet-100 dark:border-violet-800">{spec}</span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted italic">{t('nanny.no_specializations', 'Aucune spécialisation')}</span>
+                      )}
+                    </div>
 
                     {/* Today assignments + availability */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${availabilityClasses}`}>{availabilityLabel}</span>
-                      <span className="text-xs text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full font-medium">
-                        {t('nanny.assignments_today')} <span className="font-bold text-gray-700">{assignedTodayCount}</span>
+                      <span className="text-xs text-secondary bg-card-hover px-2.5 py-1 rounded-full font-medium">
+                        {t('nanny.assignments_today')} <span className="font-bold text-primary">{assignedTodayCount}</span>
                       </span>
                     </div>
 
                     {/* Cotisation */}
-                    {defaultNannyCotisation > 0 && (<div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2">
+                    {defaultNannyCotisation > 0 && (<div className="bg-input rounded-xl p-3 flex flex-col gap-2">
                       <div className="flex items-center gap-2 flex-nowrap min-w-0">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{t('nanny.cotisation.label')}</span>
+                        <span className="text-xs font-semibold text-secondary uppercase tracking-wide whitespace-nowrap">{t('nanny.cotisation.label')}</span>
                         {cotisation && !cotisation.loading && (
                           daysRemaining > 0 ? (
-                            <span className="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center justify-center gap-1 whitespace-nowrap">
+                            <span className="ml-auto text-xs font-semibold bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full flex items-center justify-center gap-1 whitespace-nowrap">
                               <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                               {t('nanny.cotisation.days_remaining', { n: String(daysRemaining) })}
                             </span>
                           ) : (
-                            <span className="ml-auto text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full flex items-center justify-center whitespace-nowrap">{t('nanny.cotisation.renew')}</span>
+                            <span className="ml-auto text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-600 px-2 py-0.5 rounded-full flex items-center justify-center whitespace-nowrap">{t('nanny.cotisation.renew')}</span>
                           )
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-nowrap min-w-0">
                         {cotisation?.loading ? (
-                          <span className="text-sm text-gray-400 animate-pulse">{t('loading')}</span>
+                          <span className="text-sm text-muted animate-pulse">{t('loading')}</span>
                         ) : daysRemaining > 0 ? (
                           <span className="text-xl font-extrabold text-[#0b5566]">{defaultNannyCotisation}€</span>
                         ) : (
-                          <span className="text-xl font-extrabold text-gray-700">{defaultNannyCotisation}€</span>
+                          <span className="text-xl font-extrabold text-primary">{defaultNannyCotisation}€</span>
                         )}
                         {daysRemaining <= 0 && isAdmin && (
                           <button
-                            className="text-[#0b5566] text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0b5566]/10 hover:bg-[#0b5566]/20 transition disabled:opacity-50"
+                            className="text-white text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 transition disabled:opacity-50"
                             disabled={cotisation?.loading || isPaymentModalOpen}
                             onClick={(e) => { e.stopPropagation(); requestPay(nanny.id); }}
                           >
@@ -1207,19 +1203,19 @@ export default function Nannies() {
                           <span className={`text-xs ml-1 ${messages[nanny.id]?.type === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>{messages[nanny.id]?.text}</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <div className="flex items-center gap-1 text-xs text-secondary">
                         <span>{t('nanny.cotisation.total_parents') || 'Total parents mensuel'}</span>
-                        <span className="font-bold text-gray-700 ml-1">{(cotisationParentsTotals[nanny.id] ?? 0)}€</span>
+                        <span className="font-bold text-primary ml-1">{(cotisationParentsTotals[nanny.id] ?? 0)}€</span>
                       </div>
                     </div>
                     )}
                   </div>
 
                   {/* Card footer */}
-                  <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-1 flex-wrap">
+                  <div className="px-5 py-3 bg-input border-t border-border-default flex items-center gap-1 flex-wrap">
                     <button
                       onClick={(e) => { e.stopPropagation(); setPlanningNanny(nanny); }}
-                      className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white"
+                      className="flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-card"
                       title={t('nanny.planning.button')}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -1230,7 +1226,7 @@ export default function Nannies() {
                         type="month"
                         value={exportMonth}
                         onChange={e => setExportMonth(e.target.value)}
-                        className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-[#0b5566]/30"
+                        className="border border-border-default rounded-lg px-2 py-1 text-xs text-secondary bg-card focus:outline-none focus:ring-1 focus:ring-[#0b5566]/30"
                       />
                       <button
                         onClick={async (e) => {
@@ -1251,7 +1247,7 @@ export default function Nannies() {
                           finally { setExportingId(null); }
                         }}
                         disabled={exportingId === nanny.id}
-                        className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white disabled:opacity-50"
+                        className="flex items-center gap-1 text-xs font-medium text-secondary hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-card disabled:opacity-50"
                         title="Exporter le planning en PDF"
                       >
                         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a1 1 0 001 1h16a1 1 0 001-1v-3"/><path d="M8 6H6a2 2 0 00-2 2v4"/><path d="M16 6h2a2 2 0 012 2v4"/><rect x="8" y="2" width="8" height="8" rx="1"/></svg>
@@ -1259,11 +1255,11 @@ export default function Nannies() {
                       </button>
                     </div>
                     <div className="flex items-center gap-1 ml-auto">
-                      <button onClick={(e) => { e.stopPropagation(); handleEdit(nanny); }} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white" title={t('children.action.edit')}>
+                      <button onClick={(e) => { e.stopPropagation(); handleEdit(nanny); }} className="flex items-center gap-1 text-xs font-medium text-secondary hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-card" title={t('children.action.edit')}>
                         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
                         {t('children.action.edit')}
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); setDeleteId(nanny.id); }} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-500 transition px-2 py-1.5 rounded-lg hover:bg-red-50" title={t('children.action.delete')}>
+                      <button onClick={(e) => { e.stopPropagation(); setDeleteId(nanny.id); }} className="flex items-center gap-1 text-xs font-medium text-secondary hover:text-red-500 transition px-2 py-1.5 rounded-lg hover:bg-red-50 dark:bg-red-950" title={t('children.action.delete')}>
                         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         {t('children.action.delete')}
                       </button>
@@ -1279,14 +1275,14 @@ export default function Nannies() {
       {/* Payment confirm modal */}
       {confirmPayment && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-gray-100">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4 mx-auto">
+          <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-border-default">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center mb-4 mx-auto">
               <svg width="24" height="24" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
             </div>
-            <h3 className="text-base font-bold mb-1 text-center text-gray-900">{t('nanny.payment.confirm_title')}</h3>
-            <p className="mb-5 text-sm text-gray-500 text-center">{t('nanny.payment.confirm_body', { amount: String(confirmPayment.amount) })}</p>
+            <h3 className="text-base font-bold mb-1 text-center text-primary">{t('nanny.payment.confirm_title')}</h3>
+            <p className="mb-5 text-sm text-secondary text-center">{t('nanny.payment.confirm_body', { amount: String(confirmPayment.amount) })}</p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmPayment(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 text-sm font-medium hover:bg-gray-200 transition">{t('modal.cancel')}</button>
+              <button onClick={() => setConfirmPayment(null)} className="flex-1 bg-card-hover text-primary rounded-xl px-4 py-2 text-sm font-medium hover:bg-border-default transition">{t('modal.cancel')}</button>
               <button onClick={confirmPay} className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-500 text-white rounded-xl px-4 py-2 text-sm font-semibold hover:opacity-90 transition shadow">{t('common.confirm')}</button>
             </div>
           </div>
@@ -1300,11 +1296,11 @@ export default function Nannies() {
       {/* Admin password reset modal */}
       {adminResetModal && adminResetModal.open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-gray-100">
-            <h3 className="text-base font-bold mb-2 text-gray-900">{t('parent.reset.confirm_title')}</h3>
-            <p className="mb-5 text-sm text-gray-500">{t('parent.reset.confirm_body')}</p>
+          <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-border-default">
+            <h3 className="text-base font-bold mb-2 text-primary">{t('parent.reset.confirm_title')}</h3>
+            <p className="mb-5 text-sm text-secondary">{t('parent.reset.confirm_body')}</p>
             <div className="flex gap-3">
-              <button onClick={cancelAdminReset} className="flex-1 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 text-sm font-medium hover:bg-gray-200 transition">{t('modal.cancel')}</button>
+              <button onClick={cancelAdminReset} className="flex-1 bg-card-hover text-primary rounded-xl px-4 py-2 text-sm font-medium hover:bg-border-default transition">{t('modal.cancel')}</button>
               <button onClick={confirmAdminReset} className="flex-1 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl px-4 py-2 text-sm font-semibold hover:opacity-90 transition shadow">{t('parent.reset.confirm')}</button>
             </div>
           </div>

@@ -7,6 +7,8 @@ import { useTutorial } from '../src/context/useTutorial';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { subscribeToPush, unsubscribeFromPush } from '../src/utils/pushSubscribe';
 import { useI18n } from '../src/lib/useI18n';
+import { useTheme } from '../hooks/useTheme';
+import type { Theme } from '../hooks/useTheme';
 import LanguageDropdown from '../components/LanguageDropdown';
 import AvatarCropper from '../components/AvatarCropper';
 import ImportModal from '../components/ImportModal';
@@ -257,13 +259,13 @@ function ProfileEditor({ onClose, isAdmin }: { onClose: () => void; isAdmin?: bo
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-16 gap-3">
       <div className="w-12 h-12 rounded-full border-4 border-[#0b5566] border-t-transparent animate-spin" />
-      <p className="text-sm text-gray-400">Chargement du profil…</p>
+      <p className="text-sm text-muted">Chargement du profil…</p>
     </div>
   );
-  if (!form) return <div className="text-sm text-gray-500">{t('no_profile')}</div>;
+  if (!form) return <div className="text-sm text-secondary">{t('no_profile')}</div>;
 
-const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition placeholder:text-gray-300";
-  const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1";
+const inputCls = "w-full bg-input border border-border-default rounded-xl px-3 py-2.5 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition placeholder:text-muted";
+  const labelCls = "block text-xs font-semibold text-secondary uppercase tracking-wide mb-1";
 
   return (
     <div className="space-y-6">
@@ -292,11 +294,11 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
               <label className={labelCls}>{t('parent.form.address') || 'Adresse'}</label>
               <input className={inputCls} placeholder="Rechercher une adresse…" value={form.address || ''} onChange={e => { handleChange('address', e.target.value); setOpenAddress(true); }} />
               {openAddress && placeSuggestions.length > 0 && (
-                <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute z-10 left-0 right-0 mt-1 bg-card border border-border-default rounded-xl shadow-lg overflow-hidden">
                   {placeSuggestions.map((p, i) => (
-                    <div key={i} className="px-3 py-2.5 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0" onClick={() => selectPlace(p)}>
+                    <div key={i} className="px-3 py-2.5 text-sm hover:bg-input cursor-pointer border-b border-border-default last:border-0" onClick={() => selectPlace(p)}>
                       <span className="font-medium">{[p.house_number, p.street || p.name].filter(Boolean).join(' ')}</span>
-                      {p.postcode && <span className="text-gray-400 ml-1">— {p.postcode}</span>}
+                      {p.postcode && <span className="text-muted ml-1">— {p.postcode}</span>}
                     </div>
                   ))}
                 </div>
@@ -357,11 +359,11 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
             <label className={labelCls}>{t('parent.form.address') || 'Adresse'}</label>
             <input className={inputCls} placeholder="Rechercher une adresse…" value={(form as NannyForm).address || ''} onChange={e => { handleChange('address', e.target.value); setOpenAddress(true); }} />
             {openAddress && placeSuggestions.length > 0 && (
-              <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+              <div className="absolute z-10 left-0 right-0 mt-1 bg-card border border-border-default rounded-xl shadow-lg overflow-hidden">
                 {placeSuggestions.map((p, i) => (
-                  <div key={i} className="px-3 py-2.5 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0" onClick={() => selectPlace(p)}>
+                  <div key={i} className="px-3 py-2.5 text-sm hover:bg-input cursor-pointer border-b border-border-default last:border-0" onClick={() => selectPlace(p)}>
                     <span className="font-medium">{[p.house_number, p.street || p.name].filter(Boolean).join(' ')}</span>
-                    {p.postcode && <span className="text-gray-400 ml-1">— {p.postcode}</span>}
+                    {p.postcode && <span className="text-muted ml-1">— {p.postcode}</span>}
                   </div>
                 ))}
               </div>
@@ -415,11 +417,11 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
             <label className={labelCls}>{t('parent.form.address') || 'Adresse'}</label>
             <input className={inputCls} placeholder="Rechercher une adresse…" value={(form as UserForm).address || ''} onChange={e => { handleChange('address', e.target.value); setOpenAddress(true); }} />
             {openAddress && placeSuggestions.length > 0 && (
-              <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+              <div className="absolute z-10 left-0 right-0 mt-1 bg-card border border-border-default rounded-xl shadow-lg overflow-hidden">
                 {placeSuggestions.map((p, i) => (
-                  <div key={i} className="px-3 py-2.5 text-sm hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0" onClick={() => selectPlace(p)}>
+                  <div key={i} className="px-3 py-2.5 text-sm hover:bg-input cursor-pointer border-b border-border-default last:border-0" onClick={() => selectPlace(p)}>
                     <span className="font-medium">{[p.house_number, p.street || p.name].filter(Boolean).join(' ')}</span>
-                    {p.postcode && <span className="text-gray-400 ml-1">— {p.postcode}</span>}
+                    {p.postcode && <span className="text-muted ml-1">— {p.postcode}</span>}
                   </div>
                 ))}
               </div>
@@ -440,7 +442,7 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
           {isAdmin && (
             <>
               <div className="sm:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-3 mt-1">Réseaux sociaux</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3 mt-1">Réseaux sociaux</p>
               </div>
               <div>
                 <label className={labelCls}>Facebook</label>
@@ -464,25 +466,25 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
       )}
 
       {/* Section mot de passe accordéon */}
-      <div className="rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="rounded-2xl border border-border-default overflow-hidden">
         <button
           type="button"
           onClick={() => setShowPasswordSection(s => !s)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition text-sm font-semibold text-gray-700"
+          className="w-full flex items-center justify-between px-4 py-3 bg-input hover:bg-card-hover transition text-sm font-semibold text-primary"
         >
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4 text-[#0b5566]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
             {t('settings.change_password')}
           </div>
-          <svg className={`w-4 h-4 text-gray-400 transition-transform ${showPasswordSection ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
+          <svg className={`w-4 h-4 text-muted transition-transform ${showPasswordSection ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
         </button>
         {showPasswordSection && (
-          <div className="p-4 space-y-3 bg-white">
+          <div className="p-4 space-y-3 bg-card">
             <div>
               <label className={labelCls}>{t('label.oldPassword')}</label>
               <div className="relative">
                 <input type={showOldPassword ? 'text' : 'password'} className={inputCls + ' pr-10'} placeholder="••••••••" value={oldPassword} onChange={e => setOldPassword(e.target.value)} />
-                <button type="button" onClick={() => setShowOldPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <button type="button" onClick={() => setShowOldPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary">
                   {showOldPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                 </button>
               </div>
@@ -491,7 +493,7 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
               <label className={labelCls}>{t('label.newPassword')}</label>
               <div className="relative">
                 <input type={showNewPassword ? 'text' : 'password'} className={inputCls + ' pr-10'} placeholder="••••••••" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
-                <button type="button" onClick={() => setShowNewPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <button type="button" onClick={() => setShowNewPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary">
                   {showNewPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                 </button>
               </div>
@@ -500,7 +502,7 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
               <label className={labelCls}>{t('label.confirmPassword')}</label>
               <div className="relative">
                 <input type={showConfirmPassword ? 'text' : 'password'} className={inputCls + ' pr-10'} placeholder="••••••••" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
-                <button type="button" onClick={() => setShowConfirmPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                <button type="button" onClick={() => setShowConfirmPassword(s => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-secondary">
                   {showConfirmPassword ? <HiOutlineEyeOff className="w-4 h-4" /> : <HiOutlineEye className="w-4 h-4" />}
                 </button>
               </div>
@@ -510,13 +512,13 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl">
+        <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-600 text-sm px-4 py-3 rounded-xl">
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
           {error}
         </div>
       )}
       {saveSuccess && (
-        <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-xl">
+        <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm px-4 py-3 rounded-xl">
           <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           Profil mis à jour avec succès
         </div>
@@ -536,7 +538,7 @@ const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.
         </button>
         <button
           onClick={onClose}
-          className="px-5 flex items-center justify-center bg-gray-100 text-gray-600 font-medium rounded-xl py-2.5 text-sm hover:bg-gray-200 transition"
+          className="px-5 flex items-center justify-center bg-card-hover text-secondary font-medium rounded-xl py-2.5 text-sm hover:bg-card-hover transition"
         >
           {t('settings.cancel')}
         </button>
@@ -580,6 +582,7 @@ export default function Settings() {
   });
 
   const { t, setLocale } = useI18n();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     // Ensure that the i18n provider always matches the current language selection
@@ -889,7 +892,7 @@ export default function Settings() {
     <div className="flex items-center gap-3 mb-6">
       <button
         onClick={() => setSearchParams({})}
-        className="flex items-center justify-center w-9 h-9 rounded-xl bg-white shadow border border-gray-100 text-gray-500 hover:text-[#0b5566] hover:border-[#0b5566] transition"
+        className="flex items-center justify-center w-9 h-9 rounded-xl bg-card shadow border border-border-default text-secondary hover:text-[#0b5566] hover:border-[#0b5566] transition"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
       </button>
@@ -898,7 +901,7 @@ export default function Settings() {
   );
 
   return (
-  <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+  <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
           <div className="flex items-start gap-3">
@@ -907,7 +910,7 @@ export default function Settings() {
             </div>
             <div className="pt-0.5">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('settings.title')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('settings.description', 'Gérez vos préférences et votre compte')}</p>
+              <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('settings.description', 'Gérez vos préférences et votre compte')}</p>
             </div>
           </div>
         </div>
@@ -918,28 +921,28 @@ export default function Settings() {
             {/* Profil & Compte */}
             <button
               onClick={() => setSearchParams({ section: 'account' })}
-              className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+              className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
             >
-              <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-[#0b5566] group-hover:bg-[#0b5566] group-hover:text-white transition">
+              <div className="w-11 h-11 rounded-xl bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-[#0b5566] group-hover:bg-[#0b5566] group-hover:text-white transition">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
               </div>
               <div>
-                <div className="font-semibold text-gray-800 text-sm">{t('settings.section.account', 'Profil & Compte')}</div>
-                <div className="text-xs text-gray-400 mt-0.5">{t('settings.section.account.subtitle', 'Modifier vos informations')}</div>
+                <div className="font-semibold text-primary text-sm">{t('settings.section.account', 'Profil & Compte')}</div>
+                <div className="text-xs text-muted mt-0.5">{t('settings.section.account.subtitle', 'Modifier vos informations')}</div>
               </div>
             </button>
 
             {/* Notifications */}
             <button
               onClick={() => setSearchParams({ section: 'notifications' })}
-              className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+              className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
             >
-              <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition">
+              <div className="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950 flex items-center justify-center text-amber-600 group-hover:bg-amber-50 dark:bg-amber-9500 group-hover:text-white transition">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/></svg>
               </div>
               <div>
-                <div className="font-semibold text-gray-800 text-sm">{t('settings.section.notifications', 'Notifications')}</div>
-                <div className="text-xs text-gray-400 mt-0.5">{t('settings.section.notifications.subtitle', 'Email et push')}</div>
+                <div className="font-semibold text-primary text-sm">{t('settings.section.notifications', 'Notifications')}</div>
+                <div className="text-xs text-muted mt-0.5">{t('settings.section.notifications.subtitle', 'Email et push')}</div>
               </div>
             </button>
 
@@ -947,14 +950,14 @@ export default function Settings() {
             {isAdmin && (
               <button
                 onClick={() => setSearchParams({ section: 'tarifs' })}
-                className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+                className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
               >
-                <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition">
+                <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-50 dark:bg-emerald-9500 group-hover:text-white transition">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z"/></svg>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-800 text-sm">{t('settings.section.billing', 'Facturation')}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{t('settings.section.billing.subtitle', 'Tarifs et cotisations')}</div>
+                  <div className="font-semibold text-primary text-sm">{t('settings.section.billing', 'Facturation')}</div>
+                  <div className="text-xs text-muted mt-0.5">{t('settings.section.billing.subtitle', 'Tarifs et cotisations')}</div>
                 </div>
               </button>
             )}
@@ -962,28 +965,44 @@ export default function Settings() {
             {/* Langue */}
             <button
               onClick={() => setSearchParams({ section: 'langue' })}
-              className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+              className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
             >
-              <div className="w-11 h-11 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-500 group-hover:text-white transition">
+              <div className="w-11 h-11 rounded-xl bg-purple-50 dark:bg-purple-950 flex items-center justify-center text-purple-600 group-hover:bg-purple-50 dark:bg-purple-9500 group-hover:text-white transition">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 21l5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 016-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 01-3.827-5.802"/></svg>
               </div>
               <div>
-                <div className="font-semibold text-gray-800 text-sm">{t('settings.language.title')}</div>
-                <div className="text-xs text-gray-400 mt-0.5">{t('settings.language.desc')}</div>
+                <div className="font-semibold text-primary text-sm">{t('settings.language.title')}</div>
+                <div className="text-xs text-muted mt-0.5">{t('settings.language.desc')}</div>
+              </div>
+            </button>
+
+            {/* Apparence */}
+            <button
+              onClick={() => setSearchParams({ section: 'apparence' })}
+              className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+            >
+              <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-600 group-hover:bg-slate-700 group-hover:text-white transition">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+                </svg>
+              </div>
+              <div>
+                <div className="font-semibold text-primary text-sm">Apparence</div>
+                <div className="text-xs text-muted mt-0.5">Thème clair, sombre ou système</div>
               </div>
             </button>
 
             {/* Tutoriels */}
             <button
               onClick={() => setSearchParams({ section: 'tutoriels' })}
-              className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+              className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
             >
               <div className="w-11 h-11 rounded-xl bg-brand-50 flex items-center justify-center text-[#0b5566] group-hover:bg-[#0b5566] group-hover:text-white transition">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/></svg>
               </div>
               <div>
-                <div className="font-semibold text-gray-800 text-sm">{t('settings.section.tutorials', 'Tutoriels')}</div>
-                <div className="text-xs text-gray-400 mt-0.5">{t('settings.section.tutorials.progress', { done: String(completedTours.length), total: String(tours.length) })}</div>
+                <div className="font-semibold text-primary text-sm">{t('settings.section.tutorials', 'Tutoriels')}</div>
+                <div className="text-xs text-muted mt-0.5">{t('settings.section.tutorials.progress', { done: String(completedTours.length), total: String(tours.length) })}</div>
               </div>
             </button>
 
@@ -991,14 +1010,14 @@ export default function Settings() {
             {!isSuperAdmin && (
               <button
                 onClick={() => setSearchParams({ section: 'support' })}
-                className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+                className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
               >
-                <div className="w-11 h-11 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition">
+                <div className="w-11 h-11 rounded-xl bg-rose-50 dark:bg-rose-950 flex items-center justify-center text-rose-500 group-hover:bg-rose-50 dark:bg-rose-9500 group-hover:text-white transition">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-800 text-sm">{t('settings.support.title', 'Support')}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{t('settings.support.open_ticket', 'Ouvrir un ticket')}</div>
+                  <div className="font-semibold text-primary text-sm">{t('settings.support.title', 'Support')}</div>
+                  <div className="text-xs text-muted mt-0.5">{t('settings.support.open_ticket', 'Ouvrir un ticket')}</div>
                 </div>
               </button>
             )}
@@ -1007,14 +1026,14 @@ export default function Settings() {
             {isAdmin && (
               <button
                 onClick={() => { navigate('/admin/emaillogs'); }}
-                className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+                className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
               >
-                <div className="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-gray-500 group-hover:text-white transition">
+                <div className="w-11 h-11 rounded-xl bg-card-hover flex items-center justify-center text-secondary group-hover:bg-border-strong group-hover:text-white transition">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-800 text-sm">{t('settings.section.email_logs', 'Email log')}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{t('settings.section.email_logs.subtitle', 'Logs des emails envoyés')}</div>
+                  <div className="font-semibold text-primary text-sm">{t('settings.section.email_logs', 'Email log')}</div>
+                  <div className="text-xs text-muted mt-0.5">{t('settings.section.email_logs.subtitle', 'Logs des emails envoyés')}</div>
                 </div>
               </button>
             )}
@@ -1024,14 +1043,14 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={() => setShowImportModal(true)}
-                className="bg-white rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+                className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
               >
-                <div className="w-11 h-11 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 group-hover:bg-[#0b5566] group-hover:text-white transition">
+                <div className="w-11 h-11 rounded-xl bg-teal-50 dark:bg-teal-950 flex items-center justify-center text-teal-600 group-hover:bg-[#0b5566] group-hover:text-white transition">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-800 text-sm">Importer des données</div>
-                  <div className="text-xs text-gray-400 mt-0.5">Nounous, parents et enfants depuis Excel</div>
+                  <div className="font-semibold text-primary text-sm">Importer des données</div>
+                  <div className="text-xs text-muted mt-0.5">Nounous, parents et enfants depuis Excel</div>
                 </div>
               </button>
             )}
@@ -1048,17 +1067,17 @@ export default function Settings() {
             <SectionHeader title={t('settings.tutorials.title')} />
 
             {/* Barre de progression globale */}
-            <div className="bg-white rounded-2xl shadow p-5 mb-4">
+            <div className="bg-card rounded-2xl shadow p-5 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <div className="font-semibold text-gray-800">{t('settings.tutorials.progress_label')}</div>
-                  <div className="text-xs text-gray-400 mt-0.5">{t('settings.tutorials.progress_detail', { done: String(completedTours.length), total: String(tours.length) })}</div>
+                  <div className="font-semibold text-primary">{t('settings.tutorials.progress_label')}</div>
+                  <div className="text-xs text-muted mt-0.5">{t('settings.tutorials.progress_detail', { done: String(completedTours.length), total: String(tours.length) })}</div>
                 </div>
                 <div className="text-2xl font-extrabold text-[#0b5566]">
                   {tours.length > 0 ? Math.round((completedTours.length / tours.length) * 100) : 0}%
                 </div>
               </div>
-              <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+              <div className="w-full h-3 bg-card-hover rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-[#0b5566] to-[#08a7c4] rounded-full transition-all duration-500"
                   style={{ width: tours.length > 0 ? `${(completedTours.length / tours.length) * 100}%` : '0%' }}
@@ -1071,31 +1090,31 @@ export default function Settings() {
               {tours.map((tour, idx) => {
                 const done = completedTours.includes(tour.id);
                 const colors = [
-                  { bg: 'bg-blue-50', text: 'text-blue-500', ring: 'hover:border-blue-200' },
-                  { bg: 'bg-violet-50', text: 'text-violet-500', ring: 'hover:border-violet-200' },
-                  { bg: 'bg-emerald-50', text: 'text-emerald-500', ring: 'hover:border-emerald-200' },
-                  { bg: 'bg-amber-50', text: 'text-amber-500', ring: 'hover:border-amber-200' },
-                  { bg: 'bg-rose-50', text: 'text-rose-500', ring: 'hover:border-rose-200' },
-                  { bg: 'bg-indigo-50', text: 'text-indigo-500', ring: 'hover:border-indigo-200' },
+                  { bg: 'bg-blue-50 dark:bg-blue-950', text: 'text-blue-500', ring: 'hover:border-blue-200 dark:border-blue-800' },
+                  { bg: 'bg-violet-50 dark:bg-violet-950', text: 'text-violet-500', ring: 'hover:border-violet-200 dark:border-violet-800' },
+                  { bg: 'bg-emerald-50 dark:bg-emerald-950', text: 'text-emerald-500', ring: 'hover:border-emerald-200 dark:border-emerald-800' },
+                  { bg: 'bg-amber-50 dark:bg-amber-950', text: 'text-amber-500', ring: 'hover:border-amber-200 dark:border-amber-800' },
+                  { bg: 'bg-rose-50 dark:bg-rose-950', text: 'text-rose-500', ring: 'hover:border-rose-200 dark:border-rose-800' },
+                  { bg: 'bg-indigo-50 dark:bg-indigo-950', text: 'text-indigo-500', ring: 'hover:border-indigo-200 dark:border-indigo-800' },
                 ];
                 const color = colors[idx % colors.length];
                 return (
                   <button
                     key={tour.id}
                     onClick={() => startTour(tour.id)}
-                    className={`group relative bg-white rounded-2xl shadow border-2 transition text-left p-4 flex items-center gap-4 ${done ? 'border-emerald-100' : 'border-transparent'} ${color.ring}`}
+                    className={`group relative bg-card rounded-2xl shadow border-2 transition text-left p-4 flex items-center gap-4 ${done ? 'border-emerald-100 dark:border-emerald-800' : 'border-transparent'} ${color.ring}`}
                   >
-                    <div className={`w-11 h-11 rounded-xl ${done ? 'bg-emerald-50' : color.bg} flex items-center justify-center flex-shrink-0 transition group-hover:scale-105`}>
+                    <div className={`w-11 h-11 rounded-xl ${done ? 'bg-emerald-50 dark:bg-emerald-950' : color.bg} flex items-center justify-center flex-shrink-0 transition group-hover:scale-105`}>
                       <span className={done ? 'text-emerald-500' : color.text}>{tour.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-gray-800 text-sm truncate">{tour.name}</div>
-                      <div className="text-xs text-gray-400 mt-0.5 truncate">{tour.description}</div>
-                      <div className={`text-xs mt-1.5 font-semibold ${done ? 'text-emerald-600' : 'text-gray-300'}`}>
+                      <div className="font-semibold text-primary text-sm truncate">{tour.name}</div>
+                      <div className="text-xs text-muted mt-0.5 truncate">{tour.description}</div>
+                      <div className={`text-xs mt-1.5 font-semibold ${done ? 'text-emerald-600' : 'text-muted'}`}>
                         {done ? t('settings.tutorials.done') : t('settings.tutorials.not_started')}
                       </div>
                     </div>
-                    <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 flex-shrink-0 transition" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/></svg>
+                    <svg className="w-4 h-4 text-muted group-hover:text-secondary flex-shrink-0 transition" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/></svg>
                   </button>
                 );
               })}
@@ -1110,7 +1129,7 @@ export default function Settings() {
 
             {/* Bandeau intro */}
             <div className="bg-gradient-to-r from-[#0b5566] to-[#08a7c4] rounded-2xl p-5 mb-4 text-white flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl bg-card/20 flex items-center justify-center flex-shrink-0">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z"/></svg>
               </div>
               <div>
@@ -1122,14 +1141,14 @@ export default function Settings() {
             {/* Cards des 3 montants */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               {/* Tarif journalier */}
-              <div className="bg-white rounded-2xl shadow p-5 flex flex-col gap-3">
+              <div className="bg-card rounded-2xl shadow p-5 flex flex-col gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-cyan-50 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-950 flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5 text-cyan-500" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t('settings.billing.daily_rate')}</div>
-                    <div className="text-xs text-gray-400">{t('settings.billing.daily_rate.desc')}</div>
+                    <div className="text-xs font-semibold text-muted uppercase tracking-wide">{t('settings.billing.daily_rate')}</div>
+                    <div className="text-xs text-muted">{t('settings.billing.daily_rate.desc')}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -1137,22 +1156,22 @@ export default function Settings() {
                     type="number" min="0" step="0.01"
                     value={tarifs.dailyRate}
                     onChange={e => setTarifs(t => ({ ...t, dailyRate: parseFloat(e.target.value) || 0 }))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-2xl font-bold text-[#0b5566] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566]"
+                    className="w-full bg-input border border-border-default rounded-xl pl-4 pr-10 py-3 text-2xl font-bold text-[#0b5566] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566]"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">€</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-semibold text-lg">€</span>
                 </div>
-                <div className="text-xs text-gray-400 text-center">{t('settings.billing.per_day')}</div>
+                <div className="text-xs text-muted text-center">{t('settings.billing.per_day')}</div>
               </div>
 
               {/* Cotisation enfant */}
-              <div className="bg-white rounded-2xl shadow p-5 flex flex-col gap-3">
+              <div className="bg-card rounded-2xl shadow p-5 flex flex-col gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-950 flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5 text-violet-500" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.182 15.182a4.5 4.5 0 01-6.364 0M21 12a9 9 0 11-18 0 9 9 0 0118 0zM9.75 9.75c0 .414-.168.75-.375.75S9 10.164 9 9.75s.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75zm5.625 0c0 .414-.168.75-.375.75s-.375-.336-.375-.75.168-.75.375-.75.375.336.375.75zm-.375 0h.008v.015h-.008V9.75z"/></svg>
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t('settings.billing.child_fee')}</div>
-                    <div className="text-xs text-gray-400">{t('settings.billing.child_fee.desc')}</div>
+                    <div className="text-xs font-semibold text-muted uppercase tracking-wide">{t('settings.billing.child_fee')}</div>
+                    <div className="text-xs text-muted">{t('settings.billing.child_fee.desc')}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -1160,22 +1179,22 @@ export default function Settings() {
                     type="number" min="0" step="0.01"
                     value={tarifs.childCotisationAmount}
                     onChange={e => setTarifs(t => ({ ...t, childCotisationAmount: parseFloat(e.target.value) || 0 }))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-2xl font-bold text-[#0b5566] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566]"
+                    className="w-full bg-input border border-border-default rounded-xl pl-4 pr-10 py-3 text-2xl font-bold text-[#0b5566] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566]"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">€</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-semibold text-lg">€</span>
                 </div>
-                <div className="text-xs text-gray-400 text-center">{t('settings.billing.per_year')}</div>
+                <div className="text-xs text-muted text-center">{t('settings.billing.per_year')}</div>
               </div>
 
               {/* Cotisation nounou */}
-              <div className="bg-white rounded-2xl shadow p-5 flex flex-col gap-3">
+              <div className="bg-card rounded-2xl shadow p-5 flex flex-col gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950 flex items-center justify-center flex-shrink-0">
                     <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{t('settings.billing.nanny_fee')}</div>
-                    <div className="text-xs text-gray-400">{t('settings.billing.nanny_fee.desc')}</div>
+                    <div className="text-xs font-semibold text-muted uppercase tracking-wide">{t('settings.billing.nanny_fee')}</div>
+                    <div className="text-xs text-muted">{t('settings.billing.nanny_fee.desc')}</div>
                   </div>
                 </div>
                 <div className="relative">
@@ -1183,22 +1202,22 @@ export default function Settings() {
                     type="number" min="0" step="0.01"
                     value={tarifs.nannyCotisationAmount}
                     onChange={e => setTarifs(t => ({ ...t, nannyCotisationAmount: parseFloat(e.target.value) || 0 }))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-4 pr-10 py-3 text-2xl font-bold text-[#0b5566] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566]"
+                    className="w-full bg-input border border-border-default rounded-xl pl-4 pr-10 py-3 text-2xl font-bold text-[#0b5566] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566]"
                   />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">€</span>
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted font-semibold text-lg">€</span>
                 </div>
-                <div className="text-xs text-gray-400 text-center">{t('settings.billing.per_month')}</div>
+                <div className="text-xs text-muted text-center">{t('settings.billing.per_month')}</div>
               </div>
             </div>
 
             {tarifsError && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">
+              <div className="flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-600 text-sm px-4 py-3 rounded-xl mb-3">
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
                 {tarifsError}
               </div>
             )}
             {tarifsSuccess && (
-              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm px-4 py-3 rounded-xl mb-3">
+              <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm px-4 py-3 rounded-xl mb-3">
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 {t('settings.billing.saved')}
               </div>
@@ -1231,10 +1250,10 @@ export default function Settings() {
           <div>
             <SectionHeader title={t('settings.section.notifications', 'Notifications')} />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
+              <div className="bg-card rounded-2xl shadow p-4 flex flex-col justify-between">
                 <div>
-                  <div className="font-semibold text-gray-800">{t('settings.email.title')}</div>
-                  <div className="text-gray-500 text-sm">{t('settings.email.desc')}</div>
+                  <div className="font-semibold text-primary">{t('settings.email.title')}</div>
+                  <div className="text-secondary text-sm">{t('settings.email.desc')}</div>
                 </div>
                 <div className="mt-4">
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -1243,14 +1262,14 @@ export default function Settings() {
                       setEmailNotifications(val);
                       try { await fetchWithRefresh(`${API_URL}/user/me`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ notifyByEmail: val }) }); } catch { /* ignore */ }
                     }} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                    <div className="w-11 h-6 bg-border-default peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-card after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
                   </label>
                 </div>
               </div>
-              <div className="bg-white rounded-2xl shadow p-4 flex flex-col justify-between">
+              <div className="bg-card rounded-2xl shadow p-4 flex flex-col justify-between">
                 <div>
-                  <div className="font-semibold text-gray-800">{t('settings.push.title')}</div>
-                  <div className="text-gray-500 text-sm">{t('settings.push.desc')}</div>
+                  <div className="font-semibold text-primary">{t('settings.push.title')}</div>
+                  <div className="text-secondary text-sm">{t('settings.push.desc')}</div>
                 </div>
                 <div className="mt-4">
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -1275,7 +1294,7 @@ export default function Settings() {
                         setPushEnabled(true);
                       } catch { setPushDeniedModal(true); }
                     }} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
+                    <div className="w-11 h-6 bg-border-default peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#a9ddf2] rounded-full peer peer-checked:bg-[#0b5566] after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-card after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
                   </label>
                 </div>
               </div>
@@ -1290,10 +1309,10 @@ export default function Settings() {
 
             {/* Hero banner */}
             <div className="relative bg-gradient-to-br from-[#0b5566] to-[#08a7c4] rounded-2xl px-6 py-5 mb-4 overflow-hidden shadow">
-              <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-white/10" />
-              <div className="absolute -right-2 bottom-0 w-16 h-16 rounded-full bg-white/5" />
+              <div className="absolute -right-6 -top-6 w-28 h-28 rounded-full bg-card/10" />
+              <div className="absolute -right-2 bottom-0 w-16 h-16 rounded-full bg-card/5" />
               <div className="relative z-10 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 text-2xl">
+                <div className="w-12 h-12 rounded-2xl bg-card/20 flex items-center justify-center flex-shrink-0 text-2xl">
                   🌍
                 </div>
                 <div>
@@ -1304,9 +1323,38 @@ export default function Settings() {
             </div>
 
             {/* Language cards */}
-            <div className="bg-white rounded-2xl shadow border border-gray-100 p-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">{t('settings.language.choose', 'Choisissez votre langue')}</p>
+            <div className="bg-card rounded-2xl shadow border border-border-default p-4">
+              <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">{t('settings.language.choose', 'Choisissez votre langue')}</p>
               <LanguageDropdown value={language} onChange={(code) => { setLanguage(code); setLocale(['en', 'es', 'ar'].includes(code) ? code as 'en' | 'es' | 'ar' : 'fr'); }} />
+            </div>
+          </div>
+        )}
+
+        {/* ── Section: Apparence ── */}
+        {activeSection === 'apparence' && (
+          <div>
+            <SectionHeader title="Apparence" />
+            <div className="bg-card rounded-2xl shadow p-6">
+              <p className="text-sm text-secondary mb-5">Choisissez comment l'application s'affiche sur cet appareil.</p>
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  { value: 'light' as Theme, label: 'Clair', icon: '☀️' },
+                  { value: 'dark' as Theme,  label: 'Sombre', icon: '🌙' },
+                  { value: 'system' as Theme, label: 'Système', icon: '💻' },
+                ]).map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setTheme(opt.value)}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition font-medium text-sm
+                      ${theme === opt.value
+                        ? 'border-[#0b5566] bg-blue-50 dark:bg-blue-950 text-[#0b5566]'
+                        : 'border-border-default bg-input text-secondary hover:border-border-strong hover:bg-card'}`}
+                  >
+                    <span className="text-2xl">{opt.icon}</span>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -1315,8 +1363,8 @@ export default function Settings() {
         {activeSection === 'support' && !isSuperAdmin && (
           <div>
             <SectionHeader title={t('settings.support.title', 'Support Client')} />
-            <div className="bg-white rounded-2xl shadow p-4">
-              <p className="text-gray-500 text-sm mb-4">{t('settings.support.description', "Besoin d'aide ? Contactez notre équipe de support")}</p>
+            <div className="bg-card rounded-2xl shadow p-4">
+              <p className="text-secondary text-sm mb-4">{t('settings.support.description', "Besoin d'aide ? Contactez notre équipe de support")}</p>
               <button onClick={() => setShowSupportModal(true)} className="bg-[#0b5566] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#08323a]">
                 {t('settings.support.open_ticket', 'Ouvrir un ticket')}
               </button>
@@ -1328,10 +1376,10 @@ export default function Settings() {
         {activeSection === 'account' && (
           <div>
             <SectionHeader title={t('settings.section.account', 'Profil & Compte')} />
-            <div className="bg-white rounded-2xl shadow p-6">
+            <div className="bg-card rounded-2xl shadow p-6">
               <div className="flex items-center gap-4 mb-4">
                 <div className="relative">
-                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center text-lg font-bold text-blue-800">
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-card-hover flex items-center justify-center text-lg font-bold text-blue-800 dark:text-blue-200">
                     {localAvatarUrl ? (
                       <img src={localAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
@@ -1342,15 +1390,15 @@ export default function Settings() {
                     type="button"
                     onClick={() => avatarInputRef.current?.click()}
                     disabled={avatarUploading}
-                    className="absolute -right-1 -bottom-1 w-7 h-7 rounded-full bg-white border border-gray-200 text-xs text-[#0b5566] flex items-center justify-center shadow-sm hover:bg-gray-50"
+                    className="absolute -right-1 -bottom-1 w-7 h-7 rounded-full bg-card border border-border-default text-xs text-[#0b5566] flex items-center justify-center shadow-sm hover:bg-input"
                   >
                     {avatarUploading ? '...' : '✎'}
                   </button>
                   <input ref={avatarInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onAvatarFileChange} />
                 </div>
                 <div>
-                  <div className="font-semibold text-gray-800">{displayName}</div>
-                  <div className="text-xs text-gray-400 capitalize mt-0.5">
+                  <div className="font-semibold text-primary">{displayName}</div>
+                  <div className="text-xs text-muted capitalize mt-0.5">
                     {authUser?.role === 'nanny'
                       ? t('settings.profile.role.nanny', 'Assistante maternelle')
                       : authUser?.role === 'parent'
@@ -1382,8 +1430,8 @@ export default function Settings() {
                 <div className="border-t mt-6 pt-6">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <div className="text-sm font-semibold text-gray-800">{t('settings.account.show_in_directory', 'Apparaître dans l\'annuaire')}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{t('settings.account.show_in_directory.desc', 'Votre structure sera visible dans l\'annuaire public')}</div>
+                      <div className="text-sm font-semibold text-primary">{t('settings.account.show_in_directory', 'Apparaître dans l\'annuaire')}</div>
+                      <div className="text-xs text-muted mt-0.5">{t('settings.account.show_in_directory.desc', 'Votre structure sera visible dans l\'annuaire public')}</div>
                     </div>
                     <button
                       role="switch"
@@ -1410,9 +1458,9 @@ export default function Settings() {
                         }
                       }}
                       disabled={directoryToggleSaving}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${tarifs.showInDirectory ? 'bg-brand-500' : 'bg-gray-200'} ${directoryToggleSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${tarifs.showInDirectory ? 'bg-brand-500' : 'bg-border-default'} ${directoryToggleSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${tarifs.showInDirectory ? 'translate-x-6' : 'translate-x-1'}`} />
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-card shadow transition-transform ${tarifs.showInDirectory ? 'translate-x-6' : 'translate-x-1'}`} />
                     </button>
                   </div>
                 </div>
@@ -1439,7 +1487,7 @@ export default function Settings() {
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                   {t('settings.export_data', 'Télécharger mes données (RGPD)')}
                 </button>
-                <button className="flex items-center gap-2 text-sm text-red-600 font-medium hover:text-red-700 transition" onClick={() => setShowDeleteModal(true)}>
+                <button className="flex items-center gap-2 text-sm text-red-600 font-medium hover:text-red-700 dark:text-red-300 transition" onClick={() => setShowDeleteModal(true)}>
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                   {t('settings.account.delete')}
                 </button>
@@ -1451,7 +1499,7 @@ export default function Settings() {
         {/* ── Déconnexion (toujours visible en bas) ── */}
         {!activeSection && (
           <div className="mt-4">
-            <button className="w-full flex items-center justify-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 font-semibold rounded-2xl px-4 py-3 hover:bg-amber-100 transition" onClick={async () => {
+            <button className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-2xl px-4 py-3 transition" onClick={async () => {
               try { await fetchWithRefresh('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { /* continue */ }
               try {
                 const __cons = (() => { try { return localStorage.getItem('cookie_consent'); } catch { return null; } })();
@@ -1484,15 +1532,15 @@ export default function Settings() {
 
       {pushDeniedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm px-4">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm flex flex-col items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center">
+          <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-sm flex flex-col items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-amber-50 dark:bg-amber-950 flex items-center justify-center">
               <svg className="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
               </svg>
             </div>
             <div className="text-center">
-              <h3 className="font-bold text-gray-900 text-base mb-1">Notifications bloquées</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
+              <h3 className="font-bold text-primary text-base mb-1">Notifications bloquées</h3>
+              <p className="text-sm text-secondary leading-relaxed">
                 Votre navigateur a bloqué les notifications. Pour les activer, cliquez sur l'icône <strong>🔒</strong> dans la barre d'adresse, puis autorisez les notifications pour ce site.
               </p>
             </div>
@@ -1508,13 +1556,13 @@ export default function Settings() {
 
       {showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-xs flex flex-col items-center relative">
-              <button type="button" onClick={() => setShowDeleteModal(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
-              <h2 className="text-lg font-bold mb-4 text-center text-red-700">{t('settings.delete_confirm.title')}</h2>
-              <p className="text-gray-700 text-center mb-4">{t('settings.delete_confirm.body')}</p>
+            <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-xs flex flex-col items-center relative">
+              <button type="button" onClick={() => setShowDeleteModal(false)} className="absolute top-2 right-2 text-muted hover:text-primary text-2xl">×</button>
+              <h2 className="text-lg font-bold mb-4 text-center text-red-700 dark:text-red-300">{t('settings.delete_confirm.title')}</h2>
+              <p className="text-primary text-center mb-4">{t('settings.delete_confirm.body')}</p>
               <div className="flex gap-2 w-full">
-                <button type="button" className="bg-gray-300 px-3 py-1 rounded w-full" onClick={() => setShowDeleteModal(false)}>{t('settings.cancel')}</button>
-                <button type="button" className="bg-red-500 text-white px-3 py-1 rounded w-full font-bold" onClick={async () => {
+                <button type="button" className="bg-border-strong px-3 py-1 rounded w-full" onClick={() => setShowDeleteModal(false)}>{t('settings.cancel')}</button>
+                <button type="button" className="bg-red-50 dark:bg-red-9500 text-white px-3 py-1 rounded w-full font-bold" onClick={async () => {
                   setDeleteError('');
                   const res = await fetchWithRefresh(`${API_URL}/user`, {
                     method: 'DELETE',
@@ -1535,12 +1583,12 @@ export default function Settings() {
 
       {showSupportModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm md:pl-64">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden m-4">
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden m-4">
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-lg font-bold">{t('settings.support.title', 'Support Client')}</h2>
               <button
                 onClick={() => setShowSupportModal(false)}
-                className="text-gray-400 hover:text-gray-700 text-2xl"
+                className="text-muted hover:text-primary text-2xl"
               >
                 ×
               </button>
@@ -1548,13 +1596,13 @@ export default function Settings() {
 
             <div className="p-6">
               {supportError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-700 rounded">{supportError}</div>
+                <div className="mb-4 p-3 bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 text-red-700 dark:text-red-300 rounded">{supportError}</div>
               )}
 
               {isSuperAdmin ? (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Tickets par centre</h3>
-                  {supportLoading && <div className="mb-4 flex items-center gap-2 text-gray-400"><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/></svg>Chargement…</div>}
+                  {supportLoading && <div className="mb-4 flex items-center gap-2 text-muted"><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/></svg>Chargement…</div>}
                   {Object.entries(ticketsByCenter).map(([centerKey, tickets]) => {
                     const [, centerName] = centerKey.split(':');
                     return (
@@ -1562,14 +1610,14 @@ export default function Settings() {
                         <h4 className="font-semibold mb-2">{centerName} ({tickets.length})</h4>
                         <div className="space-y-2">
                           {tickets.map(ticket => (
-                            <div key={ticket.id} className="p-3 bg-gray-50 rounded-lg">
+                            <div key={ticket.id} className="p-3 bg-input rounded-lg">
                               <div className="flex justify-between items-start">
                                 <div>
                                   <div className="font-medium">{ticket.subject}</div>
-                                  <div className="text-sm text-gray-600">Par: {ticket.user.name}</div>
-                                  <div className="text-xs text-gray-400">{new Date(ticket.createdAt).toLocaleDateString()}</div>
+                                  <div className="text-sm text-secondary">Par: {ticket.user.name}</div>
+                                  <div className="text-xs text-muted">{new Date(ticket.createdAt).toLocaleDateString()}</div>
                                 </div>
-                                <div className={`px-2 py-1 rounded-full text-xs font-medium ${ticket.status === 'open' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                <div className={`px-2 py-1 rounded-full text-xs font-medium ${ticket.status === 'open' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' : 'bg-green-100 text-green-800'}`}>
                                   {ticket.status === 'open' ? 'Ouvert' : 'Fermé'}
                                 </div>
                               </div>
@@ -1592,7 +1640,7 @@ export default function Settings() {
                     </button>
                   </div>
 
-                  {supportLoading && <div className="mb-4 flex items-center gap-2 text-gray-400"><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/></svg>Chargement…</div>}
+                  {supportLoading && <div className="mb-4 flex items-center gap-2 text-muted"><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/></svg>Chargement…</div>}
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-1">
@@ -1601,12 +1649,12 @@ export default function Settings() {
                       <div
                         key={ticket.id}
                         onClick={() => setSelectedTicket(ticket)}
-                        className={`p-3 rounded-lg cursor-pointer border ${selectedTicket?.id === ticket.id ? 'border-[#0b5566] bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                        className={`p-3 rounded-lg cursor-pointer border ${selectedTicket?.id === ticket.id ? 'border-[#0b5566] bg-blue-50 dark:bg-blue-950' : 'border-border-default hover:bg-input'}`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">{ticket.subject}</div>
-                            <div className="text-xs text-gray-500">{new Date(ticket.createdAt).toLocaleDateString()}</div>
+                            <div className="text-sm font-medium text-primary truncate">{ticket.subject}</div>
+                            <div className="text-xs text-secondary">{new Date(ticket.createdAt).toLocaleDateString()}</div>
                           </div>
                           <div className="flex items-center gap-2">
                             {ticket.status === 'open' ? (
@@ -1619,33 +1667,33 @@ export default function Settings() {
                       </div>
                     ))}
                     {supportTickets.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">Aucun ticket</div>
+                      <div className="text-center py-8 text-secondary">Aucun ticket</div>
                     )}
                   </div>
                 </div>
 
                 <div className="md:col-span-2">
                   {selectedTicket ? (
-                    <div ref={supportModalContainerRef} className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    <div ref={supportModalContainerRef} className="bg-input rounded-lg p-4 max-h-96 overflow-y-auto">
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-semibold">{selectedTicket.subject}</h3>
-                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${selectedTicket.status === 'open' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium ${selectedTicket.status === 'open' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' : 'bg-green-100 text-green-800'}`}>
                           {selectedTicket.status === 'open' ? 'Ouvert' : 'Fermé'}
                         </div>
                       </div>
 
                       <div className="space-y-4 mb-4">
-                        <div className="bg-white p-3 rounded-lg">
-                          <div className="text-sm text-gray-600 mb-1">Votre message initial</div>
+                        <div className="bg-card p-3 rounded-lg">
+                          <div className="text-sm text-secondary mb-1">Votre message initial</div>
                           <div className="text-sm">{selectedTicket.message}</div>
-                          <div className="text-xs text-gray-400 mt-2">{new Date(selectedTicket.createdAt).toLocaleString()}</div>
+                          <div className="text-xs text-muted mt-2">{new Date(selectedTicket.createdAt).toLocaleString()}</div>
                         </div>
 
                         {selectedTicket.replies.map(reply => (
-                          <div key={reply.id} className={`p-3 rounded-lg ${reply.isFromAdmin ? 'bg-blue-50 ml-4' : 'bg-white'}`}>
-                            <div className="text-sm text-gray-600 mb-1">{reply.isFromAdmin ? 'Support' : 'Vous'}</div>
+                          <div key={reply.id} className={`p-3 rounded-lg ${reply.isFromAdmin ? 'bg-blue-50 dark:bg-blue-950 ml-4' : 'bg-card'}`}>
+                            <div className="text-sm text-secondary mb-1">{reply.isFromAdmin ? 'Support' : 'Vous'}</div>
                             <div className="text-sm">{reply.message}</div>
-                            <div className="text-xs text-gray-400 mt-2">{new Date(reply.createdAt).toLocaleString()}</div>
+                            <div className="text-xs text-muted mt-2">{new Date(reply.createdAt).toLocaleString()}</div>
                           </div>
                         ))}
                       </div>
@@ -1671,8 +1719,8 @@ export default function Settings() {
                       )}
                     </div>
                   ) : (
-                    <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-center h-64">
-                      <div className="text-center text-gray-500">
+                    <div className="bg-input rounded-lg p-4 flex items-center justify-center h-64">
+                      <div className="text-center text-secondary">
                         <HiOutlineChat className="w-12 h-12 mx-auto mb-4" />
                         <div>Sélectionnez un ticket pour voir la conversation</div>
                       </div>
@@ -1689,7 +1737,7 @@ export default function Settings() {
 
       {showNewTicket && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm md:pl-64">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md m-4">
+          <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-md m-4">
             <h2 className="text-lg font-bold mb-4">Nouveau ticket</h2>
             <div className="space-y-4">
               <div>
@@ -1714,7 +1762,7 @@ export default function Settings() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowNewTicket(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50"
+                  className="flex-1 border border-border-strong text-primary px-4 py-2 rounded-lg hover:bg-input"
                 >
                   Annuler
                 </button>

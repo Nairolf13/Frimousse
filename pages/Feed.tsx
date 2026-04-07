@@ -65,9 +65,9 @@ function CommentBox({ postId, onSubmit, authorName }: { postId: string; onSubmit
   return (
     <form
       onSubmit={e => { e.preventDefault(); if (val.trim()) { onSubmit(postId, val.trim()); setVal(''); if (textareaRef.current) { textareaRef.current.style.height = 'auto'; } setFocused(false); } }}
-      className="flex items-start gap-2.5 pt-3 border-t border-gray-100"
+      className="flex items-start gap-2.5 pt-3 border-t border-border-default"
     >
-      <div className="w-8 h-8 rounded-full bg-[#e6f4f7] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[#0b5566] mt-0.5">
+      <div className="w-8 h-8 rounded-full bg-accent-light flex items-center justify-center flex-shrink-0 text-xs font-bold text-[#0b5566] mt-0.5">
         {initial}
       </div>
       <div className="flex-1 min-w-0">
@@ -79,12 +79,12 @@ function CommentBox({ postId, onSubmit, authorName }: { postId: string; onSubmit
           onFocus={() => setFocused(true)}
           onBlur={() => { if (!val.trim()) setFocused(false); }}
           placeholder={t('feed.write_comment', 'Écrire un commentaire...')}
-          className="w-full resize-none bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-400 leading-relaxed overflow-hidden"
+          className="w-full resize-none bg-transparent border-none outline-none text-sm text-primary placeholder-gray-400 leading-relaxed overflow-hidden"
           style={{ fontSize: '16px', minHeight: '24px' }}
         />
         {focused && (
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-            <span className="text-xs text-gray-400">{val.length > 0 ? `${val.length} caractère${val.length > 1 ? 's' : ''}` : ''}</span>
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border-default">
+            <span className="text-xs text-muted">{val.length > 0 ? `${val.length} caractère${val.length > 1 ? 's' : ''}` : ''}</span>
             <button
               type="submit"
               disabled={!val.trim()}
@@ -755,7 +755,7 @@ export default function Feed() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
 
         {/* Page header */}
@@ -766,7 +766,7 @@ export default function Feed() {
             </div>
             <div className="pt-0.5">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.feed')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{centerName ? centerName : t('feed.center_news')}</p>
+              <p className="text-xs sm:text-sm text-secondary mt-0.5">{centerName ? centerName : t('feed.center_news')}</p>
             </div>
           </div>
         </div>
@@ -774,7 +774,7 @@ export default function Feed() {
         {/* Super-admin center filter */}
         {currentUser && currentUser.role === 'super-admin' && (
           <div className="mb-4">
-            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 w-full sm:w-auto">
+            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-border-default px-3 py-2 rounded-xl text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 w-full sm:w-auto">
               <option value="">{t('activities.center.all', 'Tous les centres')}</option>
               {centers.map(c => (
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -784,7 +784,7 @@ export default function Feed() {
         )}
 
         {/* Composer */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md border border-gray-100 p-4 mb-5" data-tour="feed-compose">
+        <form onSubmit={handleSubmit} className="bg-card rounded-2xl shadow-md border border-border-default p-4 mb-5" data-tour="feed-compose">
           <div className="flex items-start gap-3 mb-3">
             <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {currentUser?.avatarUrl ? (
@@ -794,16 +794,16 @@ export default function Feed() {
               )}
             </div>
             <div className="flex-1">
-              <div className="text-sm font-semibold text-gray-800">{currentUser?.name || 'Utilisateur'}</div>
-              {centerName && <div className="text-xs text-gray-400">{centerName}</div>}
+              <div className="text-sm font-semibold text-primary">{currentUser?.name || 'Utilisateur'}</div>
+              {centerName && <div className="text-xs text-muted">{centerName}</div>}
             </div>
           </div>
-          <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t('feed.composer_placeholder')} className="w-full border border-gray-200 rounded-xl p-3 bg-gray-50 min-h-[80px] text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 resize-none" />
+          <textarea value={text} onChange={e => setText(e.target.value)} placeholder={t('feed.composer_placeholder')} className="w-full border border-border-default rounded-xl p-3 bg-input min-h-[80px] text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 resize-none" />
           <div className="flex flex-wrap items-center gap-2 mt-3">
             {/* Camera */}
             <label className="cursor-pointer">
               <input type="file" accept="image/*,video/*" capture="environment" className="hidden" onChange={e => { if (uploading) return; const input = e.currentTarget as HTMLInputElement; const newFiles = Array.from(input.files || []); if (newFiles.length === 0) return; setFiles(prev => [...prev, ...newFiles]); input.value = ''; }} />
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm text-gray-600 transition-colors">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card-hover hover:bg-border-default text-sm text-secondary transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 {uploading ? <Spinner size={16} /> : t('feed.photo')}
               </span>
@@ -811,12 +811,12 @@ export default function Feed() {
             {/* Gallery */}
             <label className="cursor-pointer">
               <input type="file" accept="image/*,video/*" multiple className="hidden" onChange={e => { if (uploading) return; const input = e.currentTarget as HTMLInputElement; const newFiles = Array.from(input.files || []); if (newFiles.length === 0) return; setFiles(prev => [...prev, ...newFiles]); input.value = ''; }} />
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm text-gray-600 transition-colors">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-card-hover hover:bg-border-default text-sm text-secondary transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 {uploading ? <Spinner size={16} /> : t('feed.gallery')}
               </span>
             </label>
-            {files.length > 0 && <span className="text-xs text-gray-400">{files.length} {t('feed.images')}</span>}
+            {files.length > 0 && <span className="text-xs text-muted">{files.length} {t('feed.images')}</span>}
             {/* Tagging button */}
             {files.length > 0 && (
               <div className="relative">
@@ -828,7 +828,7 @@ export default function Feed() {
                 <ChildSelector open={showTagMenu} onClose={() => setShowTagMenu(false)} availableChildren={availableChildren} selectedChildIds={selectedChildIds} setSelectedChildIds={setSelectedChildIds} noChildSelected={noChildSelected} setNoChildSelected={setNoChildSelected} consentMap={consentMap} title={t('feed.tag_children')} confirmLabel={t('common.confirm')} />
               </div>
             )}
-            <button type="submit" data-tour="feed-publish-btn" disabled={loading || uploading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="ml-auto flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50">
+            <button type="submit" data-tour="feed-publish-btn" disabled={loading || uploading || (selectedChildIds.length > 0 && selectedChildIds.some(id => !consentMap[id]))} className="ml-auto flex items-center gap-2 px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50">
               {(loading || uploading) ? <><Spinner size={16} /><span>{t('feed.sending')}</span></> : t('feed.publish')}
             </button>
           </div>
@@ -842,9 +842,9 @@ export default function Feed() {
           {previews.length > 0 && (
             <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
               {previews.map((p, i) => (
-                <div key={i} className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden">
+                <div key={i} className="relative aspect-square bg-card-hover rounded-xl overflow-hidden">
                   {files[i]?.type?.startsWith('video/') ? <video src={p} className="w-full h-full object-cover" /> : <img src={p} className="w-full h-full object-cover" />}
-                  <button type="button" aria-label={`Retirer ${i + 1}`} onClick={() => { setFiles(prev => { const n = prev.slice(); n.splice(i,1); return n; }); setPreviews(prev => { const n = prev.slice(); try { URL.revokeObjectURL(n[i]); } catch { /**/ } n.splice(i,1); return n; }); }} className="absolute top-1 right-1 w-5 h-5 bg-white/90 text-red-600 rounded-full flex items-center justify-center text-xs shadow hover:bg-white">✕</button>
+                  <button type="button" aria-label={`Retirer ${i + 1}`} onClick={() => { setFiles(prev => { const n = prev.slice(); n.splice(i,1); return n; }); setPreviews(prev => { const n = prev.slice(); try { URL.revokeObjectURL(n[i]); } catch { /**/ } n.splice(i,1); return n; }); }} className="absolute top-1 right-1 w-5 h-5 bg-card/90 text-red-600 rounded-full flex items-center justify-center text-xs shadow hover:bg-card">✕</button>
                 </div>
               ))}
             </div>
@@ -854,20 +854,20 @@ export default function Feed() {
         {/* Consent modal */}
         {showConsentModal && (
           <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
+            <div className="bg-card rounded-2xl shadow-xl w-full max-w-lg p-6">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
                   <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-gray-900">Autorisation photo manquante</h3>
-                  <p className="mt-1 text-sm text-gray-600">Vous n'avez pas l'autorisation des parents pour publier des photos des enfants suivants :</p>
-                  <ul className="mt-2 list-disc list-inside text-sm text-gray-800">{lackingNames.map(n => <li key={n}>{n}</li>)}</ul>
-                  <p className="mt-2 text-sm text-gray-500">Veuillez retirer ces enfants ou contacter les parents.</p>
+                  <h3 className="text-base font-bold text-primary">Autorisation photo manquante</h3>
+                  <p className="mt-1 text-sm text-secondary">Vous n'avez pas l'autorisation des parents pour publier des photos des enfants suivants :</p>
+                  <ul className="mt-2 list-disc list-inside text-sm text-primary">{lackingNames.map(n => <li key={n}>{n}</li>)}</ul>
+                  <p className="mt-2 text-sm text-secondary">Veuillez retirer ces enfants ou contacter les parents.</p>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
-                <button onClick={() => setShowConsentModal(false)} className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-medium">Fermer</button>
+                <button onClick={() => setShowConsentModal(false)} className="px-4 py-2 bg-card-hover rounded-xl text-sm font-medium">Fermer</button>
                 <button onClick={() => setShowConsentModal(false)} className="px-4 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium">Retour</button>
               </div>
             </div>
@@ -894,22 +894,22 @@ export default function Feed() {
 
           return (
             <>
-              <div className="flex items-center justify-between bg-white rounded-2xl px-4 py-3 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between bg-card rounded-2xl px-4 py-3 shadow-sm border border-border-default">
                 <button
                   onClick={() => hasPrev && setSelectedMonth(allMonths[currentIdx + 1])}
                   disabled={!hasPrev}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-secondary hover:bg-card-hover disabled:opacity-30 transition"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
                 <div className="text-center">
-                  <span className="text-sm font-bold text-gray-800 capitalize">{monthLabel}</span>
-                  <span className="ml-2 text-xs text-gray-400">{t('feed.posts_count', { count: String(filteredPosts.length), s: filteredPosts.length !== 1 ? 's' : '' })}</span>
+                  <span className="text-sm font-bold text-primary capitalize">{monthLabel}</span>
+                  <span className="ml-2 text-xs text-muted">{t('feed.posts_count', { count: String(filteredPosts.length), s: filteredPosts.length !== 1 ? 's' : '' })}</span>
                 </div>
                 <button
                   onClick={() => hasNext && setSelectedMonth(allMonths[currentIdx - 1])}
                   disabled={!hasNext}
-                  className="w-8 h-8 rounded-xl flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition"
+                  className="w-8 h-8 rounded-xl flex items-center justify-center text-secondary hover:bg-card-hover disabled:opacity-30 transition"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
                 </button>
@@ -918,26 +918,26 @@ export default function Feed() {
               {/* Posts list */}
               <div className="space-y-4">
                 {filteredPosts.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-center bg-white rounded-2xl border border-gray-100">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                  <div className="flex flex-col items-center justify-center py-12 text-center bg-card rounded-2xl border border-border-default">
+                    <div className="w-12 h-12 rounded-2xl bg-card-hover flex items-center justify-center mb-3">
+                      <svg className="w-6 h-6 text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                     </div>
-                    <p className="text-sm font-medium text-gray-500">{t('feed.empty_month')}</p>
+                    <p className="text-sm font-medium text-secondary">{t('feed.empty_month')}</p>
                   </div>
                 )}
                 {filteredPosts.map((post, idx) => (
-            <article id={`post-${post.id}`} key={post.id} className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+            <article id={`post-${post.id}`} key={post.id} className="bg-card rounded-2xl shadow-md border border-border-default overflow-hidden">
               <div className="p-4">
                 <PostItem post={post} bgClass={postBgPalette[idx % postBgPalette.length]} currentUser={currentUser}
                   onUpdatePost={async (id, newText) => setPosts(prev => prev.map(p => p.id === id ? { ...p, text: newText } : p))}
                   onDeletePost={async (id) => setPosts(prev => prev.filter(p => p.id !== id))}
                   onMediasChange={(id, medias) => setPosts(prev => prev.map(p => p.id === id ? { ...p, medias } : p))} />
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-4">
-                  <button data-post-id={post.id} onPointerDown={() => startPress(post.id)} onPointerUp={() => endPressShort(post.id)} onPointerLeave={() => cancelPress()} onContextMenu={e => e.preventDefault()} className={`flex items-center gap-1.5 text-sm transition-colors select-none ${post.hasLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}>
+                <div className="mt-4 pt-3 border-t border-border-default flex items-center gap-4">
+                  <button data-post-id={post.id} onPointerDown={() => startPress(post.id)} onPointerUp={() => endPressShort(post.id)} onPointerLeave={() => cancelPress()} onContextMenu={e => e.preventDefault()} className={`flex items-center gap-1.5 text-sm transition-colors select-none ${post.hasLiked ? 'text-red-500' : 'text-secondary hover:text-red-500'}`}>
                     <svg className="w-4 h-4" fill={post.hasLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                     <span>{post.likes ?? 0}</span>
                   </button>
-                  <button onClick={async () => { openCommentsModal(post.id); await loadComments(post.id); }} className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#0b5566] transition-colors">
+                  <button onClick={async () => { openCommentsModal(post.id); await loadComments(post.id); }} className="flex items-center gap-1.5 text-sm text-secondary hover:text-[#0b5566] transition-colors">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                     <span>{post.commentsCount ?? 0}</span>
                   </button>
@@ -968,7 +968,7 @@ export default function Feed() {
                       }
                     }}
                     disabled={loadingMore}
-                    className="px-6 py-2.5 rounded-xl bg-white border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition disabled:opacity-50 shadow-sm"
+                    className="px-6 py-2.5 rounded-xl bg-card border border-border-default text-sm font-medium text-secondary hover:bg-input hover:border-border-strong transition disabled:opacity-50 shadow-sm"
                   >
                     {loadingMore ? 'Chargement...' : 'Charger plus'}
                   </button>
@@ -982,24 +982,24 @@ export default function Feed() {
         {/* Likes modal — bottom sheet */}
         {likesModalOpen && (
           <div className="fixed inset-0 z-60 flex items-end justify-center bg-black/40 backdrop-blur-sm" onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }}>
-            <div className="w-full max-w-lg bg-white rounded-t-3xl shadow-2xl max-h-[70vh] flex flex-col animate-slide-up" onClick={e => e.stopPropagation()}>
+            <div className="w-full max-w-lg bg-card rounded-t-3xl shadow-2xl max-h-[70vh] flex flex-col animate-slide-up" onClick={e => e.stopPropagation()}>
               {/* Drag handle */}
               <div className="flex justify-center pt-3 pb-1">
-                <div className="w-10 h-1 rounded-full bg-gray-300" />
+                <div className="w-10 h-1 rounded-full bg-border-strong" />
               </div>
 
               {/* Header */}
-              <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
+              <div className="flex items-center justify-between px-6 py-3 border-b border-border-default">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950 flex items-center justify-center">
                     <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-900">{t('feed.likes_title', "J'aime")}</h3>
-                    <p className="text-xs text-gray-400">{t('feed.likes_count', { count: String(likers.length), s: likers.length > 1 ? 's' : '' })}</p>
+                    <h3 className="text-base font-bold text-primary">{t('feed.likes_title', "J'aime")}</h3>
+                    <p className="text-xs text-muted">{t('feed.likes_count', { count: String(likers.length), s: likers.length > 1 ? 's' : '' })}</p>
                   </div>
                 </div>
-                <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors">
+                <button onClick={() => { setLikesModalOpen(false); setLikers([]); setLikesModalPos(null); }} aria-label="Fermer" className="w-8 h-8 flex items-center justify-center rounded-full bg-card-hover text-secondary hover:bg-border-default transition-colors">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
                 </button>
               </div>
@@ -1008,19 +1008,19 @@ export default function Feed() {
               <div className="flex-1 overflow-auto px-6 py-4">
                 {likers.length === 0 ? (
                   <div className="text-center py-10">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                      <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
+                    <div className="w-12 h-12 rounded-full bg-card-hover flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-6 h-6 text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
                     </div>
-                    <p className="text-sm text-gray-400">{t('feed.no_likes_yet', "Aucun j'aime pour le moment")}</p>
+                    <p className="text-sm text-muted">{t('feed.no_likes_yet', "Aucun j'aime pour le moment")}</p>
                   </div>
                 ) : (
                   <ul className="space-y-1">
                     {likers.map(u => (
-                      <li key={u.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-xs font-bold text-[#0b5566]">
+                      <li key={u.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-input transition-colors">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-accent-light flex items-center justify-center text-xs font-bold text-[#0b5566]">
                           {u.avatarUrl ? <img src={u.avatarUrl} alt={u.name ? `${u.name} avatar` : 'Avatar'} className="w-full h-full object-cover" /> : (u.name || 'U').slice(0,1).toUpperCase()}
                         </div>
-                        <span className="text-sm font-medium text-gray-800">{u.name}</span>
+                        <span className="text-sm font-medium text-primary">{u.name}</span>
                       </li>
                     ))}
                   </ul>
@@ -1054,9 +1054,9 @@ export default function Feed() {
       {errorModalOpen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setErrorModalOpen(false)} />
-          <div role="dialog" aria-modal="true" className="relative bg-white rounded-2xl shadow-xl p-6 max-w-lg w-full mx-4">
-            <h3 className="text-base font-bold text-gray-900">{errorModalTitle || 'Erreur'}</h3>
-            <div className="mt-3 text-sm text-gray-600 whitespace-pre-line">{errorModalMessage}</div>
+          <div role="dialog" aria-modal="true" className="relative bg-card rounded-2xl shadow-xl p-6 max-w-lg w-full mx-4">
+            <h3 className="text-base font-bold text-primary">{errorModalTitle || 'Erreur'}</h3>
+            <div className="mt-3 text-sm text-secondary whitespace-pre-line">{errorModalMessage}</div>
             <div className="mt-5 flex justify-end">
               <button onClick={() => setErrorModalOpen(false)} className="px-5 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">OK</button>
             </div>
@@ -1095,21 +1095,21 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[80vh]"
+        className="bg-card w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[85vh] sm:max-h-[80vh]"
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle mobile */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
-          <div className="w-10 h-1 rounded-full bg-gray-200" />
+          <div className="w-10 h-1 rounded-full bg-border-default" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-3 pb-3 border-b border-gray-100 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 pt-3 pb-3 border-b border-border-default flex-shrink-0">
           <div>
-            <h3 className="text-base font-bold text-gray-900">{t('feed.comments_title', 'Commentaires')}</h3>
-            <div className="text-xs text-gray-400">{t('feed.comments_count', { count: String(comments.length), s: comments.length !== 1 ? 's' : '' })}</div>
+            <h3 className="text-base font-bold text-primary">{t('feed.comments_title', 'Commentaires')}</h3>
+            <div className="text-xs text-muted">{t('feed.comments_count', { count: String(comments.length), s: comments.length !== 1 ? 's' : '' })}</div>
           </div>
-          <button onClick={onClose} aria-label={t('feed.close', 'Fermer')} className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+          <button onClick={onClose} aria-label={t('feed.close', 'Fermer')} className="w-8 h-8 flex items-center justify-center rounded-full bg-card-hover hover:bg-border-default text-secondary transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
@@ -1117,17 +1117,17 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
         {/* Comments list */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {loading ? (
-            <div className="flex items-center justify-center py-10 gap-2 text-sm text-gray-400">
+            <div className="flex items-center justify-center py-10 gap-2 text-sm text-muted">
               <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" opacity=".2"/><path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="4"/></svg>
               {t('feed.loading', 'Chargement…')}
             </div>
           ) : comments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+              <div className="w-12 h-12 rounded-2xl bg-card-hover flex items-center justify-center mb-3">
+                <svg className="w-6 h-6 text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
               </div>
-              <p className="text-sm text-gray-500 font-medium">{t('feed.no_comments', 'Aucun commentaire')}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{t('feed.first_comment', 'Soyez le premier à commenter')}</p>
+              <p className="text-sm text-secondary font-medium">{t('feed.no_comments', 'Aucun commentaire')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('feed.first_comment', 'Soyez le premier à commenter')}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -1135,7 +1135,7 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
                 <div key={c.id || (c.authorName + c.timeAgo + c.text)}>
                   <CommentItem comment={c} currentUser={currentUser} onUpdate={onUpdateComment} onDelete={onDeleteComment} onReply={onAddComment} authorInitial={authorInitial} />
                   {repliesMap[c.id!] && repliesMap[c.id!].length > 0 && (
-                    <div className="ml-10 mt-2 space-y-3 border-l-2 border-gray-100 pl-3">
+                    <div className="ml-10 mt-2 space-y-3 border-l-2 border-border-default pl-3">
                       {repliesMap[c.id!].map(r => (
                         <CommentItem key={r.id || (r.authorName + r.timeAgo + r.text)} comment={r} currentUser={currentUser} onUpdate={onUpdateComment} onDelete={onDeleteComment} isReply />
                       ))}
@@ -1148,9 +1148,9 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
         </div>
 
         {/* Reply box */}
-        <div className="border-t border-gray-100 px-4 py-3 flex-shrink-0">
+        <div className="border-t border-border-default px-4 py-3 flex-shrink-0">
           <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-[#e6f4f7] flex items-center justify-center flex-shrink-0 text-xs font-bold text-[#0b5566] mt-0.5">
+            <div className="w-8 h-8 rounded-full overflow-hidden bg-accent-light flex items-center justify-center flex-shrink-0 text-xs font-bold text-[#0b5566] mt-0.5">
               {currentUser?.avatarUrl ? (
                 <img src={currentUser.avatarUrl} alt={currentUser.name ? `${currentUser.name} avatar` : 'Avatar'} className="w-full h-full object-cover" />
               ) : (
@@ -1166,12 +1166,12 @@ function CommentsModal({ onClose, comments, loading, currentUser, onAddComment, 
                 onFocus={() => setFocused(true)}
                 onBlur={() => { if (!val.trim()) setFocused(false); }}
                 placeholder={t('feed.add_comment_placeholder', 'Ajouter un commentaire…')}
-                className="w-full resize-none bg-transparent border-none outline-none text-sm text-gray-800 placeholder-gray-400 leading-relaxed overflow-hidden"
+                className="w-full resize-none bg-transparent border-none outline-none text-sm text-primary placeholder-gray-400 leading-relaxed overflow-hidden"
                 style={{ fontSize: '16px', minHeight: '24px' }}
               />
               {focused && (
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                  <span className="text-xs text-gray-400">{val.length > 0 ? t('feed.chars_count', { count: String(val.length), s: val.length > 1 ? 's' : '' }) : ''}</span>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-border-default">
+                  <span className="text-xs text-muted">{val.length > 0 ? t('feed.chars_count', { count: String(val.length), s: val.length > 1 ? 's' : '' }) : ''}</span>
                   <button
                     type="button"
                     disabled={!val.trim()}
@@ -1265,7 +1265,7 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
 
   return (
     <div className={`flex items-start gap-2 ${isReply ? 'gap-1.5' : ''}`}>
-      <div className={`${avatarSize} rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 mt-0.5 bg-[#e6f4f7] text-[#0b5566] font-bold`}>
+      <div className={`${avatarSize} rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 mt-0.5 bg-accent-light text-[#0b5566] font-bold`}>
         {comment.authorAvatarUrl ? (
           <img src={comment.authorAvatarUrl} alt={comment.authorName ? `${comment.authorName} avatar` : 'Avatar'} className="w-full h-full object-cover" />
         ) : (
@@ -1275,22 +1275,22 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <span className="text-xs font-semibold text-gray-800">{comment.authorName}</span>
-            <span className="text-xs text-gray-400 ml-2">{comment.timeAgo}</span>
+            <span className="text-xs font-semibold text-primary">{comment.authorName}</span>
+            <span className="text-xs text-muted ml-2">{comment.timeAgo}</span>
           </div>
           {canEdit && (
             <div className="relative flex-shrink-0">
-              <button onClick={() => setMenuOpen(s => !s)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 text-base leading-none">⋯</button>
+              <button onClick={() => setMenuOpen(s => !s)} className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-card-hover text-muted text-base leading-none">⋯</button>
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)}></div>
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-white w-40 rounded-xl shadow-lg border border-gray-100" onClick={e => e.stopPropagation()}>
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-card w-40 rounded-xl shadow-lg border border-border-default" onClick={e => e.stopPropagation()}>
                     <div className="p-1">
-                      <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-gray-50">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs rounded-lg hover:bg-input">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                         {t('children.form.edit', 'Modifier')}
                       </button>
-                      <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-red-500 rounded-lg hover:bg-gray-50">
+                      <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-xs text-red-500 rounded-lg hover:bg-input">
                         <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 9a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4 0a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zM4 6a1 1 0 011-1h10l-.6 9.6A2 2 0 0112.4 17H7.6a2 2 0 01-1.99-1.99L5 5zM9 3a1 1 0 00-1 1v1h4V4a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
                         {t('global.delete', 'Supprimer')}
                       </button>
@@ -1303,12 +1303,12 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
         </div>
 
         {!editing ? (
-          <div className="mt-1 bg-gray-50 rounded-xl px-3 py-2 text-sm text-gray-700 break-words">{comment.text}</div>
+          <div className="mt-1 bg-input rounded-xl px-3 py-2 text-sm text-primary break-words">{comment.text}</div>
         ) : (
           <div className="mt-1">
-            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2 text-sm min-h-[64px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" style={{ fontSize: '16px' }} />
+            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border border-border-default rounded-xl p-2 text-sm min-h-[64px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" style={{ fontSize: '16px' }} />
             <div className="mt-2 flex gap-2 justify-end">
-              <button type="button" onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1.5 rounded-xl bg-gray-100 text-xs font-medium">{t('global.cancel', 'Annuler')}</button>
+              <button type="button" onClick={() => { setEditing(false); setVal(comment.text); }} className="px-3 py-1.5 rounded-xl bg-card-hover text-xs font-medium">{t('global.cancel', 'Annuler')}</button>
               <button onClick={save} className="px-3 py-1.5 rounded-xl bg-[#0b5566] text-white text-xs font-medium">{t('global.save', 'Sauvegarder')}</button>
             </div>
           </div>
@@ -1318,7 +1318,7 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
         {!isReply && onReply && !editing && (
           <button
             onClick={() => { setReplyOpen(o => !o); setTimeout(() => replyRef.current?.focus(), 50); }}
-            className="mt-1.5 text-xs text-gray-400 hover:text-[#0b5566] font-medium transition-colors"
+            className="mt-1.5 text-xs text-muted hover:text-[#0b5566] font-medium transition-colors"
           >
             {t('feed.reply', 'Répondre')}
           </button>
@@ -1327,7 +1327,7 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
         {/* Inline reply box */}
         {replyOpen && (
           <div className="mt-2 flex items-start gap-2">
-            <div className={`w-6 h-6 rounded-full bg-[#e6f4f7] flex items-center justify-center text-[10px] font-bold text-[#0b5566] flex-shrink-0 mt-0.5`}>
+            <div className={`w-6 h-6 rounded-full bg-accent-light flex items-center justify-center text-[10px] font-bold text-[#0b5566] flex-shrink-0 mt-0.5`}>
               {authorInitial || '?'}
             </div>
             <div className="flex-1 min-w-0">
@@ -1337,11 +1337,11 @@ function CommentItem({ comment, currentUser, onUpdate, onDelete, onReply, author
                 rows={1}
                 onChange={e => { setReplyVal(e.target.value); autoResizeReply(); }}
                 placeholder={t('feed.reply_to', { author: comment.authorName })}
-                className="w-full resize-none bg-transparent border-none outline-none text-xs text-gray-800 placeholder-gray-400 leading-relaxed overflow-hidden"
+                className="w-full resize-none bg-transparent border-none outline-none text-xs text-primary placeholder-gray-400 leading-relaxed overflow-hidden"
                 style={{ fontSize: '16px', minHeight: '20px' }}
               />
-              <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-gray-100">
-                <button onClick={() => { setReplyOpen(false); setReplyVal(''); }} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">{t('global.cancel', 'Annuler')}</button>
+              <div className="flex items-center justify-between mt-1.5 pt-1.5 border-t border-border-default">
+                <button onClick={() => { setReplyOpen(false); setReplyVal(''); }} className="text-xs text-muted hover:text-secondary transition-colors">{t('global.cancel', 'Annuler')}</button>
                 <button
                   onClick={submitReply}
                   disabled={!replyVal.trim()}
@@ -1368,14 +1368,14 @@ function ConfirmationModal({ title, description, onCancel, onConfirm }: { title:
 
   const modal = (
     <div className="fixed inset-0 z-60 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+      <div className="bg-card rounded-2xl shadow-xl w-full max-w-md">
         <div className="px-6 py-5">
-          <h3 className="text-base font-bold text-gray-900 text-center break-words">{title}</h3>
-          <p className="text-sm text-gray-500 mt-2 text-center break-words whitespace-normal">{description}</p>
+          <h3 className="text-base font-bold text-primary text-center break-words">{title}</h3>
+          <p className="text-sm text-secondary mt-2 text-center break-words whitespace-normal">{description}</p>
         </div>
         <div className="px-6 py-4 flex flex-col sm:flex-row justify-center gap-2 border-t">
-          <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl bg-gray-100 text-sm font-medium hover:bg-gray-200 transition-colors">Annuler</button>
-          <button onClick={confirmHandler} disabled={loading} className="px-4 py-2 rounded-xl bg-red-500 text-white text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50">{loading ? 'Suppression...' : 'Supprimer'}</button>
+          <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl bg-card-hover text-sm font-medium hover:bg-border-default transition-colors">Annuler</button>
+          <button onClick={confirmHandler} disabled={loading} className="px-4 py-2 rounded-xl bg-red-50 dark:bg-red-9500 text-white text-sm font-medium hover:bg-red-600 transition-colors disabled:opacity-50">{loading ? 'Suppression...' : 'Supprimer'}</button>
         </div>
       </div>
     </div>
@@ -1760,22 +1760,22 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
             )}
           </div>
           <div>
-            <div className="font-semibold text-gray-800 text-sm leading-tight">{post.author?.name || 'Utilisateur'}</div>
-            <div className="text-xs text-gray-400">Il y a {timeAgo(post.createdAt)}</div>
+            <div className="font-semibold text-primary text-sm leading-tight">{post.author?.name || 'Utilisateur'}</div>
+            <div className="text-xs text-muted">Il y a {timeAgo(post.createdAt)}</div>
           </div>
         </div>
         <div className="relative">
           {canEdit && (
-            <button onClick={() => setMenuOpen(s => !s)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 text-gray-400 text-lg leading-none">⋯</button>
+            <button onClick={() => setMenuOpen(s => !s)} className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-card-hover text-muted text-lg leading-none">⋯</button>
           )}
           {menuOpen && canEdit && (
-            <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-100 rounded-xl shadow-lg z-10 overflow-hidden">
+            <div className="absolute right-0 mt-1 w-44 bg-card border border-border-default rounded-xl shadow-lg z-10 overflow-hidden">
               <div className="p-1">
-                <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                <button onClick={() => { setEditing(true); setMenuOpen(false); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-input">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                   Modifier
                 </button>
-                <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-500 rounded-lg hover:bg-gray-50">
+                <button onClick={() => { setMenuOpen(false); setShowConfirm(true); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-500 rounded-lg hover:bg-input">
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M8 9a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zm4 0a1 1 0 011 1v5a1 1 0 11-2 0v-5a1 1 0 011-1zM4 6a1 1 0 011-1h10l-.6 9.6A2 2 0 0112.4 17H7.6a2 2 0 01-1.99-1.99L5 5zM9 3a1 1 0 00-1 1v1h4V4a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
                   Supprimer
                 </button>
@@ -1788,14 +1788,14 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
       {/* medias display + controls */}
       {mediaCount > 0 && (
         <div className="mt-3">
-          <div className="w-full overflow-hidden rounded-lg border border-gray-200">
+          <div className="w-full overflow-hidden rounded-lg border border-border-default">
             <div className={`grid gap-2 ${ (post.medias || []).length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
             {(post.medias || []).slice(0, 4).map((m, idx) => {
             const isLastVisible = idx === 3 && (post.medias || []).length > 4;
             // enforce aspect ratio per tile so images can't overflow their box
             const tileClass = (post.medias || []).length === 1 ? 'aspect-[16/9]' : 'aspect-[4/3]';
             return (
-              <div key={m.id} className={`relative w-full ${tileClass} ${bgClass || 'bg-gray-100'} rounded overflow-hidden`}>
+              <div key={m.id} className={`relative w-full ${tileClass} ${bgClass || 'bg-card-hover'} rounded overflow-hidden`}>
                 <div className="w-full h-full">
                   <FeedImage src={m.url} thumb={m.thumbnailUrl} alt={post.text ? post.text.slice(0, 80) : 'photo'} onOpen={() => openLightbox(idx)} />
                   {isLastVisible && (
@@ -1810,7 +1810,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                   )}
                 </div>
                 {canEdit && editing && (
-                  <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-2 right-2 bg-white rounded-full p-1 text-red-600 shadow">✕</button>
+                  <button onClick={() => handleDeleteMedia(m.id)} className="absolute top-2 right-2 bg-card rounded-full p-1 text-red-600 shadow">✕</button>
                 )}
               </div>
             );
@@ -1845,13 +1845,13 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                 setStagedPreviewsLocal(prev => [...prev, ...newPreviews]);
                 input.value = '';
               }} />
-              <button type="button" onClick={() => { if (!uploadingLocal) fileInputRef.current?.click(); }} disabled={uploadingLocal} className="px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-medium flex items-center gap-2 transition-colors">{uploadingLocal ? <Spinner size={16} /> : 'Ajouter des fichiers (images/vidéos, max 6)'}</button>
+              <button type="button" onClick={() => { if (!uploadingLocal) fileInputRef.current?.click(); }} disabled={uploadingLocal} className="px-3 py-1.5 rounded-xl bg-card-hover hover:bg-border-default text-xs font-medium flex items-center gap-2 transition-colors">{uploadingLocal ? <Spinner size={16} /> : 'Ajouter des fichiers (images/vidéos, max 6)'}</button>
             </div>
             {/* Staged previews for files chosen during edit */}
             {stagedPreviewsLocal.length > 0 && (
               <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {stagedPreviewsLocal.map((p, i) => (
-                  <div key={i} className="w-full h-16 sm:h-20 md:h-24 bg-gray-100 rounded overflow-hidden relative flex items-center justify-center">
+                  <div key={i} className="w-full h-16 sm:h-20 md:h-24 bg-card-hover rounded overflow-hidden relative flex items-center justify-center">
                     {stagedFilesLocal[i] && stagedFilesLocal[i].type && stagedFilesLocal[i].type.startsWith('video/') ? (
                       <video src={p} className="w-full h-full object-contain" controls />
                     ) : (
@@ -1861,7 +1861,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                       // remove file and preview at index i
                       setStagedFilesLocal(prev => { const next = prev.slice(); next.splice(i, 1); return next; });
                       setStagedPreviewsLocal(prev => { const next = prev.slice(); try { URL.revokeObjectURL(next[i]); } catch { /* ignore revoke errors */ } next.splice(i, 1); return next; });
-                    }} className="absolute top-1 right-1 bg-white/90 text-red-600 rounded-full p-1 shadow hover:bg-white">✕</button>
+                    }} className="absolute top-1 right-1 bg-card/90 text-red-600 rounded-full p-1 shadow hover:bg-card">✕</button>
                   </div>
                 ))}
               </div>
@@ -1913,12 +1913,12 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
       {/* post text (separate box so length doesn't affect images) */}
       {!editing ? (
         <div className="mt-3">
-          <div className="text-gray-800 break-words text-sm leading-relaxed">{post.text}</div>
+          <div className="text-primary break-words text-sm leading-relaxed">{post.text}</div>
         </div>
       ) : (
         <div className="mt-3">
-          <div className="border border-gray-200 rounded-xl p-3">
-            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border border-gray-200 rounded-xl p-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" />
+          <div className="border border-border-default rounded-xl p-3">
+            <textarea autoFocus onMouseDown={e => e.stopPropagation()} value={val} onChange={e => setVal(e.target.value)} className="w-full border border-border-default rounded-xl p-2 text-sm min-h-[80px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20" />
             <div className="mt-2 flex gap-2 justify-end">
               <button type="button" onClick={() => {
                 (async () => {
@@ -1949,7 +1949,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
                   setEditing(false);
                   setVal(post.text || '');
                 })();
-              }} className="px-3 py-1.5 rounded-xl bg-gray-100 text-xs font-medium hover:bg-gray-200 transition-colors">Annuler</button>
+              }} className="px-3 py-1.5 rounded-xl bg-card-hover text-xs font-medium hover:bg-border-default transition-colors">Annuler</button>
               <button type="button" onClick={async () => {
                 // If there are staged files, require identification before saving
                 if (stagedFilesLocal.length > 0) {

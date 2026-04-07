@@ -124,14 +124,14 @@ function PhotoConsentToggle({ childId, initialConsent, onChange }: { childId: st
   };
 
   if (!user || (!isParent && !isAdmin)) return null; // only parents/admins see the toggle
-  if (consent === null) return <div className="text-sm text-gray-500">{t('children.photo_consent.loading')}</div>;
+  if (consent === null) return <div className="text-sm text-secondary">{t('children.photo_consent.loading')}</div>;
   return (
     <div className="flex items-center gap-2">
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" checked={consent} onChange={toggle} disabled={loading} />
         <span className="text-sm">{t('children.photo_consent.toggle_label')}</span>
       </label>
-      <span className="text-xs text-gray-400">{consent ? t('children.photo_consent.allowed') : t('children.photo_consent.denied')}</span>
+      <span className="text-xs text-muted">{consent ? t('children.photo_consent.allowed') : t('children.photo_consent.denied')}</span>
     </div>
   );
 }
@@ -225,6 +225,7 @@ export default function Children() {
   const successTimer = useRef<number | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [cotisationLoadingId, setCotisationLoadingId] = useState<string | null>(null);
+  const [confirmCotisation, setConfirmCotisation] = useState<{ childId: string; amount: number } | null>(null);
   const [photoConsentMap, setPhotoConsentMap] = useState<Record<string, boolean>>({});
   const [prescriptionModal, setPrescriptionModal] = useState<{ open: boolean; url?: string | null; childName?: string | null }>({ open: false, url: null, childName: null });
   const [emptyPrescriptionModal, setEmptyPrescriptionModal] = useState<{ open: boolean; childName?: string | null }>({ open: false, childName: null });
@@ -616,6 +617,51 @@ export default function Children() {
     }
   };
 
+  const confirmAndPay = async () => {
+    if (!confirmCotisation) return;
+    const { childId, amount } = confirmCotisation;
+    setConfirmCotisation(null);
+    setCotisationLoadingId(childId);
+    // Optimistic update: set paidUntil to 1 year from now so the countdown appears immediately
+    const optimisticPaidUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+    setChildren(prev => prev.map(c => c.id === childId ? { ...c, cotisationPaidUntil: optimisticPaidUntil } : c));
+    // Invalidate cache so next fetch gets fresh data
+    const cacheKey = `${API_URL}/children${centerFilter ? `?centerId=${encodeURIComponent(centerFilter)}` : ''}`;
+    invalidate(cacheKey);
+    try {
+      const child = children.find(c => c.id === childId);
+      if (!child) return;
+      const res = await fetchWithRefresh(`${API_URL}/children/${childId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: child.name,
+          age: child.age,
+          sexe: child.sexe,
+          parentName: child.parentName,
+          parentContact: child.parentContact,
+          allergies: child.allergies || '',
+          payCotisation: true,
+          amount
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const realPaidUntil = data.cotisationPaidUntil ? String(data.cotisationPaidUntil) : optimisticPaidUntil;
+        setChildren(prev => prev.map(c => c.id === childId ? { ...c, cotisationPaidUntil: realPaidUntil } : c));
+      } else {
+        // Revert optimistic update on failure
+        setChildren(prev => prev.map(c => c.id === childId ? { ...c, cotisationPaidUntil: children.find(x => x.id === childId)?.cotisationPaidUntil } : c));
+      }
+    } catch {
+      // Revert optimistic update on error
+      setChildren(prev => prev.map(c => c.id === childId ? { ...c, cotisationPaidUntil: children.find(x => x.id === childId)?.cotisationPaidUntil } : c));
+    } finally {
+      setCotisationLoadingId(null);
+    }
+  };
+
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const handleDelete = async () => {
@@ -686,8 +732,8 @@ export default function Children() {
   if (sort === 'name') filtered = filtered.sort((a, b) => a.name.localeCompare(b.name));
   if (sort === 'age') filtered = filtered.sort((a, b) => computeAge(a.birthDate, a.age) - computeAge(b.birthDate, b.age));
 
-  const inputCls = "border border-gray-200 rounded-xl px-3 py-2 text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition w-full";
-  const labelCls = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1";
+  const inputCls = "border border-border-default rounded-xl px-3 py-2 text-primary bg-input focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition w-full";
+  const labelCls = "block text-xs font-semibold text-secondary uppercase tracking-wide mb-1";
 
   const handlePhotoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -729,7 +775,7 @@ export default function Children() {
   };
 
   return (
-    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handlePhotoFileChange} />
       {cropModalOpen && cropImageSrc && (
         <AvatarCropper imageSrc={cropImageSrc} onCancel={closeCropModal} onApply={onCropApply} />
@@ -744,7 +790,7 @@ export default function Children() {
             </div>
             <div className="pt-0.5">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.children.title')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.children.description')}</p>
+              <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('page.children.description')}</p>
             </div>
           </div>
           {isAdminUser && (
@@ -754,7 +800,7 @@ export default function Children() {
                 type="button"
                 data-tour="btn-add-child"
                 onClick={() => { setShowForm(true); setForm(emptyForm); setEditingId(null); setError(''); }}
-                className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white text-xs sm:text-sm font-semibold rounded-xl shadow hover:opacity-90 transition flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-3 py-2 sm:px-5 sm:py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-semibold rounded-xl shadow transition flex items-center justify-center gap-2"
               >
                 <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                 {t('children.add')}
@@ -765,16 +811,16 @@ export default function Children() {
 
         {/* KPI badges */}
         <div className="grid grid-cols-3 gap-3 mb-5 w-full sm:w-auto sm:flex sm:flex-row sm:gap-3">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
-            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('children.total')}</div>
+          <div className="bg-card rounded-xl shadow-sm border border-border-default px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-muted font-medium">{t('children.total')}</div>
             <div className="text-lg font-extrabold text-[#0b5566]">{totalChildren}</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
-            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('children.present')}</div>
+          <div className="bg-card rounded-xl shadow-sm border border-border-default px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-muted font-medium">{t('children.present')}</div>
             <div className="text-lg font-extrabold text-emerald-600">{presentToday}</div>
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-2 flex flex-col items-center justify-center">
-            <div className="text-[10px] sm:text-xs text-gray-400 font-medium">{t('children.new_badge')}</div>
+          <div className="bg-card rounded-xl shadow-sm border border-border-default px-3 py-2 flex flex-col items-center justify-center">
+            <div className="text-[10px] sm:text-xs text-muted font-medium">{t('children.new_badge')}</div>
             <div className="text-lg font-extrabold text-amber-500">{children.filter(c => c.newThisMonth).length}</div>
           </div>
         </div>
@@ -782,33 +828,33 @@ export default function Children() {
         {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6 w-full">
           <div className="relative flex-1 min-w-0">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-gray-700 bg-white shadow-sm text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566] transition" />
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-border-default rounded-xl pl-9 pr-3 py-2 text-primary bg-card shadow-sm text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566] transition" />
           </div>
           {user && (user as { role?: string | null }).role === 'super-admin' && (
-            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
+            <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-border-default rounded-xl px-3 py-2 bg-card text-primary shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
               <option value="">{t('messages.center.all', 'Tous les centres')}</option>
               {centers.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}
             </select>
           )}
-          <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
+          <select value={groupFilter} onChange={e => setGroupFilter(e.target.value)} className="border border-border-default rounded-xl px-3 py-2 bg-card text-primary shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
             <option value="">{t('children.group.all')}</option>
             {groupLabels.map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
           </select>
-          <select value={sort} onChange={e => setSort(e.target.value)} className="border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-700 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
+          <select value={sort} onChange={e => setSort(e.target.value)} className="border border-border-default rounded-xl px-3 py-2 bg-card text-primary shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 min-h-[40px]">
             <option value="name">{t('children.sort.name')}</option>
             <option value="age">{t('children.sort.age')}</option>
           </select>
         </div>
 
       {(showForm || editingId) && (
-        <form onSubmit={handleSubmit} className="mb-6 bg-white rounded-2xl shadow-md border border-gray-100">
+        <form onSubmit={handleSubmit} className="mb-6 bg-card rounded-2xl shadow-md border border-border-default">
           {/* Form header */}
-          <div className="px-6 py-4 bg-gradient-to-r from-[#0b5566] to-[#08323a] flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center">
-              <svg width="16" height="16" fill="none" stroke="white" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          <div className="px-6 py-4 bg-[#0b5566] dark:bg-input border-b border-transparent dark:border-border-default flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-card/20 dark:bg-border-default flex items-center justify-center">
+              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" className="text-white dark:text-primary"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
             </div>
-            <h2 className="text-white font-semibold text-base">{editingId ? t('children.form.edit') : t('children.add')}</h2>
+            <h2 className="text-white dark:text-primary font-semibold text-base">{editingId ? t('children.form.edit') : t('children.add')}</h2>
           </div>
           <div className="p-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div className="flex flex-col" data-tour="child-form-info">
@@ -858,7 +904,7 @@ export default function Children() {
                 setTimeout(() => setShowParentsDropdown(false), 150);
               }}
               placeholder={t('children.form.parent_placeholder')}
-              className="border border-gray-200 rounded-lg px-3 py-2 w-full"
+              className="border border-border-default rounded-lg px-3 py-2 w-full"
             />
 
             {showParentsDropdown && (() => {
@@ -866,9 +912,9 @@ export default function Children() {
               const filtered = lower ? parentsList.filter(p => p.name.toLowerCase().includes(lower)) : parentsList;
               if (filtered.length === 0) return null;
               return (
-                <ul className="absolute left-0 right-0 bg-white border rounded shadow max-h-56 overflow-auto z-50 mt-1">
+                <ul className="absolute left-0 right-0 bg-card border rounded shadow max-h-56 overflow-auto z-50 mt-1">
                   {filtered.slice(0, 12).map(p => (
-                    <li key={p.id} className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm" onMouseDown={(ev) => {
+                    <li key={p.id} className="px-3 py-2 hover:bg-card-hover cursor-pointer text-sm" onMouseDown={(ev) => {
                       // select before blur
                       ev.preventDefault();
                       setForm(f => ({ ...f, parentName: p.name, parentMail: p.email || '', parentContact: p.phone || '', parentId: p.id }));
@@ -893,13 +939,13 @@ export default function Children() {
           </div>
           <div className="md:col-span-2 lg:col-span-3">
             <label className={labelCls}>{t('children.nannies.label')} <span className="text-red-500">*</span></label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-auto border border-gray-200 rounded-xl p-3 bg-gray-50">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-40 overflow-auto border border-border-default rounded-xl p-3 bg-input">
               {nanniesList.length === 0 ? (
-                <div className="text-sm text-gray-500">{t('children.nannies.none')}</div>
+                <div className="text-sm text-secondary">{t('children.nannies.none')}</div>
                 ) : nanniesList.map(n => {
                 const checked = Array.isArray(form.nannyIds) && form.nannyIds.includes(n.id);
                 return (
-                  <label key={n.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-white rounded-lg px-2 py-1 transition">
+                  <label key={n.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-card rounded-lg px-2 py-1 transition">
                     <input id={`nanny-${n.id}`} type="checkbox" value={n.id} checked={checked} onChange={(e) => {
                       const val = e.target.value;
                       setForm(prev => {
@@ -913,7 +959,7 @@ export default function Children() {
                         return { ...prev, nannyIds: prevIds } as typeof prev;
                       });
                     }} className="accent-[#0b5566]" />
-                    <span className="text-gray-700">{n.name}</span>
+                    <span className="text-primary">{n.name}</span>
                   </label>
                 );
               })}
@@ -921,26 +967,26 @@ export default function Children() {
           </div>
           </div>
           {/* Form footer */}
-          <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
-            <div className="text-xs text-gray-400">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
+          <div className="px-6 py-4 bg-input border-t border-border-default flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between">
+            <div className="text-xs text-muted">{t('children.form.required_note')} <span className="text-red-500">*</span></div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(false); setError(''); }} className="px-4 py-2 rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition text-sm font-medium">{t('global.cancel')}</button>
-              <button type="submit" className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white font-semibold hover:opacity-90 transition text-sm shadow">
+              <button type="button" onClick={() => { setForm(emptyForm); setEditingId(null); setShowForm(false); setError(''); }} className="px-4 py-2 rounded-xl bg-card-hover text-secondary hover:bg-border-default transition text-sm font-medium">{t('global.cancel')}</button>
+              <button type="submit" className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold transition text-sm shadow">
                 {editingId ? t('children.form.edit') : t('children.add')}
               </button>
             </div>
           </div>
-          {error && <div className="px-6 py-3 text-red-600 text-sm bg-red-50 border-t border-red-100">{error}</div>}
+          {error && <div className="px-6 py-3 text-red-600 text-sm bg-red-50 dark:bg-red-950 border-t border-red-100 dark:border-red-800">{error}</div>}
         </form>
       )}
       {successMsg && (
-        <div className="mb-4 text-[#0b5566] font-semibold text-center bg-[#a9ddf2] border border-[#fcdcdf] rounded-lg py-2">{successMsg}</div>
+        <div className="mb-4 text-[#0b5566] font-semibold text-center bg-accent-light border border-[#fcdcdf] rounded-lg py-2">{successMsg}</div>
       )}
 
       {loading ? (
         <div>{t('children.loading')}</div>
       ) : (
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 w-full children-responsive-grid">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 items-stretch w-full children-responsive-grid">
           {filtered.map((child, idx) => {
             const billing = billings[child.id];
             const isDeleting = deleteId === child.id;
@@ -958,37 +1004,8 @@ export default function Children() {
                 countdown = 'Cotisation à renouveler';
               }
             }
-            const handleCotisation = async () => {
-              setCotisationLoadingId(child.id);
-              const amount = defaultChildCotisation;
-              try {
-                const res = await fetchWithRefresh(`${API_URL}/children/${child.id}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  credentials: 'include',
-                  body: JSON.stringify({
-                    name: child.name,
-                    age: child.age,
-                    sexe: child.sexe,
-                    parentName: child.parentName,
-                    parentContact: child.parentContact,
-                    allergies: child.allergies || '',
-                    payCotisation: true,
-                    amount
-                  })
-                });
-                if (!res.ok) {
-                  if (import.meta.env.DEV) console.error('Failed to update cotisation', res.status);
-                  else console.error('Failed to update cotisation', String(res.status));
-                } else {
-                  await fetchChildren();
-                }
-              } catch (err: unknown) {
-                if (import.meta.env.DEV) console.error('Error while updating cotisation', err);
-                else console.error('Error while updating cotisation', err instanceof Error ? err.message : String(err));
-              } finally {
-                setCotisationLoadingId(null);
-              }
+            const handleCotisation = () => {
+              setConfirmCotisation({ childId: child.id, amount: defaultChildCotisation });
             };
             const gradients = [
               'from-[#0b5566] to-[#0a7c97]',
@@ -1002,24 +1019,24 @@ export default function Children() {
             const initials = child.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
             return (
-              <div key={child.id} className="relative bg-white rounded-2xl shadow-md border border-gray-100 flex flex-col overflow-hidden">
+              <div key={child.id} className="relative bg-card rounded-2xl shadow-md border border-border-default flex flex-col overflow-hidden min-h-[420px]">
                 {/* Delete overlay */}
                 {isDeleting && (
-                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/95 rounded-2xl p-8">
-                    <div className="w-14 h-14 rounded-2xl bg-red-100 flex items-center justify-center mb-4">
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-card/95 rounded-2xl p-8">
+                    <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-900 flex items-center justify-center mb-4">
                       <svg width="28" height="28" fill="none" stroke="#ef4444" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                     </div>
-                    <div className="text-base font-semibold text-gray-900 text-center mb-1">{t('children.delete.confirm_title')}</div>
-                    <div className="text-sm text-gray-500 mb-6 text-center">{t('children.delete.confirm_body')}</div>
+                    <div className="text-base font-semibold text-primary text-center mb-1">{t('children.delete.confirm_title')}</div>
+                    <div className="text-sm text-secondary mb-6 text-center">{t('children.delete.confirm_body')}</div>
                     <div className="flex gap-3 w-full">
-                      <button onClick={() => setDeleteId(null)} className="flex-1 bg-gray-100 text-gray-700 rounded-xl px-4 py-2 font-medium hover:bg-gray-200 transition text-sm" disabled={deleteLoading}>{t('modal.cancel')}</button>
-                      <button onClick={handleDelete} className="flex-1 bg-red-500 text-white rounded-xl px-4 py-2 font-medium hover:bg-red-600 transition shadow text-sm" disabled={deleteLoading}>{deleteLoading ? t('children.deleting') : t('children.action.delete')}</button>
+                      <button onClick={() => setDeleteId(null)} className="flex-1 bg-card-hover text-primary rounded-xl px-4 py-2 font-medium hover:bg-border-default transition text-sm" disabled={deleteLoading}>{t('modal.cancel')}</button>
+                      <button onClick={handleDelete} className="flex-1 bg-red-600 hover:bg-red-700 text-white rounded-xl px-4 py-2 font-medium transition shadow text-sm" disabled={deleteLoading}>{deleteLoading ? t('children.deleting') : t('children.action.delete')}</button>
                     </div>
                   </div>
                 )}
 
-                {/* Card header with gradient avatar */}
-                <div className={`px-5 pt-5 pb-4 bg-gradient-to-r ${gradient} flex items-center gap-3`}>
+                {/* Card header */}
+                <div className={`px-5 pt-5 pb-4 bg-gradient-to-r ${gradient} dark:bg-none dark:bg-input dark:border-b dark:border-border-default flex items-center gap-3`}>
                   <button
                     type="button"
                     onClick={() => {
@@ -1027,13 +1044,13 @@ export default function Children() {
                       photoUploadTargetId.current = child.id;
                       photoInputRef.current?.click();
                     }}
-                    className="relative w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 overflow-hidden group focus:outline-none"
+                    className="relative w-12 h-12 rounded-full bg-card/20 dark:bg-border-default flex items-center justify-center flex-shrink-0 overflow-hidden group focus:outline-none"
                     title={isAdminUser || user?.role === 'nanny' ? t('children.photo.upload_hint', 'Changer la photo') : undefined}
                   >
                     {child.photoUrl ? (
                       <img src={child.photoUrl} alt={child.name} className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-white font-bold text-lg">{initials}</span>
+                      <span className="text-white dark:text-primary font-bold text-lg">{initials}</span>
                     )}
                     {(isAdminUser || user?.role === 'nanny') && (
                       <>
@@ -1054,24 +1071,24 @@ export default function Children() {
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-white text-base truncate">{child.name}</span>
+                      <span className="font-bold text-white dark:text-primary text-base truncate">{child.name}</span>
                       {child.present ? (
-                        <span className="text-[10px] font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">{t('children.presence.present_today')}</span>
+                        <span className="text-[10px] font-semibold bg-card/20 dark:bg-border-default text-white dark:text-secondary px-2 py-0.5 rounded-full">{t('children.presence.present_today')}</span>
                       ) : (
-                        <span className="text-[10px] font-semibold bg-red-400/30 text-white px-2 py-0.5 rounded-full">{t('children.presence.absent_today')}</span>
+                        <span className="text-[10px] font-semibold bg-red-400/30 dark:bg-red-900/60 text-white dark:text-red-300 px-2 py-0.5 rounded-full">{t('children.presence.absent_today')}</span>
                       )}
                       {child.newThisMonth && (
-                        <span className="text-[10px] font-semibold bg-amber-300/30 text-white px-2 py-0.5 rounded-full">{t('children.new_badge')}</span>
+                        <span className="text-[10px] font-semibold bg-amber-300/30 dark:bg-amber-900/60 text-white dark:text-amber-300 px-2 py-0.5 rounded-full">{t('children.new_badge')}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <span className="text-xs text-white/80 font-medium">{computeAge(child.birthDate, child.age)} ans</span>
-                      <span className="text-white/40">·</span>
-                      <span className="text-xs text-white/80">{child.sexe === 'masculin' ? t('children.form.sexe.m') : t('children.form.sexe.f')}</span>
+                      <span className="text-xs text-white/80 dark:text-secondary font-medium">{computeAge(child.birthDate, child.age)} ans</span>
+                      <span className="text-white/40 dark:text-border-strong">·</span>
+                      <span className="text-xs text-white/80 dark:text-secondary">{child.sexe === 'masculin' ? t('children.form.sexe.m') : t('children.form.sexe.f')}</span>
                       {child.birthDate && (
                         <>
-                          <span className="text-white/40">·</span>
-                          <span className="text-xs text-white/80">{new Date(child.birthDate).toLocaleDateString('fr-FR')}</span>
+                          <span className="text-white/40 dark:text-border-strong">·</span>
+                          <span className="text-xs text-white/80 dark:text-secondary">{new Date(child.birthDate).toLocaleDateString('fr-FR')}</span>
                         </>
                       )}
                     </div>
@@ -1081,80 +1098,78 @@ export default function Children() {
                 {/* Card body */}
                 <div className="flex-1 flex flex-col p-5 gap-4">
 
-                  {/* Allergies */}
-                  {child.allergies ? (
-                    <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                      <svg className="text-amber-500 flex-shrink-0 mt-0.5" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                      <span className="text-xs text-amber-700 font-medium">{t('children.allergies.label')} {child.allergies}</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
-                      <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
-                      {t('children.allergies.none')}
-                    </div>
-                  )}
+                  {/* Allergies - fixed height so layout doesn't shift */}
+                  <div className={`flex items-start gap-2 rounded-xl px-3 py-2 min-h-[36px] ${child.allergies ? 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800' : 'bg-input border border-transparent'}`}>
+                    <svg className={`flex-shrink-0 mt-0.5 ${child.allergies ? 'text-amber-500' : 'text-muted'}`} width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      {child.allergies && <><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>}
+                    </svg>
+                    <span className={`text-xs font-medium ${child.allergies ? 'text-amber-700 dark:text-amber-300' : 'text-muted'}`}>
+                      {child.allergies ? `${t('children.allergies.label')} ${child.allergies}` : t('children.allergies.none')}
+                    </span>
+                  </div>
 
                   {/* Parent info */}
-                  <div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-1.5">
-                    <div className="flex items-center gap-2 text-sm text-gray-700">
-                      <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                      <span className="font-medium truncate">{child.parentName || <span className="text-gray-400 italic">—</span>}</span>
+                  <div className="bg-input rounded-xl p-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2 text-sm text-primary">
+                      <svg className="text-muted flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      <span className="font-medium truncate">{child.parentName || <span className="text-muted italic">—</span>}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                      <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                      <svg className="text-muted flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.62 3.38 2 2 0 0 1 3.6 1.2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.77a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       {child.parentContact ? (
                         <a href={`tel:${child.parentContact}`} className="text-[#0b5566] hover:underline transition">{child.parentContact}</a>
                       ) : (
-                        <span className="text-gray-400 italic">—</span>
+                        <span className="text-muted italic">—</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                      <svg className="text-gray-400 flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                      <svg className="text-muted flex-shrink-0" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                       {child.parentMail ? (
                         <a href={`mailto:${child.parentMail}`} className="text-[#0b5566] hover:underline transition truncate">{child.parentMail}</a>
                       ) : (
-                        <span className="text-gray-400 italic">—</span>
+                        <span className="text-muted italic">—</span>
                       )}
                     </div>
                   </div>
 
                   {/* Cotisation */}
                   {(defaultChildCotisation > 0 || centerSettings.dailyRate > 0) && (
-                  <div className="bg-gray-50 rounded-xl p-3 flex flex-col gap-2">
+                  <div className="bg-input rounded-xl p-3 flex flex-col gap-2">
                     {defaultChildCotisation > 0 && (
                       <>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('children.cotisation.label')}</span>
+                          <span className="text-xs font-semibold text-secondary uppercase tracking-wide">{t('children.cotisation.label')}</span>
                           {cotisationOk ? (
-                            <span className="ml-auto text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <span className="ml-auto text-xs font-semibold bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1">
                               <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                               {countdown}
                             </span>
                           ) : (
-                            <span className="ml-auto text-xs font-semibold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{countdown || t('children.cotisation.pay')}</span>
+                            <span className="ml-auto text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-600 px-2 py-0.5 rounded-full">{countdown || t('children.cotisation.pay')}</span>
                           )}
                         </div>
                         <div className="flex items-center gap-2">
                           {daysRemaining > 0 ? (
                             <span className="text-xl font-extrabold text-[#0b5566]">{defaultChildCotisation}€</span>
                           ) : (
-                            <span className="text-xl font-extrabold text-gray-700">{defaultChildCotisation}€</span>
+                            <span className="text-xl font-extrabold text-primary">{defaultChildCotisation}€</span>
                           )}
                           {!cotisationOk && (
                             cotisationLoadingId === child.id ? (
-                              <span className="text-gray-400 text-xs animate-pulse ml-1">{t('children.loading')}</span>
+                              <span className="text-muted text-xs animate-pulse ml-1">{t('children.loading')}</span>
                             ) : !isNannyUser ? (
-                              <button onClick={handleCotisation} className="text-[#0b5566] text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0b5566]/10 hover:bg-[#0b5566]/20 transition" title={t('children.cotisation.pay')}>{t('children.cotisation.pay')}</button>
+                              <button onClick={handleCotisation} className="text-white text-xs font-semibold px-3 py-1.5 rounded-lg bg-indigo-500 hover:bg-indigo-600 transition shadow-sm" title={t('children.cotisation.pay')}>{t('children.cotisation.pay')}</button>
                             ) : null
                           )}
                         </div>
                       </>
                     )}
                     {centerSettings.dailyRate > 0 && (
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <div className="flex items-center gap-1 text-xs text-secondary">
                         <span>{t('children.cotisation.this_month')}</span>
-                        <span className="font-bold text-gray-700 ml-1">{billing ? `${billing.amount}€` : '...'}</span>
-                        <span className="text-gray-400">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
+                        <span className="font-bold text-primary ml-1">{billing ? `${billing.amount}€` : '...'}</span>
+                        <span className="text-muted">({billing ? `${billing.days} jour${billing.days > 1 ? 's' : ''}` : 'calcul...'})</span>
                       </div>
                     )}
                   </div>
@@ -1167,19 +1182,19 @@ export default function Children() {
                         photoConsentMap[child.id] ? (
                           <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium">{t('children.photo_consent.yes')}</span>
                         ) : (
-                          <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium">{t('children.photo_consent.no')}</span>
+                          <span className="text-xs bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 px-2 py-1 rounded-full font-medium">{t('children.photo_consent.no')}</span>
                         )
                       ) : (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">{t('children.photo_consent.unknown')}</span>
+                        <span className="text-xs bg-card-hover text-secondary px-2 py-1 rounded-full">{t('children.photo_consent.unknown')}</span>
                       )}
                     </div>
                     {Array.isArray(child.nannyIds) && child.nannyIds.length > 0 ? (
-                      <span className="text-xs px-2 py-1 rounded-full flex items-center gap-1 bg-indigo-50 text-indigo-600 flex-shrink-0">
+                      <span className="text-xs px-2 py-1 rounded-full flex items-center gap-1 bg-indigo-50 dark:bg-indigo-950 text-indigo-600 flex-shrink-0">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         <span className="font-medium truncate max-w-[120px]">{child.nannyIds.map(id => nanniesList.find(n => n.id === id)?.name || '').filter(Boolean).join(', ')}</span>
                       </span>
                     ) : (
-                      <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{t('children.not_assigned')}</span>
+                      <span className="text-xs bg-card-hover text-secondary px-2 py-1 rounded-full">{t('children.not_assigned')}</span>
                     )}
                   </div>
 
@@ -1197,7 +1212,7 @@ export default function Children() {
                 </div>
 
                 {/* Card footer actions */}
-                <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center gap-2">
+                <div className="px-5 py-3 bg-input border-t border-border-default flex items-center gap-2">
                   <button
                     onClick={async () => {
                       const known = getPrescriptionUrl(child);
@@ -1216,7 +1231,7 @@ export default function Children() {
                       }
                       if (url) setPrescriptionModal({ open: true, url, childName: child.name });
                     }}
-                    className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white"
+                    className="flex items-center gap-1.5 text-xs font-medium text-secondary hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-card"
                     title={t('children.prescription.view_button')}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/></svg>
@@ -1224,11 +1239,11 @@ export default function Children() {
                   </button>
                   {(user && (user.role === 'admin' || user.role === 'super-admin' || user.nannyId)) && (
                     <div className="flex items-center gap-1 ml-auto">
-                      <button onClick={() => handleEdit(child)} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-white" title={t('children.action.edit')}>
+                      <button onClick={() => handleEdit(child)} className="flex items-center gap-1 text-xs font-medium text-secondary hover:text-[#0b5566] transition px-2 py-1.5 rounded-lg hover:bg-card" title={t('children.action.edit')}>
                         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z"/></svg>
                         {t('children.action.edit')}
                       </button>
-                      <button onClick={() => setDeleteId(child.id)} className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-red-500 transition px-2 py-1.5 rounded-lg hover:bg-red-50" title={t('children.action.delete')}>
+                      <button onClick={() => setDeleteId(child.id)} className="flex items-center gap-1 text-xs font-medium text-secondary hover:text-red-500 transition px-2 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950" title={t('children.action.delete')}>
                         <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         {t('children.action.delete')}
                       </button>
@@ -1243,8 +1258,8 @@ export default function Children() {
           {/* Prescription modal */}
           {prescriptionModal.open && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-              <div className="bg-white rounded-2xl shadow-xl p-4 w-full max-w-3xl relative mx-4">
-                <button onClick={() => setPrescriptionModal({ open: false, url: null })} className="absolute top-3 right-3 text-gray-500">×</button>
+              <div className="bg-card rounded-2xl shadow-xl p-4 w-full max-w-3xl relative mx-4">
+                <button onClick={() => setPrescriptionModal({ open: false, url: null })} className="absolute top-3 right-3 text-secondary">×</button>
                     <div className="text-lg font-bold mb-2">Ordonnance de {prescriptionModal.childName || "cet enfant"}</div>
                 <div className="w-full h-[50vh] sm:h-[70vh] flex items-center justify-center overflow-auto">
                   {prescriptionModal.url && prescriptionModal.url.endsWith('.pdf') ? (
@@ -1259,12 +1274,29 @@ export default function Children() {
           {/* Empty prescription modal */}
           {emptyPrescriptionModal.open && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-              <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
-                <button onClick={() => setEmptyPrescriptionModal({ open: false, childName: null })} className="absolute top-3 right-3 text-gray-500">×</button>
+              <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-md relative">
+                <button onClick={() => setEmptyPrescriptionModal({ open: false, childName: null })} className="absolute top-3 right-3 text-secondary">×</button>
                 <div className="text-lg font-bold mb-2">{t('children.prescription.noneTitle')}</div>
-                <div className="text-gray-600 mb-4">{t('children.prescription.noneMessage', { name: emptyPrescriptionModal.childName || t('children.thisChild') })}</div>
+                <div className="text-secondary mb-4">{t('children.prescription.noneMessage', { name: emptyPrescriptionModal.childName || t('children.thisChild') })}</div>
                 <div className="flex justify-end">
                   <button onClick={() => setEmptyPrescriptionModal({ open: false, childName: null })} className="px-4 py-2 bg-[#0b5566] text-white rounded-lg">{t('common.ok')}</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Cotisation payment confirmation modal */}
+          {confirmCotisation && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 border border-border-default">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center mb-4 mx-auto">
+                  <svg width="24" height="24" fill="none" stroke="#059669" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+                </div>
+                <h3 className="text-base font-bold mb-1 text-center text-primary">{t('nanny.payment.confirm_title', 'Confirmer le paiement')}</h3>
+                <p className="mb-5 text-sm text-secondary text-center">{t('nanny.payment.confirm_body', { amount: String(confirmCotisation.amount) })}</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setConfirmCotisation(null)} className="flex-1 bg-card-hover text-primary rounded-xl px-4 py-2 text-sm font-medium hover:bg-border-default transition">{t('modal.cancel')}</button>
+                  <button onClick={confirmAndPay} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white rounded-xl px-4 py-2 text-sm font-semibold transition shadow">{t('common.confirm', 'Confirmer')}</button>
                 </div>
               </div>
             </div>

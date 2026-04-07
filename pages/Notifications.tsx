@@ -76,7 +76,7 @@ export default function NotificationsPage() {
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   return (
-    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
 
         {/* Page header */}
@@ -87,7 +87,7 @@ export default function NotificationsPage() {
             </div>
             <div className="pt-0.5">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.notifications.title')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.notifications.desc')}</p>
+              <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('page.notifications.desc')}</p>
             </div>
           </div>
           {/* Action buttons */}
@@ -106,16 +106,16 @@ export default function NotificationsPage() {
                   console.error('Failed to mark all read', e);
                 }
               }}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-2 bg-card border border-border-default text-primary rounded-xl text-sm font-medium hover:bg-input transition-colors shadow-sm"
             >
-              <svg className="w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <svg className="w-4 h-4 text-secondary" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               {t('notifications.mark_all')}
             </button>
             <button
               onClick={() => setConfirmOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-600 rounded-xl text-sm font-medium hover:bg-red-100 dark:bg-red-900 transition-colors shadow-sm"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <path d="M3 6h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -129,17 +129,17 @@ export default function NotificationsPage() {
 
         {/* KPI cards */}
         <div className="grid grid-cols-3 gap-3 mb-5">
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-            <div className="text-xs text-gray-400 font-medium mb-1">{t('notifications.stats.unread')}</div>
-            <div className={`text-2xl font-extrabold ${stats.unread > 0 ? 'text-red-500' : 'text-gray-900'}`}>{stats.unread}</div>
+          <div className="bg-card rounded-2xl shadow-md border border-border-default p-4">
+            <div className="text-xs text-muted font-medium mb-1">{t('notifications.stats.unread')}</div>
+            <div className={`text-2xl font-extrabold ${stats.unread > 0 ? 'text-red-500' : 'text-primary'}`}>{stats.unread}</div>
           </div>
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-            <div className="text-xs text-gray-400 font-medium mb-1">{t('notifications.stats.today')}</div>
+          <div className="bg-card rounded-2xl shadow-md border border-border-default p-4">
+            <div className="text-xs text-muted font-medium mb-1">{t('notifications.stats.today')}</div>
             <div className="text-2xl font-extrabold text-[#0b5566]">{stats.today}</div>
           </div>
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-            <div className="text-xs text-gray-400 font-medium mb-1">{t('notifications.stats.week')}</div>
-            <div className="text-2xl font-extrabold text-gray-900">{stats.week}</div>
+          <div className="bg-card rounded-2xl shadow-md border border-border-default p-4">
+            <div className="text-xs text-muted font-medium mb-1">{t('notifications.stats.week')}</div>
+            <div className="text-2xl font-extrabold text-primary">{stats.week}</div>
           </div>
         </div>
 

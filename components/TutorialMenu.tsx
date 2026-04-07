@@ -21,12 +21,12 @@ export default function TutorialMenu() {
     <div className="fixed inset-0 z-[10000] flex items-end md:items-center justify-center" onClick={handleClose}>
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm tutorial-backdrop-in" />
       <div
-        className="relative z-10 bg-white rounded-t-3xl md:rounded-3xl shadow-2xl max-w-lg w-full mx-0 md:mx-4 overflow-hidden tutorial-card-in"
+        className="relative z-10 bg-card rounded-t-3xl md:rounded-3xl shadow-2xl max-w-lg w-full mx-0 md:mx-4 overflow-hidden tutorial-card-in"
         onClick={e => e.stopPropagation()}
       >
         {/* Drag handle (mobile only) */}
-        <div className="flex justify-center pt-3 pb-1 md:hidden bg-white">
-          <div className="w-10 h-1 bg-gray-200 rounded-full" />
+        <div className="flex justify-center pt-3 pb-1 md:hidden bg-card">
+          <div className="w-10 h-1 bg-input rounded-full" />
         </div>
 
         {/* Header */}
@@ -73,13 +73,13 @@ export default function TutorialMenu() {
                   onClick={() => startTour(tour.id)}
                   className={`w-full text-left p-4 rounded-2xl border transition-all duration-200 group ${
                     isDone
-                      ? 'border-emerald-100 bg-emerald-50/50 hover:bg-emerald-50'
-                      : 'border-gray-100 bg-white hover:bg-gray-50 hover:border-gray-200'
+                      ? 'border-emerald-100 dark:border-emerald-900 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/50'
+                      : 'border-border-default bg-card hover:bg-card-hover'
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-brand-50 text-brand-600'
+                      isDone ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400' : 'bg-brand-50 dark:bg-brand-900/30 text-brand-600'
                     }`}>
                       {isDone ? (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
@@ -87,14 +87,14 @@ export default function TutorialMenu() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <h3 className={`font-semibold text-sm ${isDone ? 'text-emerald-700' : 'text-gray-900'}`}>{tour.name}</h3>
+                        <h3 className={`font-semibold text-sm ${isDone ? 'text-emerald-700 dark:text-emerald-400' : 'text-primary'}`}>{tour.name}</h3>
                         {isDone && (
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">Fait</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900 px-2 py-0.5 rounded-full">Fait</span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{tour.description}</p>
+                      <p className="text-xs text-muted mt-0.5 leading-relaxed">{tour.description}</p>
                     </div>
-                    <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                    <svg className="w-4 h-4 text-muted group-hover:text-secondary transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
                   </div>
                 </button>
               );
@@ -104,7 +104,7 @@ export default function TutorialMenu() {
 
         {/* Footer */}
         <div className="px-6 pb-5 pt-2 safe-area-bottom">
-          <p className="text-center text-xs text-gray-400">
+          <p className="text-center text-xs text-muted">
             {t(
               'settings.tutorials.menu.footer',
               'Vous pouvez relancer un tutoriel à tout moment depuis le bouton ? du menu.'

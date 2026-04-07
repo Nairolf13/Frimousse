@@ -572,6 +572,7 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
       await tx.parentChild.deleteMany({ where: { childId: id } });
       await tx.assignment.deleteMany({ where: { childId: id } });
       await tx.report.deleteMany({ where: { childId: id } });
+      await tx.presenceSheet.deleteMany({ where: { childId: id } });
 
       // finally remove child record
       await tx.child.delete({ where: { id } });

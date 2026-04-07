@@ -371,7 +371,7 @@ export default function Dashboard() {
   const selectedAssignment = selectedId ? assignments.find(a => a.id === selectedId) : undefined;
 
   return (
-  <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+  <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       {successMessage && (
         <div className="fixed top-6 right-6 z-50 bg-green-50 border border-green-200 text-green-800 px-5 py-3 rounded-xl shadow-lg animate-slide-up flex items-center gap-2">
           <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
@@ -387,63 +387,63 @@ export default function Dashboard() {
           </div>
           <div className="pt-0.5">
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.dashboard')}</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('dashboard.welcome')}</p>
+            <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('dashboard.welcome')}</p>
           </div>
         </div>
           <div className="flex items-center gap-3 self-start md:self-end">
           <input type="date" value={currentDate.toISOString().split('T')[0]} onChange={e => setCurrentDate(new Date(e.target.value))}
-            className="border border-gray-200 rounded-xl px-3 py-2.5 text-gray-700 bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300 w-[130px] sm:w-auto" />
+            className="border border-border-default rounded-xl px-3 py-2.5 text-primary bg-card shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300 w-[130px] sm:w-auto" />
           {!(user && user.role === 'parent') && (
-            <button type="button" onClick={() => handleQuickAdd(new Date())} className="bg-brand-500 text-white font-semibold rounded-xl px-5 py-2.5 text-sm shadow-sm hover:bg-brand-600 active:scale-[0.98] transition-all whitespace-nowrap">+ {t('global.add')}</button>
+            <button type="button" onClick={() => handleQuickAdd(new Date())} className="bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl px-5 py-2.5 text-sm shadow-sm active:scale-[0.98] transition-all whitespace-nowrap">+ {t('global.add')}</button>
           )}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4 mb-8 w-full">
-        <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-gray-100 hover:shadow-md transition-shadow w-full">
+        <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-border-default hover:shadow-md transition-shadow w-full">
             <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl sm:text-3xl font-bold text-gray-900">{totalChildren}</span>
+            <span className="text-2xl sm:text-3xl font-bold text-primary">{totalChildren}</span>
             <span className="rounded-full p-2 bg-brand-200 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg></span>
           </div>
-          <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.children_registered')}</div>
+          <div className="text-secondary font-medium text-sm sm:text-base">{t('dashboard.children_registered')}</div>
           <div className={`${childrenChangePercent !== null && childrenChangePercent < 0 ? 'text-red-500' : 'text-brand-500'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{childrenChangePercent === null ? '—' : `${childrenChangePercent > 0 ? '+' : ''}${childrenChangePercent}%`} {t('dashboard.since_last_month')}</div>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-gray-100 hover:shadow-md transition-shadow w-full">
+        <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-border-default hover:shadow-md transition-shadow w-full">
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl sm:text-3xl font-bold text-gray-900">{presentToday}</span>
+            <span className="text-2xl sm:text-3xl font-bold text-primary">{presentToday}</span>
             <span className="bg-brand-200 text-brand-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
           </div>
-          <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.present_today')}</div>
+          <div className="text-secondary font-medium text-sm sm:text-base">{t('dashboard.present_today')}</div>
           <div className="text-brand-500 text-xs sm:text-sm font-semibold flex items-center gap-1">{t('dashboard.presence_rate')} {presentRate}%</div>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-gray-100 hover:shadow-md transition-shadow w-full">
+        <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-border-default hover:shadow-md transition-shadow w-full">
             <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl sm:text-3xl font-bold text-gray-900">{activeCaregivers}</span>
+            <span className="text-2xl sm:text-3xl font-bold text-primary">{activeCaregivers}</span>
             <span className="rounded-full p-2 bg-cream-100 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21C7 21 2 17 2 12V7a5 5 0 0 1 10 0v5c0 5-5 9-10 9z"/></svg></span>
           </div>
-          <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.active_caregivers')}</div>
-          <div className="text-gray-400 text-xs sm:text-sm font-medium flex items-center gap-1">{t('dashboard.no_change')}</div>
+          <div className="text-secondary font-medium text-sm sm:text-base">{t('dashboard.active_caregivers')}</div>
+          <div className="text-muted text-xs sm:text-sm font-medium flex items-center gap-1">{t('dashboard.no_change')}</div>
         </div>
-        <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-gray-100 hover:shadow-md transition-shadow w-full">
+        <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-border-default hover:shadow-md transition-shadow w-full">
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl sm:text-3xl font-bold text-gray-900">{weeklyAverage}%</span>
-            <span className="rounded-full p-2 bg-pink-100 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 17l4-4 4 4"/></svg></span>
+            <span className="text-2xl sm:text-3xl font-bold text-primary">{weeklyAverage}%</span>
+            <span className="rounded-full p-2 bg-pink-100 dark:bg-pink-900 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 17l4-4 4 4"/></svg></span>
           </div>
-          <div className="text-gray-500 font-medium text-sm sm:text-base">{t('dashboard.weekly_average')}</div>
+          <div className="text-secondary font-medium text-sm sm:text-base">{t('dashboard.weekly_average')}</div>
           <div className={`${weeklyChangePercent !== null && weeklyChangePercent < 0 ? 'text-red-500' : 'text-brand-500'} text-xs sm:text-sm font-semibold flex items-center gap-1`}>{weeklyChangePercent === null ? '—' : `${weeklyChangePercent > 0 ? '+' : ''}${weeklyChangePercent}%`} {t('dashboard.since_last_week')}</div>
         </div>
       </div>
-      <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 border border-gray-100 w-full mx-auto">
+      <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 border border-border-default w-full mx-auto">
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-6 gap-2">
-      <div className="text-lg md:text-2xl font-bold text-gray-900">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
+      <div className="text-lg md:text-2xl font-bold text-primary">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
           <div className="flex items-center gap-2">
-            <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></button>
-            <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+            <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-border-default bg-card hover:bg-card-hover text-secondary"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></button>
+            <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-border-default bg-card hover:bg-card-hover text-secondary"><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
           </div>
         </div>
         <div className="block sm:hidden w-full overflow-x-auto">
           <div className="grid grid-cols-7 gap-0 w-full">
             {shortWeekDays.map((day, i) => (
-              <div key={i} className="text-center text-gray-700 font-bold text-xs py-2 border-b-2 border-gray-300 uppercase tracking-wide">{day}</div>
+              <div key={i} className="text-center text-primary font-bold text-xs py-2 border-b-2 border-border-strong uppercase tracking-wide">{day}</div>
             ))}
             {monthGrid.flat().map((day, idx) => {
               const assigns = assignments.filter(a => {
@@ -459,13 +459,13 @@ export default function Dashboard() {
               return (
                 <div key={idx} className={
                   "align-top p-1 h-full flex flex-col " +
-                  (isToday ? 'border-2 border-brand-500 rounded-xl ' : 'border border-gray-300 ') +
-                  (isCurrentMonth ? 'bg-white' : 'bg-gray-100 opacity-60') +
+                  (isToday ? 'border-2 border-brand-500 rounded-xl ' : 'border border-border-strong ') +
+                  (isCurrentMonth ? 'bg-card' : 'bg-card-hover opacity-60') +
                   " relative"
                 }>
                   <div className="flex items-center justify-between mb-1">
                     <span
-                      className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-900' : 'text-gray-400')}
+                      className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-primary' : 'text-muted')}
                       onClick={() => {
                         setDayModalAssignments(assigns);
                         setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
@@ -483,13 +483,13 @@ export default function Dashboard() {
                           )}
                   </div>
                   {assigns.length === 0 ? (
-                    <div className="text-gray-300 text-xs">—</div>
+                    <div className="text-muted text-xs">—</div>
                   ) : (
                         assigns.slice(0, 2).map((a, j) => (
                       <div key={a.id} className={"flex items-center gap-1 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-brand-200/60' : 'bg-cream-100') + " shadow-sm group"}>
                         <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-brand-700' : 'bg-amber-600')}></span>
                         <span
-                          className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]"
+                          className="font-semibold text-primary text-[11px] group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[70px]"
                           title={a.child.name}
                           onClick={() => {
                             // open day modal to show all children present that day
@@ -513,7 +513,7 @@ export default function Dashboard() {
                         setDayModalSuccess(null);
                         setDayModalOpen(true);
                       }}
-                      className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200"
+                      className="text-xs text-secondary px-2 py-0.5 rounded-full bg-card-hover hover:bg-border-default"
                       title={t('common.view_more', { n: String(assigns.length - 2) })}
                     >
                       +{assigns.length - 2}
@@ -525,11 +525,11 @@ export default function Dashboard() {
           </div>
         </div>
         <div className="hidden sm:block w-full">
-          <table className="w-full table-fixed bg-white rounded-lg">
+          <table className="w-full table-fixed bg-card rounded-lg">
             <thead>
               <tr>
                 {shortWeekDays.map((day, i) => (
-                  <th key={i} className="p-2 text-center text-gray-700 font-bold text-base border-b-2 border-gray-300 uppercase tracking-wide">
+                  <th key={i} className="p-2 text-center text-primary font-bold text-base border-b-2 border-border-strong uppercase tracking-wide">
                     {day}
                   </th>
                 ))}
@@ -552,13 +552,13 @@ export default function Dashboard() {
                     return (
                       <td key={dIdx} className={
                         "align-top p-2 h-28 " +
-                        (isToday ? 'border-2 border-brand-500 rounded-xl ' : 'border border-gray-300 ') +
-                        (isCurrentMonth ? 'bg-white' : 'bg-gray-100 opacity-60') +
+                        (isToday ? 'border-2 border-brand-500 rounded-xl ' : 'border border-border-strong ') +
+                        (isCurrentMonth ? 'bg-card' : 'bg-card-hover opacity-60') +
                         " relative"
                       }>
                         <div className="flex items-center justify-between mb-1">
                           <span
-                            className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-gray-900' : 'text-gray-400')}
+                            className={"text-xs font-bold cursor-pointer " + (isCurrentMonth ? 'text-primary' : 'text-muted')}
                             onClick={() => {
                               setDayModalAssignments(assigns);
                               setDayModalDate(new Intl.DateTimeFormat(locale).format(day));
@@ -576,14 +576,14 @@ export default function Dashboard() {
                           )}
                         </div>
                         {assigns.length === 0 ? (
-                          <div className="text-gray-300 text-sm">—</div>
+                          <div className="text-muted text-sm">—</div>
                         ) : (
                           <>
                             {assigns.slice(0, 2).map((a, j) => (
                             <div key={a.id} className={"flex items-center gap-2 mb-2 px-2 py-1 rounded-lg " + (j === 0 ? 'bg-brand-200/60' : 'bg-cream-100') + " shadow-sm group"}>
                                       <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-brand-700' : 'bg-amber-600')}></span>
                                 <span
-                                      className="font-semibold text-gray-800 text-sm group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[120px]"
+                                      className="font-semibold text-primary text-sm group-hover:underline cursor-pointer hover:text-red-600 truncate max-w-[120px]"
                                       title={a.child.name}
                                       onClick={() => {
                                         setDayModalAssignments(assigns);
@@ -598,7 +598,7 @@ export default function Dashboard() {
                             {assigns.length > 2 && (
                               <button
                                 onClick={() => { setDayModalAssignments(assigns); setDayModalDate(new Intl.DateTimeFormat(locale).format(day)); setSelectedDayIds([]); setDayModalError(null); setDayModalSuccess(null); setDayModalOpen(true); }}
-                                className="text-xs text-gray-500 px-2 py-0.5 rounded-full bg-gray-100 hover:bg-gray-200"
+                                className="text-xs text-secondary px-2 py-0.5 rounded-full bg-card-hover hover:bg-border-default"
                                 title={`Voir ${assigns.length - 2} autres enfants`}
                               >
                                 +{assigns.length - 2}
@@ -620,7 +620,7 @@ export default function Dashboard() {
         <div className="text-red-600 font-semibold mb-2">{saveError}</div>
       )}
       {modalOpen && (
-        <div role="button" tabIndex={0} onClick={() => { setModalOpen(false); setSelectedId(null); setModalInitial(null); setSaveError(null); }} className="fixed inset-0 z-40 bg-white/40 backdrop-blur-sm transition-all" aria-label="Fermer la fenêtre"></div>
+        <div role="button" tabIndex={0} onClick={() => { setModalOpen(false); setSelectedId(null); setModalInitial(null); setSaveError(null); }} className="fixed inset-0 z-40 bg-card/40 backdrop-blur-sm transition-all" aria-label="Fermer la fenêtre"></div>
       )}
       <AssignmentModal
         open={modalOpen}
@@ -630,18 +630,18 @@ export default function Dashboard() {
       />
       {selectedId && (
         <div role="presentation" onClick={(e) => { if (e.target === e.currentTarget) { setSelectedId(null); } }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm relative flex flex-col items-center">
-            <button onClick={() => setSelectedId(null)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl" aria-label="Fermer">×</button>
+          <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-sm relative flex flex-col items-center">
+            <button onClick={() => setSelectedId(null)} className="absolute top-2 right-2 text-muted hover:text-primary text-2xl" aria-label="Fermer">×</button>
             <div className="flex flex-col items-center gap-4">
-                <div className="bg-red-100 rounded-full p-4 mb-2">
+                <div className="bg-red-100 dark:bg-red-900 rounded-full p-4 mb-2">
                   <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">{t('modal.delete.title')}</h3>
+                <h3 className="text-xl font-bold text-primary mb-2 text-center">{t('modal.delete.title')}</h3>
                 {/* Render child name and date on separate lines for better presentation */}
                 {selectedAssignment && (
                   <div className="text-center">
-                    <p className="text-gray-700 font-semibold">{`Voulez-vous supprimer ${selectedAssignment.child.name}`}</p>
-                    <p className="text-gray-700 font-semibold mt-1">{(() => {
+                    <p className="text-primary font-semibold">{`Voulez-vous supprimer ${selectedAssignment.child.name}`}</p>
+                    <p className="text-primary font-semibold mt-1">{(() => {
                       const d = modalInitial?.date || selectedAssignment.date;
                       let formatted = d;
                       try {
@@ -656,7 +656,7 @@ export default function Dashboard() {
               <div className="flex gap-3 w-full">
                 <button
                   onClick={() => setSelectedId(null)}
-                  className="flex-1 px-4 py-2 rounded-xl bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200 transition"
+                  className="flex-1 px-4 py-2 rounded-xl bg-card-hover text-primary font-semibold hover:bg-border-default transition"
                 >{t('modal.cancel')}</button>
                 <button
                   onClick={async () => {
@@ -700,15 +700,15 @@ export default function Dashboard() {
       )}
       {dayModalOpen && (
         <div role="presentation" onClick={(e) => { if (e.target === e.currentTarget) { setDayModalOpen(false); } }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
-            <button onClick={() => setDayModalOpen(false)} className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl">×</button>
+          <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-2xl relative">
+            <button onClick={() => setDayModalOpen(false)} className="absolute top-2 right-2 text-muted hover:text-primary text-2xl">×</button>
             <div className="py-3 px-6 flex justify-between items-center sticky top-0">
-              <h2 className="text-xl font-semibold text-gray-900">{t('page.children')}</h2>
-              <span className="text-sm text-gray-600">{dayModalDate}</span>
+              <h2 className="text-xl font-semibold text-primary">{t('page.children')}</h2>
+              <span className="text-sm text-secondary">{dayModalDate}</span>
             </div>
             <div className="mt-4">
             {dayModalAssignments.length === 0 ? (
-              <div className="text-gray-500 text-center">{t('children.none_on_date', { date: dayModalDate })}</div>
+              <div className="text-secondary text-center">{t('children.none_on_date', { date: dayModalDate })}</div>
             ) : (
               // only admins can bulk-delete; parents/nannies see read-only listing
               user && user.role !== 'parent' && user.role !== 'nanny' ? (
@@ -718,7 +718,7 @@ export default function Dashboard() {
                       <div
                         key={a.id}
                         className={"flex items-center justify-between p-3 border rounded-lg shadow-sm transition cursor-pointer " +
-                          (selectedDayIds.includes(a.id) ? 'bg-red-50 border-red-200' : 'hover:shadow-md hover:bg-gray-50')}
+                          (selectedDayIds.includes(a.id) ? 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800' : 'hover:shadow-md hover:bg-input')}
                         onClick={() => {
                           setSelectedDayIds(prev => {
                             if (prev.includes(a.id)) return prev.filter(id => id !== a.id);
@@ -727,8 +727,8 @@ export default function Dashboard() {
                         }}
                       >
                         <div>
-                          <div className="font-medium text-gray-800">{a.child.name}</div>
-                          <div className="text-xs text-gray-500">{a.nanny.name}</div>
+                          <div className="font-medium text-primary">{a.child.name}</div>
+                          <div className="text-xs text-secondary">{a.nanny.name}</div>
                         </div>
                         <input
                           type="checkbox"
@@ -748,7 +748,7 @@ export default function Dashboard() {
                   <div className="flex gap-2">
                     <button
                       disabled={selectedDayIds.length === 0}
-                      className="flex-1 bg-red-500 text-white px-3 py-1 rounded disabled:opacity-50"
+                      className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white px-3 py-1 rounded font-semibold transition disabled:opacity-50"
                       onClick={async () => {
                         if (selectedDayIds.length === 0) return;
                         try {
@@ -775,7 +775,7 @@ export default function Dashboard() {
                         }
                       }}
                     >{t('children.delete_selected')}</button>
-                    <button className="flex-1 bg-gray-300 px-3 py-1 rounded" onClick={() => setDayModalOpen(false)}>Annuler</button>
+                    <button className="flex-1 bg-input hover:bg-card-hover text-primary px-3 py-1 rounded font-medium transition" onClick={() => setDayModalOpen(false)}>Annuler</button>
                   </div>
                 </>
               ) : (
@@ -786,10 +786,10 @@ export default function Dashboard() {
                     return acc;
                   }, {} as Record<string, Assignment[]>)).map(([nannyName, assigns]) => (
                     <div key={nannyName}>
-                      <div className="font-bold text-blue-700 mb-2 text-center">{nannyName}</div>
+                      <div className="font-bold text-blue-700 dark:text-blue-300 mb-2 text-center">{nannyName}</div>
                       <ul className="space-y-2">
                         {assigns.map(a => (
-                          <li key={a.id} className="bg-blue-50 rounded-lg px-3 py-2 text-gray-800 font-semibold text-center border border-blue-100 shadow-sm">
+                          <li key={a.id} className="bg-blue-50 dark:bg-blue-950 rounded-lg px-3 py-2 text-primary font-semibold text-center border border-blue-100 dark:border-blue-800 shadow-sm">
                             {a.child.name}
                           </li>
                         ))}

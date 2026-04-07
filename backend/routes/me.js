@@ -19,6 +19,7 @@ router.get('/', requireAuth, async (req, res) => {
           tutorialCompleted: true,
           cookieConsent: true,
           language: true,
+          theme: true,
           avatarUrl: true,
           notifyByEmail: true,
           profileCompleted: true,

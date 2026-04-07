@@ -14,6 +14,7 @@ export interface User {
   tutorialCompleted?: string[];
   cookieConsent?: string | null;
   language?: string | null;
+  theme?: 'light' | 'dark' | 'system' | null;
   profileCompleted?: boolean;
   avatarUrl?: string | null;
 }

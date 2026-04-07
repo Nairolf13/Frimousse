@@ -14,7 +14,7 @@ const typeLabel: Record<string, string> = {
 const priorityStyles: Record<string, string> = {
   haute: 'bg-[#ffeaea] border-[#ffdddd]',
   moyenne: 'bg-[#fff7e6] border-[#fff1d6]',
-  basse: 'bg-[#a9ddf2] border-[#cfeef9]',
+  basse: 'bg-accent-light border-[#cfeef9]',
 };
 
 export default function ParentChildReports() {
@@ -106,25 +106,25 @@ export default function ParentChildReports() {
   }, [childId]);
 
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 w-full">
             <div className="self-start md:self-auto">
-              <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-[#a9ddf2] text-[#0b5566] hover:bg-[#cfeef9] cursor-pointer" onClick={() => navigate(-1)}>
+              <button className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border-default bg-accent-light text-[#0b5566] hover:bg-[#cfeef9] cursor-pointer" onClick={() => navigate(-1)}>
                 <span className="text-lg">←</span>
                 <span className="font-medium">Retour</span>
               </button>
             </div>
             <div className="flex-1 text-center min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 tracking-tight truncate">Rapports de {childName ?? "l'enfant"}</h1>
-              <div className="text-base sm:text-lg text-gray-500 font-medium mb-2 sm:mb-4">Consultez les rapports liés à cet enfant.</div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-primary mb-1 tracking-tight truncate">Rapports de {childName ?? "l'enfant"}</h1>
+              <div className="text-base sm:text-lg text-secondary font-medium mb-2 sm:mb-4">Consultez les rapports liés à cet enfant.</div>
             </div>
             <div className="w-24 md:w-32" />
           </div>
 
           <div className="flex flex-col gap-4 md:gap-6">
             {loading ? (
-              <div className="bg-white rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-gray-400"><svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/><path d="M12 4v4m0 12v4M4 12H0m24 0h-4"/></svg>Chargement…</div>
+              <div className="bg-card rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-muted"><svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/><path d="M12 4v4m0 12v4M4 12H0m24 0h-4"/></svg>Chargement…</div>
             ) : reports.length === 0 ? (
               <div>Aucun rapport trouvé.</div>
             ) : (
@@ -136,12 +136,12 @@ export default function ParentChildReports() {
                       <span className={`px-2 py-1 rounded-lg font-bold text-xs`} style={{ background: report.priority === 'haute' ? '#dc2626' : report.priority === 'moyenne' ? '#f59e0b' : '#0b5566', color: '#ffffff' }}>{report.priority?.toUpperCase()}</span>
                       <span className="font-bold text-xs md:text-sm ml-1 truncate" style={{ color: '#08323a' }}>{report.nanny?.name ?? '—'}</span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-2 md:mt-0 md:ml-4 whitespace-nowrap">{formatReportDate(report.date, report.time)}</div>
+                    <div className="text-xs text-secondary mt-2 md:mt-0 md:ml-4 whitespace-nowrap">{formatReportDate(report.date, report.time)}</div>
                   </div>
                   <div className="px-4 py-3 md:px-6 md:py-4">
-                    <div className="font-bold text-gray-700 mb-1 text-sm md:text-base">Résumé</div>
-                    <div className="text-gray-700 text-sm md:text-base mb-2 line-clamp-3">{report.summary}</div>
-                    <div className="text-sm text-gray-500 mt-2 line-clamp-4">{report.details}</div>
+                    <div className="font-bold text-primary mb-1 text-sm md:text-base">Résumé</div>
+                    <div className="text-primary text-sm md:text-base mb-2 line-clamp-3">{report.summary}</div>
+                    <div className="text-sm text-secondary mt-2 line-clamp-4">{report.details}</div>
                   </div>
                 </div>
               ))

@@ -78,17 +78,17 @@ function StatusBadge({ status, trialEnd, t }: { status: string; trialEnd?: strin
   const days = status === 'trialing' ? daysRemaining(trialEnd) : null;
   const map: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
     active: { label: t('subscription.status.active', 'Actif'), color: 'bg-green-100 text-green-700', icon: <HiOutlineCheckCircle className="w-4 h-4" /> },
-    trialing: { label: t('subscription.status.trialing', 'Essai'), color: 'bg-blue-100 text-blue-700', icon: <HiOutlineClock className="w-4 h-4" /> },
-    past_due: { label: t('subscription.status.past_due', 'Paiement en retard'), color: 'bg-red-100 text-red-700', icon: <HiOutlineExclamationCircle className="w-4 h-4" /> },
-    canceled: { label: t('subscription.status.canceled', 'Annulé'), color: 'bg-gray-100 text-gray-500', icon: <HiOutlineXCircle className="w-4 h-4" /> },
-    unpaid: { label: t('subscription.status.unpaid', 'Impayé'), color: 'bg-orange-100 text-orange-700', icon: <HiOutlineExclamationCircle className="w-4 h-4" /> },
+    trialing: { label: t('subscription.status.trialing', 'Essai'), color: 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300', icon: <HiOutlineClock className="w-4 h-4" /> },
+    past_due: { label: t('subscription.status.past_due', 'Paiement en retard'), color: 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300', icon: <HiOutlineExclamationCircle className="w-4 h-4" /> },
+    canceled: { label: t('subscription.status.canceled', 'Annulé'), color: 'bg-card-hover text-secondary', icon: <HiOutlineXCircle className="w-4 h-4" /> },
+    unpaid: { label: t('subscription.status.unpaid', 'Impayé'), color: 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300', icon: <HiOutlineExclamationCircle className="w-4 h-4" /> },
   };
-  const s = map[status] || { label: status, color: 'bg-gray-100 text-gray-500', icon: null };
+  const s = map[status] || { label: status, color: 'bg-card-hover text-secondary', icon: null };
   return (
     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${s.color}`}>
       {s.icon}{s.label}
       {days !== null && (
-        <span className="ml-0.5 bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+        <span className="ml-0.5 bg-blue-200 text-blue-800 dark:text-blue-200 px-1.5 py-0.5 rounded-full text-[10px] font-bold">
           {days}j
         </span>
       )}
@@ -203,17 +203,17 @@ export default function SubscriptionManagement() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 md:pl-64">
-        <div className="bg-white rounded-2xl shadow p-8 max-w-md text-center">
-          <HiOutlineXCircle className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">{t('subscription.forbidden', 'Cette page est réservée aux administrateurs.')}</p>
+      <div className="min-h-screen flex items-center justify-center bg-input md:pl-64">
+        <div className="bg-card rounded-2xl shadow p-8 max-w-md text-center">
+          <HiOutlineXCircle className="w-12 h-12 text-muted mx-auto mb-4" />
+          <p className="text-secondary">{t('subscription.forbidden', 'Cette page est réservée aux administrateurs.')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f7fa] p-2 sm:p-4 md:pl-64 w-full">
+    <div className="min-h-screen bg-surface p-2 sm:p-4 md:pl-64 w-full">
       <div className="max-w-3xl mx-auto px-0 sm:px-2 md:px-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 w-full">
           <div className="flex items-start gap-3">
@@ -222,20 +222,20 @@ export default function SubscriptionManagement() {
             </div>
             <div className="pt-0.5">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('subscription.title', 'Mon abonnement')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('subscription.subtitle', 'Gérez votre plan, vos informations de facturation et suivez le statut de votre abonnement.')}</p>
+              <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('subscription.subtitle', 'Gérez votre plan, vos informations de facturation et suivez le statut de votre abonnement.')}</p>
             </div>
           </div>
         </div>
 
         {loading && (
-          <div className="bg-white rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-gray-400">
+          <div className="bg-card rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-muted">
             <HiOutlineRefresh className="w-5 h-5 animate-spin" />
             {t('subscription.loading', 'Chargement…')}
           </div>
         )}
 
         {!loading && error && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-700 text-sm flex items-center gap-3">
+          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-2xl p-6 text-red-700 dark:text-red-300 text-sm flex items-center gap-3">
             <HiOutlineExclamationCircle className="w-5 h-5 flex-shrink-0" />
             {error}
           </div>
@@ -243,28 +243,28 @@ export default function SubscriptionManagement() {
 
         {!loading && !error && !sub && (
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-card rounded-2xl shadow-sm border border-border-default p-6">
               <div className="flex items-center gap-3 mb-2">
                 <HiOutlineCreditCard className="w-6 h-6 text-brand-400" />
-                <div className="font-semibold text-gray-900">{t('subscription.no_plan.title', 'Choisissez votre plan')}</div>
+                <div className="font-semibold text-primary">{t('subscription.no_plan.title', 'Choisissez votre plan')}</div>
               </div>
-              <p className="text-sm text-gray-500 mb-5">{t('subscription.no_plan.subtitle', 'Aucun abonnement actif. Sélectionnez un plan ci-dessous pour accéder à toutes les fonctionnalités.')}</p>
+              <p className="text-sm text-secondary mb-5">{t('subscription.no_plan.subtitle', 'Aucun abonnement actif. Sélectionnez un plan ci-dessous pour accéder à toutes les fonctionnalités.')}</p>
               {planError && (
-                <div className="mb-4 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-red-700 text-sm flex items-center gap-2">
+                <div className="mb-4 bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 rounded-xl px-4 py-3 text-red-700 dark:text-red-300 text-sm flex items-center gap-2">
                   <HiOutlineExclamationCircle className="w-4 h-4" />{planError}
                 </div>
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(['essentiel', 'pro'] as const).map(plan => (
-                  <div key={plan} className="relative border border-gray-200 rounded-xl p-5 flex flex-col gap-3">
+                  <div key={plan} className="relative border border-border-default rounded-xl p-5 flex flex-col gap-3">
                     <div>
-                      <div className="font-bold text-gray-900 text-base">{PLAN_LABELS[plan]}</div>
+                      <div className="font-bold text-primary text-base">{PLAN_LABELS[plan]}</div>
                       <div className="text-sm text-brand-600 font-semibold mt-0.5">{PLAN_PRICES[plan]}</div>
                     </div>
                     <ul className="space-y-2 flex-1">
                       {PLAN_FEATURES[plan].map(f => (
-                        <li key={f.key} className={`flex items-center gap-2 text-sm ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>
-                          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-gray-100 text-gray-300'}`}>
+                        <li key={f.key} className={`flex items-center gap-2 text-sm ${f.included ? 'text-primary' : 'text-muted'}`}>
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-card-hover text-muted'}`}>
                             {f.included ? (
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
                             ) : (
@@ -296,13 +296,13 @@ export default function SubscriptionManagement() {
         {!loading && !error && sub && (
           <div className="space-y-6">
             {/* Current plan card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-card rounded-2xl shadow-sm border border-border-default p-6">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <div className="text-xs text-gray-400 uppercase font-semibold mb-1">{t('subscription.current_plan', 'Plan actuel')}</div>
-                  <div className="text-2xl font-bold text-gray-900">{PLAN_LABELS[sub.plan] || sub.plan}</div>
+                  <div className="text-xs text-muted uppercase font-semibold mb-1">{t('subscription.current_plan', 'Plan actuel')}</div>
+                  <div className="text-2xl font-bold text-primary">{PLAN_LABELS[sub.plan] || sub.plan}</div>
                   {PLAN_PRICES[sub.plan] && (
-                    <div className="text-sm text-gray-500 mt-0.5">{PLAN_PRICES[sub.plan]}</div>
+                    <div className="text-sm text-secondary mt-0.5">{PLAN_PRICES[sub.plan]}</div>
                   )}
                 </div>
                 <StatusBadge status={sub.status} trialEnd={sub.trialEnd} t={t} />
@@ -310,27 +310,27 @@ export default function SubscriptionManagement() {
 
               <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 {sub.status === 'trialing' && sub.trialEnd && (
-                  <div className="bg-blue-50 rounded-xl px-4 py-3">
+                  <div className="bg-blue-50 dark:bg-blue-950 rounded-xl px-4 py-3">
                     <div className="text-xs text-blue-400 font-medium mb-0.5">{t('subscription.trial_end', "Fin de la période d'essai")}</div>
-                    <div className="font-semibold text-blue-800">{formatDate(sub.trialEnd)}</div>
+                    <div className="font-semibold text-blue-800 dark:text-blue-200">{formatDate(sub.trialEnd)}</div>
                   </div>
                 )}
                 {sub.currentPeriodEnd && sub.status !== 'canceled' && (
-                  <div className="bg-gray-50 rounded-xl px-4 py-3">
-                    <div className="text-xs text-gray-400 font-medium mb-0.5">
+                  <div className="bg-input rounded-xl px-4 py-3">
+                    <div className="text-xs text-muted font-medium mb-0.5">
                       {sub.cancelAtPeriodEnd ? t('subscription.access_until', "Accès jusqu'au") : t('subscription.next_renewal', 'Prochain renouvellement')}
                     </div>
-                    <div className="font-semibold text-gray-800">{formatDate(sub.currentPeriodEnd)}</div>
+                    <div className="font-semibold text-primary">{formatDate(sub.currentPeriodEnd)}</div>
                   </div>
                 )}
                 {sub.cancelAtPeriodEnd && (
-                  <div className="sm:col-span-2 bg-orange-50 border border-orange-100 rounded-xl px-4 py-3 text-orange-700 text-xs font-medium flex items-center gap-2">
+                  <div className="sm:col-span-2 bg-orange-50 dark:bg-orange-950 border border-orange-100 dark:border-orange-800 rounded-xl px-4 py-3 text-orange-700 dark:text-orange-300 text-xs font-medium flex items-center gap-2">
                     <HiOutlineExclamationCircle className="w-4 h-4 flex-shrink-0" />
                     {t('subscription.cancel_warning', "Résiliation programmée — votre accès reste actif jusqu'à la fin de la période en cours.")}
                   </div>
                 )}
                 {sub.status === 'past_due' && (
-                  <div className="sm:col-span-2 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-red-700 text-xs font-medium flex items-center gap-2">
+                  <div className="sm:col-span-2 bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 rounded-xl px-4 py-3 text-red-700 dark:text-red-300 text-xs font-medium flex items-center gap-2">
                     <HiOutlineExclamationCircle className="w-4 h-4 flex-shrink-0" />
                     {t('subscription.past_due_warning', 'Paiement en échec — mettez à jour votre moyen de paiement pour éviter la suspension.')}
                   </div>
@@ -340,11 +340,11 @@ export default function SubscriptionManagement() {
               {/* Features */}
               {PLAN_FEATURES[sub.plan] && (
                 <div className="mt-5">
-                  <div className="text-xs text-gray-400 font-semibold uppercase mb-2">{t('subscription.features_title', 'Inclus dans votre plan')}</div>
+                  <div className="text-xs text-muted font-semibold uppercase mb-2">{t('subscription.features_title', 'Inclus dans votre plan')}</div>
                   <ul className="space-y-2">
                     {PLAN_FEATURES[sub.plan].map(f => (
-                      <li key={t(f.key, f.text)} className={`flex items-center gap-2 text-sm ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-gray-100 text-gray-300'}`}>
+                      <li key={t(f.key, f.text)} className={`flex items-center gap-2 text-sm ${f.included ? 'text-primary' : 'text-muted'}`}>
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-card-hover text-muted'}`}>
                           {f.included ? (
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
                           ) : (
@@ -361,11 +361,11 @@ export default function SubscriptionManagement() {
 
             {/* Billing portal */}
             {portalUrl && (
-              <div className="relative bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="relative bg-card rounded-2xl shadow-sm border border-border-default p-6">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
-                    <div className="font-semibold text-gray-900 text-sm">{t('subscription.billing.title', 'Facturation & moyen de paiement')}</div>
-                    <div className="text-xs text-gray-400 mt-0.5">{t('subscription.billing.subtitle', 'Gérez votre carte, consultez vos factures Stripe et modifiez vos informations.')}</div>
+                    <div className="font-semibold text-primary text-sm">{t('subscription.billing.title', 'Facturation & moyen de paiement')}</div>
+                    <div className="text-xs text-muted mt-0.5">{t('subscription.billing.subtitle', 'Gérez votre carte, consultez vos factures Stripe et modifiez vos informations.')}</div>
                   </div>
                   <a
                     href={portalUrl}
@@ -386,25 +386,25 @@ export default function SubscriptionManagement() {
 
             {/* Upgrade from decouverte — redirect to Stripe Checkout */}
             {sub.plan === 'decouverte' && ['active', 'trialing'].includes(sub.status) && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <div className="font-semibold text-gray-900 text-sm mb-1">{t('subscription.upgrade.title', 'Passer à un plan payant')}</div>
-                <div className="text-xs text-gray-400 mb-4">{t('subscription.upgrade.subtitle', "Choisissez un plan pour continuer après la période d'essai.")}</div>
+              <div className="bg-card rounded-2xl shadow-sm border border-border-default p-6">
+                <div className="font-semibold text-primary text-sm mb-1">{t('subscription.upgrade.title', 'Passer à un plan payant')}</div>
+                <div className="text-xs text-muted mb-4">{t('subscription.upgrade.subtitle', "Choisissez un plan pour continuer après la période d'essai.")}</div>
                 {planError && (
-                  <div className="mb-4 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-red-700 text-sm flex items-center gap-2">
+                  <div className="mb-4 bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 rounded-xl px-4 py-3 text-red-700 dark:text-red-300 text-sm flex items-center gap-2">
                     <HiOutlineExclamationCircle className="w-4 h-4" />{planError}
                   </div>
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(['essentiel', 'pro'] as const).map(plan => (
-                    <div key={plan} className="relative border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+                    <div key={plan} className="relative border border-border-default rounded-xl p-4 flex flex-col gap-3">
                       <div>
-                        <div className="font-semibold text-gray-900">{PLAN_LABELS[plan]}</div>
-                        <div className="text-sm text-gray-500">{PLAN_PRICES[plan]}</div>
+                        <div className="font-semibold text-primary">{PLAN_LABELS[plan]}</div>
+                        <div className="text-sm text-secondary">{PLAN_PRICES[plan]}</div>
                       </div>
                       <ul className="space-y-1.5 flex-1">
                         {PLAN_FEATURES[plan].map(f => (
-                          <li key={f.key} className={`flex items-center gap-2 text-xs ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>
-                            <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-gray-100 text-gray-300'}`}>
+                          <li key={f.key} className={`flex items-center gap-2 text-xs ${f.included ? 'text-primary' : 'text-muted'}`}>
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-card-hover text-muted'}`}>
                               {f.included ? (
                                 <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
                               ) : (
@@ -434,8 +434,8 @@ export default function SubscriptionManagement() {
 
             {/* Change plan — only for active/trialing, not canceled */}
             {['active', 'trialing'].includes(sub.status) && sub.plan !== 'decouverte' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <div className="font-semibold text-gray-900 text-sm mb-1">{t('subscription.change.title', 'Changer de plan')}</div>
+              <div className="bg-card rounded-2xl shadow-sm border border-border-default p-6">
+                <div className="font-semibold text-primary text-sm mb-1">{t('subscription.change.title', 'Changer de plan')}</div>
 
                 {/* How it works */}
                 <div className="mb-4 bg-brand-50 border border-brand-100 rounded-xl px-4 py-3 space-y-1.5">
@@ -465,22 +465,22 @@ export default function SubscriptionManagement() {
                   </div>
                 )}
                 {planError && (
-                  <div className="mb-4 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-red-700 text-sm flex items-center gap-2">
+                  <div className="mb-4 bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 rounded-xl px-4 py-3 text-red-700 dark:text-red-300 text-sm flex items-center gap-2">
                     <HiOutlineExclamationCircle className="w-4 h-4" />{planError}
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {(['essentiel', 'pro'] as const).filter(p => p !== sub.plan).map(plan => (
-                    <div key={plan} className="relative border border-gray-200 rounded-xl p-4 flex flex-col gap-3">
+                    <div key={plan} className="relative border border-border-default rounded-xl p-4 flex flex-col gap-3">
                       <div>
-                        <div className="font-semibold text-gray-900">{PLAN_LABELS[plan]}</div>
-                        <div className="text-sm text-gray-500">{PLAN_PRICES[plan]}</div>
+                        <div className="font-semibold text-primary">{PLAN_LABELS[plan]}</div>
+                        <div className="text-sm text-secondary">{PLAN_PRICES[plan]}</div>
                       </div>
                       <ul className="space-y-1.5 flex-1">
                         {PLAN_FEATURES[plan].map(f => (
-                          <li key={t(f.key, f.text)} className={`flex items-center gap-2 text-xs ${f.included ? 'text-gray-700' : 'text-gray-400'}`}>
-                            <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-gray-100 text-gray-300'}`}>
+                          <li key={t(f.key, f.text)} className={`flex items-center gap-2 text-xs ${f.included ? 'text-primary' : 'text-muted'}`}>
+                            <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${f.included ? 'bg-brand-50 text-brand-500' : 'bg-card-hover text-muted'}`}>
                               {f.included ? (
                                 <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
                               ) : (
@@ -493,7 +493,7 @@ export default function SubscriptionManagement() {
                       </ul>
                       {confirmPlan === plan ? (
                         <div className="mt-1 space-y-2">
-                          <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 text-xs text-amber-800">
+                          <div className="bg-amber-50 dark:bg-amber-950 border border-amber-100 dark:border-amber-800 rounded-lg px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
                             {t('subscription.change.confirm_msg', 'En confirmant, votre carte enregistrée sera débitée au prorata des jours restants ce mois-ci. Le changement est immédiat et sans interruption de service.')}
                           </div>
                           <div className="flex gap-2">
@@ -506,7 +506,7 @@ export default function SubscriptionManagement() {
                             </button>
                             <button
                               onClick={() => setConfirmPlan(null)}
-                              className="flex-1 border border-gray-200 px-3 py-2 rounded-lg text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+                              className="flex-1 border border-border-default px-3 py-2 rounded-lg text-xs text-secondary hover:bg-input transition-colors"
                             >
                               {t('global.cancel', 'Annuler')}
                             </button>

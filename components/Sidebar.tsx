@@ -5,7 +5,8 @@ import { useEffect, useState, useRef, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import AvatarCropper from './AvatarCropper';
 import { useI18n } from '../src/lib/useI18n';
-import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell, HiOutlineCurrencyDollar, HiOutlineChatAlt, HiOutlineOfficeBuilding, HiOutlineCreditCard, HiOutlineChatAlt2 } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineBell, HiOutlineCurrencyDollar, HiOutlineChatAlt, HiOutlineOfficeBuilding, HiOutlineCreditCard, HiOutlineChatAlt2, HiOutlineSun, HiOutlineMoon } from 'react-icons/hi';
+import { useTheme } from '../hooks/useTheme';
 import { FaRobot } from 'react-icons/fa';
 import MobileMenu from './MobileMenu';
 // caching and rate-limit managed by hooks
@@ -78,6 +79,7 @@ export default function Sidebar() {
   const location = useLocation();
   const { user, setUser } = useAuth();
   const { t } = useI18n();
+  const { resolved, setTheme } = useTheme();
   const [supportCount, setSupportCount] = useState<number | null>(null);
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -222,16 +224,16 @@ export default function Sidebar() {
     <>
       <MobileMenu />
       {!isShortLandscape && (
-        <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-white/95 backdrop-blur-sm shadow-lg flex-col p-0 border-r border-gray-100/80 z-30">
+        <aside className="hidden md:flex fixed top-0 left-0 h-screen w-64 bg-card/95 backdrop-blur-sm shadow-lg flex-col p-0 border-r border-border-default/80 z-30">
          <div className="flex items-center gap-3 px-6 pt-7 pb-5">
           <div className="w-14 h-14 flex items-center justify-center">
             <img src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-12 h-12 object-contain" />
           </div>
          <div className="flex flex-col">
-           <span data-tour="sidebar-logo" className="font-extrabold text-lg text-gray-900 leading-tight">{displayCenterName(centerName)}</span>
+           <span data-tour="sidebar-logo" className="font-extrabold text-lg text-primary leading-tight">{displayCenterName(centerName)}</span>
          </div>
         </div>
-        <div className="mx-4 mb-3 border-t border-gray-100"></div>
+        <div className="mx-4 mb-3 border-t border-border-default"></div>
         <nav className="flex-1 px-3 overflow-y-auto">
           <ul className="space-y-0.5">
             {getNavLinks(user ?? null, t).map(link => (
@@ -239,7 +241,7 @@ export default function Sidebar() {
                 <Link
                   to={link.to}
                   data-tour={`nav-${link.to.replace(/^\//, '').replace(/\//g, '-') || 'dashboard'}`}
-                  className={`flex items-center px-3 py-2.5 rounded-xl font-medium transition-all duration-150 text-sm ${location.pathname === link.to ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
+                  className={`flex items-center px-3 py-2.5 rounded-xl font-medium transition-all duration-150 text-sm ${location.pathname === link.to ? 'bg-accent-light text-accent font-semibold' : 'text-secondary hover:bg-input hover:text-primary'}`}
                 >
                   {link.icon}
                   <span className="flex-1">{link.label}</span>
@@ -257,7 +259,7 @@ export default function Sidebar() {
             ))}
           </ul>
         </nav>
-        <div className="mx-4 border-t border-gray-100"></div>
+        <div className="mx-4 border-t border-border-default"></div>
         <div className="flex items-center gap-3 px-5 py-5">
           <div className="relative">
             <div className="w-12 h-12 rounded-full overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-sm font-semibold text-[#0b5566]">{
@@ -271,7 +273,7 @@ export default function Sidebar() {
               type="button"
               onClick={() => avatarInputRef.current?.click()}
               disabled={avatarUploading}
-              className="absolute -right-1 -bottom-1 w-6 h-6 rounded-full bg-white border border-gray-200 text-xs text-[#0b5566] flex items-center justify-center shadow-sm hover:bg-gray-50"
+              className="absolute -right-1 -bottom-1 w-6 h-6 rounded-full bg-card border border-border-default text-xs text-[#0b5566] flex items-center justify-center shadow-sm hover:bg-input"
               title="Modifier la photo de profil"
             >
               {avatarUploading ? '...' : '✎'}
@@ -285,9 +287,17 @@ export default function Sidebar() {
             />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-gray-900 leading-tight text-sm truncate">{userName}</div>
-            <div className="text-xs text-gray-400 capitalize">{userRole}</div>
+            <div className="font-semibold text-primary leading-tight text-sm truncate">{userName}</div>
+            <div className="text-xs text-muted capitalize">{userRole}</div>
           </div>
+          <button
+            type="button"
+            onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
+            className="flex-shrink-0 p-1.5 rounded-lg text-muted hover:text-primary hover:bg-input transition"
+            title={resolved === 'dark' ? 'Mode clair' : 'Mode sombre'}
+          >
+            {resolved === 'dark' ? <HiOutlineSun className="w-5 h-5" /> : <HiOutlineMoon className="w-5 h-5" />}
+          </button>
         </div>
         </aside>
       )}

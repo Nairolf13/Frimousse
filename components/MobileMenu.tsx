@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { HiOutlineViewGrid, HiOutlineBell, HiOutlineChatAlt, HiOutlineChatAlt2, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar, HiOutlineOfficeBuilding, HiOutlineCreditCard } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineBell, HiOutlineChatAlt, HiOutlineChatAlt2, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar, HiOutlineOfficeBuilding, HiOutlineCreditCard, HiOutlineSun, HiOutlineMoon } from 'react-icons/hi';
+import { useTheme } from '../hooks/useTheme';
 import { FaRobot } from 'react-icons/fa';
 import { useAuth } from '../src/context/AuthContext';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -68,6 +69,20 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan
   ];
 }
 
+function ThemeToggleButton() {
+  const { resolved, setTheme } = useTheme();
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
+      className="flex-shrink-0 p-1.5 rounded-lg text-muted hover:text-primary hover:bg-input transition"
+      title={resolved === 'dark' ? 'Mode clair' : 'Mode sombre'}
+    >
+      {resolved === 'dark' ? <HiOutlineSun className="w-5 h-5" /> : <HiOutlineMoon className="w-5 h-5" />}
+    </button>
+  );
+}
+
 function MobileMenuButton({ showOnMd = false, onOpen }: { showOnMd?: boolean; onOpen: () => void }) {
   const [show, setShow] = useState(false);
   const { t } = useI18n();
@@ -110,11 +125,11 @@ function MobileMenuButton({ showOnMd = false, onOpen }: { showOnMd?: boolean; on
   if (!show) return null;
   return (
     <button
-      className="fixed top-3 right-3 z-60 bg-white rounded-full p-1.5 shadow-md border border-gray-200"
+      className="fixed top-3 right-3 z-60 bg-card rounded-full p-1.5 shadow-md border border-border-default"
       onClick={onOpen}
       aria-label={t('menu.open')}
     >
-      <HiOutlineMenu className="w-5 h-5 text-gray-700" />
+      <HiOutlineMenu className="w-5 h-5 text-primary" />
     </button>
   );
 }
@@ -284,21 +299,21 @@ export default function MobileMenu() {
       {/* show button on small screens, and also on short landscape (e.g. mobile landscape)
           but hide the floating burger when the overlay menu is open (so it doesn't remain fixed) */}
       {!open && <MobileMenuButton showOnMd={true} onOpen={() => setOpen(true)} />}
-      <div className="fixed inset-0 z-[9999] bg-white flex flex-col" style={{ WebkitOverflowScrolling: 'touch', visibility: open ? 'visible' : 'hidden', pointerEvents: open ? 'auto' : 'none', opacity: open ? 1 : 0 }}>
+      <div className="fixed inset-0 z-[9999] bg-card flex flex-col" style={{ WebkitOverflowScrolling: 'touch', visibility: open ? 'visible' : 'hidden', pointerEvents: open ? 'auto' : 'none', opacity: open ? 1 : 0 }}>
           <div className="flex items-center gap-3 px-6 pt-7 pb-5">
             <div className="w-12 h-12 rounded-2xl overflow-hidden bg-brand-50 flex items-center justify-center ring-1 ring-brand-100 shadow-sm">
               <img src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-8 h-8 object-contain" />
             </div>
-            <span data-tour="sidebar-logo" className="font-extrabold text-lg text-gray-900">{displayCenterName(centerName)}</span>
+            <span data-tour="sidebar-logo" className="font-extrabold text-lg text-primary">{displayCenterName(centerName)}</span>
             <button
-              className="ml-auto bg-gray-100 rounded-xl p-2.5 border border-gray-200 hover:bg-gray-200 transition-colors"
+              className="ml-auto bg-card-hover rounded-xl p-2.5 border border-border-default hover:bg-input transition-colors"
               onClick={() => setOpen(false)}
               aria-label={t('menu.close')}
             >
-              <HiOutlineX className="w-5 h-5 text-gray-600" />
+              <HiOutlineX className="w-5 h-5 text-secondary" />
             </button>
           </div>
-          <div className="mx-4 mb-2 border-t border-gray-100"></div>
+          <div className="mx-4 mb-2 border-t border-border-default"></div>
           <nav className="flex-1 px-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
             <ul className="space-y-0.5" style={{ paddingBottom: '96px' }}>
               {getNavLinks(user ?? null, t).map((link) => (
@@ -306,7 +321,7 @@ export default function MobileMenu() {
                   <Link
                     to={link.to}
                     data-tour={`nav-${link.to.replace(/^\//, '').replace(/\//g, '-') || 'dashboard'}`}
-                    className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-150 text-base ${location.pathname === link.to ? 'bg-brand-50 text-brand-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'}`}
+                    className={`flex items-center px-4 py-3 rounded-xl font-medium transition-all duration-150 text-base ${location.pathname === link.to ? 'bg-accent-light text-accent font-semibold' : 'text-secondary hover:bg-input'}`}
                     onClick={(e) => { e.preventDefault(); if (!tutorialKeepOpenRef.current) setOpen(false); navigate(link.to); }}
                   >
                     {link.icon}
@@ -325,7 +340,7 @@ export default function MobileMenu() {
               ))}
             </ul>
           </nav>
-          <div className="mx-4 border-t border-gray-100"></div>
+          <div className="mx-4 border-t border-border-default"></div>
           <div className="flex items-center gap-3 px-5 py-5">
             <div className="w-10 h-10 rounded-full overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-sm font-semibold text-[#0b5566] flex-shrink-0">
               {(user as { avatarUrl?: string } | null)?.avatarUrl ? (
@@ -334,10 +349,11 @@ export default function MobileMenu() {
                 (user?.name || 'U').split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase()
               )}
             </div>
-            <div>
-              <div className="font-semibold text-gray-900 leading-tight text-sm">{user?.name || 'Utilisateur'}</div>
-              <div className="text-xs text-gray-400 capitalize">{user?.role ? user.role.replace('_', ' ') : 'Utilisateur'}</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold text-primary leading-tight text-sm">{user?.name || 'Utilisateur'}</div>
+              <div className="text-xs text-muted capitalize">{user?.role ? user.role.replace('_', ' ') : 'Utilisateur'}</div>
             </div>
+            <ThemeToggleButton />
           </div>
         </div>
     </>
