@@ -43,7 +43,7 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
     : 'text-gray-600 hover:text-brand-600 hover:bg-gray-50';
 
   const ctaBtn = isDark
-    ? 'bg-white text-brand-700 hover:shadow-lg hover:shadow-white/20 hover:scale-[1.03] active:scale-[0.98]'
+    ? 'bg-white !text-brand-700 hover:shadow-lg hover:shadow-white/20 hover:scale-[1.03] active:scale-[0.98]'
     : 'bg-brand-500 !text-white hover:bg-brand-600 shadow-sm hover:shadow-md';
 
   const hamburgerColor = isDark ? 'text-white' : 'text-gray-700';
@@ -112,7 +112,7 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
                     key={link.to}
                     to={link.to}
                     onClick={() => setMobileOpen(false)}
-                    className={`text-base font-semibold px-4 py-3 rounded-xl transition-all ${isActive ? 'text-brand-600 bg-brand-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                    className={`text-base font-semibold px-4 py-3 rounded-xl transition-all ${isActive ? '!text-brand-600 bg-brand-50' : '!text-gray-700 hover:bg-gray-50'}`}
                   >
                     {link.label}
                   </Link>
@@ -124,15 +124,14 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
               <Link
                 to="/login"
                 onClick={() => setMobileOpen(false)}
-                className="text-center text-base font-bold text-brand-600 px-4 py-3 rounded-xl border-2 border-brand-200 bg-brand-50 hover:bg-brand-100 hover:border-brand-300 transition-all"
+                className="text-center text-base font-bold !text-brand-600 px-4 py-3 rounded-xl border-2 border-brand-200 bg-brand-50 hover:bg-brand-100 hover:border-brand-300 transition-all"
               >
                 Connexion
               </Link>
               <Link
                 to="/register"
                 onClick={() => setMobileOpen(false)}
-                className="text-center text-base font-bold bg-brand-500 text-white px-4 py-3.5 rounded-xl hover:bg-brand-600 transition-all shadow-sm"
-                style={{ color: '#ffffff' }}
+                className="text-center text-base font-bold bg-brand-500 !text-white px-4 py-3.5 rounded-xl hover:bg-brand-600 transition-all shadow-sm"
               >
                 Essai gratuit
               </Link>
