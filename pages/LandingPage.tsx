@@ -129,7 +129,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in">
-                  <a href="/register" className="group bg-white text-brand-700 px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-black/10 hover:shadow-2xl transition-all hover:-translate-y-0.5 inline-flex items-center gap-3 w-full sm:w-auto justify-center">
+                  <a href="/register" className="group bg-white !text-brand-700 px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-black/10 hover:shadow-2xl transition-all hover:-translate-y-0.5 inline-flex items-center gap-3 w-full sm:w-auto justify-center">
                     Essayer gratuitement
                     <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
                   </a>
@@ -691,7 +691,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
                 <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-6">Prêt à simplifier votre gestion&nbsp;?</h2>
                 <p className="text-white text-lg mb-10 max-w-xl mx-auto leading-relaxed">Rejoignez des dizaines d'associations et de familles déjà convaincues. Inscription rapide, sans engagement.</p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                  <a href="/register" className="group bg-white text-brand-700 px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-black/10 hover:shadow-2xl transition-all hover:-translate-y-0.5 inline-flex items-center gap-3">
+                  <a href="/register" className="group bg-white !text-brand-700 px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-black/10 hover:shadow-2xl transition-all hover:-translate-y-0.5 inline-flex items-center gap-3">
                     Créer mon compte gratuit
                     <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
                   </a>
