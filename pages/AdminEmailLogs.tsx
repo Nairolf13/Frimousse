@@ -324,21 +324,21 @@ export default function AdminEmailLogs() {
     if (s === 'sent' || s === 'ok' || s === 'delivered') {
       return {
         label: t('emaillogs.status.sent'),
-        badge: 'bg-green-100 text-green-800',
+        badge: 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200',
         icon: <HiOutlineCheck className="w-4 h-4 mr-2" />
       };
     }
     if (s === 'pending' || s === 'processing' || s === 'in_progress' || s === 'queued') {
       return {
         label: t('emaillogs.status.pending'),
-        badge: 'bg-yellow-100 text-yellow-800',
+        badge: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200',
         icon: <HiOutlineClock className="w-4 h-4 mr-2" />
       };
     }
     // default to error
     return {
       label: t('emaillogs.status.error'),
-      badge: 'bg-red-100 text-red-800',
+        badge: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200',
       icon: <HiOutlineExclamationCircle className="w-4 h-4 mr-2" />
     };
   };
@@ -346,7 +346,7 @@ export default function AdminEmailLogs() {
   // expanded state removed — mobile cards now show full info with actions
 
   return (
-    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
 
         {/* Titre principal */}
@@ -355,8 +355,8 @@ export default function AdminEmailLogs() {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
           </div>
           <div className="pt-0.5">
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('settings.title')}</h1>
-            <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('settings.description')}</p>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-primary dark:text-accent">{t('settings.title')}</h1>
+            <p className="text-xs sm:text-sm text-muted mt-0.5">{t('settings.description')}</p>
           </div>
         </div>
 
@@ -364,83 +364,83 @@ export default function AdminEmailLogs() {
         <div className="flex items-center gap-3 mb-6">
           <button
             onClick={() => navigate('/settings')}
-            className="flex items-center justify-center w-9 h-9 rounded-xl bg-white shadow border border-gray-100 text-gray-500 hover:text-[#0b5566] hover:border-[#0b5566] transition"
+            className="flex items-center justify-center w-9 h-9 rounded-xl bg-card shadow border border-border-default text-secondary hover:text-accent hover:border-accent transition"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
           </button>
-          <h2 className="text-lg font-bold text-[#0b5566]">{t('admin.emaillogs.title')}</h2>
+          <h2 className="text-lg font-bold text-primary dark:text-accent">{t('admin.emaillogs.title')}</h2>
         </div>
 
         {/* Stats rapides */}
         <div className="grid grid-cols-3 gap-3 mb-4">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#e6f4f7] flex items-center justify-center flex-shrink-0">
-              <HiOutlineDocumentText className="w-5 h-5 text-[#0b5566]" />
+          <div className="bg-card rounded-2xl shadow-sm border border-border-default p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-input flex items-center justify-center flex-shrink-0">
+              <HiOutlineDocumentText className="w-5 h-5 text-accent" />
             </div>
             <div>
-              <div className="text-xl font-extrabold text-gray-800">{loading ? '…' : (total ?? logs.length)}</div>
-              <div className="text-xs text-gray-400">{t('admin.emaillogs.stat.total')}</div>
+              <div className="text-xl font-extrabold text-primary">{loading ? '…' : (total ?? logs.length)}</div>
+              <div className="text-xs text-muted">{t('admin.emaillogs.stat.total')}</div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-              <HiOutlineCheck className="w-5 h-5 text-emerald-500" />
+          <div className="bg-card rounded-2xl shadow-sm border border-border-default p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center flex-shrink-0">
+              <HiOutlineCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
-              <div className="text-xl font-extrabold text-gray-800">{loading ? '…' : logs.filter(l => l.status === 'sent').length}</div>
-              <div className="text-xs text-gray-400">{t('admin.emaillogs.stat.sent')}</div>
+              <div className="text-xl font-extrabold text-primary">{loading ? '…' : logs.filter(l => l.status === 'sent').length}</div>
+              <div className="text-xs text-muted">{t('admin.emaillogs.stat.sent')}</div>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-              <HiOutlineExclamationCircle className="w-5 h-5 text-red-400" />
+          <div className="bg-card rounded-2xl shadow-sm border border-border-default p-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
+              <HiOutlineExclamationCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
             </div>
             <div>
-              <div className="text-xl font-extrabold text-gray-800">{loading ? '…' : logs.filter(l => l.status !== 'sent' && l.status !== 'pending').length}</div>
-              <div className="text-xs text-gray-400">{t('admin.emaillogs.stat.errors')}</div>
+              <div className="text-xl font-extrabold text-primary">{loading ? '…' : logs.filter(l => l.status !== 'sent' && l.status !== 'pending').length}</div>
+              <div className="text-xs text-muted">{t('admin.emaillogs.stat.errors')}</div>
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm px-4 py-3">
+          <div className="mb-4 flex items-center gap-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl text-sm px-4 py-3">
             <HiOutlineExclamationCircle className="w-4 h-4 flex-shrink-0" />{error}
           </div>
         )}
 
         {/* Filtres */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4">
+        <div className="bg-card rounded-2xl shadow-sm border border-border-default p-4 mb-4">
           <div className="flex flex-col gap-3">
             <div className="flex flex-col sm:flex-row gap-3">
               {/* Recherche */}
-              <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 flex-1 focus-within:border-[#0b5566] focus-within:ring-2 focus-within:ring-[#0b5566]/10 transition">
-                <HiOutlineSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <input aria-label="search" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none w-full" placeholder={t('admin.emaillogs.search_placeholder')} />
-                {query && <button onClick={() => setQuery('')} className="text-gray-400 hover:text-gray-600 flex-shrink-0">✕</button>}
+              <div className="flex items-center gap-2 bg-input border border-border-default rounded-xl px-3 py-2.5 flex-1 focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10 transition">
+                <HiOutlineSearch className="w-4 h-4 text-muted flex-shrink-0" />
+                <input aria-label="search" value={query} onChange={e => setQuery(e.target.value)} className="bg-transparent text-sm text-primary placeholder-muted outline-none w-full" placeholder={t('admin.emaillogs.search_placeholder')} />
+                {query && <button onClick={() => setQuery('')} className="text-muted hover:text-secondary flex-shrink-0">✕</button>}
               </div>
               {/* Actions */}
               <div className="flex gap-2 flex-shrink-0">
-                <button onClick={() => exportCsv()} className="flex items-center gap-2 bg-gradient-to-r from-[#0b5566] to-[#08a7c4] text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow hover:opacity-90 transition">
+                <button onClick={() => exportCsv()} className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow transition">
                   <HiOutlineDownload className="w-4 h-4" />
                   <span className="hidden sm:inline">{t('admin.emaillogs.export_csv')}</span>
                 </button>
-                <button onClick={() => { setPage(1); setQuery(''); setSelectedMonth(defaultMonth); }} className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition" title={t('admin.emaillogs.refresh')}>
-                  <HiOutlineRefresh className={`w-4 h-4 text-gray-500 ${loading ? 'animate-spin' : ''}`} />
+                <button onClick={() => { setPage(1); setQuery(''); setSelectedMonth(defaultMonth); }} className="p-2.5 border border-border-default rounded-xl hover:bg-input transition" title={t('admin.emaillogs.refresh')}>
+                  <HiOutlineRefresh className={`w-4 h-4 text-secondary ${loading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               {/* Mois / Année */}
               <div className="flex gap-2 flex-1">
-                <select value={month} onChange={e => setMonth(Number(e.target.value))} className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 capitalize">
+                <select value={month} onChange={e => setMonth(Number(e.target.value))} className="flex-1 border border-border-default rounded-xl px-3 py-2 text-sm text-primary bg-input focus:outline-none focus:ring-2 focus:ring-accent/20 capitalize">
                   {monthNames.map((mName, idx) => <option key={mName} value={idx + 1} className="capitalize">{mName}</option>)}
                 </select>
-                <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
+                <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-border-default rounded-xl px-3 py-2 text-sm text-primary bg-input focus:outline-none focus:ring-2 focus:ring-accent/20">
                   {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
                 </select>
               </div>
               {/* Destinataire */}
-              <select value={recipientFilter} onChange={e => setRecipientFilter(e.target.value)} className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20">
+              <select value={recipientFilter} onChange={e => setRecipientFilter(e.target.value)} className="flex-1 border border-border-default rounded-xl px-3 py-2 text-sm text-primary bg-input focus:outline-none focus:ring-2 focus:ring-accent/20">
                 <option value="">{t('admin.emaillogs.all_recipients')}</option>
                 {Array.from(new Set(logs.flatMap(l => {
                   try { const p = JSON.parse(l.recipients || '[]'); return Array.isArray(p) ? p.map(String) : [String(p)]; } catch { return (l.recipients || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean); }
@@ -462,9 +462,9 @@ export default function AdminEmailLogs() {
               return true;
             });
             if (v.length === 0) return (
-              <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
-                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
-                  <HiOutlineDocumentText className="w-7 h-7 text-gray-300" />
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted">
+                <div className="w-14 h-14 rounded-2xl bg-input flex items-center justify-center">
+                  <HiOutlineDocumentText className="w-7 h-7 text-muted" />
                 </div>
                 <p className="text-sm">{t('admin.emaillogs.empty')}</p>
               </div>
@@ -477,23 +477,23 @@ export default function AdminEmailLogs() {
               const statusIsSent = l.status === 'sent';
               const statusIsError = l.status !== 'sent' && l.status !== 'pending';
               return (
-                <div key={l.id} className={`bg-white rounded-2xl shadow-sm border-l-4 ${statusIsSent ? 'border-l-emerald-400' : statusIsError ? 'border-l-red-400' : 'border-l-amber-400'} border border-gray-100 p-4`}>
+                <div key={l.id} className={`bg-card rounded-2xl shadow-sm border-l-4 ${statusIsSent ? 'border-l-emerald-400' : statusIsError ? 'border-l-red-400' : 'border-l-amber-400'} border border-border-default p-4`}>
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex items-start gap-3 min-w-0">
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${statusIsSent ? 'bg-emerald-50' : statusIsError ? 'bg-red-50' : 'bg-amber-50'}`}>
                         <HiOutlineDocumentText className={`w-5 h-5 ${statusIsSent ? 'text-emerald-500' : statusIsError ? 'text-red-400' : 'text-amber-500'}`} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{l.subject || t('payments.download_invoice')}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{new Date(l.createdAt).toLocaleDateString()} · {new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        <p className="text-sm font-semibold text-primary truncate">{l.subject || t('payments.download_invoice')}</p>
+                        <p className="text-xs text-muted mt-0.5">{new Date(l.createdAt).toLocaleDateString()} · {new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                       </div>
                     </div>
                     <div className={`flex-shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${s.badge}`}>{s.icon}<span>{s.label}</span></div>
                   </div>
                   <div className="space-y-1.5 mb-3">
                     {recips.map((r, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-1.5">
-                        <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                      <div key={i} className="flex items-center gap-2 text-xs text-secondary bg-input rounded-lg px-3 py-1.5">
+                        <svg className="w-3 h-3 text-muted flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                         <span className="truncate">{r}</span>
                       </div>
                     ))}
@@ -501,7 +501,7 @@ export default function AdminEmailLogs() {
                       const ph = l.paymentHistory;
                       const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : new Date();
                       return (
-                        <div className="flex items-center gap-2 text-xs text-[#0b5566] bg-[#e6f4f7] rounded-lg px-3 py-1.5 font-medium">
+                        <div className="flex items-center gap-2 text-xs text-accent bg-accent/10 rounded-lg px-3 py-1.5 font-medium">
                           <HiOutlineDocumentText className="w-3 h-3 flex-shrink-0" />
                           FA-{invoiceDate.getFullYear()}-{String(ph.id).slice(0,6)}
                           {ph.total != null && <span className="ml-auto font-bold">{ph.total.toFixed(2)} €</span>}
@@ -509,18 +509,18 @@ export default function AdminEmailLogs() {
                       );
                     })()}
                     {l.errorText && (
-                      <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-lg px-3 py-1.5">
+                      <div className="flex items-center gap-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 rounded-lg px-3 py-1.5">
                         <HiOutlineExclamationCircle className="w-3 h-3 flex-shrink-0" />{l.errorText}
                       </div>
                     )}
                   </div>
-                  <div className="flex gap-2 pt-2 border-t border-gray-100">
+                  <div className="flex gap-2 pt-2 border-t border-border-default">
                     {statusIsSent ? (
                       <>
-                        <button onClick={() => l.paymentHistory && openInvoice(l.paymentHistory!.id)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                        <button onClick={() => l.paymentHistory && openInvoice(l.paymentHistory!.id)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border-default text-xs font-semibold text-secondary hover:bg-input transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
                           <HiOutlineEye className="w-4 h-4" /> Voir
                         </button>
-                        <button onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory!.id, `facture-${l.paymentHistory!.id}.pdf`)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                        <button onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory!.id, `facture-${l.paymentHistory!.id}.pdf`)} disabled={!l.paymentHistory} className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-border-default text-xs font-semibold text-secondary hover:bg-input transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}>
                           <HiOutlineDownload className="w-4 h-4" /> Télécharger
                         </button>
                       </>
@@ -537,21 +537,21 @@ export default function AdminEmailLogs() {
         </div>
 
         {/* Desktop: table */}
-        <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="hidden md:block bg-card rounded-2xl shadow-sm border border-border-default overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.subject')}</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.date')}</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.recipients')}</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.invoice_number')}</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.status')}</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.error')}</th>
-                  <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider py-3 px-5">{t('emaillogs.table.actions')}</th>
+                <tr className="bg-input border-b border-border-default">
+                  <th className="text-left text-xs font-semibold text-muted uppercase tracking-wider py-3 px-5">{t('emaillogs.table.subject')}</th>
+                  <th className="text-left text-xs font-semibold text-muted uppercase tracking-wider py-3 px-5">{t('emaillogs.table.date')}</th>
+                  <th className="text-left text-xs font-semibold text-muted uppercase tracking-wider py-3 px-5">{t('emaillogs.table.recipients')}</th>
+                  <th className="text-left text-xs font-semibold text-muted uppercase tracking-wider py-3 px-5">{t('emaillogs.table.invoice_number')}</th>
+                  <th className="text-left text-xs font-semibold text-muted uppercase tracking-wider py-3 px-5">{t('emaillogs.table.status')}</th>
+                  <th className="text-left text-xs font-semibold text-muted uppercase tracking-wider py-3 px-5">{t('emaillogs.table.error')}</th>
+                  <th className="text-left text-xs font-semibold text-muted uppercase tracking-wider py-3 px-5">{t('emaillogs.table.actions')}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-border-default">
                 {(() => {
                   const v = logs.filter(l => {
                     let recips: string[] = [];
@@ -562,7 +562,7 @@ export default function AdminEmailLogs() {
                     return true;
                   });
                   if (v.length === 0) return (
-                    <tr><td colSpan={7} className="py-16 text-center text-gray-400 text-sm">Aucun email trouvé</td></tr>
+                    <tr><td colSpan={7} className="py-16 text-center text-muted text-sm">Aucun email trouvé</td></tr>
                   );
                   return v.map(l => {
                     let recips: string[] = [];
@@ -572,45 +572,45 @@ export default function AdminEmailLogs() {
                     const statusIsSent = l.status === 'sent';
                     const s = getStatusInfo(l.status);
                     return (
-                      <tr key={l.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={l.id} className="hover:bg-input transition-colors">
                         <td className="py-3.5 px-5">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-[#e6f4f7] flex items-center justify-center flex-shrink-0">
-                              <HiOutlineDocumentText className="w-4 h-4 text-[#0b5566]" />
+                            <div className="w-8 h-8 rounded-lg bg-input flex items-center justify-center flex-shrink-0">
+                              <HiOutlineDocumentText className="w-4 h-4 text-accent" />
                             </div>
-                            <span className="text-sm font-medium text-gray-900">{l.subject || t('payments.download_invoice')}</span>
+                            <span className="text-sm font-medium text-primary">{l.subject || t('payments.download_invoice')}</span>
                           </div>
                         </td>
                         <td className="py-3.5 px-5">
-                          <div className="text-sm text-gray-700">{new Date(l.createdAt).toLocaleDateString()}</div>
-                          <div className="text-xs text-gray-400">{new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                          <div className="text-sm text-primary">{new Date(l.createdAt).toLocaleDateString()}</div>
+                          <div className="text-xs text-muted">{new Date(l.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                         </td>
                         <td className="py-3.5 px-5 max-w-[200px]">
                           <div className="flex items-center gap-2">
                             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusIsSent ? 'bg-green-500' : 'bg-red-400'}`} />
-                            <span className="text-sm text-gray-700 truncate">{firstRecip}</span>
+                            <span className="text-sm text-primary truncate">{firstRecip}</span>
                           </div>
-                          {recips[1] && <div className="text-xs text-gray-400 ml-3.5 truncate">{recips.slice(1).join(', ')}</div>}
+                          {recips[1] && <div className="text-xs text-muted ml-3.5 truncate">{recips.slice(1).join(', ')}</div>}
                         </td>
                         <td className="py-3.5 px-5">
                           {l.paymentHistory ? (() => {
                             const ph = l.paymentHistory;
                             const invoiceDate = ph.createdAt ? new Date(ph.createdAt) : new Date();
-                            return <span className="text-sm font-medium text-[#0b5566]">FA-{invoiceDate.getFullYear()}-{String(ph.id).slice(0,6)}</span>;
-                          })() : <span className="text-gray-400">—</span>}
+                            return <span className="text-sm font-medium text-accent">FA-{invoiceDate.getFullYear()}-{String(ph.id).slice(0,6)}</span>;
+                          })() : <span className="text-muted">—</span>}
                         </td>
                         <td className="py-3.5 px-5">
                           <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${s.badge}`}>{s.icon}<span>{s.label}</span></div>
                         </td>
                         <td className="py-3.5 px-5 max-w-[160px]">
-                          {l.errorText ? <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-lg">{l.errorText}</span> : <span className="text-gray-300">—</span>}
+                          {l.errorText ? <span className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 px-2 py-1 rounded-lg">{l.errorText}</span> : <span className="text-muted">—</span>}
                         </td>
                         <td className="py-3.5 px-5">
                           <div className="flex items-center gap-1.5">
                             {statusIsSent ? (
                               <>
-                                <button title={t('admin.emaillogs.view_invoice')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && openInvoice(l.paymentHistory.id)} className={`p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}><HiOutlineEye className="w-4 h-4" /></button>
-                                <button title={t('admin.emaillogs.download')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory.id, `facture-${l.paymentHistory.id}.pdf`)} className={`p-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}><HiOutlineDownload className="w-4 h-4" /></button>
+                                <button title={t('admin.emaillogs.view_invoice')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && openInvoice(l.paymentHistory.id)} className={`p-2 rounded-lg border border-border-default text-secondary hover:bg-input transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}><HiOutlineEye className="w-4 h-4" /></button>
+                                <button title={t('admin.emaillogs.download')} disabled={!l.paymentHistory} onClick={() => l.paymentHistory && downloadInvoice(l.paymentHistory.id, `facture-${l.paymentHistory.id}.pdf`)} className={`p-2 rounded-lg border border-border-default text-secondary hover:bg-input transition ${!l.paymentHistory ? 'opacity-40 cursor-not-allowed' : ''}`}><HiOutlineDownload className="w-4 h-4" /></button>
                               </>
                             ) : (
                               <button title={t('admin.emaillogs.resend')} onClick={() => resendEmail(l.id)} disabled={!!resending[l.id] || !!(l.paymentHistory && (disabledAfterResend[l.paymentHistory.id] || hasSentForPayment(l.paymentHistory.id)))} className={`p-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 transition ${resending[l.id] ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -628,8 +628,8 @@ export default function AdminEmailLogs() {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100 bg-gray-50">
-            <p className="text-sm text-gray-500">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-border-default bg-input">
+            <p className="text-sm text-muted">
               {t('admin.emaillogs.displaying', {
                 from: total ? `${(page - 1) * limit + 1}` : (logs.length ? '1' : '—'),
                 to: total ? `${Math.min(page * limit, total)}` : (logs.length ? `${logs.length}` : '—'),
@@ -637,9 +637,9 @@ export default function AdminEmailLogs() {
               })}
             </p>
             <div className="flex items-center gap-2">
-              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={!hasPrev} className="px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-white transition disabled:opacity-40">{t('emaillogs.pagination.prev')}</button>
-              <span className="w-8 h-8 flex items-center justify-center bg-[#0b5566] text-white text-sm font-bold rounded-lg">{page}</span>
-              <button onClick={() => hasNext && setPage(page + 1)} disabled={!hasNext} className="px-3 py-1.5 text-sm border border-gray-200 rounded-xl text-gray-600 hover:bg-white transition disabled:opacity-40">{t('emaillogs.pagination.next')}</button>
+              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={!hasPrev} className="px-3 py-1.5 text-sm border border-border-default rounded-xl text-secondary hover:bg-card transition disabled:opacity-40">{t('emaillogs.pagination.prev')}</button>
+              <span className="w-8 h-8 flex items-center justify-center bg-accent text-white text-sm font-bold rounded-lg">{page}</span>
+              <button onClick={() => hasNext && setPage(page + 1)} disabled={!hasNext} className="px-3 py-1.5 text-sm border border-border-default rounded-xl text-secondary hover:bg-card transition disabled:opacity-40">{t('emaillogs.pagination.next')}</button>
             </div>
           </div>
         </div>
@@ -648,20 +648,20 @@ export default function AdminEmailLogs() {
 
       {showCalendarModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-lg">
+          <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-lg border border-border-default">
             <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-semibold">{t('admin.emaillogs.choose_month')}</div>
-              <button className="text-gray-500" onClick={() => setShowCalendarModal(false)}>✕</button>
+              <div className="text-lg font-semibold text-primary">{t('admin.emaillogs.choose_month')}</div>
+              <button className="text-muted" onClick={() => setShowCalendarModal(false)}>✕</button>
             </div>
             <div>
               <div className="flex items-center justify-between mb-3">
-                <div className="font-medium">{new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(calendarDate)}</div>
+                <div className="font-medium text-primary">{new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(calendarDate)}</div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="px-2 py-1 border rounded">‹</button>
-                  <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} className="px-2 py-1 border rounded">›</button>
+                  <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))} className="px-2 py-1 border border-border-default rounded text-secondary">‹</button>
+                  <button onClick={() => setCalendarDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))} className="px-2 py-1 border border-border-default rounded text-secondary">›</button>
                 </div>
               </div>
-              <div className="grid grid-cols-7 gap-1 text-center text-xs text-gray-500 mb-2">
+              <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted mb-2">
                 {getMonthGrid(calendarDate).flat().slice(0,7).map((d, i) => (
                   <div key={i}>{new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(d)}</div>
                 ))}
@@ -670,8 +670,8 @@ export default function AdminEmailLogs() {
                 {getMonthGrid(calendarDate).flat().map((d, idx) => {
                   const isCurrentMonth = d.getMonth() === calendarDate.getMonth();
                   return (
-                    <button key={idx} onClick={() => handleSelectDay(d)} className={`p-2 rounded ${isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60'}`}>
-                      <div className="text-sm text-gray-800">{d.getDate()}</div>
+                    <button key={idx} onClick={() => handleSelectDay(d)} className={`p-2 rounded ${isCurrentMonth ? 'bg-input hover:bg-card-hover' : 'bg-card opacity-60'} transition`}>
+                      <div className="text-sm text-primary">{d.getDate()}</div>
                     </button>
                   );
                 })}

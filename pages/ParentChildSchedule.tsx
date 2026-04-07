@@ -141,11 +141,11 @@ export default function ParentChildSchedule() {
   const monthLabel = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 w-full">
           <div>
-            <button className="mr-2 cursor-pointer flex items-center gap-2 bg-[#a9ddf2] text-[#0b5566] px-3 py-1 rounded" onClick={() => navigate(-1)}>
+            <button className="mr-2 cursor-pointer flex items-center gap-2 bg-accent-light text-[#0b5566] px-3 py-1 rounded" onClick={() => navigate(-1)}>
               <span className="text-lg">←</span>
               <span>Retour</span>
             </button>
@@ -154,9 +154,9 @@ export default function ParentChildSchedule() {
             <div className="text-2xl font-semibold">Planning de {childName ?? "l'enfant"}</div>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-end">
-            <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500">‹</button>
+            <button onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-border-default bg-card hover:bg-card-hover text-secondary">‹</button>
             <div className="text-lg font-bold text-[#0b5566]">{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}</div>
-            <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-500">›</button>
+            <button onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full border border-border-default bg-card hover:bg-card-hover text-secondary">›</button>
           </div>
         </div>
 
@@ -167,11 +167,11 @@ export default function ParentChildSchedule() {
             <ActivityDetailModal activities={activityModalData.activities} onClose={() => setActivityModalData(null)} />
           )}
         {loading ? (
-          <div className="bg-white rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-gray-400"><svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/><path d="M12 4v4m0 12v4M4 12H0m24 0h-4"/></svg>Chargement…</div>
+          <div className="bg-card rounded-2xl shadow p-8 flex items-center justify-center gap-3 text-muted"><svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 12a8 8 0 018-8"/><path d="M12 4v4m0 12v4M4 12H0m24 0h-4"/></svg>Chargement…</div>
         ) : (
-          <div className="bg-white rounded-2xl shadow p-4" style={{ border: '1px solid #fcdcdf' }}>
+          <div className="bg-card rounded-2xl shadow p-4" style={{ border: '1px solid #fcdcdf' }}>
             <div className="hidden sm:block w-full">
-              <table className="w-full table-fixed bg-white rounded-lg" style={{ borderCollapse: 'separate', borderSpacing: 0, border: '1px solid transparent' }}>
+              <table className="w-full table-fixed bg-card rounded-lg" style={{ borderCollapse: 'separate', borderSpacing: 0, border: '1px solid transparent' }}>
                 <thead>
                   <tr>
                     {['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'].map(d => (
@@ -190,12 +190,12 @@ export default function ParentChildSchedule() {
                         const isToday = day.toDateString() === new Date().toDateString();
                         const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                         return (
-                          <td key={dIdx} className={"align-top p-2 h-28 " + (isToday ? 'border-2 border-[#a9ddf2] rounded-xl ' : 'border border-gray-100 ') + (isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60') + " relative"}>
+                          <td key={dIdx} className={"align-top p-2 h-28 " + (isToday ? 'border-2 border-[#a9ddf2] rounded-xl ' : 'border border-border-default ') + (isCurrentMonth ? 'bg-input' : 'bg-input opacity-60') + " relative"}>
                             <div className="flex items-center justify-between mb-1">
-                              <span className={"text-xs font-bold " + (isCurrentMonth ? '' : 'text-gray-400')} style={isCurrentMonth ? { color: '#08323a' } : undefined}>{day.getDate()}</span>
+                              <span className={"text-xs font-bold " + (isCurrentMonth ? '' : 'text-muted')} style={isCurrentMonth ? { color: '#08323a' } : undefined}>{day.getDate()}</span>
                             </div>
                             {dayAssignments.length === 0 ? (
-                              <div className="text-gray-300 text-sm">—</div>
+                              <div className="text-muted text-sm">—</div>
                             ) : (
                               <div className="space-y-2">
                                 {dayAssignments.map(a => (
@@ -236,7 +236,7 @@ export default function ParentChildSchedule() {
             <div className="block sm:hidden w-full overflow-x-auto">
               <div className="grid grid-cols-7 gap-1 w-full">
                 {['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map((d, i) => (
-                  <div key={i} className="text-center text-gray-500 font-semibold text-xs py-1">{d}</div>
+                  <div key={i} className="text-center text-secondary font-semibold text-xs py-1">{d}</div>
                 ))}
                 {monthGrid.flat().map((day, idx) => {
                   const assigns = assignments.filter(a => toLocalYMD(a.date) === toLocalYMD(day));
@@ -245,24 +245,24 @@ export default function ParentChildSchedule() {
                   return (
                     <div key={idx} className={
                       "box-border align-top p-1 h-full flex flex-col " +
-                      (isToday ? 'border-2 border-[#0b5566] rounded-xl ' : 'border border-gray-100 ') +
-                      (isCurrentMonth ? 'bg-[#f8f8fc]' : 'bg-gray-50 opacity-60') +
+                      (isToday ? 'border-2 border-[#0b5566] rounded-xl ' : 'border border-border-default ') +
+                      (isCurrentMonth ? 'bg-input' : 'bg-input opacity-60') +
                       " relative"
                     }>
                       <div className="flex items-center justify-between mb-1">
-                        <span className={"text-xs font-bold " + (isCurrentMonth ? 'text-gray-700' : 'text-gray-400')}>{day.getDate()}</span>
+                        <span className={"text-xs font-bold " + (isCurrentMonth ? 'text-primary' : 'text-muted')}>{day.getDate()}</span>
                         {!(user && user.role === 'parent') && (
                           <button onClick={() => handleQuickAdd(day)} className="text-[#0b5566] hover:text-[#08323a] text-lg font-bold">+</button>
                         )}
                       </div>
                       {assigns.length === 0 ? (
-                        <div className="text-gray-300 text-xs">—</div>
+                        <div className="text-muted text-xs">—</div>
                       ) : (
                         assigns.slice(0, 2).map((a, j) => (
-                          <div key={a.id} className={"flex items-center gap-2 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-[#a9ddf2]' : 'bg-[#fff7e6]') + " shadow-sm group"}>
+                          <div key={a.id} className={"flex items-center gap-2 mb-1 px-1 py-1 rounded-lg " + (j === 0 ? 'bg-accent-light' : 'bg-[#fff7e6]') + " shadow-sm group"}>
                             <span className={"w-2 h-2 rounded-full " + (j === 0 ? 'bg-[#08323a]' : 'bg-[#856400]')}></span>
                             <span
-                              className="font-semibold text-gray-800 text-[11px] group-hover:underline cursor-pointer truncate max-w-[70px]"
+                              className="font-semibold text-primary text-[11px] group-hover:underline cursor-pointer truncate max-w-[70px]"
                               title={a.child.name}
                             >
                               {a.child.name}
@@ -271,7 +271,7 @@ export default function ParentChildSchedule() {
                         ))
                       )}
                       {assigns.length > 2 && (
-                        <div className="text-gray-400 text-xs italic truncate max-w-[70px] overflow-hidden whitespace-nowrap">...et {assigns.length - 2} autres</div>
+                        <div className="text-muted text-xs italic truncate max-w-[70px] overflow-hidden whitespace-nowrap">...et {assigns.length - 2} autres</div>
                       )}
                     </div>
                   );

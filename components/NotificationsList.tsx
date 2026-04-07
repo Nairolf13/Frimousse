@@ -170,16 +170,11 @@ export default function NotificationsList({ items = [], loading = false, onRefre
     }
   }
 
-  if (loading) return <div className="text-gray-600">{t('notifications.loading')}</div>;
-  if (!items || items.length === 0) return <div className="text-gray-500">{t('notifications.none')}</div>;
+  if (loading) return <div className="text-secondary">{t('notifications.loading')}</div>;
+  if (!items || items.length === 0) return <div className="text-muted">{t('notifications.none')}</div>;
 
   const cardColors = [
-    'bg-blue-50',
-    'bg-yellow-50',
-    'bg-purple-50',
-    'bg-green-50',
-    'bg-pink-50',
-    'bg-orange-50',
+    'bg-card',
   ];
 
   return (
@@ -240,7 +235,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
           }
         }
 
-        const iconCls = n.read ? 'bg-gray-100 text-gray-500' : `${bg} text-white`;
+        const iconCls = n.read ? 'bg-gray-100 dark:bg-input text-gray-500 dark:text-muted' : `${bg} text-white`;
 
         const notifLink = getNotificationLink(maybeData);
 
@@ -248,7 +243,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
           <li key={n.id}>
           <SwipeableItem onDelete={() => del(n.id)}>
           <div
-            className={`rounded-2xl p-4 pb-12 sm:pb-6 relative ${cardColors[idx % cardColors.length]} border border-blue-50 shadow-sm ${notifLink ? 'cursor-pointer' : ''}`}
+            className={`rounded-2xl p-4 pb-12 sm:pb-6 relative ${cardColors[idx % cardColors.length]} border border-blue-50 dark:border-border-default shadow-sm ${notifLink ? 'cursor-pointer' : ''}`}
             onClick={notifLink ? () => { if (!n.read) markRead(n.id); navigate(notifLink); } : undefined}
           >
             {/* mobile top: icon left, time right */}
@@ -256,7 +251,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
               <div className="flex items-center">
                 <div className={`w-8 h-8 rounded-lg ${iconCls} flex items-center justify-center text-base font-bold`}>{renderIcon(dtype, true)}</div>
               </div>
-              <div className="text-xs text-gray-500">{relativeTime(n.createdAt)}</div>
+              <div className="text-xs text-gray-500 dark:text-muted">{relativeTime(n.createdAt)}</div>
             </div>
 
             {/* desktop row */}
@@ -267,22 +262,22 @@ export default function NotificationsList({ items = [], loading = false, onRefre
 
               <div className="flex-1 px-3">
                 <div className="text-sm font-semibold" title={title}>{title}</div>
-                {body ? <div className="text-sm text-gray-600 mt-1 break-words">{body}</div> : null}
+                {body ? <div className="text-sm text-gray-600 dark:text-secondary mt-1 break-words">{body}</div> : null}
                 {tags.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {tags.map((tg) => (
-                      <span key={tg} className="text-xs px-2 py-1 rounded-full bg-white text-gray-700 border border-gray-100">{tg}</span>
+                      <span key={tg} className="text-xs px-2 py-1 rounded-full bg-white dark:bg-card text-gray-700 dark:text-primary border border-gray-100 dark:border-border-default">{tg}</span>
                     ))}
                   </div>
                 ) : null}
               </div>
 
               <div className="flex flex-col items-end">
-                <div className="text-xs text-gray-500">{relativeTime(n.createdAt)}</div>
+                <div className="text-xs text-gray-500 dark:text-muted">{relativeTime(n.createdAt)}</div>
                 <div className="hidden sm:flex mt-3 gap-2">
                   {(() => {
                     const isRead = !!n.read;
-                    const btnCls = isRead ? 'px-3 py-2 rounded-full bg-gray-100 text-gray-600 border border-gray-100' : 'px-3 py-2 rounded-full bg-blue-600 text-white border border-blue-600';
+                    const btnCls = isRead ? 'px-3 py-2 rounded-full bg-gray-100 dark:bg-input text-gray-600 dark:text-secondary border border-gray-100 dark:border-border-default' : 'px-3 py-2 rounded-full bg-blue-600 text-white border border-blue-600';
                     return (
                       <button onClick={() => isRead ? markUnread(n.id) : markRead(n.id)} className={btnCls} title={isRead ? t('notifications.mark_unread') : t('notifications.mark_read')}>
                         {isRead ? (
@@ -293,7 +288,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
                       </button>
                     );
                   })()}
-                  <button onClick={() => del(n.id)} className="px-3 py-2 rounded-full bg-red-50 text-red-600 border border-red-100">
+                  <button onClick={() => del(n.id)} className="px-3 py-2 rounded-full bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-800">
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M3 6h18" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
                       <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"/>
@@ -307,11 +302,11 @@ export default function NotificationsList({ items = [], loading = false, onRefre
             {/* mobile content below icon */}
             <div className="sm:hidden mt-3">
               <div className="text-sm font-semibold" title={n.title}>{n.title}</div>
-              {n.body ? <div className="text-sm text-gray-600 mt-1 break-words">{n.body}</div> : null}
+              {n.body ? <div className="text-sm text-gray-600 dark:text-secondary mt-1 break-words">{n.body}</div> : null}
               {tags.length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {tags.map((tg) => (
-                    <span key={tg} className="text-xs px-2 py-1 rounded-full bg-white text-gray-700 border border-gray-100">{tg}</span>
+                    <span key={tg} className="text-xs px-2 py-1 rounded-full bg-white dark:bg-card text-gray-700 dark:text-primary border border-gray-100 dark:border-border-default">{tg}</span>
                   ))}
                 </div>
               ) : null}
@@ -321,7 +316,7 @@ export default function NotificationsList({ items = [], loading = false, onRefre
             <div className="sm:hidden absolute right-4 bottom-4 flex items-center gap-2">
               {(() => {
                 const isRead = !!n.read;
-                const btnCls = isRead ? 'px-3 py-2 rounded-full bg-gray-100 text-gray-600 border border-gray-100' : 'px-3 py-2 rounded-full bg-blue-600 text-white border border-blue-600';
+                const btnCls = isRead ? 'px-3 py-2 rounded-full bg-gray-100 dark:bg-input text-gray-600 dark:text-secondary border border-gray-100 dark:border-border-default' : 'px-3 py-2 rounded-full bg-blue-600 text-white border border-blue-600';
                 return (
                   <button onClick={() => isRead ? markUnread(n.id) : markRead(n.id)} className={btnCls} title={isRead ? t('notifications.mark_unread') : t('notifications.mark_read')}>
                     {isRead ? (
@@ -349,13 +344,13 @@ function DeleteModal({ id, open, onCancel, onConfirm, loading }: { id: string | 
   if (!open || !id) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative">
-        <button onClick={onCancel} className="absolute top-3 right-3 text-gray-500">×</button>
+      <div className="bg-card rounded-2xl shadow-xl p-6 w-full max-w-md relative">
+        <button onClick={onCancel} className="absolute top-3 right-3 text-muted">×</button>
   <div className="text-red-500 text-4xl mb-2 mt-2 flex justify-center">🗑️</div>
-        <div className="text-lg font-semibold mb-2 text-gray-900 text-center">{t('notifications.confirm_delete.title')}</div>
-        <div className="text-gray-500 mb-6 text-center">{t('notifications.confirm_delete.body')}</div>
+        <div className="text-lg font-semibold mb-2 text-primary text-center">{t('notifications.confirm_delete.title')}</div>
+        <div className="text-muted mb-6 text-center">{t('notifications.confirm_delete.body')}</div>
         <div className="flex gap-3 w-full">
-          <button onClick={onCancel} className="flex-1 bg-gray-100 text-gray-700 rounded-lg px-4 py-2 font-medium hover:bg-gray-200 transition" disabled={loading}>{t('notifications.confirm_delete.cancel')}</button>
+          <button onClick={onCancel} className="flex-1 bg-input text-secondary rounded-lg px-4 py-2 font-medium hover:bg-card-hover transition" disabled={loading}>{t('notifications.confirm_delete.cancel')}</button>
           <button onClick={() => onConfirm(id)} className="flex-1 bg-red-500 text-white rounded-lg px-4 py-2 font-medium hover:bg-red-600 transition shadow" disabled={loading}>{loading ? t('notifications.deleting') : t('notifications.confirm_delete.confirm')}</button>
         </div>
       </div>

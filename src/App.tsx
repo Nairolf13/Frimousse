@@ -1,6 +1,7 @@
 import AppRoutes from '../routes';
 import { useEffect, useState } from 'react';
 import { AuthContext, useAuth } from './context/AuthContext';
+import { useTheme } from '../hooks/useTheme';
 import { CenterSettingsProvider } from './context/CenterSettingsContext';
 import { AssistantProvider } from './context/AssistantContext';
 import NotificationsProvider from './context/NotificationsProvider';
@@ -12,9 +13,16 @@ import { writeLocalConsent } from './utils/cookieConsent';
 import { useI18n } from './lib/useI18n';
 
 // Synchronise BDD → local dès que l'user est connu (multi-appareils)
+function ThemeInitializer() {
+  useTheme(); // applies theme from localStorage on mount and keeps it in sync
+  return null;
+}
+
+// Synchronise BDD → local dès que l'user est connu (multi-appareils)
 function UserPreferencesSync() {
   const { user } = useAuth();
   const { setLocale } = useI18n();
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     if (!user) return;
@@ -27,6 +35,9 @@ function UserPreferencesSync() {
     }
     if (Array.isArray(user.tutorialCompleted) && user.tutorialCompleted.length > 0) {
       try { localStorage.setItem('tutorial_completed', JSON.stringify(user.tutorialCompleted)); } catch { /* ignore */ }
+    }
+    if (user.theme === 'light' || user.theme === 'dark' || user.theme === 'system') {
+      setTheme(user.theme);
     }
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -117,6 +128,7 @@ function App() {
   return (
     <HelmetProvider>
       <AuthContext.Provider value={{ user, setUser }}>
+        <ThemeInitializer />
         <UserPreferencesSync />
         <CookieConsentBanner />
         <CenterSettingsProvider>

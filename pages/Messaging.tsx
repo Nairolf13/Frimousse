@@ -18,14 +18,14 @@ const EMOJI_LIST = [
 
 function EmojiPicker({ onSelect }: { onSelect: (e: string) => void }) {
   return (
-    <div className="absolute bottom-14 right-0 z-50 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 w-64">
+    <div className="absolute bottom-14 right-0 z-50 bg-card rounded-2xl shadow-xl border border-border-default p-3 w-64">
       <div className="grid grid-cols-10 gap-1">
         {EMOJI_LIST.map((e) => (
           <button
             key={e}
             type="button"
             onClick={() => onSelect(e)}
-            className="text-xl hover:bg-gray-100 rounded-lg p-0.5 transition-colors leading-none"
+            className="text-xl hover:bg-card-hover rounded-lg p-0.5 transition-colors leading-none"
           >
             {e}
           </button>
@@ -212,7 +212,7 @@ function Avatar({
         <img
           src={avatarUrl}
           alt={`${name} avatar`}
-          className={`${dims} rounded-full object-cover border-2 border-white`}
+          className={`${dims} rounded-full object-cover border-2 border-card`}
           onError={(e) => {
             const target = e.currentTarget as HTMLImageElement;
             target.onerror = null;
@@ -228,7 +228,7 @@ function Avatar({
       )}
       {online !== undefined && (
         <span
-          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${online ? 'bg-green-400' : 'bg-gray-300'}`}
+          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-card ${online ? 'bg-green-400' : 'bg-border-strong'}`}
         />
       )}
     </div>
@@ -865,18 +865,18 @@ export default function Messaging() {
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className={`flex bg-white overflow-hidden h-[calc(100vh-48px)] md:h-screen ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`flex bg-card overflow-hidden h-[calc(100vh-48px)] md:h-screen ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       {/* ── Liste des conversations ── */}
       <div
-        className={`${selectedConvId ? 'hidden' : 'flex'} flex-col w-full bg-white flex-shrink-0`}
+        className={`${selectedConvId ? 'hidden' : 'flex'} flex-col w-full bg-card flex-shrink-0`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-5 pb-3 border-b border-gray-100">
-          <h1 className="text-xl font-bold text-gray-900">{t('page.messages', 'Messages')}</h1>
+        <div className="flex items-center justify-between px-4 pt-5 pb-3 border-b border-border-default">
+          <h1 className="text-xl font-bold text-primary">{t('page.messages', 'Messages')}</h1>
           <button
             data-tour="msg-new-btn"
             onClick={() => setShowNewConv(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-[#0b5566]"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-card-hover transition-colors text-[#0b5566]"
             title={t('messages.new.title', 'Nouveau message')}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -886,14 +886,14 @@ export default function Messaging() {
         </div>
 
         {/* Search */}
-        <div className="px-3 py-2 border-b border-gray-100">
-          <div className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-2">
-            <HiOutlineSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <div className="px-3 py-2 border-b border-border-default">
+          <div className="flex items-center gap-2 bg-input rounded-full px-3 py-2">
+            <HiOutlineSearch className="w-4 h-4 text-muted flex-shrink-0" />
             <input
               value={convSearch}
               onChange={(e) => setConvSearch(e.target.value)}
               placeholder={t('messages.search.placeholder', 'Rechercher un message')}
-              className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none"
+              className="flex-1 bg-transparent text-sm text-primary placeholder-gray-400 outline-none"
             />
           </div>
         </div>
@@ -906,9 +906,9 @@ export default function Messaging() {
             </div>
           ) : filteredConvs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-              <HiOutlineChatAlt2 className="w-10 h-10 text-gray-300 mb-3" />
-              <p className="text-gray-500 text-sm font-medium">{t('messages.empty', 'Aucun message')}</p>
-              <p className="text-gray-400 text-xs mt-1">{t('messages.empty.action', 'Commencez une nouvelle conversation')}</p>
+              <HiOutlineChatAlt2 className="w-10 h-10 text-muted mb-3" />
+              <p className="text-secondary text-sm font-medium">{t('messages.empty', 'Aucun message')}</p>
+              <p className="text-muted text-xs mt-1">{t('messages.empty.action', 'Commencez une nouvelle conversation')}</p>
             </div>
           ) : (
             filteredConvs.map((conv) => {
@@ -920,22 +920,22 @@ export default function Messaging() {
                 <SwipeableItem key={conv.id} onDelete={() => handleDeleteConv(conv.id)}>
                   <button
                     onClick={() => setSelectedConvId(conv.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${isActive ? 'bg-[#0b5566]/5' : ''}`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-input transition-colors text-left ${isActive ? 'bg-[#0b5566]/5' : ''}`}
                   >
                     <Avatar name={other?.name ?? '?'} avatarUrl={other?.avatarUrl} online={isOnline} size="md" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
+                        <span className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-primary' : 'font-medium text-primary'}`}>
                           {other?.name ?? t('messages.unknown', 'Inconnu')}
                         </span>
                         {lastMsg && (
-                          <span className="text-xs text-gray-400 ml-2 flex-shrink-0">
+                          <span className="text-xs text-muted ml-2 flex-shrink-0">
                             {formatTime(lastMsg.createdAt)}
                           </span>
                         )}
                       </div>
                       <div className="flex items-center justify-between mt-0.5">
-                        <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-gray-700 font-medium' : 'text-gray-400'}`}>
+                        <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-primary font-medium' : 'text-muted'}`}>
                           {lastMsg
                             ? (lastMsg.senderId === user?.id ? `${t('messages.you', 'Vous')} : ` : '') + (lastMsg.mediaUrl && !lastMsg.content ? (lastMsg.mediaType === 'video' ? t('messages.media.video', '🎥 Vidéo') : t('messages.media.image', '📷 Photo')) : lastMsg.content)
                             : getRoleLabel(other?.role ?? '', t)}
@@ -958,10 +958,10 @@ export default function Messaging() {
       {/* ── Chat pane ── */}
       <div className={`${!selectedConvId ? 'hidden' : 'flex'} flex-col flex-1 min-w-0`}>
             {/* Chat header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white/95 backdrop-blur-sm">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-border-default bg-card/95 backdrop-blur-sm">
               <button
                 onClick={() => setSelectedConvId(null)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-card-hover text-secondary"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -977,16 +977,16 @@ export default function Messaging() {
                       size="md"
                     />
                     <span
-                      className={`absolute right-0 bottom-0 w-2.5 h-2.5 rounded-full border-2 border-white ${
-                        demoStatusPhase === 'offline' ? 'bg-gray-400 animate-pulse' :
+                      className={`absolute right-0 bottom-0 w-2.5 h-2.5 rounded-full border-2 border-card ${
+                        demoStatusPhase === 'offline' ? 'bg-muted animate-pulse' :
                         demoStatusPhase === 'online' ? 'bg-green-400' :
                         'bg-green-400 ring-2 ring-blue-400 shadow-lg animate-pulse'
                       }`}
                     />
                   </div>
                   <div>
-                    <p className="font-bold text-gray-900 text-sm leading-tight">{otherParticipant.name}</p>
-                    <p className="text-xs text-gray-400">
+                    <p className="font-bold text-primary text-sm leading-tight">{otherParticipant.name}</p>
+                    <p className="text-xs text-muted">
                       {onlineUserIds.has(otherParticipant.id) ? (
                         <span className="text-green-500">{t('messages.online', 'En ligne')}</span>
                       ) : (
@@ -1006,7 +1006,7 @@ export default function Messaging() {
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
-                  <p className="text-gray-400 text-sm">{t('messages.empty.conversation', 'Aucun message. Commencez la conversation !')}</p>
+                  <p className="text-muted text-sm">{t('messages.empty.conversation', 'Aucun message. Commencez la conversation !')}</p>
                 </div>
               ) : (
                 <>
@@ -1020,7 +1020,7 @@ export default function Messaging() {
                     return (
                       <div key={msg.id}>
                         {showTime && (
-                          <div className="text-center text-xs text-gray-400 py-2">{formatFullTime(msg.createdAt)}</div>
+                          <div className="text-center text-xs text-muted py-2">{formatFullTime(msg.createdAt)}</div>
                         )}
                         <div className={`flex items-end gap-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
                           {isEditing ? (
@@ -1030,17 +1030,17 @@ export default function Messaging() {
                                 value={editContent}
                                 onChange={(e) => setEditContent(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter') handleEditSubmit(); if (e.key === 'Escape') { setEditingMsgId(null); setEditContent(''); } }}
-                                className="flex-1 bg-gray-100 text-gray-900 text-sm px-3 py-2 rounded-2xl outline-none border border-[#0b5566]/30 focus:border-[#0b5566]"
+                                className="flex-1 bg-card-hover text-primary text-sm px-3 py-2 rounded-2xl outline-none border border-[#0b5566]/30 focus:border-[#0b5566]"
                               />
                               <button onClick={handleEditSubmit} className="text-[#0b5566] text-xs font-semibold px-2">OK</button>
-                              <button onClick={() => { setEditingMsgId(null); setEditContent(''); }} className="text-gray-400 text-xs px-1">✕</button>
+                              <button onClick={() => { setEditingMsgId(null); setEditContent(''); }} className="text-muted text-xs px-1">✕</button>
                             </div>
                           ) : (
                             <div
                               className={`max-w-xs lg:max-w-md xl:max-w-lg rounded-2xl text-sm leading-relaxed select-none overflow-hidden ${
                                 isMe
                                   ? 'bg-[#0b5566] text-white rounded-br-sm'
-                                  : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+                                  : 'bg-card-hover text-primary rounded-bl-sm'
                               }`}
                               onTouchStart={(e) => handleLongPressStart(e, msg, isMe)}
                               onTouchEnd={handleLongPressEnd}
@@ -1072,10 +1072,10 @@ export default function Messaging() {
                   <div data-tour="msg-typing-indicator" className="mb-1">
                     {(isOtherTyping || isTutorialMessageStep6) ? (
                       <div className="flex items-end gap-2 justify-start">
-                        <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                          <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                        <div className="bg-card-hover px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce [animation-delay:0ms]" />
+                          <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce [animation-delay:150ms]" />
+                          <span className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce [animation-delay:300ms]" />
                         </div>
                       </div>
                     ) : (
@@ -1089,14 +1089,14 @@ export default function Messaging() {
             </div>
 
             {/* Input */}
-            <div className="px-4 py-3 border-t border-gray-100 bg-white">
+            <div className="px-4 py-3 border-t border-border-default bg-card">
               {/* Media preview */}
               {mediaPreview && (
                 <div className="mb-2 relative inline-block">
                   {mediaPreview.type === 'image' ? (
-                    <img src={mediaPreview.url} alt="aperçu" className="h-24 rounded-xl object-cover border border-gray-200" />
+                    <img src={mediaPreview.url} alt="aperçu" className="h-24 rounded-xl object-cover border border-border-default" />
                   ) : (
-                    <video src={mediaPreview.url} className="h-24 rounded-xl border border-gray-200" />
+                    <video src={mediaPreview.url} className="h-24 rounded-xl border border-border-default" />
                   )}
                   <button
                     onClick={() => setMediaPreview(null)}
@@ -1104,12 +1104,12 @@ export default function Messaging() {
                   >✕</button>
                 </div>
               )}
-              <div className="relative flex items-end gap-2 bg-gray-50 rounded-2xl px-3 py-2" data-tour="msg-input">
+              <div className="relative flex items-end gap-2 bg-input rounded-2xl px-3 py-2" data-tour="msg-input">
                 {/* Emoji button */}
                 <button
                   type="button"
                   onClick={() => setShowEmoji(v => !v)}
-                  className="text-gray-400 hover:text-[#0b5566] transition-colors flex-shrink-0 mb-0.5"
+                  className="text-muted hover:text-[#0b5566] transition-colors flex-shrink-0 mb-0.5"
                   title={t('messages.emoji', 'Emoji')}
                 >
                   <HiOutlineEmojiHappy className="w-5 h-5" />
@@ -1118,7 +1118,7 @@ export default function Messaging() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-gray-400 hover:text-[#0b5566] transition-colors flex-shrink-0 mb-0.5"
+                  className="text-muted hover:text-[#0b5566] transition-colors flex-shrink-0 mb-0.5"
                   title={t('messages.attach', 'Joindre une image ou vidéo')}
                 >
                   <HiOutlinePhotograph className="w-5 h-5" />
@@ -1137,7 +1137,7 @@ export default function Messaging() {
                   onKeyDown={handleKeyDown}
                   placeholder={t('messages.input.placeholder', 'Écrivez un message…')}
                   rows={1}
-                  className="flex-1 bg-transparent text-sm text-gray-800 placeholder-gray-400 outline-none resize-none max-h-32 py-1"
+                  className="flex-1 bg-transparent text-sm text-primary placeholder-gray-400 outline-none resize-none max-h-32 py-1"
                   style={{ minHeight: '24px' }}
                 />
                 <button
@@ -1146,7 +1146,7 @@ export default function Messaging() {
                   className="w-8 h-8 flex items-center justify-center rounded-full bg-[#0b5566] text-white disabled:opacity-40 hover:bg-[#0a4a59] transition-colors flex-shrink-0 mb-0.5"
                 >
                   {sending || uploadingMedia ? (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-card border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <HiOutlinePaperAirplane className="w-4 h-4 rotate-90" />
                   )}
@@ -1156,7 +1156,7 @@ export default function Messaging() {
                   <EmojiPicker onSelect={(e) => { setInput(v => v + e); setShowEmoji(false); inputRef.current?.focus(); }} />
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-1 ml-1">{t('messages.input.helper', 'Entrée pour envoyer · Maj+Entrée pour un saut de ligne')}</p>
+              <p className="text-xs text-muted mt-1 ml-1">{t('messages.input.helper', 'Entrée pour envoyer · Maj+Entrée pour un saut de ligne')}</p>
             </div>
       </div>
 
@@ -1166,7 +1166,7 @@ export default function Messaging() {
           <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
           <div
             data-tour={isTutorialMessageStep7 ? 'msg-action-hint' : undefined}
-            className="fixed z-50 bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100"
+            className="fixed z-50 bg-card rounded-2xl shadow-xl overflow-hidden border border-border-default"
             style={{
               top: isTutorialMessageStep7
                 ? Math.max(24, Math.min(contextMenu.y - 14, window.innerHeight - 120))
@@ -1182,9 +1182,9 @@ export default function Messaging() {
                   if (msg) { setEditingMsgId(msg.id); setEditContent(msg.content); }
                   setContextMenu(null);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-primary hover:bg-input transition-colors"
               >
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 {t('messages.action.edit', 'Modifier')}
@@ -1202,7 +1202,7 @@ export default function Messaging() {
               </button>
             )}
             {!contextMenu.isMe && (
-              <div className="px-4 py-3 text-xs text-gray-400 text-center">
+              <div className="px-4 py-3 text-xs text-muted text-center">
                 {t('messages.cannot_edit', 'Vous ne pouvez pas modifier ce message')}
               </div>
             )}
@@ -1213,32 +1213,32 @@ export default function Messaging() {
       {/* ── New conversation modal ── */}
       {showNewConv && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h2 className="font-bold text-gray-900 text-base">{t('messages.new.title', 'Nouveau message')}</h2>
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border-default">
+              <h2 className="font-bold text-primary text-base">{t('messages.new.title', 'Nouveau message')}</h2>
               <button
                 onClick={() => { setShowNewConv(false); setContactSearch(''); setCenterFilter(''); }}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-card-hover text-muted"
               >
                 <HiOutlineX className="w-5 h-5" />
               </button>
             </div>
-            <div className="px-4 py-3 border-b border-gray-100 flex flex-col gap-2">
-              <div className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-2">
-                <HiOutlineSearch className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <div className="px-4 py-3 border-b border-border-default flex flex-col gap-2">
+              <div className="flex items-center gap-2 bg-input rounded-full px-3 py-2">
+                <HiOutlineSearch className="w-4 h-4 text-muted flex-shrink-0" />
                 <input
                   autoFocus
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
                   placeholder={t('messages.contactSearch.placeholder', 'Rechercher une personne…')}
-                  className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 outline-none"
+                  className="flex-1 bg-transparent text-sm text-primary placeholder-gray-400 outline-none"
                 />
               </div>
               {user?.role && typeof user.role === 'string' && user.role.toLowerCase().includes('super') && (
                 <select
                   value={centerFilter}
                   onChange={(e) => setCenterFilter(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30"
+                  className="w-full border border-border-default rounded-xl px-3 py-2 text-sm text-primary bg-card focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30"
                 >
                   <option value="">{t('messages.center.all', 'Tous les centres')}</option>
                   {centers.map((c) => (
@@ -1249,14 +1249,14 @@ export default function Messaging() {
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
               {filteredContacts.length === 0 ? (
-                <p className="text-center text-gray-400 text-sm py-8">{t('messages.contacts.empty', 'Aucun contact trouvé')}</p>
+                <p className="text-center text-muted text-sm py-8">{t('messages.contacts.empty', 'Aucun contact trouvé')}</p>
               ) : (
                 filteredContacts.map((contact) => (
                   <button
                     key={contact.id}
                     onClick={() => handleCreateConv(contact.id)}
                     disabled={creatingConv}
-                    className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-5 py-3 hover:bg-input transition-colors text-left"
                   >
                     <Avatar
                       name={contact.name}
@@ -1265,8 +1265,8 @@ export default function Messaging() {
                       size="md"
                     />
                     <div>
-                      <p className="font-semibold text-gray-900 text-sm">{contact.name}</p>
-                      <p className="text-xs text-gray-400">{getRoleLabel(contact.role, t)}</p>
+                      <p className="font-semibold text-primary text-sm">{contact.name}</p>
+                      <p className="text-xs text-muted">{getRoleLabel(contact.role, t)}</p>
                     </div>
                   </button>
                 ))

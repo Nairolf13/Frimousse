@@ -94,11 +94,11 @@ export default function ImportModal({ onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-card rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100">
-          <h2 className="text-base font-bold text-gray-900">Importer des données</h2>
-          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+        <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border-default">
+          <h2 className="text-base font-bold text-primary">Importer des données</h2>
+          <button type="button" onClick={onClose} className="text-muted hover:text-secondary text-xl leading-none">×</button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
@@ -106,37 +106,37 @@ export default function ImportModal({ onClose }: Props) {
           {/* Step: upload */}
           {step === 'upload' && (
             <>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-secondary">
                 Importez vos nounous, parents et enfants en une seule fois depuis un fichier Excel.
                 Le fichier doit contenir 3 onglets : <strong>Nounous</strong>, <strong>Parents</strong>, <strong>Enfants</strong>.
               </p>
-              <button type="button" onClick={handleDownloadTemplate} className="inline-flex items-center gap-2 text-sm text-[#0b5566] font-medium hover:underline">
+              <button type="button" onClick={handleDownloadTemplate} className="inline-flex items-center gap-2 text-sm text-accent font-medium hover:underline">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                 Télécharger le template Excel
               </button>
 
               <div
-                className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-[#0b5566]/40 transition-colors"
+                className="border-2 border-dashed border-border-default rounded-xl p-8 text-center cursor-pointer hover:border-accent/40 transition-colors"
                 onClick={() => fileInputRef.current?.click()}
               >
                 {file ? (
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-800">{file.name}</p>
-                    <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(1)} Ko</p>
+                    <p className="text-sm font-medium text-primary">{file.name}</p>
+                    <p className="text-xs text-muted">{(file.size / 1024).toFixed(1)} Ko</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <svg className="w-8 h-8 mx-auto text-gray-300" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-8m0 0l-3 3m3-3l3 3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1" /></svg>
-                    <p className="text-sm text-gray-500">Cliquez pour choisir un fichier <strong>.xlsx</strong></p>
+                    <svg className="w-8 h-8 mx-auto text-muted" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-8m0 0l-3 3m3-3l3 3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1" /></svg>
+                    <p className="text-sm text-secondary">Cliquez pour choisir un fichier <strong>.xlsx</strong></p>
                   </div>
                 )}
                 <input ref={fileInputRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={handleFileChange} />
               </div>
 
               {validationErrors.length > 0 && (
-                <div className="rounded-xl bg-red-50 border border-red-100 p-4 space-y-1">
-                  <p className="text-sm font-semibold text-red-700">Erreurs de validation :</p>
-                  <ul className="text-xs text-red-600 space-y-0.5 list-disc list-inside">
+                <div className="rounded-xl bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 p-4 space-y-1">
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-300">Erreurs de validation :</p>
+                  <ul className="text-xs text-red-600 dark:text-red-400 space-y-0.5 list-disc list-inside">
                     {validationErrors.map((e, i) => <li key={i}>{e}</li>)}
                   </ul>
                 </div>
@@ -164,10 +164,10 @@ export default function ImportModal({ onClose }: Props) {
 
               {preview.nannies.length > 0 && (
                 <section>
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Nounous ({preview.nannies.length})</h3>
-                  <div className="rounded-xl border border-gray-100 overflow-hidden">
+                  <h3 className="text-xs font-bold text-muted uppercase tracking-wide mb-2">Nounous ({preview.nannies.length})</h3>
+                  <div className="rounded-xl border border-border-default overflow-hidden">
                     <table className="w-full text-xs">
-                      <thead className="bg-gray-50 text-gray-500">
+                      <thead className="bg-input text-muted">
                         <tr>
                           <th className="text-left px-3 py-2">name</th>
                           <th className="text-left px-3 py-2">email</th>
@@ -176,13 +176,13 @@ export default function ImportModal({ onClose }: Props) {
                           <th className="text-left px-3 py-2">Statut</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-border-default">
                         {preview.nannies.map((r, i) => (
-                          <tr key={i} className={r._status === 'exists' ? 'bg-amber-50' : ''}>
-                            <td className="px-3 py-2 font-medium text-gray-800">{r.name}</td>
-                            <td className="px-3 py-2 text-gray-500">{r.email}</td>
-                            <td className="px-3 py-2 text-gray-500">{r.experience || '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{r.availability || '—'}</td>
+                          <tr key={i} className={r._status === 'exists' ? 'bg-amber-50 dark:bg-amber-950/30' : ''}>
+                            <td className="px-3 py-2 font-medium text-primary">{r.name}</td>
+                            <td className="px-3 py-2 text-secondary">{r.email}</td>
+                            <td className="px-3 py-2 text-secondary">{r.experience || '—'}</td>
+                            <td className="px-3 py-2 text-secondary">{r.availability || '—'}</td>
                             <td className="px-3 py-2">
                               {r._status === 'new'
                                 ? <span className="text-emerald-600 font-medium">Nouveau</span>
@@ -198,10 +198,10 @@ export default function ImportModal({ onClose }: Props) {
 
               {preview.parents.length > 0 && (
                 <section>
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Parents ({preview.parents.length})</h3>
-                  <div className="rounded-xl border border-gray-100 overflow-hidden">
+                  <h3 className="text-xs font-bold text-muted uppercase tracking-wide mb-2">Parents ({preview.parents.length})</h3>
+                  <div className="rounded-xl border border-border-default overflow-hidden">
                     <table className="w-full text-xs">
-                      <thead className="bg-gray-50 text-gray-500">
+                      <thead className="bg-input text-muted">
                         <tr>
                           <th className="text-left px-3 py-2">firstName</th>
                           <th className="text-left px-3 py-2">lastName</th>
@@ -209,12 +209,12 @@ export default function ImportModal({ onClose }: Props) {
                           <th className="text-left px-3 py-2">Statut</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-border-default">
                         {preview.parents.map((r, i) => (
-                          <tr key={i} className={r._status === 'exists' ? 'bg-amber-50' : ''}>
-                            <td className="px-3 py-2 font-medium text-gray-800">{r.firstname}</td>
-                            <td className="px-3 py-2 text-gray-800">{r.lastname}</td>
-                            <td className="px-3 py-2 text-gray-500">{r.email}</td>
+                          <tr key={i} className={r._status === 'exists' ? 'bg-amber-50 dark:bg-amber-950/30' : ''}>
+                            <td className="px-3 py-2 font-medium text-primary">{r.firstname}</td>
+                            <td className="px-3 py-2 text-primary">{r.lastname}</td>
+                            <td className="px-3 py-2 text-secondary">{r.email}</td>
                             <td className="px-3 py-2">
                               {r._status === 'new'
                                 ? <span className="text-emerald-600 font-medium">Nouveau</span>
@@ -230,10 +230,10 @@ export default function ImportModal({ onClose }: Props) {
 
               {preview.children.length > 0 && (
                 <section>
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Enfants ({preview.children.length})</h3>
-                  <div className="rounded-xl border border-gray-100 overflow-hidden">
+                  <h3 className="text-xs font-bold text-muted uppercase tracking-wide mb-2">Enfants ({preview.children.length})</h3>
+                  <div className="rounded-xl border border-border-default overflow-hidden">
                     <table className="w-full text-xs">
-                      <thead className="bg-gray-50 text-gray-500">
+                      <thead className="bg-input text-muted">
                         <tr>
                           <th className="text-left px-3 py-2">name</th>
                           <th className="text-left px-3 py-2">birthDate</th>
@@ -242,14 +242,14 @@ export default function ImportModal({ onClose }: Props) {
                           <th className="text-left px-3 py-2">Parent(s)</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-border-default">
                         {preview.children.map((r, i) => (
                           <tr key={i}>
-                            <td className="px-3 py-2 font-medium text-gray-800">{r.name}</td>
-                            <td className="px-3 py-2 text-gray-500">{r.birthdate || '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{r.sexe || '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{r.group || '—'}</td>
-                            <td className="px-3 py-2 text-gray-500">{[r.email_parent1, r.email_parent2].filter(Boolean).join(', ') || '—'}</td>
+                            <td className="px-3 py-2 font-medium text-primary">{r.name}</td>
+                            <td className="px-3 py-2 text-secondary">{r.birthdate || '—'}</td>
+                            <td className="px-3 py-2 text-secondary">{r.sexe || '—'}</td>
+                            <td className="px-3 py-2 text-secondary">{r.group || '—'}</td>
+                            <td className="px-3 py-2 text-secondary">{[r.email_parent1, r.email_parent2].filter(Boolean).join(', ') || '—'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -266,10 +266,10 @@ export default function ImportModal({ onClose }: Props) {
           {step === 'done' && report && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                 </div>
-                <p className="text-base font-semibold text-gray-900">Import terminé</p>
+                <p className="text-base font-semibold text-primary">Import terminé</p>
               </div>
               <div className="grid grid-cols-3 gap-3">
                 {[
@@ -277,18 +277,18 @@ export default function ImportModal({ onClose }: Props) {
                   { label: 'Parents', ...report.parents },
                   { label: 'Enfants', created: report.children.created, skipped: report.children.skipped },
                 ].map(item => (
-                  <div key={item.label} className="rounded-xl bg-gray-50 p-4 text-center">
-                    <p className="text-xs text-gray-500 mb-1">{item.label}</p>
-                    <p className="text-2xl font-bold text-[#0b5566]">{item.created}</p>
-                    <p className="text-xs text-gray-400">créé(s)</p>
+                  <div key={item.label} className="rounded-xl bg-input p-4 text-center">
+                    <p className="text-xs text-muted mb-1">{item.label}</p>
+                    <p className="text-2xl font-bold text-accent">{item.created}</p>
+                    <p className="text-xs text-muted">créé(s)</p>
                     {(item.skipped ?? 0) > 0 && <p className="text-xs text-amber-500 mt-1">{item.skipped} ignoré(s)</p>}
                   </div>
                 ))}
               </div>
               {report.errors.length > 0 && (
-                <div className="rounded-xl bg-red-50 border border-red-100 p-4 space-y-1">
-                  <p className="text-sm font-semibold text-red-700">Erreurs partielles :</p>
-                  <ul className="text-xs text-red-600 space-y-0.5 list-disc list-inside">
+                <div className="rounded-xl bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 p-4 space-y-1">
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-300">Erreurs partielles :</p>
+                  <ul className="text-xs text-red-600 dark:text-red-400 space-y-0.5 list-disc list-inside">
                     {report.errors.map((e, i) => <li key={i}>{e}</li>)}
                   </ul>
                 </div>
@@ -298,15 +298,15 @@ export default function ImportModal({ onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 gap-3">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-border-default gap-3">
           {step === 'upload' && (
             <>
-              <button type="button" onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700">Annuler</button>
+              <button type="button" onClick={onClose} className="text-sm text-secondary hover:text-primary">Annuler</button>
               <button
                 type="button"
                 onClick={handlePreview}
                 disabled={!file || loading}
-                className="px-4 py-2 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:bg-[#0a4a59] disabled:opacity-50 transition-colors"
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
               >
                 {loading ? 'Analyse...' : 'Analyser le fichier'}
               </button>
@@ -314,19 +314,19 @@ export default function ImportModal({ onClose }: Props) {
           )}
           {step === 'preview' && (
             <>
-              <button type="button" onClick={() => { setStep('upload'); setPreview(null); }} className="text-sm text-gray-500 hover:text-gray-700">Retour</button>
+              <button type="button" onClick={() => { setStep('upload'); setPreview(null); }} className="text-sm text-secondary hover:text-primary">Retour</button>
               <button
                 type="button"
                 onClick={handleConfirm}
                 disabled={loading || totalNew === 0}
-                className="px-4 py-2 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:bg-[#0a4a59] disabled:opacity-50 transition-colors"
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold disabled:opacity-50 transition-colors"
               >
                 {loading ? 'Import en cours...' : `Importer ${totalNew} entrée(s)`}
               </button>
             </>
           )}
           {step === 'done' && (
-            <button type="button" onClick={onClose} className="ml-auto px-4 py-2 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:bg-[#0a4a59] transition-colors">
+            <button type="button" onClick={onClose} className="ml-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors">
               Fermer
             </button>
           )}

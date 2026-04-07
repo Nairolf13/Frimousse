@@ -64,7 +64,7 @@ export default function MonPlanning() {
   }
 
   return (
-    <div className={`min-h-screen bg-[#fcfcff] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
             <div className="flex-1 min-w-0">
@@ -74,8 +74,8 @@ export default function MonPlanning() {
             <div className="flex flex-wrap items-center gap-2 self-start md:self-end">
               {isAdmin && nannies.length > 0 && (
                 <>
-                  <label className="text-sm text-gray-600 font-medium">Voir le planning de :</label>
-                  <select value={nannyId || ''} onChange={e => { setNannyId(e.target.value); }} className="border border-gray-200 rounded-xl px-3 py-2.5 text-gray-700 bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300">
+                  <label className="text-sm text-secondary font-medium">Voir le planning de :</label>
+                  <select value={nannyId || ''} onChange={e => { setNannyId(e.target.value); }} className="border border-border-default rounded-xl px-3 py-2.5 text-primary bg-card shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-300">
                     {nannies.map(n => (
                       <option key={n.id} value={n.id}>{n.name}</option>
                     ))}
@@ -86,7 +86,7 @@ export default function MonPlanning() {
                 type="month"
                 value={exportMonth}
                 onChange={e => setExportMonth(e.target.value)}
-                className="border border-gray-200 rounded-xl px-3 py-2 text-gray-700 bg-white shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
+                className="border border-border-default rounded-xl px-3 py-2 text-primary bg-card shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-brand-200"
               />
               <button
                 disabled={exporting || !nannyId}
@@ -113,7 +113,7 @@ export default function MonPlanning() {
               </button>
             </div>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 border border-gray-100 w-full" data-tour="planning-calendar">
+          <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 border border-border-default w-full" data-tour="planning-calendar">
             <NannyCalendar nannyId={nannyId} />
           </div>
       </div>

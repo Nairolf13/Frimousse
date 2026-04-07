@@ -41,6 +41,8 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
   const [selectedNannyId, setSelectedNannyId] = useState('');
   const [manualDates, setManualDates] = useState<string[]>([]);
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isEdit = !!initial?.childId;
 
@@ -59,6 +61,8 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
         setSelectedNannyId('');
         setManualDates([]);
       }
+      setIsSubmitting(false);
+      setSubmitError(null);
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -112,8 +116,11 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (isSubmitting) return;
+    setSubmitError(null);
+    setIsSubmitting(true);
     if (isEdit) {
-      onSave(form);
+      Promise.resolve(onSave(form)).finally(() => setIsSubmitting(false));
       return;
     }
     const entries: AssignmentEntry[] = [];
@@ -122,7 +129,7 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
         entries.push({ date, childId, nannyId: selectedNannyId });
       }
     }
-    onSave(entries);
+    Promise.resolve(onSave(entries)).finally(() => setIsSubmitting(false));
   }
 
   if (!open) return null;
@@ -133,20 +140,20 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       role="presentation"
     >
-      <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div className="bg-card w-full max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex justify-center pt-3 pb-1 sm:hidden">
-          <div className="w-10 h-1 rounded-full bg-gray-200" />
+          <div className="w-10 h-1 rounded-full bg-border-default" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-gray-100">
-          <div className="w-10 h-10 rounded-xl bg-[#e6f4f7] flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-[#0b5566]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+        <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-border-default">
+          <div className="w-10 h-10 rounded-xl bg-[#e6f4f7] dark:bg-input flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-[#0b5566] dark:text-accent" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="text-base font-bold text-gray-900 leading-tight">
+            <h2 className="text-base font-bold text-primary leading-tight">
               {isEdit ? t('assignment.modal.title.edit') : t('assignment.modal.title.add')}
             </h2>
             {!isEdit && selectedDates.length > 0 && selectedChildIds.length > 0 && (
@@ -155,11 +162,11 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
               </p>
             )}
             {!isEdit && !(selectedDates.length > 0 && selectedChildIds.length > 0) && (
-              <p className="text-xs text-gray-400 mt-0.5">{t('assignment.modal.help', 'Select children, days and a nanny')}</p>
+              <p className="text-xs text-muted mt-0.5">{t('assignment.modal.help', 'Select children, days and a nanny')}</p>
             )}
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition flex-shrink-0">
-            <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-input hover:bg-card-hover flex items-center justify-center transition flex-shrink-0">
+            <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
@@ -171,28 +178,28 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
               /* ── MODE ÉDITION (un seul assignment) ── */
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
                     {t('assignment.modal.date')} <span className="text-red-400">*</span>
                   </label>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="border border-border-default rounded-xl overflow-hidden">
                     <input
                       type="date"
                       value={form.date}
                       onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
                       required
-                      className="block w-full px-3 py-2.5 text-sm text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20"
+                      className="block w-full px-3 py-2.5 text-sm text-primary bg-input focus:outline-none focus:ring-2 focus:ring-accent/20"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
                     {t('assignment.modal.child')} <span className="text-red-400">*</span>
                   </label>
                   <div className="flex items-center gap-3">
                     {(() => {
                       const selected = children.find(c => c.id === form.childId);
                       return selected ? (
-                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-sm font-bold text-[#0b5566]">
+                        <div className="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden bg-[#e6f4f7] dark:bg-input flex items-center justify-center text-sm font-bold text-[#0b5566] dark:text-accent">
                           {selected.photoUrl
                             ? <img src={selected.photoUrl} alt={selected.name} className="w-full h-full object-cover" />
                             : selected.name.charAt(0).toUpperCase()}
@@ -204,32 +211,32 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
                         value={form.childId}
                         onChange={e => setForm(f => ({ ...f, childId: e.target.value }))}
                         required
-                        className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/20 focus:border-[#0b5566] transition"
+                        className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-border-default bg-input text-sm text-primary focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition"
                       >
                         <option value="">{t('assignment.modal.select')}</option>
                         {children.map(child => <option key={child.id} value={child.id}>{child.name}</option>)}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                        <svg className="w-4 h-4 text-muted" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
                     {t('assignment.modal.nanny')} <span className="text-red-400">*</span>
                   </label>
                   {visibleNannies.length === 0 ? (
-                    <p className="text-sm text-gray-400 italic">{form.childId ? 'Aucune nounou assignée à cet enfant.' : "Sélectionnez d'abord un enfant."}</p>
+                    <p className="text-sm text-muted italic">{form.childId ? 'Aucune nounou assignée à cet enfant.' : "Sélectionnez d'abord un enfant."}</p>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
                       {visibleNannies.map(nanny => {
                         const selected = form.nannyId === nanny.id;
                         return (
                           <button key={nanny.id} type="button" onClick={() => setForm(f => ({ ...f, nannyId: nanny.id }))}
-                            className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${selected ? 'bg-[#0b5566] text-white border-[#0b5566] shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0b5566] hover:text-[#0b5566]'}`}>
+                            className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${selected ? 'bg-accent text-white border-accent shadow-sm' : 'bg-input text-primary border-border-default hover:border-accent hover:text-accent'}`}>
                             <div className="flex items-center gap-2 min-w-0">
-                                  <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                              <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] dark:bg-border-default text-[#0b5566] dark:text-accent'}`}>
                                 {nanny.avatarUrl
                                   ? <img src={nanny.avatarUrl} alt={nanny.name} className="w-full h-full object-cover" />
                                   : nanny.name.charAt(0).toUpperCase()}
@@ -248,23 +255,23 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
               /* ── MODE CRÉATION MULTIPLE ── */
               <>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
                     {t('assignment.modal.day_selection', 'Select days')} <span className="text-red-400">*</span>
                   </label>
                   <div className="flex items-center justify-between text-xs font-semibold mb-2">
                     <button
                       type="button"
                       onClick={() => setCalendarMonth(month => new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-                      className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200"
+                      className="px-2 py-1 rounded-lg bg-input hover:bg-card-hover text-secondary"
                     >{t('assignment.modal.prev', 'Prev')}</button>
-                    <span>{new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-US', { month: 'long', year: 'numeric' }).format(calendarMonth)}</span>
+                    <span className="text-primary">{new Intl.DateTimeFormat(locale === 'fr' ? 'fr-FR' : 'en-US', { month: 'long', year: 'numeric' }).format(calendarMonth)}</span>
                     <button
                       type="button"
                       onClick={() => setCalendarMonth(month => new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-                      className="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200"
+                      className="px-2 py-1 rounded-lg bg-input hover:bg-card-hover text-secondary"
                     >{t('assignment.modal.next', 'Next')}</button>
                   </div>
-                  <div className="grid grid-cols-7 gap-1 text-[10px] text-gray-500 text-center mb-1">
+                  <div className="grid grid-cols-7 gap-1 text-[10px] text-muted text-center mb-1">
                     {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((d, index) => <div key={`${d}-${index}`}>{d}</div>)}
                   </div>
                   <div className="grid grid-cols-7 gap-1 text-xs mb-1">
@@ -288,7 +295,7 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
                             onClick={() => {
                               setManualDates(prev => prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date].sort());
                             }}
-                            className={`h-9 rounded-lg text-center ${selected ? 'bg-[#0b5566] text-white' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'}`}
+                            className={`h-9 rounded-lg text-center ${selected ? 'bg-accent text-white' : 'bg-input text-primary hover:bg-card-hover border border-border-default'}`}
                           >
                             {Number(date.split('-')[2])}
                           </button>
@@ -297,29 +304,29 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
                     })()}
                   </div>
                   {manualDates.length > 0 ? (
-                    <p className="text-xs text-gray-400">{manualDates.length} jour{manualDates.length > 1 ? 's' : ''} sélectionné{manualDates.length > 1 ? 's' : ''}</p>
+                    <p className="text-xs text-muted">{manualDates.length} jour{manualDates.length > 1 ? 's' : ''} sélectionné{manualDates.length > 1 ? 's' : ''}</p>
                   ) : (
-                    <p className="text-xs text-gray-400">{t('assignment.modal.no_days', 'No days selected')}</p>
+                    <p className="text-xs text-muted">{t('assignment.modal.no_days', 'No days selected')}</p>
                   )}
                 </div>
 
                 {/* Enfants (multi-sélection) */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
                     {t('assignment.modal.child')} <span className="text-red-400">*</span>
-                    {selectedChildIds.length > 0 && <span className="ml-1.5 text-[#0b5566] normal-case font-bold">({selectedChildIds.length} sélectionné{selectedChildIds.length > 1 ? 's' : ''})</span>}
+                    {selectedChildIds.length > 0 && <span className="ml-1.5 text-accent normal-case font-bold">({selectedChildIds.length} sélectionné{selectedChildIds.length > 1 ? 's' : ''})</span>}
                   </label>
                   {children.length === 0 ? (
-                    <p className="text-sm text-gray-400 italic">Aucun enfant disponible.</p>
+                    <p className="text-sm text-muted italic">Aucun enfant disponible.</p>
                   ) : (
                     <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
                       {children.map(child => {
                         const selected = selectedChildIds.includes(child.id);
                         return (
                           <button key={child.id} type="button" onClick={() => toggleChild(child.id)}
-                            className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${selected ? 'bg-[#0b5566] text-white border-[#0b5566] shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0b5566] hover:text-[#0b5566]'}`}>
+                            className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${selected ? 'bg-accent text-white border-accent shadow-sm' : 'bg-input text-primary border-border-default hover:border-accent hover:text-accent'}`}>
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                              <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] dark:bg-border-default text-[#0b5566] dark:text-accent'}`}>
                                 {child.photoUrl
                                   ? <img src={child.photoUrl} alt={child.name} className="w-full h-full object-cover" />
                                   : child.name.charAt(0).toUpperCase()}
@@ -336,20 +343,20 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
 
                 {/* Nounou */}
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
                     {t('assignment.modal.nanny')} <span className="text-red-400">*</span>
                   </label>
                   {visibleNannies.length === 0 ? (
-                    <p className="text-sm text-gray-400 italic">{selectedChildIds.length === 0 ? "Sélectionnez d'abord un enfant." : 'Aucune nounou assignée à ces enfants.'}</p>
+                    <p className="text-sm text-muted italic">{selectedChildIds.length === 0 ? "Sélectionnez d'abord un enfant." : 'Aucune nounou assignée à ces enfants.'}</p>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
                       {visibleNannies.map(nanny => {
                         const selected = selectedNannyId === nanny.id;
                         return (
                           <button key={nanny.id} type="button" onClick={() => setSelectedNannyId(nanny.id)}
-                            className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${selected ? 'bg-[#0b5566] text-white border-[#0b5566] shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:border-[#0b5566] hover:text-[#0b5566]'}`}>
+                            className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${selected ? 'bg-accent text-white border-accent shadow-sm' : 'bg-input text-primary border-border-default hover:border-accent hover:text-accent'}`}>
                             <div className="flex items-center gap-2 min-w-0">
-                                  <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] text-[#0b5566]'}`}>
+                              <div className={`w-7 h-7 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold ${selected ? 'bg-white/20 text-white' : 'bg-[#e6f4f7] dark:bg-border-default text-[#0b5566] dark:text-accent'}`}>
                                 {nanny.avatarUrl
                                   ? <img src={nanny.avatarUrl} alt={nanny.name} className="w-full h-full object-cover" />
                                   : nanny.name.charAt(0).toUpperCase()}
@@ -368,21 +375,27 @@ export default function AssignmentModal({ open, onClose, onSave, initial }: Assi
           </div>
 
           {/* Footer */}
-          <div className="flex gap-3 px-5 py-4 border-t border-gray-100">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition">
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={isEdit ? !canSubmitEdit : !canSubmitMulti}
-              className="flex-[2] py-2.5 rounded-xl bg-[#0b5566] text-white text-sm font-bold shadow hover:bg-[#08323a] transition disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {isEdit
-                ? (t('global.edit') || t('global.save'))
-                : canSubmitMulti
-                  ? `Ajouter ${selectedChildIds.length * selectedDates.length} affectation${selectedChildIds.length * selectedDates.length > 1 ? 's' : ''}`
-                  : t('global.add')}
-            </button>
+          <div className="flex flex-col gap-2 px-5 py-4 border-t border-border-default">
+            {submitError && (
+              <p className="text-xs text-red-500 text-center">{submitError}</p>
+            )}
+            <div className="flex gap-3">
+              <button type="button" onClick={onClose} disabled={isSubmitting} className="flex-1 py-2.5 rounded-xl border border-border-default text-sm font-semibold text-secondary hover:bg-input transition disabled:opacity-50">
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={(isEdit ? !canSubmitEdit : !canSubmitMulti) || isSubmitting}
+                className="flex-[2] py-2.5 rounded-xl bg-amber-500 text-white text-sm font-bold shadow hover:bg-amber-600 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSubmitting && <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>}
+                {isEdit
+                  ? (t('global.edit') || t('global.save'))
+                  : canSubmitMulti
+                    ? `Ajouter ${selectedChildIds.length * selectedDates.length} affectation${selectedChildIds.length * selectedDates.length > 1 ? 's' : ''}`
+                    : t('global.add')}
+              </button>
+            </div>
           </div>
         </form>
       </div>

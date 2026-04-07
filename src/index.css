@@ -1,5 +1,91 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+@variant dark (&:is(.dark, .dark *));
+
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS — SEUL ENDROIT À MODIFIER POUR CHANGER LES COULEURS
+   ── Light mode (:root) et dark mode (.dark) définis ici.
+   ── Tailwind génère automatiquement bg-surface, text-primary, etc.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Fonds */
+  --t-surface:      #f4f7fa;   /* fond de page */
+  --t-card:         #ffffff;   /* fond carte / panel */
+  --t-card-hover:   #f9fafb;   /* carte survolée */
+  --t-input:        #f9fafb;   /* fond champ de formulaire */
+
+  /* Bordures */
+  --t-border:       #e5e7eb;   /* bordure standard (gray-200) */
+  --t-border-strong:#d1d5db;   /* bordure marquée (gray-300) */
+
+  /* Textes */
+  --t-text-primary:   #1f2937; /* texte principal (gray-800) */
+  --t-text-secondary: #6b7280; /* texte secondaire (gray-500) */
+  --t-text-muted:     #9ca3af; /* texte discret (gray-400) */
+
+  /* Sidebar */
+  --t-sidebar:      #0b5566;   /* fond sidebar */
+  --t-sidebar-text: #ffffff;   /* texte sidebar */
+
+  /* Accent / brand */
+  --t-accent:       #0b5566;
+  --t-accent-light: #e0f2fe;
+
+  /* CTA amber */
+  --t-cta:          #F59E0B;
+  --t-cta-hover:    #D97706;
+}
+
+.dark {
+  /* Fonds — bleu-marine profond (style mockup) */
+  --t-surface:      #0d1117;   /* background principal */
+  --t-card:         #131929;   /* cards / panels */
+  --t-card-hover:   #1a2540;   /* modales / hover élevé */
+  --t-input:        #1a2540;   /* champs de formulaire */
+
+  /* Bordures */
+  --t-border:       #1e2a40;   /* bordure standard */
+  --t-border-strong:#2d3f60;   /* bordure marquée */
+
+  /* Textes */
+  --t-text-primary:   #E2E8F0; /* texte principal */
+  --t-text-secondary: #94A3B8; /* texte secondaire */
+  --t-text-muted:     #64748B; /* texte faible */
+
+  /* Sidebar (inchangée en dark) */
+  --t-sidebar:      #0b5566;
+  --t-sidebar-text: #ffffff;
+
+  /* Accent / primary */
+  --t-accent:       #6366F1;   /* indigo */
+  --t-accent-light: #1e2a5e;   /* indigo soft bg */
+
+  /* CTA amber */
+  --t-cta:          #F59E0B;   /* bouton principal amber */
+  --t-cta-hover:    #D97706;
+}
+
+/* ── Expose les tokens comme classes Tailwind ──────────────────
+   Utilisation : bg-surface, bg-card, text-primary, border-default…
+   ─────────────────────────────────────────────────────────────── */
+@theme inline {
+  --color-surface:        var(--t-surface);
+  --color-card:           var(--t-card);
+  --color-card-hover:     var(--t-card-hover);
+  --color-input:          var(--t-input);
+  --color-border-default: var(--t-border);
+  --color-border-strong:  var(--t-border-strong);
+  --color-primary:        var(--t-text-primary);
+  --color-secondary:      var(--t-text-secondary);
+  --color-muted:          var(--t-text-muted);
+  --color-sidebar:        var(--t-sidebar);
+  --color-sidebar-text:   var(--t-sidebar-text);
+  --color-accent:         var(--t-accent);
+  --color-accent-light:   var(--t-accent-light);
+  --color-cta:            var(--t-cta, #F59E0B);
+  --color-cta-hover:      var(--t-cta-hover, #D97706);
+}
 
 /* ── Custom theme (Tailwind v4 @theme) ───────── */
 @theme {
@@ -81,7 +167,7 @@
   }
 
   body {
-    @apply text-gray-800 bg-gray-50;
+    @apply bg-surface text-primary;
   }
 
   /* Better focus styles */

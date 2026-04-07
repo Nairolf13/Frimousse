@@ -23,5 +23,5 @@
     "noUncheckedSideEffectImports": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "pages"]
+  "include": ["src", "pages", "hooks", "components", "context", "utils", "types", "services", "scripts"]
 }

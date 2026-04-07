@@ -258,18 +258,18 @@ export default function PaymentHistoryPage() {
 
   // Helper renderers to keep JSX flatter and avoid deep nesting
   const FamilyList = () => {
-    if (loading) return <div className="text-gray-400 text-sm py-8 text-center">{t('loading')}</div>;
-    if (!loading && filtered.length === 0) return <div className="text-gray-400 text-sm py-8 text-center">{t('payments.history.empty')}</div>;
+    if (loading) return <div className="text-muted text-sm py-8 text-center">{t('loading')}</div>;
+    if (!loading && filtered.length === 0) return <div className="text-muted text-sm py-8 text-center">{t('payments.history.empty')}</div>;
     return <>
       {filtered.map(rec => {
         const initials = (rec.parent ? `${rec.parent.firstName || ''}`.slice(0,1) + (rec.parent?.lastName || '').slice(0,1) : '--').toUpperCase();
         const parentName = rec.parent ? `${rec.parent.firstName || ''} ${rec.parent.lastName || ''}`.trim() : t('common.none');
         return (
-          <div key={rec.id} className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden mb-4">
+          <div key={rec.id} className="bg-card rounded-2xl shadow-md border border-border-default overflow-hidden mb-4">
             {/* Card header */}
             <div className="bg-gradient-to-r from-[#0b5566] to-[#08323a] px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-11 h-11 rounded-full overflow-hidden bg-white/20 text-white flex items-center justify-center font-bold text-base flex-shrink-0">
+                <div className="w-11 h-11 rounded-full overflow-hidden bg-card/20 text-white flex items-center justify-center font-bold text-base flex-shrink-0">
                   {rec.parent?.user?.avatarUrl
                     ? <img src={rec.parent.user.avatarUrl} alt={parentName} className="w-full h-full object-cover" />
                     : initials}
@@ -283,11 +283,11 @@ export default function PaymentHistoryPage() {
                 {rec.invoiceNumber && <span className="text-xs text-white/60 font-medium">{rec.invoiceNumber}</span>}
                 {rec.createdAt && <span className="text-xs text-white/60">{new Date(rec.createdAt).toLocaleDateString('fr-FR')}</span>}
                 {rec.paid
-                  ? <span className="text-xs font-semibold bg-emerald-500 text-white px-2.5 py-1 rounded-full">{t('payments.status.paid')}</span>
-                  : <span className="text-xs font-semibold bg-white/20 text-white px-2.5 py-1 rounded-full">{t('payments.status.unpaid')}</span>
+                  ? <span className="text-xs font-semibold bg-emerald-50 dark:bg-emerald-9500 text-white px-2.5 py-1 rounded-full">{t('payments.status.paid')}</span>
+                  : <span className="text-xs font-semibold bg-card/20 text-white px-2.5 py-1 rounded-full">{t('payments.status.unpaid')}</span>
                 }
                 {user && (user.role === 'admin' || (user.role && user.role.toLowerCase().includes('super'))) && (
-                  <button onClick={() => togglePaid(rec.id, !rec.paid)} className="text-xs px-2.5 py-1 bg-white/20 hover:bg-white/30 text-white rounded-full transition-colors">
+                  <button onClick={() => togglePaid(rec.id, !rec.paid)} className="text-xs px-2.5 py-1 bg-card/20 hover:bg-card/30 text-white rounded-full transition-colors">
                     {rec.paid ? t('payments.actions.mark_unpaid') : t('payments.actions.mark_paid')}
                   </button>
                 )}
@@ -296,7 +296,7 @@ export default function PaymentHistoryPage() {
 
             {/* Child details */}
             <div className="px-5 py-4">
-              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">{t('payments.detail.header', { month: new Date(year, month-1).toLocaleString(locale || 'fr-FR', { month: 'long', year: 'numeric' }) })}</div>
+              <div className="text-xs font-semibold text-muted uppercase tracking-wide mb-3">{t('payments.detail.header', { month: new Date(year, month-1).toLocaleString(locale || 'fr-FR', { month: 'long', year: 'numeric' }) })}</div>
               <div className="space-y-2">
                 {(() => {
                   const visible = Array.isArray(rec.details)
@@ -304,36 +304,36 @@ export default function PaymentHistoryPage() {
                     : [];
                   if (visible.length > 0) {
                     return visible.map((d, idx) => (
-                      <div key={idx} className="bg-gray-50 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div key={idx} className="bg-input rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 flex items-center justify-center font-bold text-sm flex-shrink-0">
                             {d.childPhotoUrl
                               ? <img src={d.childPhotoUrl} alt={d.childName} className="w-full h-full object-cover" />
                               : (d.childName || '').slice(0,1).toUpperCase()}
                           </div>
-                          <span className="font-semibold text-gray-800 text-sm">{d.childName}</span>
+                          <span className="font-semibold text-primary text-sm">{d.childName}</span>
                         </div>
                         <div className="text-right text-sm">
-                          <span className="text-gray-500">{d.daysPresent} {t('payments.days')}</span>
-                          <span className="mx-2 text-gray-300">·</span>
+                          <span className="text-secondary">{d.daysPresent} {t('payments.days')}</span>
+                          <span className="mx-2 text-muted">·</span>
                           <span className="text-emerald-600 font-semibold">{d.daysPresent} × {fmt(d.ratePerDay)} = {fmt(d.subtotal)}</span>
                         </div>
                       </div>
                     ));
                   }
-                  return <div className="text-gray-400 text-sm">{t('payments.no_child_this_month')}</div>;
+                  return <div className="text-muted text-sm">{t('payments.no_child_this_month')}</div>;
                 })()}
               </div>
             </div>
 
             {/* Card footer */}
-            <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="px-5 py-4 bg-input border-t border-border-default flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <div className="text-xs text-gray-400 font-medium">{t('payments.family.total_label')}</div>
+                <div className="text-xs text-muted font-medium">{t('payments.family.total_label')}</div>
                 {Array.isArray(rec.details) && (() => {
                   const vis = rec.details.filter(d => !(d.daysPresent === 0 && d.ratePerDay === 0 && (d.childName||'').toLowerCase().includes('réduction')));
                   const days = vis.reduce((s,d) => s + (d.daysPresent||0), 0);
-                  return <div className="text-xs text-gray-400 mt-0.5">{t('payments.family.summary', { n: String(vis.length), days: String(days) })}</div>;
+                  return <div className="text-xs text-muted mt-0.5">{t('payments.family.summary', { n: String(vis.length), days: String(days) })}</div>;
                 })()}
                 <div className="text-2xl font-extrabold text-[#0b5566] mt-1">
                   {fmt(Number(rec.total))}
@@ -349,7 +349,7 @@ export default function PaymentHistoryPage() {
                   {rec.invoiceNumber ? `${t('payments.download_invoice')} (${rec.invoiceNumber})` : t('payments.download_invoice')}
                 </a>
                 <button type="button" onClick={() => { if (!rec.parent?.email) { showModal(t('payments.errors.no_email') || 'Aucune adresse e-mail trouvée'); return; } sendInvoice(rec.id, rec.parent?.firstName || rec.parent?.email || ''); }}
-                  className="flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
+                  className="flex items-center justify-center gap-1.5 px-4 py-2 border border-border-default bg-card text-primary rounded-xl text-sm font-medium hover:bg-input transition-colors">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                   {t('payments.send_invoice') || 'Envoyer'}
                 </button>
@@ -362,17 +362,17 @@ export default function PaymentHistoryPage() {
   };
 
   const NannyList = () => {
-    if (loadingNannyGroups) return <div className="text-gray-400 text-sm py-8 text-center">{t('loading')}</div>;
-    if (nannyGroupsError) return <div className="bg-red-50 border border-red-100 text-red-700 p-4 rounded-xl text-sm">{nannyGroupsError}</div>;
-    if (!Array.isArray(nannyGroups) || nannyGroups.length === 0) return <div className="text-gray-400 text-sm py-8 text-center">{t('payments.history.empty')}</div>;
+    if (loadingNannyGroups) return <div className="text-muted text-sm py-8 text-center">{t('loading')}</div>;
+    if (nannyGroupsError) return <div className="bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 text-red-700 dark:text-red-300 p-4 rounded-xl text-sm">{nannyGroupsError}</div>;
+    if (!Array.isArray(nannyGroups) || nannyGroups.length === 0) return <div className="text-muted text-sm py-8 text-center">{t('payments.history.empty')}</div>;
     return <>
       {nannyGroups.map((g: NannyGroup) => {
         const initials = (g.nanny?.name || '').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || '—';
         return (
-          <div key={String(g.nanny?.id || Math.random())} className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden mb-4">
+          <div key={String(g.nanny?.id || Math.random())} className="bg-card rounded-2xl shadow-md border border-border-default overflow-hidden mb-4">
             {/* Nanny card header */}
             <div className="bg-gradient-to-r from-violet-600 to-violet-800 px-5 py-4 flex items-center gap-3">
-              <div className="w-11 h-11 rounded-xl overflow-hidden bg-white/20 text-white flex items-center justify-center font-bold text-base flex-shrink-0">
+              <div className="w-11 h-11 rounded-xl overflow-hidden bg-card/20 text-white flex items-center justify-center font-bold text-base flex-shrink-0">
                 {g.nanny?.avatarUrl ? (
                   <img src={g.nanny.avatarUrl} alt={`${g.nanny.name || 'Nounou'} avatar`} className="w-full h-full object-cover" />
                 ) : (
@@ -389,14 +389,14 @@ export default function PaymentHistoryPage() {
             {/* Payment rows */}
             <div className="px-5 py-4">
               {(g.payments || []).length === 0 ? (
-                <div className="text-gray-400 text-sm">{t('payments.history.empty')}</div>
+                <div className="text-muted text-sm">{t('payments.history.empty')}</div>
               ) : (
                 <div className="space-y-2">
                   {(g.payments || []).map((p) => (
-                    <div key={p.id} className="bg-gray-50 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div key={p.id} className="bg-input rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <div className="font-semibold text-gray-800 text-sm">{p.parent ? `${p.parent.firstName || ''} ${p.parent.lastName || ''}`.trim() : t('common.none')}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">
+                        <div className="font-semibold text-primary text-sm">{p.parent ? `${p.parent.firstName || ''} ${p.parent.lastName || ''}`.trim() : t('common.none')}</div>
+                        <div className="text-xs text-muted mt-0.5">
                           {p.createdAt ? new Date(p.createdAt).toLocaleDateString('fr-FR') : ''}
                           {p.invoiceNumber ? ` • ${p.invoiceNumber}` : ''}
                         </div>
@@ -412,7 +412,7 @@ export default function PaymentHistoryPage() {
                           {t('payments.download_invoice') || 'Télécharger'}
                         </button>
                         <button type="button" onClick={() => sendInvoice(p.id, p.parent?.firstName || p.parent?.email || '')}
-                          className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 bg-white text-gray-700 rounded-xl text-xs font-medium hover:bg-gray-50 transition-colors">
+                          className="flex items-center gap-1 px-3 py-1.5 border border-border-default bg-card text-primary rounded-xl text-xs font-medium hover:bg-input transition-colors">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                           {t('payments.send_invoice') || 'Envoyer'}
                         </button>
@@ -603,7 +603,7 @@ export default function PaymentHistoryPage() {
 
 
   return (
-    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+    <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
 
         {/* Page header */}
@@ -614,22 +614,22 @@ export default function PaymentHistoryPage() {
             </div>
             <div className="pt-0.5">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.payments')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.payments.description')}</p>
+              <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('page.payments.description')}</p>
             </div>
           </div>
         </div>
 
         {/* Filters card */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-5 mb-5">
+        <div className="bg-card rounded-2xl shadow-md border border-border-default p-5 mb-5">
           {/* View toggle — hidden for parents */}
           {user?.role !== 'parent' && (
             <div className="flex gap-2 mb-4">
               <button type="button" onClick={() => setViewMode('by-family')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'by-family' ? 'bg-[#0b5566] text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'by-family' ? 'bg-[#0b5566] text-white shadow-sm' : 'bg-card-hover text-secondary hover:bg-border-default'}`}>
                 {t('payments.view.by_family') || 'Par famille'}
               </button>
               <button type="button" onClick={() => setViewMode('by-nanny')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'by-nanny' ? 'bg-[#0b5566] text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${viewMode === 'by-nanny' ? 'bg-[#0b5566] text-white shadow-sm' : 'bg-card-hover text-secondary hover:bg-border-default'}`}>
                 {t('payments.view.by_nanny') || 'Par nounou'}
               </button>
             </div>
@@ -637,14 +637,14 @@ export default function PaymentHistoryPage() {
 
           {/* Month/year + parent filter */}
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
-            <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 w-full sm:w-auto">
+            <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border border-border-default px-3 py-2 rounded-xl text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 w-full sm:w-auto">
               {monthNames.map((name, idx) => <option key={idx} value={idx + 1}>{name}</option>)}
             </select>
-            <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 w-full sm:w-auto">
+            <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-border-default px-3 py-2 rounded-xl text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 w-full sm:w-auto">
               {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
             {user?.role !== 'parent' && (
-              <select value={parentFilter} onChange={e => setParentFilter(e.target.value)} className="border border-gray-200 px-3 py-2 rounded-xl text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 flex-1 min-w-0">
+              <select value={parentFilter} onChange={e => setParentFilter(e.target.value)} className="border border-border-default px-3 py-2 rounded-xl text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 flex-1 min-w-0">
                 <option value="">{t('payments.filter.all_parents')}</option>
                 {parents.map((p, idx) => {
                   const name = p ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : '—';
@@ -670,7 +670,7 @@ export default function PaymentHistoryPage() {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 {t('payments.export_csv')}
               </button>
-              <button onClick={() => window.print()} className="flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
+              <button onClick={() => window.print()} className="flex items-center justify-center gap-2 px-4 py-2 border border-border-default bg-card text-primary rounded-xl text-sm font-medium hover:bg-input transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
                 {t('payments.print')}
               </button>
@@ -680,16 +680,16 @@ export default function PaymentHistoryPage() {
 
         {/* KPI cards — hidden for parents */}
         {user?.role !== 'parent' && <div className="grid grid-cols-3 gap-3 mb-5">
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-            <div className="text-xs text-gray-400 font-medium mb-1">{t('payments.card.month_revenue')}</div>
+          <div className="bg-card rounded-2xl shadow-md border border-border-default p-4">
+            <div className="text-xs text-muted font-medium mb-1">{t('payments.card.month_revenue')}</div>
             <div className="text-xl font-extrabold text-[#0b5566]">{fmt(totalRevenue)}</div>
           </div>
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-            <div className="text-xs text-gray-400 font-medium mb-1">{t('payments.card.families_active')}</div>
-            <div className="text-xl font-extrabold text-gray-900">{familiesActive}</div>
+          <div className="bg-card rounded-2xl shadow-md border border-border-default p-4">
+            <div className="text-xs text-muted font-medium mb-1">{t('payments.card.families_active')}</div>
+            <div className="text-xl font-extrabold text-primary">{familiesActive}</div>
           </div>
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-4">
-            <div className="text-xs text-gray-400 font-medium mb-1">{t('payments.card.unpaid')}</div>
+          <div className="bg-card rounded-2xl shadow-md border border-border-default p-4">
+            <div className="text-xs text-muted font-medium mb-1">{t('payments.card.unpaid')}</div>
             <div className={`text-xl font-extrabold ${unpaidCount > 0 ? 'text-red-500' : 'text-emerald-600'}`}>{unpaidCount}</div>
           </div>
         </div>}
@@ -698,9 +698,9 @@ export default function PaymentHistoryPage() {
         {modalVisible && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setModalVisible(false)} />
-            <div role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc" className="relative max-w-md w-full bg-white rounded-2xl shadow-xl p-6 mx-4">
-              <h3 id="modal-title" className="text-base font-bold text-gray-900">Information</h3>
-              <p id="modal-desc" className="mt-3 text-sm text-gray-600">{modalMessage}</p>
+            <div role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-desc" className="relative max-w-md w-full bg-card rounded-2xl shadow-xl p-6 mx-4">
+              <h3 id="modal-title" className="text-base font-bold text-primary">Information</h3>
+              <p id="modal-desc" className="mt-3 text-sm text-secondary">{modalMessage}</p>
               <div className="mt-6 flex justify-end">
                 <button onClick={() => setModalVisible(false)} className="px-5 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium hover:opacity-90 transition-opacity">OK</button>
               </div>
@@ -708,7 +708,7 @@ export default function PaymentHistoryPage() {
           </div>
         )}
 
-        {error && <div className="bg-red-50 border border-red-100 text-red-700 p-4 rounded-xl text-sm mb-4">{error}</div>}
+        {error && <div className="bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 text-red-700 dark:text-red-300 p-4 rounded-xl text-sm mb-4">{error}</div>}
 
         {/* Render selected view */}
         <div className="grid gap-0">

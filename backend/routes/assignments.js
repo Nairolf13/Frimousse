@@ -108,6 +108,21 @@ router.post('/', auth, async (req, res) => {
       if (!nanny || nanny.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
     }
 
+    // Duplicate guard: a child can only be assigned once per day
+    const assignDateNorm = new Date(date);
+    assignDateNorm.setUTCHours(0, 0, 0, 0);
+    const nextDay = new Date(assignDateNorm);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    const existing = await prisma.assignment.findFirst({
+      where: {
+        childId,
+        date: { gte: assignDateNorm, lt: nextDay },
+      },
+    });
+    if (existing) {
+      return res.status(409).json({ message: 'Cet enfant est déjà assigné ce jour-là.' });
+    }
+
     const assignment = await prisma.assignment.create({ data: { date: new Date(date), childId, nannyId, centerId: req.user.centerId } });
     res.status(201).json(assignment);
 

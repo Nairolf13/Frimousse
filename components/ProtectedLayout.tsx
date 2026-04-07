@@ -66,7 +66,7 @@ export default function ProtectedLayout() {
 
   // Still loading — App.tsx hasn't resolved /api/user/me yet
   if (user === undefined) return (
-    <div className="flex items-center justify-center h-screen bg-gray-50">
+    <div className="flex items-center justify-center h-screen bg-surface">
       <div className="flex flex-col items-center gap-4 animate-fade-in">
         <div className="w-12 h-12 rounded-2xl bg-brand-50 flex items-center justify-center">
           <img src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-16 h-16 object-contain" />
@@ -90,7 +90,7 @@ export default function ProtectedLayout() {
       <AnnouncementBanner />
       <div className="flex min-h-screen">
         <Sidebar />
-        <main className="flex-1 bg-[#f4f7fa] pt-12 md:pt-0 max-w-full overflow-x-hidden box-border">
+        <main className="flex-1 bg-surface pt-12 md:pt-0 max-w-full overflow-x-hidden box-border">
           {outlet}
         </main>
         <BirthdayModal items={birthdays} open={showBirthday} onClose={() => setShowBirthday(false)} centerId={centerId} />

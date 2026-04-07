@@ -64,9 +64,9 @@ function isNonWorkDay(dateStr: string) {
 }
 
 function statusBadge(status: string, t: (k: string, fallback?: string) => string) {
-  if (status === 'signed') return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">{t('presenceSheets.status.signed', 'Signée')}</span>;
-  if (status === 'sent') return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{t('presenceSheets.status.sent', 'Envoyée')}</span>;
-  return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-500">{t('presenceSheets.status.draft', 'Brouillon')}</span>;
+  if (status === 'signed') return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300">{t('presenceSheets.status.signed', 'Signée')}</span>;
+  if (status === 'sent') return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">{t('presenceSheets.status.sent', 'Envoyée')}</span>;
+  return <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-card-hover text-secondary">{t('presenceSheets.status.draft', 'Brouillon')}</span>;
 }
 
 // Canvas de signature
@@ -102,15 +102,15 @@ function SignaturePad({ onSave, onCancel, t }: { onSave: (sig: string) => void; 
 
   return (
     <div className="flex flex-col items-center gap-3">
-      <p className="text-sm text-gray-500">Dessinez votre signature ci-dessous</p>
+      <p className="text-sm text-secondary">Dessinez votre signature ci-dessous</p>
       <canvas ref={canvasRef} width={300} height={100}
-        className="border-2 border-dashed border-[#0b5566]/30 rounded-xl bg-white cursor-crosshair touch-none w-full"
+        className="border-2 border-dashed border-[#0b5566]/30 rounded-xl bg-card cursor-crosshair touch-none w-full"
         onMouseDown={start} onMouseMove={move} onMouseUp={end} onMouseLeave={end}
         onTouchStart={start} onTouchMove={move} onTouchEnd={end}
       />
       <div className="flex gap-2 w-full">
-        <button onClick={clear} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100">{t('presenceSheets.signature.clear', 'Effacer')}</button>
-        <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 active:bg-gray-100">{t('presenceSheets.signature.cancel', 'Annuler')}</button>
+        <button onClick={clear} className="flex-1 py-3 rounded-xl border border-border-default text-sm text-secondary hover:bg-input active:bg-card-hover">{t('presenceSheets.signature.clear', 'Effacer')}</button>
+        <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-border-default text-sm text-secondary hover:bg-input active:bg-card-hover">{t('presenceSheets.signature.cancel', 'Annuler')}</button>
         <button onClick={save} className="flex-1 py-3 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:opacity-90 active:opacity-80">{t('presenceSheets.signature.save', 'Valider')}</button>
       </div>
     </div>
@@ -509,7 +509,7 @@ export default function PresenceSheets() {
   );
 
   return (
-    <div className="min-h-screen bg-[#f4f7fa] p-2 sm:p-4 md:pl-64 w-full">
+    <div className="min-h-screen bg-surface p-2 sm:p-4 md:pl-64 w-full">
 
 
 <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
@@ -522,13 +522,12 @@ export default function PresenceSheets() {
             </div>
             <div className="pt-0.5">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.presenceSheets', 'Feuilles de présence')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{t('page.presenceSheets.description', 'Consultez et gérez les feuilles de présence et signatures des enfants.')}</p>
+              <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('page.presenceSheets.description', 'Consultez et gérez les feuilles de présence et signatures des enfants.')}</p>
             </div>
           </div>
           {canEdit && (
             <button data-tour="presence-sheets-new" onClick={() => { setShowCreate(true); setError(''); }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-semibold shadow hover:opacity-90 transition"
-              style={{ background: 'linear-gradient(135deg,#0b5566,#1a8fa8)' }}>
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold shadow transition">
               <HiOutlinePlus className="w-4 h-4" /> {t('presenceSheets.new_sheet', 'Nouvelle feuille')}
             </button>
           )}
@@ -539,7 +538,7 @@ export default function PresenceSheets() {
           <select
             value={filterMonth}
             onChange={e => setFilterMonth(e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
+            className="border border-border-default rounded-xl px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-primary"
           >
             <option value="">{t('presenceSheets.month.all', 'Tous les mois')}</option>
             {monthNames.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
@@ -547,7 +546,7 @@ export default function PresenceSheets() {
           <select
             value={filterYear}
             onChange={e => setFilterYear(e.target.value)}
-            className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
+            className="border border-border-default rounded-xl px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-primary"
           >
             <option value="">{t('presenceSheets.year.all', 'Toutes les années')}</option>
             {[2024, 2025, 2026, 2027].map(y => <option key={y} value={String(y)}>{y}</option>)}
@@ -556,7 +555,7 @@ export default function PresenceSheets() {
             <select
               value={parentFilter}
               onChange={e => setParentFilter(e.target.value)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
+              className="border border-border-default rounded-xl px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-primary"
             >
               <option value="">{t('presenceSheets.parent.all', 'Tous les parents')}</option>
               {parents.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -566,7 +565,7 @@ export default function PresenceSheets() {
             <select
               value={centerFilter}
               onChange={e => setCenterFilter(e.target.value)}
-              className="border border-gray-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-gray-700"
+              className="border border-border-default rounded-xl px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 text-primary"
             >
               <option value="">{t('presenceSheets.center.all', 'Tous les centres')}</option>
               {centers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -576,13 +575,13 @@ export default function PresenceSheets() {
           {(filterMonth || filterYear || centerFilter || parentFilter) && (
             <button
               onClick={() => { setFilterMonth(''); setFilterYear(''); setCenterFilter(''); setParentFilter(''); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-gray-500 border border-gray-200 bg-white hover:bg-gray-50 transition"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-secondary border border-border-default bg-card hover:bg-input transition"
             >
               <HiOutlineX className="w-3.5 h-3.5" /> Réinitialiser
             </button>
           )}
           {(filterMonth || filterYear || centerFilter || parentFilter) && (
-            <span className="text-xs text-gray-400 ml-1">
+            <span className="text-xs text-muted ml-1">
               {filteredSheets.length} résultat{filteredSheets.length !== 1 ? 's' : ''}
             </span>
           )}
@@ -591,52 +590,52 @@ export default function PresenceSheets() {
         {/* Modal création */}
         {showCreate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="bg-card rounded-2xl shadow-xl w-full max-w-md p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-lg text-[#0b5566]">{t('presenceSheets.new_sheet.title', 'Nouvelle feuille de présence')}</h2>
-                <button onClick={() => setShowCreate(false)}><HiOutlineX className="w-5 h-5 text-gray-400" /></button>
+                <button onClick={() => setShowCreate(false)}><HiOutlineX className="w-5 h-5 text-muted" /></button>
               </div>
-              {error && <div className="mb-3 text-sm text-red-600 bg-red-50 rounded-xl px-3 py-2">{error}</div>}
+              {error && <div className="mb-3 text-sm text-red-600 bg-red-50 dark:bg-red-950 rounded-xl px-3 py-2">{error}</div>}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.child', 'Enfant')}</label>
+                  <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1">{t('presenceSheets.create.child', 'Enfant')}</label>
                   <select value={createForm.childId} onChange={e => setCreateForm(p => ({ ...p, childId: e.target.value }))}
-                    className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
+                    className="border border-border-default rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
                     <option value="">{t('presenceSheets.create.selectChild', 'Sélectionner un enfant')}</option>
                     {children.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.month', 'Mois')}</label>
+                    <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1">{t('presenceSheets.create.month', 'Mois')}</label>
                     <select value={createForm.month} onChange={e => setCreateForm(p => ({ ...p, month: e.target.value }))}
-                      className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
+                      className="border border-border-default rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
                       {monthNames.map((m, i) => <option key={i} value={String(i + 1)}>{m}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.year', 'Année')}</label>
+                    <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1">{t('presenceSheets.create.year', 'Année')}</label>
                     <select value={createForm.year} onChange={e => setCreateForm(p => ({ ...p, year: e.target.value }))}
-                      className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
+                      className="border border-border-default rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30">
                       {[2024, 2025, 2026, 2027].map(y => <option key={y} value={String(y)}>{y}</option>)}
                     </select>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.arrival', 'Arrivée par défaut')}</label>
+                    <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1">{t('presenceSheets.create.arrival', 'Arrivée par défaut')}</label>
                     <input type="text" value={createForm.defaultArrival} onChange={e => setCreateForm(p => ({ ...p, defaultArrival: e.target.value }))}
-                      placeholder={t('presenceSheets.create.arrivalPlaceholder', '08h30')} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
+                      placeholder={t('presenceSheets.create.arrivalPlaceholder', '08h30')} className="border border-border-default rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t('presenceSheets.create.departure', 'Départ par défaut')}</label>
+                    <label className="block text-xs font-semibold text-secondary uppercase tracking-wider mb-1">{t('presenceSheets.create.departure', 'Départ par défaut')}</label>
                     <input type="text" value={createForm.defaultDeparture} onChange={e => setCreateForm(p => ({ ...p, defaultDeparture: e.target.value }))}
-                      placeholder={t('presenceSheets.create.departurePlaceholder', '17h30')} className="border border-gray-200 rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
+                      placeholder={t('presenceSheets.create.departurePlaceholder', '17h30')} className="border border-border-default rounded-xl px-3 py-2.5 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
                   </div>
                 </div>
               </div>
               <div className="flex gap-2 mt-5">
-                <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">{t('global.cancel', 'Annuler')}</button>
+                <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl border border-border-default text-sm text-secondary hover:bg-input">{t('global.cancel', 'Annuler')}</button>
                 <button data-tour="presence-sheets-create" onClick={createSheet} disabled={!createForm.childId || saving}
                   className="flex-1 py-2.5 rounded-xl bg-[#0b5566] text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50">
                   {saving ? t('presenceSheets.creating', 'Création…') : t('presenceSheets.create', 'Créer')}
@@ -649,9 +648,9 @@ export default function PresenceSheets() {
         {/* Liste des feuilles — toujours visible, détail en dessous */}
         {!selectedSheet && (
           <div className="space-y-2 mb-4">
-            <p className="text-sm text-gray-400 text-center mb-3">{t('presenceSheets.select_sheet', 'Sélectionnez une feuille pour la consulter')}</p>
+            <p className="text-sm text-muted text-center mb-3">{t('presenceSheets.select_sheet', 'Sélectionnez une feuille pour la consulter')}</p>
             {filteredSheets.length === 0 ? (
-              <div data-tour="presence-sheets-empty" className="bg-white rounded-2xl shadow p-8 text-center text-gray-400">
+              <div data-tour="presence-sheets-empty" className="bg-card rounded-2xl shadow p-8 text-center text-muted">
                 <HiOutlineDocumentText className="w-10 h-10 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">
                   {filterMonth || filterYear ? t('presenceSheets.select_sheet.empty.date', 'Aucune feuille pour cette période') : t('presenceSheets.select_sheet.empty', 'Aucune feuille de présence')}
@@ -662,18 +661,18 @@ export default function PresenceSheets() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredSheets.map(sheet => (
                   <div key={sheet.id}
-                    className="bg-white rounded-2xl shadow border-2 border-transparent transition-all hover:border-[#0b5566]/40 hover:shadow-md">
+                    className="bg-card rounded-2xl shadow border-2 border-transparent transition-all hover:border-[#0b5566]/40 hover:shadow-md">
                     <button className="w-full text-left p-4" onClick={() => openSheet(sheet)}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-xs font-bold text-[#0b5566]">
+                          <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-accent-light flex items-center justify-center text-xs font-bold text-[#0b5566]">
                             {sheet.child?.photoUrl
                               ? <img src={sheet.child.photoUrl} alt={sheet.child.name} className="w-full h-full object-cover" />
                               : sheet.child?.name?.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <div className="font-semibold text-gray-900 text-sm">{sheet.child?.name}</div>
-                            <div className="text-xs text-gray-500 mt-0.5">{monthNames[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</div>
+                            <div className="font-semibold text-primary text-sm">{sheet.child?.name}</div>
+                            <div className="text-xs text-secondary mt-0.5">{monthNames[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</div>
                           </div>
                         </div>
                         {statusBadge(sheet.status, t)}
@@ -696,15 +695,15 @@ export default function PresenceSheets() {
 
         {/* Détail feuille sélectionnée */}
         {selectedSheet && (
-              <div data-tour="presence-sheet-view" className="bg-white rounded-2xl shadow overflow-hidden">
+              <div data-tour="presence-sheet-view" className="bg-card rounded-2xl shadow overflow-hidden">
                 {/* Header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="px-5 py-4 border-b border-border-default flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => setSelectedSheet(null)} className="lg:hidden mr-1 p-1.5 rounded-lg hover:bg-gray-100 transition" title={t('common.back', 'Retour')}>
-                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                      <button onClick={() => setSelectedSheet(null)} className="lg:hidden mr-1 p-1.5 rounded-lg hover:bg-card-hover transition" title={t('common.back', 'Retour')}>
+                        <svg className="w-4 h-4 text-secondary" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
                       </button>
-                      <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-xs font-bold text-[#0b5566]">
+                      <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-accent-light flex items-center justify-center text-xs font-bold text-[#0b5566]">
                         {selectedSheet.child.photoUrl
                           ? <img src={selectedSheet.child.photoUrl} alt={selectedSheet.child.name} className="w-full h-full object-cover" />
                           : selectedSheet.child.name.charAt(0).toUpperCase()}
@@ -712,7 +711,7 @@ export default function PresenceSheets() {
                       <h2 data-tour="presence-sheet-view" className="font-bold text-[#0b5566] text-base">{selectedSheet.child.name}</h2>
                       {statusBadge(selectedSheet.status, t)}
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">{monthNames[selectedSheet.month - 1]} {selectedSheet.year} · {selectedSheet.nanny.name}</p>
+                    <p className="text-xs text-secondary mt-0.5">{monthNames[selectedSheet.month - 1]} {selectedSheet.year} · {selectedSheet.nanny.name}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {canEdit && selectedSheet.status !== 'signed' && (
@@ -730,19 +729,19 @@ export default function PresenceSheets() {
                       </button>
                     )}
                     <button data-tour="presence-sheet-pdf" onClick={() => downloadPdf(selectedSheet)} disabled={downloadingPdf}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-gray-600 text-xs font-semibold hover:bg-gray-50 disabled:opacity-50">
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border-default text-secondary text-xs font-semibold hover:bg-input disabled:opacity-50">
                       <HiOutlineDownload className="w-3.5 h-3.5" /> {downloadingPdf ? '…' : t('presenceSheets.pdf', 'PDF')}
                     </button>
                     {isAdminUser && selectedSheet.status === 'signed' && (
                       <button onClick={() => resetSheetStatus(selectedSheet.id, 'sent')}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 text-orange-600 text-xs font-semibold hover:bg-orange-50"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-200 dark:border-orange-800 text-orange-600 text-xs font-semibold hover:bg-orange-50 dark:bg-orange-950"
                         title={t('presenceSheets.reopen.title', 'Remettre en statut Envoyée')}>
                         <HiOutlineRefresh className="w-3.5 h-3.5" /> {t('presenceSheets.reopen', 'Réouvrir')}
                       </button>
                     )}
                     {isAdminUser && (
                       <button onClick={() => setConfirmDeleteId(selectedSheet.id)}
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50">
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 dark:border-red-800 text-red-600 text-xs font-semibold hover:bg-red-50 dark:bg-red-950">
                         <HiOutlineTrash className="w-3.5 h-3.5" /> {t('global.delete', 'Supprimer')}
                       </button>
                     )}
@@ -750,18 +749,18 @@ export default function PresenceSheets() {
                 </div>
 
                 {successMsg && (
-                  <div className="mx-5 mt-3 px-4 py-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl flex items-center gap-2">
+                  <div className="mx-5 mt-3 px-4 py-2 bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm rounded-xl flex items-center gap-2">
                     <HiOutlineCheck className="w-4 h-4" />{successMsg}
                   </div>
                 )}
-                {error && <div className="mx-5 mt-3 px-4 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">{error}</div>}
+                {error && <div className="mx-5 mt-3 px-4 py-2 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm rounded-xl">{error}</div>}
 
                 {/* Légende signatures */}
                 {selectedSheet.status !== 'draft' && (
-                  <div className="px-5 pt-3 pb-1 flex gap-4 text-xs text-gray-500">
+                  <div className="px-5 pt-3 pb-1 flex gap-4 text-xs text-secondary">
                     <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-[#0b5566] inline-block" />{t('presenceSheets.legend.nannySigned', 'Nounou signé')}</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-500 inline-block" />{t('presenceSheets.legend.parentSigned', 'Parent signé')}</span>
-                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full border border-gray-300 inline-block" />{t('presenceSheets.legend.notSigned', 'Non signé')}</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-emerald-50 dark:bg-emerald-9500 inline-block" />{t('presenceSheets.legend.parentSigned', 'Parent signé')}</span>
+                    <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full border border-border-strong inline-block" />{t('presenceSheets.legend.notSigned', 'Non signé')}</span>
                   </div>
                 )}
 
@@ -777,31 +776,31 @@ export default function PresenceSheets() {
 
                     if (nonWorkDay) {
                       return (
-                        <div key={entry.id} className="px-4 py-2 flex items-center justify-between bg-gray-50/60">
-                          <span className="text-xs font-medium text-gray-400">
+                        <div key={entry.id} className="px-4 py-2 flex items-center justify-between bg-input/60">
+                          <span className="text-xs font-medium text-muted">
                             {DAY_NAMES[d.getDay()]} {d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                           </span>
-                          <span className="text-xs text-gray-300">—</span>
+                          <span className="text-xs text-muted">—</span>
                         </div>
                       );
                     }
 
                     return (
-                      <div key={entry.id} className={`px-4 py-3 ${entry.absent ? 'bg-red-50' : idx % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]'}`}>
+                      <div key={entry.id} className={`px-4 py-3 ${entry.absent ? 'bg-red-50 dark:bg-red-950' : idx % 2 === 0 ? 'bg-card' : 'bg-input'}`}>
                         {/* Ligne date + absent */}
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-semibold text-gray-800">
+                            <span className="text-sm font-semibold text-primary">
                               {DAY_NAMES[d.getDay()]} {d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                             </span>
                             {entryIsSigned && !isAdminUser && (
-                              <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><title>{t('presenceSheets.entry.locked', 'Entrée verrouillée — déjà signée')}</title><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                              <svg className="w-3 h-3 text-muted" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><title>{t('presenceSheets.entry.locked', 'Entrée verrouillée — déjà signée')}</title><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            {entry.absent && <span className="text-xs font-semibold text-red-500 bg-red-100 px-2 py-0.5 rounded-full">{t('presenceSheets.entry.absent', 'Absent')}</span>}
+                            {entry.absent && <span className="text-xs font-semibold text-red-500 bg-red-100 dark:bg-red-900 px-2 py-0.5 rounded-full">{t('presenceSheets.entry.absent', 'Absent')}</span>}
                             {canEditEntry && (
-                              <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+                              <label className="flex items-center gap-1.5 text-xs text-secondary cursor-pointer">
                                 <input type="checkbox" checked={entry.absent} onChange={e => updateEntry(idx, 'absent', e.target.checked)} className="w-4 h-4 rounded accent-red-500" />
                                 {t('presenceSheets.entry.absent', 'Absent')}
                               </label>
@@ -813,20 +812,20 @@ export default function PresenceSheets() {
                         {!entry.absent && (
                           <div className="flex gap-3 mb-2">
                             <div className="flex-1">
-                              <div className="text-xs text-gray-400 mb-1">{t('presenceSheets.entry.arrival', 'Arrivée')}</div>
+                              <div className="text-xs text-muted mb-1">{t('presenceSheets.entry.arrival', 'Arrivée')}</div>
                               {canEditEntry ? (
                                 <input type="text" value={entry.arrivalTime || ''} onChange={e => updateEntry(idx, 'arrivalTime', e.target.value)}
                                   placeholder="08h30"
-                                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40" />
-                              ) : <span className="text-sm font-medium text-gray-700">{entry.arrivalTime || '—'}</span>}
+                                  className="w-full border border-border-default rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40" />
+                              ) : <span className="text-sm font-medium text-primary">{entry.arrivalTime || '—'}</span>}
                             </div>
                             <div className="flex-1">
-                              <div className="text-xs text-gray-400 mb-1">{t('presenceSheets.entry.departure', 'Départ')}</div>
+                              <div className="text-xs text-muted mb-1">{t('presenceSheets.entry.departure', 'Départ')}</div>
                               {canEditEntry ? (
                                 <input type="text" value={entry.departureTime || ''} onChange={e => updateEntry(idx, 'departureTime', e.target.value)}
                                   placeholder="17h30"
-                                  className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40" />
-                              ) : <span className="text-sm font-medium text-gray-700">{entry.departureTime || '—'}</span>}
+                                  className="w-full border border-border-default rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40" />
+                              ) : <span className="text-sm font-medium text-primary">{entry.departureTime || '—'}</span>}
                             </div>
                           </div>
                         )}
@@ -835,9 +834,9 @@ export default function PresenceSheets() {
                         {canEditEntry ? (
                           <input type="text" value={entry.comment || ''} onChange={e => updateEntry(idx, 'comment', e.target.value)}
                             placeholder={t('presenceSheets.entry.commentPlaceholder', 'Commentaire…')}
-                            className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40 mb-2" />
+                            className="w-full border border-border-default rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40 mb-2" />
                         ) : entry.comment ? (
-                          <p className="text-xs text-gray-500 mb-2">{entry.comment}</p>
+                          <p className="text-xs text-secondary mb-2">{entry.comment}</p>
                         ) : null}
 
                         {/* Signatures */}
@@ -855,8 +854,8 @@ export default function PresenceSheets() {
                                   <HiOutlinePencil className="w-3 h-3" /> {t('presenceSheets.entry.signNanny', 'Signer (nounou)')}
                                 </button>
                               ) : (
-                                <span className="flex items-center gap-1 text-xs text-gray-300">
-                                  <span className="w-3 h-3 rounded-full border border-gray-200 inline-block" /> Nounou
+                                <span className="flex items-center gap-1 text-xs text-muted">
+                                  <span className="w-3 h-3 rounded-full border border-border-default inline-block" /> Nounou
                                 </span>
                               )}
                             </div>
@@ -868,12 +867,12 @@ export default function PresenceSheets() {
                                 </span>
                               ) : canSignParent ? (
                                 <button onClick={() => setSigningEntry({ entryId: entry.id, role: 'parent' })}
-                                  className="flex items-center gap-1 px-2 py-1 rounded-lg border border-dashed border-emerald-400/60 text-xs text-emerald-600 hover:bg-emerald-50 transition">
+                                  className="flex items-center gap-1 px-2 py-1 rounded-lg border border-dashed border-emerald-400/60 text-xs text-emerald-600 hover:bg-emerald-50 dark:bg-emerald-950 transition">
                                   <HiOutlinePencil className="w-3 h-3" /> {t('presenceSheets.entry.signParent', 'Signer (parent)')}
                                 </button>
                               ) : (
-                                <span className="flex items-center gap-1 text-xs text-gray-300">
-                                  <span className="w-3 h-3 rounded-full border border-gray-200 inline-block" /> Parent
+                                <span className="flex items-center gap-1 text-xs text-muted">
+                                  <span className="w-3 h-3 rounded-full border border-border-default inline-block" /> Parent
                                 </span>
                               )}
                             </div>
@@ -888,7 +887,7 @@ export default function PresenceSheets() {
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="bg-[#f4f7fa] text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      <tr className="bg-surface text-xs font-semibold text-secondary uppercase tracking-wider">
                         <th className="px-3 py-2.5 text-left">Date</th>
                         <th className="px-2 py-2.5 text-left">Jour</th>
                         <th className="px-2 py-2.5 text-center">Arrivée</th>
@@ -903,20 +902,20 @@ export default function PresenceSheets() {
                       {editingEntries.map((entry, idx) => {
                         const d = new Date(entry.date);
                         const nonWorkDay = isNonWorkDay(entry.date);
-                        const rowBg = entry.absent ? 'bg-red-50' : nonWorkDay ? 'bg-gray-50/60' : idx % 2 === 0 ? 'bg-white' : 'bg-[#f8fafc]';
-                        const textColor = nonWorkDay ? 'text-gray-400' : 'text-gray-700';
+                        const rowBg = entry.absent ? 'bg-red-50 dark:bg-red-950' : nonWorkDay ? 'bg-input/60' : idx % 2 === 0 ? 'bg-card' : 'bg-input';
+                        const textColor = nonWorkDay ? 'text-muted' : 'text-primary';
                         const entryIsSigned = !!(entry.nannySignature || entry.parentSignature);
                     const canEditEntry = canEdit && selectedSheet.status !== 'signed' && (isAdminUser || !entryIsSigned);
                         const canSignNanny = (isNannyUser || isAdminUser) && selectedSheet.status !== 'draft' && !entry.nannySignedAt && !nonWorkDay && !entry.absent;
                         const canSignParent = isParentUser && selectedSheet.status !== 'draft' && !entry.parentSignedAt && !nonWorkDay && !entry.absent;
 
                         return (
-                          <tr key={entry.id} className={`${rowBg} border-b border-gray-50`}>
+                          <tr key={entry.id} className={`${rowBg} border-b border-border-default`}>
                             <td className={`px-3 py-1.5 font-medium text-xs ${textColor}`}>
                               <div className="flex items-center gap-1">
                                 {d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
                                 {entryIsSigned && !isAdminUser && (
-                                  <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><title>Verrouillé — déjà signé</title><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                  <svg className="w-3 h-3 text-muted flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><title>Verrouillé — déjà signé</title><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                 )}
                               </div>
                             </td>
@@ -925,14 +924,14 @@ export default function PresenceSheets() {
                               {canEditEntry && !nonWorkDay ? (
                                 <input type="text" value={entry.arrivalTime || ''} onChange={e => updateEntry(idx, 'arrivalTime', e.target.value)}
                                   placeholder="08h30" disabled={entry.absent}
-                                  className="w-14 text-center border border-gray-200 rounded-lg px-1 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40 disabled:opacity-30" />
+                                  className="w-14 text-center border border-border-default rounded-lg px-1 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40 disabled:opacity-30" />
                               ) : <span className={`text-xs ${textColor}`}>{entry.arrivalTime || '—'}</span>}
                             </td>
                             <td className="px-2 py-1.5 text-center">
                               {canEditEntry && !nonWorkDay ? (
                                 <input type="text" value={entry.departureTime || ''} onChange={e => updateEntry(idx, 'departureTime', e.target.value)}
                                   placeholder="17h30" disabled={entry.absent}
-                                  className="w-14 text-center border border-gray-200 rounded-lg px-1 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40 disabled:opacity-30" />
+                                  className="w-14 text-center border border-border-default rounded-lg px-1 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40 disabled:opacity-30" />
                               ) : <span className={`text-xs ${textColor}`}>{entry.departureTime || '—'}</span>}
                             </td>
                             <td className="px-2 py-1.5 text-center">
@@ -943,8 +942,8 @@ export default function PresenceSheets() {
                             <td className="px-2 py-1.5">
                               {canEditEntry && !nonWorkDay ? (
                                 <input type="text" value={entry.comment || ''} onChange={e => updateEntry(idx, 'comment', e.target.value)}
-                                  placeholder="Note…" className="w-full min-w-[80px] border border-gray-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40" />
-                              ) : !nonWorkDay ? <span className="text-xs text-gray-400">{entry.comment || ''}</span> : null}
+                                  placeholder="Note…" className="w-full min-w-[80px] border border-border-default rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-[#0b5566]/40" />
+                              ) : !nonWorkDay ? <span className="text-xs text-muted">{entry.comment || ''}</span> : null}
                             </td>
                             {selectedSheet.status !== 'draft' && (
                               <td className="px-2 py-1.5 text-center">
@@ -958,7 +957,7 @@ export default function PresenceSheets() {
                                     title="Signer ce jour">
                                     <HiOutlinePencil className="w-3 h-3 text-[#0b5566]/50" />
                                   </button>
-                                ) : <span className="w-4 h-4 rounded-full border border-gray-200 inline-block" />}
+                                ) : <span className="w-4 h-4 rounded-full border border-border-default inline-block" />}
                               </td>
                             )}
                             {selectedSheet.status !== 'draft' && (
@@ -969,11 +968,11 @@ export default function PresenceSheets() {
                                   </span>
                                 ) : canSignParent ? (
                                   <button onClick={() => setSigningEntry({ entryId: entry.id, role: 'parent' })}
-                                    className="w-6 h-6 rounded-full border-2 border-dashed border-emerald-400/60 hover:border-emerald-500 hover:bg-emerald-50 transition mx-auto flex items-center justify-center"
+                                    className="w-6 h-6 rounded-full border-2 border-dashed border-emerald-400/60 hover:border-emerald-500 hover:bg-emerald-50 dark:bg-emerald-950 transition mx-auto flex items-center justify-center"
                                     title="Signer ce jour">
                                     <HiOutlinePencil className="w-3 h-3 text-emerald-400" />
                                   </button>
-                                ) : <span className="w-4 h-4 rounded-full border border-gray-200 inline-block" />}
+                                ) : <span className="w-4 h-4 rounded-full border border-border-default inline-block" />}
                               </td>
                             )}
                           </tr>
@@ -984,10 +983,10 @@ export default function PresenceSheets() {
                 </div>
 
                 {/* Récap */}
-                <div className="px-5 py-4 border-t border-gray-100 bg-[#f8fafc]">
+                <div className="px-5 py-4 border-t border-border-default bg-input">
                   <div className="flex flex-wrap gap-4 text-sm">
-                    <span className="text-gray-600">Présences : <strong>{editingEntries.filter(e => !e.absent && e.arrivalTime && !isWeekend(e.date)).length} jours</strong></span>
-                    <span className="text-gray-600">Absences : <strong>{editingEntries.filter(e => e.absent).length} jours</strong></span>
+                    <span className="text-secondary">Présences : <strong>{editingEntries.filter(e => !e.absent && e.arrivalTime && !isWeekend(e.date)).length} jours</strong></span>
+                    <span className="text-secondary">Absences : <strong>{editingEntries.filter(e => e.absent).length} jours</strong></span>
                     {selectedSheet.status !== 'draft' && (
                       <>
                         <span className="text-[#0b5566]">Sig. nounou : <strong>{editingEntries.filter(e => e.nannySignedAt).length}</strong></span>
@@ -998,20 +997,20 @@ export default function PresenceSheets() {
                 </div>
 
                 {/* Tableau de facturation + Signatures globales */}
-                <div className="px-5 py-5 border-t border-gray-100 space-y-5">
+                <div className="px-5 py-5 border-t border-border-default space-y-5">
 
                   {/* Tableau réservé à la facturation */}
                   <div>
-                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-2 text-center">Tableau Réservé à la Facturation</h3>
-                    <div className="border border-gray-300 rounded-xl overflow-hidden text-sm">
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-2 text-center">Tableau Réservé à la Facturation</h3>
+                    <div className="border border-border-strong rounded-xl overflow-hidden text-sm">
                       {([
                         { label: 'Nombre de jours de contrat', key: 'joursContrat' },
                         { label: 'Nombre de jours de présence', key: 'joursPresence' },
                         { label: "Nombre de jours d'absences", key: 'joursAbsence' },
                         { label: "Nombre d'heures complémentaires", key: 'heuresCompl' },
                       ] as { label: string; key: keyof typeof billingData }[]).map((row, i) => (
-                        <div key={i} className={`flex items-center ${i > 0 ? 'border-t border-gray-200' : ''}`}>
-                          <span className="flex-1 px-4 py-2.5 text-gray-700">{row.label}</span>
+                        <div key={i} className={`flex items-center ${i > 0 ? 'border-t border-border-default' : ''}`}>
+                          <span className="flex-1 px-4 py-2.5 text-primary">{row.label}</span>
                           {(isAdminUser || isNannyUser) ? (
                             <input
                               type="number"
@@ -1021,32 +1020,32 @@ export default function PresenceSheets() {
                               onChange={e => setBillingData(prev => ({ ...prev, [row.key]: e.target.value }))}
                               onBlur={saveBilling}
                               placeholder="—"
-                              className="w-20 border-l border-gray-200 px-3 py-2.5 text-center text-gray-800 bg-transparent focus:outline-none focus:bg-[#0b5566]/5 transition"
+                              className="w-20 border-l border-border-default px-3 py-2.5 text-center text-primary bg-transparent focus:outline-none focus:bg-[#0b5566]/5 transition"
                             />
                           ) : (
-                            <span className="w-20 border-l border-gray-200 px-3 py-2.5 text-center text-gray-600">{billingData[row.key] || '—'}</span>
+                            <span className="w-20 border-l border-border-default px-3 py-2.5 text-center text-secondary">{billingData[row.key] || '—'}</span>
                           )}
                         </div>
                       ))}
                     </div>
-                    {savingBilling && <p className="text-[10px] text-gray-400 mt-1 text-right">{t('presenceSheets.billing.saving', 'Enregistrement…')}</p>}
+                    {savingBilling && <p className="text-[10px] text-muted mt-1 text-right">{t('presenceSheets.billing.saving', 'Enregistrement…')}</p>}
                   </div>
 
                   {/* Signatures globales */}
                   {selectedSheet.status !== 'draft' && (
                   <div>
-                    <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-3">{t('presenceSheets.signatures.title', 'Signatures de validation')}</h3>
+                    <h3 className="text-xs font-bold text-primary uppercase tracking-wider mb-3">{t('presenceSheets.signatures.title', 'Signatures de validation')}</h3>
                     <div className="grid grid-cols-2 gap-4">
                       {/* Signature Nounou */}
-                      <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('presenceSheets.signature.role.nanny', 'Nounou')}</span>
+                      <div className="border border-border-default rounded-xl p-3 flex flex-col items-center gap-2">
+                        <span className="text-xs font-semibold text-secondary uppercase tracking-wider">{t('presenceSheets.signature.role.nanny', 'Nounou')}</span>
                         {selectedSheet.nannySignature ? (
                           <img src={selectedSheet.nannySignature} alt={t('presenceSheets.signature.alt.nanny', 'Signature nounou')} className="h-16 w-full object-contain" />
                         ) : (
-                          <div className="h-16 w-full flex items-center justify-center text-gray-300 text-xs border border-dashed border-gray-200 rounded-lg">{t('presenceSheets.signature.notSigned', 'Non signé')}</div>
+                          <div className="h-16 w-full flex items-center justify-center text-muted text-xs border border-dashed border-border-default rounded-lg">{t('presenceSheets.signature.notSigned', 'Non signé')}</div>
                         )}
                         {selectedSheet.nannySignedAt && (
-                          <span className="text-[10px] text-gray-400">{t('presenceSheets.signature.signedAt', { date: new Date(selectedSheet.nannySignedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR') })}</span>
+                          <span className="text-[10px] text-muted">{t('presenceSheets.signature.signedAt', { date: new Date(selectedSheet.nannySignedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR') })}</span>
                         )}
                         {(isNannyUser || isAdminUser) && !selectedSheet.nannySignature && (
                           <button data-tour="presence-sheet-sign" 
@@ -1058,20 +1057,20 @@ export default function PresenceSheets() {
                       </div>
 
                       {/* Signature Parent */}
-                      <div className="border border-gray-200 rounded-xl p-3 flex flex-col items-center gap-2">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t('presenceSheets.signature.role.parent', 'Parent')}</span>
+                      <div className="border border-border-default rounded-xl p-3 flex flex-col items-center gap-2">
+                        <span className="text-xs font-semibold text-secondary uppercase tracking-wider">{t('presenceSheets.signature.role.parent', 'Parent')}</span>
                         {selectedSheet.parentSignature ? (
                           <img src={selectedSheet.parentSignature} alt={t('presenceSheets.signature.alt.parent', 'Signature parent')} className="h-16 w-full object-contain" />
                         ) : (
-                          <div className="h-16 w-full flex items-center justify-center text-gray-300 text-xs border border-dashed border-gray-200 rounded-lg">{t('presenceSheets.signature.notSigned', 'Non signé')}</div>
+                          <div className="h-16 w-full flex items-center justify-center text-muted text-xs border border-dashed border-border-default rounded-lg">{t('presenceSheets.signature.notSigned', 'Non signé')}</div>
                         )}
                         {selectedSheet.parentSignedAt && (
-                          <span className="text-[10px] text-gray-400">{t('presenceSheets.signature.signedAt', { date: new Date(selectedSheet.parentSignedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR') })}</span>
+                          <span className="text-[10px] text-muted">{t('presenceSheets.signature.signedAt', { date: new Date(selectedSheet.parentSignedAt).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR') })}</span>
                         )}
                         {isParentUser && !selectedSheet.parentSignature && (
                           <button data-tour="presence-sheet-sign-parent"
                             onClick={() => setSigningSheet('parent')}
-                            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-emerald-400/60 text-xs text-emerald-600 hover:bg-emerald-50 transition">
+                            className="mt-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-emerald-400/60 text-xs text-emerald-600 hover:bg-emerald-50 dark:bg-emerald-950 transition">
                             <HiOutlinePencil className="w-3 h-3" /> {t('presenceSheets.signature.btn', 'Signer')}
                           </button>
                         )}
@@ -1086,41 +1085,41 @@ export default function PresenceSheets() {
         {/* Modal confirmation suppression */}
         {confirmDeleteId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6 animate-fade-in">
               <div className="flex items-center gap-4 mb-5">
-                <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-900 flex items-center justify-center flex-shrink-0">
                   <HiOutlineTrash className="w-6 h-6 text-red-600" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">{t('presenceSheets.delete.title', 'Supprimer la feuille')}</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">{t('presenceSheets.delete.subtitle', 'Cette action est irréversible')}</p>
+                  <h2 className="text-lg font-bold text-primary">{t('presenceSheets.delete.title', 'Supprimer la feuille')}</h2>
+                  <p className="text-sm text-secondary mt-0.5">{t('presenceSheets.delete.subtitle', 'Cette action est irréversible')}</p>
                 </div>
               </div>
               {(() => {
                 const sheet = sheets.find(s => s.id === confirmDeleteId);
                 return sheet ? (
-                  <div className="bg-gray-50 rounded-xl px-4 py-3 mb-5 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-[#e6f4f7] flex items-center justify-center text-xs font-bold text-[#0b5566]">
+                  <div className="bg-input rounded-xl px-4 py-3 mb-5 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden bg-accent-light flex items-center justify-center text-xs font-bold text-[#0b5566]">
                       {sheet.child?.photoUrl
                         ? <img src={sheet.child.photoUrl} alt={sheet.child.name} className="w-full h-full object-cover" />
                         : sheet.child?.name?.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-800">{sheet.child?.name}</p>
-                      <p className="text-xs text-gray-500">{monthNames[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</p>
+                      <p className="text-sm font-semibold text-primary">{sheet.child?.name}</p>
+                      <p className="text-xs text-secondary">{monthNames[sheet.month - 1]} {sheet.year} · {sheet.nanny?.name}</p>
                     </div>
                     {statusBadge(sheet.status, t)}
                   </div>
                 ) : null;
               })()}
-              <p className="text-sm text-gray-600 mb-6">
+              <p className="text-sm text-secondary mb-6">
                 {t('presenceSheets.delete.confirm', 'Êtes-vous sûr de vouloir supprimer cette feuille de présence ? Toutes les entrées et signatures associées seront définitivement perdues.')}
               </p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setConfirmDeleteId(null)}
                   disabled={deleting}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition disabled:opacity-50">
+                  className="flex-1 py-2.5 rounded-xl border border-border-default text-sm font-medium text-primary hover:bg-input transition disabled:opacity-50">
                   {t('global.cancel', 'Annuler')}
                 </button>
                 <button
@@ -1141,14 +1140,14 @@ export default function PresenceSheets() {
         {/* Modal signature globale de la feuille */}
         {signingSheet && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
-            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-sm overflow-y-auto max-h-[90vh] p-6 pb-8">
+            <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-sm overflow-y-auto max-h-[90vh] p-6 pb-8">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-[#0b5566] text-sm">
                   {t('presenceSheets.signatureSheet.title', { role: signingSheet === 'nanny' ? t('presenceSheets.signature.role.nanny', 'Nounou') : t('presenceSheets.signature.role.parent', 'Parent') })}
                 </h2>
-                <button onClick={() => setSigningSheet(null)} className="p-2 rounded-full hover:bg-gray-100"><HiOutlineX className="w-5 h-5 text-gray-400" /></button>
+                <button onClick={() => setSigningSheet(null)} className="p-2 rounded-full hover:bg-card-hover"><HiOutlineX className="w-5 h-5 text-muted" /></button>
               </div>
-              <p className="text-xs text-gray-500 mb-4">{t('presenceSheets.signatureSheet.desc', 'Signez pour valider l\'ensemble de la feuille de présence du mois.')}</p>
+              <p className="text-xs text-secondary mb-4">{t('presenceSheets.signatureSheet.desc', 'Signez pour valider l\'ensemble de la feuille de présence du mois.')}</p>
               <SignaturePad
                 onSave={sig => signSheet(signingSheet, sig)}
                 onCancel={() => setSigningSheet(null)}
@@ -1161,7 +1160,7 @@ export default function PresenceSheets() {
         {/* Modal signature par entrée */}
         {signingEntry && (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4">
-            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm overflow-y-auto max-h-[90vh] p-6 pb-8">
+            <div className="bg-card rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm overflow-y-auto max-h-[90vh] p-6 pb-8">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-bold text-[#0b5566]">
                   Signature {signingEntry.role === 'nanny' ? 'Nounou' : 'Parent'} — {(() => {
@@ -1169,16 +1168,16 @@ export default function PresenceSheets() {
                     return e ? new Date(e.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
                   })()}
                 </h2>
-                <button onClick={() => setSigningEntry(null)}><HiOutlineX className="w-5 h-5 text-gray-400" /></button>
+                <button onClick={() => setSigningEntry(null)}><HiOutlineX className="w-5 h-5 text-muted" /></button>
               </div>
               {/* Afficher les heures du jour */}
               {(() => {
                 const e = editingEntries.find(e => e.id === signingEntry.entryId);
                 if (!e) return null;
                 return (
-                  <div className="mb-4 bg-[#f4f7fa] rounded-xl px-4 py-3 text-sm flex gap-6">
-                    <span className="text-gray-500">Arrivée : <strong className="text-gray-800">{e.arrivalTime || '—'}</strong></span>
-                    <span className="text-gray-500">Départ : <strong className="text-gray-800">{e.departureTime || '—'}</strong></span>
+                  <div className="mb-4 bg-surface rounded-xl px-4 py-3 text-sm flex gap-6">
+                    <span className="text-secondary">Arrivée : <strong className="text-primary">{e.arrivalTime || '—'}</strong></span>
+                    <span className="text-secondary">Départ : <strong className="text-primary">{e.departureTime || '—'}</strong></span>
                   </div>
                 );
               })()}

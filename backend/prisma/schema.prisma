@@ -102,6 +102,7 @@ model User {
   tutorialCompleted        String[]
   cookieConsent            String?
   language                 String?
+  theme                    String?
   facebookUrl              String?
   instagramUrl             String?
   linkedinUrl              String?

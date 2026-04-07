@@ -43,12 +43,12 @@ function getWeekDates(date: Date) {
 
 export default function WeeklyActivityCalendar() {
   const cardColors = [
-    { bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700' },
-    { bg: 'bg-yellow-50', border: 'border-yellow-100', text: 'text-yellow-700' },
-    { bg: 'bg-purple-50', border: 'border-purple-100', text: 'text-purple-700' },
-    { bg: 'bg-green-50', border: 'border-green-100', text: 'text-green-700' },
-    { bg: 'bg-pink-50', border: 'border-pink-100', text: 'text-pink-700' },
-    { bg: 'bg-orange-50', border: 'border-orange-100', text: 'text-orange-700' },
+    { bg: 'bg-blue-100',   border: 'border-blue-200',   text: 'text-blue-700',   darkBg: 'dark:bg-blue-900/50',   darkBorder: 'dark:border-blue-700',   darkText: 'dark:text-blue-200'   },
+    { bg: 'bg-yellow-100', border: 'border-yellow-200', text: 'text-yellow-700', darkBg: 'dark:bg-yellow-900/50', darkBorder: 'dark:border-yellow-700', darkText: 'dark:text-yellow-200' },
+    { bg: 'bg-purple-100', border: 'border-purple-200', text: 'text-purple-700', darkBg: 'dark:bg-purple-900/50', darkBorder: 'dark:border-purple-700', darkText: 'dark:text-purple-200' },
+    { bg: 'bg-green-100',  border: 'border-green-200',  text: 'text-green-700',  darkBg: 'dark:bg-green-900/50',  darkBorder: 'dark:border-green-700',  darkText: 'dark:text-green-200'  },
+    { bg: 'bg-pink-100',   border: 'border-pink-200',   text: 'text-pink-700',   darkBg: 'dark:bg-pink-900/50',   darkBorder: 'dark:border-pink-700',   darkText: 'dark:text-pink-200'   },
+    { bg: 'bg-orange-100', border: 'border-orange-200', text: 'text-orange-700', darkBg: 'dark:bg-orange-900/50', darkBorder: 'dark:border-orange-700', darkText: 'dark:text-orange-200' },
   ];
   function getActivityVisuals(name: string, idx: number) {
     let emoji = '✨';
@@ -250,13 +250,13 @@ export default function WeeklyActivityCalendar() {
             </div>
             <div className="pt-0.5">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('activities.title')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 mt-0.5">{weekLabel}</p>
+              <p className="text-xs sm:text-sm text-muted mt-0.5">{weekLabel}</p>
             </div>
           </div>
           <div className="flex flex-col md:flex-row items-center gap-2 mt-2 md:mt-0">
               {user && (user as { role?: string | null }).role === 'super-admin' && (
               <div className="w-full md:w-auto mb-2 md:mb-0 md:mr-2">
-                  <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-700 shadow-sm text-sm w-full md:w-auto min-h-[44px]">
+                  <select value={centerFilter || ''} onChange={e => setCenterFilter(e.target.value || null)} className="border border-border-default rounded-lg px-3 py-2 bg-input text-primary shadow-sm text-sm w-full md:w-auto min-h-[44px]">
                   <option value="">{t('activities.center.all', 'Tous les centres')}</option>
                   {centers.map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -265,8 +265,8 @@ export default function WeeklyActivityCalendar() {
               </div>
             )}
             <div className="flex items-center gap-2 w-full md:w-auto">
-              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition flex-shrink-0">&#60;</button>
-              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-gray-200 bg-white hover:bg-gray-100 text-gray-500 text-xl transition flex-shrink-0">&#62;</button>
+              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() - 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-border-default bg-card hover:bg-input text-muted text-xl transition flex-shrink-0">&#60;</button>
+              <button onClick={() => setCurrentDate(new Date(currentDate.setDate(currentDate.getDate() + 7)))} className="w-9 h-9 flex items-center justify-center rounded-lg border border-border-default bg-card hover:bg-input text-muted text-xl transition flex-shrink-0">&#62;</button>
               {!isParent && (
                 <button onClick={() => setAdding(true)} className="bg-[#0b5566] text-white px-5 py-2 rounded-lg font-bold shadow hover:bg-[#08323a] transition text-base flex-1 md:flex-none md:ml-2">{t('activities.add')}</button>
               )}
@@ -275,14 +275,14 @@ export default function WeeklyActivityCalendar() {
         </div>
         <div className="hidden lg:block max-w-5xl mx-auto">
           <div className="overflow-x-auto">
-            <table className="min-w-[600px] w-full border-separate border-spacing-0 bg-gradient-to-br from-blue-50 via-pink-50 to-yellow-50 rounded-2xl shadow-xl border border-blue-100" style={{ tableLayout: 'fixed' }}>
+            <table className="min-w-[600px] w-full border-separate border-spacing-0 bg-card rounded-2xl shadow-xl border border-border-default" style={{ tableLayout: 'fixed' }}>
               <thead>
                 <tr>
-                  <th className="font-bold text-xs md:text-base p-2 md:p-3 border-b w-16 md:w-20" style={{ background: '#f7f4d7', color: '#08323a', borderColor: '#cfeef9' }}>{t('activities.table.hour')}</th>
+                  <th className="font-bold text-xs md:text-base p-2 md:p-3 border-b border-border-default w-16 md:w-20 bg-input text-primary">{t('activities.table.hour')}</th>
                   {weekDates.map((date, i) => (
-                    <th key={i} className="font-bold p-2 md:p-3 text-center border-b" style={{ width: '12.5%', background: '#f7f4d7', color: '#08323a', borderColor: '#cfeef9' }}>
+                    <th key={i} className="font-bold p-2 md:p-3 text-center border-b border-border-default bg-input text-primary" style={{ width: '12.5%' }}>
                       <div className="text-xs md:text-base">{weekdayLabels[i].label}</div>
-                      <div className="text-[10px] md:text-xs text-gray-400">{new Intl.DateTimeFormat(locale).format(date)}</div>
+                      <div className="text-[10px] md:text-xs text-muted">{new Intl.DateTimeFormat(locale).format(date)}</div>
                     </th>
                   ))}
                 </tr>
@@ -295,7 +295,7 @@ export default function WeeklyActivityCalendar() {
                     const timeLabel = `${hour}h`;
                     return (
                       <tr key={timeLabel}>
-                        <td className="p-2 w-16 md:w-20 text-xs md:text-base font-bold border-t border-b border-gray-100 bg-gray-50 text-gray-500">{timeLabel}</td>
+                        <td className="p-2 w-16 md:w-20 text-xs md:text-base font-bold border-t border-b border-border-default bg-input text-muted">{timeLabel}</td>
                         {weekDates.map((date, dayIdx) => {
                           if (cellHidden[slotIdx][dayIdx]) return null;
                           const dateStr = date.toISOString().split('T')[0];
@@ -322,7 +322,7 @@ export default function WeeklyActivityCalendar() {
                                 <td
                                   key={activity.id}
                                   rowSpan={span}
-                                  className={`align-top p-0 h-full bg-gradient-to-br from-white via-${visuals.bg.replace('bg-','')} to-${visuals.bg.replace('bg-','')} border-l-4 ${visuals.border} rounded-2xl shadow-lg cursor-pointer transition-transform hover:-translate-y-1 hover:shadow-2xl duration-200 overflow-hidden`}
+                                  className={`align-top p-0 h-full ${visuals.bg} ${visuals.darkBg} border-l-4 ${visuals.border} ${visuals.darkBorder} rounded-2xl shadow-lg cursor-pointer transition-transform hover:-translate-y-1 hover:shadow-2xl duration-200 overflow-hidden`}
                                   style={{ verticalAlign: 'top', fontFamily: 'Inter, Arial, sans-serif' }}
                                   onClick={() => handleActivityCardClick(activity)}
                                   tabIndex={0}
@@ -330,14 +330,14 @@ export default function WeeklyActivityCalendar() {
                                   <div className="flex flex-col gap-2 h-full rounded-2xl px-4 py-3" style={{ minHeight: '90px', position: 'relative' }}>
                                     <div className="flex items-center gap-2 mb-1">
                                       <span className="text-2xl drop-shadow-sm">{visuals.emoji}</span>
-                                      <span className={`font-semibold text-lg ${visuals.text} tracking-tight truncate`}>{activity.name}</span>
+                                      <span className={`font-semibold text-lg ${visuals.text} ${visuals.darkText} tracking-tight truncate`}>{activity.name}</span>
                                     </div>
                                   </div>
                                 </td>
                               );
                             });
                           } else {
-                            return <td key={dayIdx} className="p-2 border-t border-b border-gray-100"></td>;
+                            return <td key={dayIdx} className="p-2 border-t border-b border-border-default"></td>;
                           }
                         })}
                       </tr>
@@ -356,27 +356,27 @@ export default function WeeklyActivityCalendar() {
               const slots = [
                 {
                   label: t('activities.slot.morning'),
-                  color: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+                  color: 'bg-yellow-100 border-yellow-200 text-yellow-800 dark:bg-yellow-900/50 dark:border-yellow-700 dark:text-yellow-200',
                   emoji: '🌞',
                   start: 7,
                   end: 12,
                 },
                 {
                   label: t('activities.slot.afternoon'),
-                  color: 'bg-blue-50 border-blue-200 text-blue-800',
+                  color: 'bg-blue-100 border-blue-200 text-blue-800 dark:bg-blue-900/50 dark:border-blue-700 dark:text-blue-200',
                   emoji: '🌤️',
                   start: 12,
                   end: 19,
                 },
               ];
               return (
-                <div key={i} className="bg-white rounded-2xl shadow border border-gray-100 p-3">
+                <div key={i} className="bg-card rounded-2xl shadow border border-border-default p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold text-base text-gray-700">{weekdayLabels[i].label}</span>
-                    <span className="text-xs text-gray-400">{new Intl.DateTimeFormat(locale).format(date)}</span>
+                    <span className="font-bold text-base text-primary">{weekdayLabels[i].label}</span>
+                    <span className="text-xs text-muted">{new Intl.DateTimeFormat(locale).format(date)}</span>
                   </div>
                   {dayActivities.length === 0 ? (
-                    <div className="text-xs text-gray-400 italic">{t('activities.none')}</div>
+                    <div className="text-xs text-muted italic">{t('activities.none')}</div>
                   ) : (
                     <div className="flex flex-col gap-4">
                       {slots.map(slot => {
@@ -389,7 +389,7 @@ export default function WeeklyActivityCalendar() {
                           <div key={slot.label}>
                             <div className={`flex items-center gap-2 mb-2`}>
                               <span className="text-lg">{slot.emoji}</span>
-                              <span className={`font-semibold text-xs px-2 py-1 rounded bg-white/60 border border-gray-200 ${slot.color}`}>{slot.label}</span>
+                              <span className={`font-semibold text-xs px-2 py-1 rounded border ${slot.color}`}>{slot.label}</span>
                             </div>
                             <div className="flex flex-col gap-2">
                               {slotActivities.map((activity, idx) => {
@@ -397,15 +397,15 @@ export default function WeeklyActivityCalendar() {
                                 return (
                                   <div
                                     key={activity.id}
-                                    className={`rounded-xl shadow border flex flex-col gap-1 ${visuals.bg} ${visuals.border} px-2 py-2 cursor-pointer transition-transform hover:scale-105 active:scale-95 overflow-hidden`}
+                                    className={`rounded-xl shadow border flex flex-col gap-1 ${visuals.bg} ${visuals.darkBg} ${visuals.border} ${visuals.darkBorder} px-2 py-2 cursor-pointer transition-transform hover:scale-105 active:scale-95 overflow-hidden`}
                                     onClick={() => handleActivityCardClick(activity)}
                                   >
                                     <div className="flex items-center justify-between mb-1">
-                                      <span className={`font-bold text-base mb-1 ${visuals.text} truncate`}>{activity.name}</span>
-                                      <span className="text-xs text-gray-600">{activity.startTime} - {activity.endTime}</span>
+                                      <span className={`font-bold text-base mb-1 ${visuals.text} ${visuals.darkText} truncate`}>{activity.name}</span>
+                                      <span className="text-xs text-secondary">{activity.startTime} - {activity.endTime}</span>
                                     </div>
                                     {activity.comment && (
-                                      <span className="block text-sm text-gray-700 bg-gray-50 rounded px-2 py-1 mb-1 w-full whitespace-pre-line">{activity.comment}</span>
+                                      <span className="block text-sm text-secondary bg-input rounded px-2 py-1 mb-1 w-full whitespace-pre-line">{activity.comment}</span>
                                     )}
                                   </div>
                                 );
@@ -423,27 +423,27 @@ export default function WeeklyActivityCalendar() {
         </div>
         {modalOpen && selectedActivity && (
           <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
-            <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="bg-card-hover w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[85vh]">
               {/* Header */}
-              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border-default flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{getActivityVisuals(selectedActivity.name, 0).emoji}</span>
                   <div>
                     <h2 className="text-lg font-extrabold text-[#0b5566] leading-tight">{selectedActivity.name}</h2>
-                    <p className="text-xs text-gray-400 mt-0.5">{selectedActivity.date ? selectedActivity.date.split('T')[0] : ''}</p>
+                    <p className="text-xs text-muted mt-0.5">{selectedActivity.date ? selectedActivity.date.split('T')[0] : ''}</p>
                   </div>
                 </div>
-                <button onClick={() => setModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-xl leading-none">×</button>
+                <button onClick={() => setModalOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:text-primary hover:bg-input transition text-xl leading-none">×</button>
               </div>
 
               {/* Body */}
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
                 {/* Horaires */}
-                <div className="flex items-center gap-4 bg-gray-50 rounded-xl px-4 py-3">
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                <div className="flex items-center gap-4 bg-input rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2 text-sm text-primary">
                     <svg className="w-4 h-4 text-[#0b5566]" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span className="font-semibold">{selectedActivity.startTime}</span>
-                    <span className="text-gray-400">→</span>
+                    <span className="text-muted">→</span>
                     <span className="font-semibold">{selectedActivity.endTime}</span>
                   </div>
                 </div>
@@ -452,7 +452,7 @@ export default function WeeklyActivityCalendar() {
                 {selectedActivity.comment && (
                   <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
                     <p className="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-1">{t('label.comment')}</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-line">{selectedActivity.comment}</p>
+                    <p className="text-sm text-secondary whitespace-pre-line">{selectedActivity.comment}</p>
                   </div>
                 )}
 
@@ -464,7 +464,7 @@ export default function WeeklyActivityCalendar() {
                   if (resolvedNannies.length === 0) return null;
                   return (
                     <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                      <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
                         {resolvedNannies.length > 1
                           ? t('activities.nannies.assigned', `${resolvedNannies.length} Nounous assignées`)
                           : t('activities.nannies.assigned_single', 'Nounou assignée')}
@@ -484,9 +484,9 @@ export default function WeeklyActivityCalendar() {
 
               {/* Footer actions */}
               {!isParent && (
-                <div className="flex items-center gap-3 px-6 py-4 border-t border-gray-100 flex-shrink-0">
+                <div className="flex items-center gap-3 px-6 py-4 border-t border-border-default flex-shrink-0">
                   <button
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border-default text-sm font-semibold text-primary hover:bg-input transition"
                     onClick={() => handleEditActivity(selectedActivity)}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -506,25 +506,25 @@ export default function WeeklyActivityCalendar() {
         )}
       {adding && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
-          <div className="bg-white w-full max-w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+          <div className="bg-card-hover w-full max-w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
 
             {/* Drag handle (mobile only) */}
             <div className="flex justify-center pt-3 pb-1 sm:hidden flex-shrink-0">
-              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+              <div className="w-10 h-1 bg-border-default rounded-full" />
             </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-4 sm:px-6 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b border-gray-100 flex-shrink-0">
+            <div className="flex items-center justify-between px-4 sm:px-6 pt-3 sm:pt-5 pb-3 sm:pb-4 border-b border-border-default flex-shrink-0">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow flex-shrink-0">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                 </div>
                 <div>
                   <h2 className="text-base sm:text-lg font-extrabold text-[#0b5566] leading-tight">{selectedActivity ? t('activities.modal.edit') : t('activities.modal.add')}</h2>
-                  <p className="text-xs text-gray-400 leading-none mt-0.5 hidden sm:block">{t('activities.modal.subtitle', 'Planifiez une activité pour la semaine')}</p>
+                  <p className="text-xs text-muted leading-none mt-0.5 hidden sm:block">{t('activities.modal.subtitle', 'Planifiez une activité pour la semaine')}</p>
                 </div>
               </div>
-              <button onClick={() => { setAdding(false); setSelectedActivity(null); }} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition text-xl leading-none flex-shrink-0">×</button>
+              <button onClick={() => { setAdding(false); setSelectedActivity(null); }} className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:text-primary hover:bg-input transition text-xl leading-none flex-shrink-0">×</button>
             </div>
 
             {/* Body scrollable */}
@@ -532,7 +532,7 @@ export default function WeeklyActivityCalendar() {
 
               {/* Nom de l'activité */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
                   {t('label.activityName') || 'Nom de l\'activité'} <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -540,20 +540,20 @@ export default function WeeklyActivityCalendar() {
                   placeholder={t('activities.modal.name.placeholder', 'Ex : Atelier peinture, Lecture, Jeux libres…')}
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition"
+                  className="w-full border border-border-default rounded-xl px-3.5 py-2.5 text-sm text-primary bg-input placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition"
                   required
                 />
               </div>
 
               {/* Date */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Date <span className="text-red-400">*</span></label>
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">Date <span className="text-red-400">*</span></label>
+                <div className="border border-border-default rounded-xl overflow-hidden">
                   <input
                     type="date"
                     value={form.date}
                     onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                    className="w-full px-3 py-2.5 text-sm text-gray-800 focus:outline-none bg-white"
+                    className="w-full px-3 py-2.5 text-sm text-primary focus:outline-none bg-input"
                     required
                   />
                 </div>
@@ -562,22 +562,22 @@ export default function WeeklyActivityCalendar() {
               {/* Horaires — 2 colonnes égales */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{t('label.start')} <span className="text-red-400">*</span></label>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <input type="time" min="07:00" max="19:00" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="w-full px-3 py-2.5 text-sm text-gray-800 focus:outline-none bg-white" required />
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">{t('label.start')} <span className="text-red-400">*</span></label>
+                  <div className="border border-border-default rounded-xl overflow-hidden">
+                    <input type="time" min="07:00" max="19:00" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className="w-full px-3 py-2.5 text-sm text-primary focus:outline-none bg-input" required />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{t('label.end')} <span className="text-red-400">*</span></label>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <input type="time" min="07:00" max="19:00" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="w-full px-3 py-2.5 text-sm text-gray-800 focus:outline-none bg-white" required />
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">{t('label.end')} <span className="text-red-400">*</span></label>
+                  <div className="border border-border-default rounded-xl overflow-hidden">
+                    <input type="time" min="07:00" max="19:00" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="w-full px-3 py-2.5 text-sm text-primary focus:outline-none bg-input" required />
                   </div>
                 </div>
               </div>
 
               {/* Commentaire */}
               <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1.5">
                   {t('label.comment.optional', 'Commentaire (optionnel)')}
                 </label>
                 <textarea
@@ -585,14 +585,14 @@ export default function WeeklyActivityCalendar() {
                   value={form.comment}
                   onChange={e => setForm(f => ({ ...f, comment: e.target.value }))}
                   rows={2}
-                  className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition resize-none"
+                  className="w-full border border-border-default rounded-xl px-3.5 py-2.5 text-sm text-primary bg-input placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566] transition resize-none"
                 />
               </div>
 
               {/* Nounous assignées */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  <label className="block text-xs font-semibold text-muted uppercase tracking-wider">
                     {t('activities.nannies.assigned', 'Nounous assignées')} <span className="text-red-400">*</span>
                   </label>
                   {form.nannyIds.length > 0 && (
@@ -602,7 +602,7 @@ export default function WeeklyActivityCalendar() {
                   )}
                 </div>
                 {nannies.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic">{t('activity.modal.no_nannies', 'Aucune nounou disponible.')}</p>
+                  <p className="text-xs text-muted italic">{t('activity.modal.no_nannies', 'Aucune nounou disponible.')}</p>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
                     {nannies.map(n => {
@@ -620,7 +620,7 @@ export default function WeeklyActivityCalendar() {
                           className={`flex items-center justify-between gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-medium border transition-all text-left ${
                             selected
                               ? 'bg-[#0b5566] text-white border-[#0b5566] shadow-sm'
-                              : 'bg-white text-gray-700 border-gray-200 hover:border-[#0b5566] hover:text-[#0b5566]'
+                              : 'bg-card text-secondary border-border-default hover:border-[#0b5566] hover:text-[#0b5566]'
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
@@ -649,11 +649,11 @@ export default function WeeklyActivityCalendar() {
             </form>
 
             {/* Footer */}
-            <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-100 flex-shrink-0">
+            <div className="flex items-center gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-border-default flex-shrink-0">
               <button
                 type="button"
                 onClick={() => { setAdding(false); setSelectedActivity(null); }}
-                className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+                className="flex-1 py-3 rounded-xl border border-border-default text-sm font-semibold text-secondary hover:bg-input transition"
               >
                 {t('global.cancel') ?? 'Annuler'}
               </button>

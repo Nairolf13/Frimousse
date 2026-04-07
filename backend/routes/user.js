@@ -417,7 +417,7 @@ router.put('/tutorial-seen', auth, async (req, res) => {
 
 router.put('/preferences', auth, async (req, res) => {
   try {
-    const { cookieConsent, language } = req.body;
+    const { cookieConsent, language, theme } = req.body;
     const data = {};
     if (cookieConsent !== undefined) {
       if (!['all', 'essential'].includes(cookieConsent)) return res.status(400).json({ error: 'cookieConsent invalide' });
@@ -426,6 +426,10 @@ router.put('/preferences', auth, async (req, res) => {
     if (language !== undefined) {
       if (!['fr', 'en', 'es', 'ar'].includes(language)) return res.status(400).json({ error: 'language invalide' });
       data.language = language;
+    }
+    if (theme !== undefined) {
+      if (!['light', 'dark', 'system'].includes(theme)) return res.status(400).json({ error: 'theme invalide' });
+      data.theme = theme;
     }
     if (Object.keys(data).length === 0) return res.status(400).json({ error: 'Aucune donnée' });
     await prisma.user.update({ where: { id: req.user.id }, data });

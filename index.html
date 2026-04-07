@@ -17,11 +17,16 @@
   <meta name="geo.region" content="FR" />
   <meta name="geo.placename" content="France" />
   <meta name="language" content="fr" />
+  <!-- Anti-FOUC: apply theme class before React renders to avoid flash -->
+  <script>
+    (function(){try{var t=localStorage.getItem('app_theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();
+  </script>
   <!-- Minimal critical CSS to reduce render-blocking and avoid FOUC while main CSS loads -->
   <style>
     /* Critical styles: background, root sizing and basic typography */
     html,body,#root{height:100%;}
-    body{margin:0;min-height:100vh;background:#ffffff;color:#08323a;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,'Noto Sans',"Noto Color Emoji","Apple Color Emoji";}
+    body{margin:0;min-height:100vh;background:#f4f7fa;color:#1f2937;font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial,'Noto Sans',"Noto Color Emoji","Apple Color Emoji";}
+    html.dark body{background:#0F172A;color:#E5E7EB;}
     img{max-width:100%;height:auto;display:block}
     a{color:inherit}
   </style>

@@ -59,16 +59,16 @@ function getDesktopTooltipStyle(
 
 /* ─── Arrow (desktop tooltip) ─── */
 function TooltipArrow({ placement }: { placement: string }) {
-  const base = 'absolute w-3 h-3 bg-white rotate-45';
+  const base = 'absolute w-3 h-3 bg-card rotate-45';
   switch (placement) {
     case 'right':
-      return <div className={`${base} -left-[7px] top-1/2 -translate-y-1/2 border-l border-b border-gray-100`} />;
+      return <div className={`${base} -left-[7px] top-1/2 -translate-y-1/2 border-l border-b border-border-default`} />;
     case 'left':
-      return <div className={`${base} -right-[7px] top-1/2 -translate-y-1/2 border-r border-t border-gray-100`} />;
+      return <div className={`${base} -right-[7px] top-1/2 -translate-y-1/2 border-r border-t border-border-default`} />;
     case 'bottom':
-      return <div className={`${base} -top-[7px] left-1/2 -translate-x-1/2 border-t border-l border-gray-100`} />;
+      return <div className={`${base} -top-[7px] left-1/2 -translate-x-1/2 border-t border-l border-border-default`} />;
     case 'top':
-      return <div className={`${base} -bottom-[7px] left-1/2 -translate-x-1/2 border-b border-r border-gray-100`} />;
+      return <div className={`${base} -bottom-[7px] left-1/2 -translate-x-1/2 border-b border-r border-border-default`} />;
     default:
       return null;
   }
@@ -79,13 +79,13 @@ function Progress({ total, current, animate = false }: { total: number; current:
   if (total > 6) {
     return (
       <div className="flex items-center gap-2 mb-3">
-        <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+        <div className="flex-1 h-1 bg-input rounded-full overflow-hidden">
           <div
             className={`h-full bg-brand-500 rounded-full ${animate ? 'transition-all duration-500' : ''}`}
             style={{ width: `${((current + 1) / total) * 100}%` }}
           />
         </div>
-        <span className="text-xs text-gray-400 font-semibold tabular-nums">{current + 1}/{total}</span>
+        <span className="text-xs text-muted font-semibold tabular-nums">{current + 1}/{total}</span>
       </div>
     );
   }
@@ -95,11 +95,11 @@ function Progress({ total, current, animate = false }: { total: number; current:
         <div
           key={i}
           className={`h-1.5 rounded-full ${animate ? 'transition-all duration-300' : ''} ${
-            i === current ? 'w-5 bg-brand-500' : i < current ? 'w-1.5 bg-brand-300' : 'w-1.5 bg-gray-200'
+            i === current ? 'w-5 bg-brand-500' : i < current ? 'w-1.5 bg-brand-300' : 'w-1.5 bg-input'
           }`}
         />
       ))}
-      <span className="ml-auto text-xs text-gray-400 font-medium">{current + 1}/{total}</span>
+      <span className="ml-auto text-xs text-muted font-medium">{current + 1}/{total}</span>
     </div>
   );
 }
@@ -220,7 +220,7 @@ function NavButtons({
     <div className={`flex items-center justify-between ${compact ? 'mt-4' : 'mt-6 md:mt-8'}`}>
       <button
         onClick={onStop}
-        className={`text-gray-400 hover:text-gray-600 transition-colors font-medium ${compact ? 'text-xs' : 'text-sm'}`}
+        className={`text-muted hover:text-secondary transition-colors font-medium ${compact ? 'text-xs' : 'text-sm'}`}
       >
         {isFirst ? 'Passer le tutoriel' : 'Quitter'}
       </button>
@@ -228,7 +228,7 @@ function NavButtons({
         {currentStep > 0 && (
           <button
             onClick={onPrev}
-            className={`font-medium text-gray-500 hover:text-gray-800 transition-colors px-3 py-2 rounded-xl hover:bg-gray-100 ${compact ? 'text-xs' : 'text-sm'}`}
+            className={`font-medium text-secondary hover:text-primary transition-colors px-3 py-2 rounded-xl hover:bg-input ${compact ? 'text-xs' : 'text-sm'}`}
           >
             ← Retour
           </button>
@@ -415,14 +415,14 @@ export default function TutorialOverlay() {
       <div className="fixed inset-0 z-[10000] flex items-end md:items-center justify-center">
         <div className="absolute inset-0 bg-black/50 tutorial-backdrop-in" />
         <div
-          className="relative z-10 bg-white md:rounded-3xl rounded-t-3xl shadow-2xl max-w-md w-full mx-0 md:mx-4 px-8 pt-8 md:px-12 md:pt-10 tutorial-card-in"
+          className="relative z-10 bg-card md:rounded-3xl rounded-t-3xl shadow-2xl max-w-md w-full mx-0 md:mx-4 px-8 pt-8 md:px-12 md:pt-10 tutorial-card-in"
           style={{ paddingBottom: 'max(2rem, calc(2rem + env(safe-area-inset-bottom, 0px)))' }}
           onClick={e => e.stopPropagation()}
         >
-          <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
+          <div className="w-10 h-1 bg-input rounded-full mx-auto mb-5 md:hidden" />
           <Progress total={totalSteps} current={currentStep} animate />
-          <h3 className="text-xl font-bold text-gray-900 mb-2.5 text-center">{step.title}</h3>
-          <p className="text-gray-600 leading-relaxed text-center">{step.content}</p>
+          <h3 className="text-xl font-bold text-primary mb-2.5 text-center">{step.title}</h3>
+          <p className="text-secondary leading-relaxed text-center">{step.content}</p>
           <NavButtons
             currentStep={currentStep}
             totalSteps={totalSteps}
@@ -531,7 +531,7 @@ export default function TutorialOverlay() {
       {/* ── Tooltip / sheet card ── */}
       <div
         ref={tooltipRef}
-        className={`pointer-events-auto bg-white border border-gray-100 shadow-2xl p-5 md:p-7
+        className={`pointer-events-auto bg-card border border-border-default shadow-2xl p-5 md:p-7
           ${isMobile
             ? cardFromTop
               ? 'fixed top-0 left-0 right-0 rounded-b-3xl tutorial-card-up-in'
@@ -546,7 +546,7 @@ export default function TutorialOverlay() {
       >
         {/* Drag handle */}
         {isMobile && !cardFromTop && (
-          <div className="w-8 h-1 bg-gray-200 rounded-full mx-auto mb-4" />
+          <div className="w-8 h-1 bg-input rounded-full mx-auto mb-4" />
         )}
 
         {/* Arrow (desktop) */}
@@ -554,8 +554,8 @@ export default function TutorialOverlay() {
 
         <Progress total={totalSteps} current={currentStep} />
 
-        <h4 className="text-sm font-bold text-gray-900 mb-1.5">{step.title}</h4>
-        <p className="text-xs text-gray-600 leading-relaxed">{step.content}</p>
+        <h4 className="text-sm font-bold text-primary mb-1.5">{step.title}</h4>
+        <p className="text-xs text-secondary leading-relaxed">{step.content}</p>
 
         <NavButtons
           currentStep={currentStep}
@@ -567,7 +567,7 @@ export default function TutorialOverlay() {
         />
 
         {isMobile && cardFromTop && (
-          <div className="w-8 h-1 bg-gray-200 rounded-full mx-auto mt-4" />
+          <div className="w-8 h-1 bg-input rounded-full mx-auto mt-4" />
         )}
       </div>
     </div>
