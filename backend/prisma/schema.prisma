@@ -585,3 +585,18 @@ model AnnouncementRead {
   @@unique([announcementId, userId])
   @@index([userId])
 }
+
+// Logs des pages 404 — accessible uniquement par le super-admin
+model NotFoundLog {
+  id          String   @id @default(uuid())
+  url         String
+  count       Int      @default(1)
+  userAgent   String?
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  resolved    Boolean  @default(false)
+  resolvedAt  DateTime?
+
+  @@index([lastSeenAt])
+  @@index([resolved])
+}

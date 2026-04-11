@@ -110,10 +110,11 @@ async function filterOptedOutEmails(prisma, emails) {
 
 async function sendTemplatedMail({ templateName, lang, to, subject, text, substitutions = {}, prisma = null, attachments: extraAttachments = [], respectOptOut = true, paymentHistoryId = null, bypassOptOut = false, recipientsText = null }) {
 
-  // Set logoUrl before rendering so it gets substituted in the template
-  if (!substitutions.logoUrl) {
-    substitutions.logoUrl = 'https://lesfrimousses.com/imgs/LogoFrimousse-192.png';
-  }
+  // Inject logo as inline attachment so it renders in all mail clients without external image blocking
+  const logoPath = path.join(__dirname, '..', '..', 'public', 'imgs', 'LogoFrimousse-192.png');
+  const logoExists = fs.existsSync(logoPath);
+  substitutions.logoUrl = logoExists ? 'cid:logo@frimousse' : 'https://lesfrimousses.com/imgs/LogoFrimousse-192.png';
+
   const html = renderTemplate(templateName, lang, substitutions);
   // normalize 'to' into array
   let recipients = Array.isArray(to) ? to.slice() : (to ? [to] : []);
@@ -125,6 +126,14 @@ async function sendTemplatedMail({ templateName, lang, to, subject, text, substi
   if (!recipients.length) return;
 
   const attachments = [];
+  // Always attach the logo inline so templates can reference it via cid:logo@frimousse
+  if (logoExists) {
+    attachments.push({
+      filename: 'LogoFrimousse.png',
+      path: logoPath,
+      cid: 'logo@frimousse',
+    });
+  }
   if (Array.isArray(extraAttachments) && extraAttachments.length) {
     for (const a of extraAttachments) attachments.push(a);
   }

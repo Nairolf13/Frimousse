@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { HiOutlineViewGrid, HiOutlineBell, HiOutlineChatAlt, HiOutlineChatAlt2, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar, HiOutlineOfficeBuilding, HiOutlineCreditCard, HiOutlineSun, HiOutlineMoon } from 'react-icons/hi';
+import { HiOutlineViewGrid, HiOutlineBell, HiOutlineChatAlt, HiOutlineChatAlt2, HiOutlineUserGroup, HiOutlineHeart, HiOutlineCalendar, HiOutlineDocumentText, HiOutlineCog, HiOutlineMenu, HiOutlineX, HiOutlineCurrencyDollar, HiOutlineOfficeBuilding, HiOutlineCreditCard, HiOutlineSun, HiOutlineMoon, HiOutlineExclamationCircle } from 'react-icons/hi';
 import { useTheme } from '../hooks/useTheme';
 import { FaRobot } from 'react-icons/fa';
 import { useAuth } from '../src/context/AuthContext';
@@ -53,6 +53,7 @@ function getNavLinks(user: { role?: string | null; nannyId?: string | null; plan
       { to: '/admin/centers', label: t('nav.centers', 'Centres'), icon: <HiOutlineOfficeBuilding className="w-5 h-5 mr-3" /> },
       { to: '/admin/support', label: t('nav.support', 'Support'), icon: <HiOutlineChatAlt className="w-5 h-5 mr-3" /> },
       { to: '/admin/announcements', label: t('nav.announcements', 'Annonces'), icon: <HiOutlineBell className="w-5 h-5 mr-3" /> },
+      { to: '/admin/not-found-logs', label: t('nav.notfoundlogs', 'Pages 404'), icon: <HiOutlineExclamationCircle className="w-5 h-5 mr-3" /> },
     ] : []),
     { to: '/children', label: t('nav.children'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
     { to: '/parent', label: t('nav.parents'), icon: <HiOutlineUserGroup className="w-5 h-5 mr-3" /> },
