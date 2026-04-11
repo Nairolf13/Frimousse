@@ -92,6 +92,7 @@ const TrialExpiredPage = lazyWithRetry(() => import('../pages/TrialExpiredPage')
 const LandingMAMPage = lazyWithRetry(() => import('../pages/LandingMAMPage'));
 const LandingCrechePage = lazyWithRetry(() => import('../pages/LandingCrechePage'));
 const LandingMicroCrechePage = lazyWithRetry(() => import('../pages/LandingMicroCrechePage'));
+const NotFoundPage = lazyWithRetry(() => import('../pages/NotFoundPage'));
 
 const LoadingFallback = () => (
   <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
@@ -170,6 +171,7 @@ export default function AppRoutes() {
             <Route path="/presence-sheets" element={<PresenceSheets />} />
             <Route path="/messages" element={<Messaging />} />
           </Route>
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

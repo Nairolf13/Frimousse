@@ -1063,5 +1063,22 @@
   "settings.export_data": "Descargar mis datos (RGPD)",
   "settings.export_error": "Error al exportar sus datos.",
   "global.edit": "Editar",
-  "subscription.status.inactive": "Inactivo"
+  "subscription.status.inactive": "Inactivo",
+  "notfound.breadcrumb": "Error 404 — Página no encontrada",
+  "notfound.title": "Esta página\nno existe.",
+  "notfound.description": "Es posible que el enlace que seguiste esté roto, que la página haya sido movida, o que la URL haya sido escrita con un error. En cualquier caso, serás informado y todo se resolverá.",
+  "notfound.card.title": "Enlace no encontrado",
+  "notfound.card.desc": "Esta página ya no existe o ha sido movida.",
+  "notfound.badge": "Incidente conocido",
+  "notfound.badge.desc": "Nuestro equipo ya está informado.",
+  "notfound.steps.title": "Lo que hace nuestro equipo",
+  "notfound.step1": "Identificación del origen del problema",
+  "notfound.step2": "Corrección en lugar de redirección",
+  "notfound.step3": "Verificación del inventario de páginas afectadas",
+  "notfound.step4": "Implementación de una corrección si es necesario",
+  "notfound.cta.home": "Volver al inicio",
+  "notfound.cta.support": "Contactarnos",
+  "notfound.support.title": "¿Necesitas ayuda inmediata?",
+  "notfound.support.desc": "Nuestro soporte responde en 24h en días laborables.",
+  "notfound.support.cta": "Escribir"
 }

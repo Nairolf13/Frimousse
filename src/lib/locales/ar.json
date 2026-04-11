@@ -1063,5 +1063,22 @@
   "settings.export_data": "تنزيل بياناتي (GDPR)",
   "settings.export_error": "خطأ عند تصدير بياناتك.",
   "global.edit": "تعديل",
-  "subscription.status.inactive": "غير نشط"
+  "subscription.status.inactive": "غير نشط",
+  "notfound.breadcrumb": "خطأ 404 — الصفحة غير موجودة",
+  "notfound.title": "هذه الصفحة\nغير موجودة.",
+  "notfound.description": "من المحتمل أن الرابط الذي اتبعته معطوب، أو أن الصفحة قد نُقلت، أو أن عنوان URL كُتب بخطأ. في جميع الأحوال، سيتم إخطارك وسيتم حل كل شيء.",
+  "notfound.card.title": "رابط غير موجود",
+  "notfound.card.desc": "هذه الصفحة لم تعد موجودة أو تم نقلها.",
+  "notfound.badge": "حادثة معروفة",
+  "notfound.badge.desc": "فريقنا على علم بالأمر.",
+  "notfound.steps.title": "ما يفعله فريقنا",
+  "notfound.step1": "التحقق من أصل المشكلة",
+  "notfound.step2": "التصحيح بدلاً من إعادة التوجيه",
+  "notfound.step3": "مراجعة قائمة الصفحات المتأثرة",
+  "notfound.step4": "تطبيق إصلاح إذا لزم الأمر",
+  "notfound.cta.home": "العودة إلى الرئيسية",
+  "notfound.cta.support": "تواصل معنا",
+  "notfound.support.title": "هل تحتاج إلى مساعدة فورية؟",
+  "notfound.support.desc": "يرد فريق الدعم لدينا خلال 24 ساعة في أيام العمل.",
+  "notfound.support.cta": "كتابة"
 }

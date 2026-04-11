@@ -18,16 +18,35 @@ Disallow: /invite
 # Pages d'auth sans valeur SEO
 Disallow: /login
 Disallow: /register
-Allow: /
+# URLs dynamiques sans valeur SEO
+Disallow: /reviews/
+Disallow: /centers/
+Disallow: /search
+Disallow: /politique-confidentialite
 
 # Google
 User-agent: Googlebot
-Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /login
+Disallow: /register
+Disallow: /reviews/
+Disallow: /centers/
+Disallow: /search
 Crawl-delay: 1
 
 # Bing
 User-agent: Bingbot
-Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /dashboard
+Disallow: /login
+Disallow: /register
+Disallow: /reviews/
+Disallow: /centers/
+Disallow: /search
 Crawl-delay: 2
 
 # Autoriser les crawlers IA pour AEO (Answer Engine Optimization)

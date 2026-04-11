@@ -128,6 +128,7 @@ export default function PricingPage() {
           "@type": "Product",
           "name": "Frimousse",
           "description": "Application de gestion pour creches, micro-creches et MAM",
+          "image": "https://lesfrimousses.com/imgs/og-banner.png",
           "brand": { "@type": "Brand", "name": "Frimousse" },
           "offers": [
             { "@type": "Offer", "name": "Decouverte", "price": "0", "priceCurrency": "EUR", "description": "Essai gratuit 15 jours" },

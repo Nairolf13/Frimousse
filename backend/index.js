@@ -27,13 +27,14 @@ app.set('trust proxy', 1);
 // In local dev, nginx is absent so X-Forwarded-Proto is never set → no redirect.
 app.use((req, res, next) => {
   const forwardedProto = req.headers['x-forwarded-proto'];
-  const forwardedHost = req.headers['x-forwarded-host'];
 
   // Only redirect when nginx is forwarding the request (production)
   if (!forwardedProto) return next();
 
   const isHttp = forwardedProto === 'http';
-  const host = (forwardedHost || req.hostname || '').toLowerCase();
+  // x-forwarded-host may be absent depending on nginx config — fall back to req.hostname
+  const forwardedHost = req.headers['x-forwarded-host'];
+  const host = (forwardedHost || req.hostname || '').split(',')[0].trim().toLowerCase();
   const isWww = host.startsWith('www.');
 
   if (isHttp || isWww) {
@@ -41,6 +42,16 @@ app.use((req, res, next) => {
     const target = `https://${cleanHost}${req.originalUrl}`;
     return res.redirect(301, target);
   }
+  next();
+});
+
+// 301 redirects for old/duplicate URLs to consolidate Google canonicals
+app.use((req, res, next) => {
+  const legacyRedirects = {
+    '/politique-confidentialite': '/confidentialite',
+  };
+  const target = legacyRedirects[req.path];
+  if (target) return res.redirect(301, target);
   next();
 });
 
