@@ -258,6 +258,10 @@ const supportRoutes = require('./routes/support');
 app.use('/api/admin', adminEmailLogsRoutes);
 app.use('/api/support', supportRoutes);
 
+const notFoundLogsRoutes = require('./routes/notFoundLogs');
+app.use('/api/not-found-logs', notFoundLogsRoutes);   // POST public (log 404)
+app.use('/api/admin', notFoundLogsRoutes);             // GET/PATCH/DELETE super-admin
+
 
 const paymentInvoiceRoutes = require('./routes/paymentInvoice');
 // Mount invoice route before the general payment-history routes so it has priority
@@ -317,4 +321,12 @@ try {
   console.log('Data retention cron loaded');
 } catch (err) {
   console.error('Failed to load data retention cron', err);
+}
+
+// Start 404 digest cron (daily 08:30 — email super-admin with new 404s)
+try {
+  require('./lib/notFoundDigestCron');
+  console.log('Not-found digest cron loaded');
+} catch (err) {
+  console.error('Failed to load not-found digest cron', err);
 }

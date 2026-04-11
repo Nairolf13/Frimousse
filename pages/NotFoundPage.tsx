@@ -1,11 +1,23 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
 import { useI18n } from '../src/lib/useI18n';
 
 export default function NotFoundPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useI18n();
+
+  // Log the 404 to the backend silently — never block the UI
+  useEffect(() => {
+    const url = location.pathname + location.search;
+    fetch('/api/not-found-logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    }).catch(() => {/* ignore network errors */});
+  }, [location.pathname, location.search]);
 
   const steps = [
     t('notfound.step1', "Vérification de l'origine du problème"),
