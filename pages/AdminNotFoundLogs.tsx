@@ -3,6 +3,25 @@ import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useI18n } from '../src/lib/useI18n';
 import { HiOutlineExclamationCircle, HiOutlineCheck, HiOutlineRefresh, HiOutlineTrash } from 'react-icons/hi';
 
+function useIsShortLandscape() {
+  const [isShortLandscape, setIsShortLandscape] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mql = window.matchMedia('(min-width: 768px) and (max-height: 600px)');
+    const onChange = () => setIsShortLandscape(Boolean(mql.matches));
+    onChange();
+    if (typeof mql.addEventListener === 'function') mql.addEventListener('change', onChange); else mql.addListener(onChange);
+    window.addEventListener('resize', onChange);
+    window.addEventListener('orientationchange', onChange);
+    return () => {
+      try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ }
+      window.removeEventListener('resize', onChange);
+      window.removeEventListener('orientationchange', onChange);
+    };
+  }, []);
+  return isShortLandscape;
+}
+
 type NotFoundLog = {
   id: string;
   url: string;
@@ -16,6 +35,7 @@ type NotFoundLog = {
 
 export default function AdminNotFoundLogs() {
   const { t } = useI18n();
+  const isShortLandscape = useIsShortLandscape();
   const [logs, setLogs] = useState<NotFoundLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +112,8 @@ export default function AdminNotFoundLogs() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+    <div className={`min-h-screen bg-[#f4f7fa] p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
@@ -247,6 +268,7 @@ export default function AdminNotFoundLogs() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
