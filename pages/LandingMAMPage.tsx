@@ -10,7 +10,7 @@ export default function LandingMAMPage() {
         title="Logiciel gestion MAM — Maison d'Assistantes Maternelles | Les Frimousses"
         description="Les Frimousses : logiciel de gestion MAM complet. Planning des assistantes maternelles, fiches enfants, communication parents, rapports d'activité et facturation. Essai gratuit, conforme RGPD."
         url="https://lesfrimousses.com/logiciel-mam"
-        image="https://lesfrimousses.com/imgs/LogoFrimousse.webp"
+        image="https://lesfrimousses.com/imgs/og-banner.png"
         breadcrumbs={[
           { name: 'Accueil', url: 'https://lesfrimousses.com/' },
           { name: 'Logiciel MAM', url: 'https://lesfrimousses.com/logiciel-mam' },

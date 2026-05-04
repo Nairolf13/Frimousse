@@ -10,7 +10,7 @@ export default function GuideAddChildPage() {
         title={"Ajouter un enfant dans le logiciel | Guide Frimousse - Gestion creche"}
         description={"Comment ajouter un enfant dans Frimousse : formulaire d'inscription, informations medicales, contacts d'urgence, autorisations parentales. Guide pour creches et MAM."}
         url={"https://lesfrimousses.com/guide-ajouter-enfant"}
-        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        image={"https://lesfrimousses.com/imgs/og-banner.png"}
         type={"article"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Guide ajout enfant', url: 'https://lesfrimousses.com/guide-ajouter-enfant' }]}
       />

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../src/context/AuthContext';
 
@@ -214,6 +215,7 @@ export default function VerifyEmailPage() {
   
   return (
     <div className="min-h-screen w-screen flex items-center justify-center bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2]">
+      <Helmet><meta name="robots" content="noindex,nofollow" /></Helmet>
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md flex flex-col items-center">
         <div className="w-20 h-20 mb-4">
           <img src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-full h-full object-contain" />

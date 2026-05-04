@@ -12,7 +12,7 @@ export default function GuideSecurityPage() {
         title={"Securite et RGPD | Guide Frimousse - Protection des donnees creche"}
         description={"Securite et conformite RGPD de Frimousse : chiffrement des donnees, gestion des acces, confidentialite des informations enfants et familles. Guide pour creches et MAM."}
         url={"https://lesfrimousses.com/guide-securite"}
-        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        image={"https://lesfrimousses.com/imgs/og-banner.png"}
         type={"article"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Guide securite', url: 'https://lesfrimousses.com/guide-securite' }]}
       />

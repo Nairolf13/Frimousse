@@ -12,7 +12,7 @@ export default function SupportPage() {
         title={t('supportpage.seo.title', 'Support et aide | Frimousse - Application de gestion créche')}
         description={t('supportpage.seo.description', "Besoin d'aide sur Frimousse ? Guides, assistance technique, documentation et FAQ pour les crèches, micro-crèches, MAM et garderies. Support réactif par email.")}
         url={"https://lesfrimousses.com/support"}
-        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        image={"https://lesfrimousses.com/imgs/og-banner.png"}
         breadcrumbs={[{ name: t('supportpage.breadcrumb.home', 'Accueil'), url: 'https://lesfrimousses.com/' }, { name: t('supportpage.breadcrumb.support', 'Support'), url: 'https://lesfrimousses.com/support' }]}
       />
 

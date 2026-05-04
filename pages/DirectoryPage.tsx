@@ -242,6 +242,9 @@ export default function DirectoryPage() {
       <SEO
         title={t('directory.seo.title', 'Annuaire des crèches, MAM et micro-crèches — Frimousse')}
         description={t('directory.seo.description', 'Trouvez une crèche, MAM ou micro-crèche près de chez vous. Coordonnées, adresses et contacts des structures référencées sur Frimousse.')}
+        url="https://lesfrimousses.com/annuaire"
+        image="https://lesfrimousses.com/imgs/og-banner.png"
+        breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Annuaire', url: 'https://lesfrimousses.com/annuaire' }]}
       />
       {!loading && centers.length > 0 && <DirectoryJsonLd centers={centers} />}
       <PublicNavbar variant="light" />

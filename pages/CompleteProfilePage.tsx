@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
+import SEO from '../components/SEO';
 
 const API_URL = import.meta.env.VITE_API_URL || "";
 
@@ -297,6 +298,7 @@ export default function CompleteProfilePage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f7f4d7] px-4">
+      <SEO noindex={true} />
       <div
         ref={containerRef}
         className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-lg flex flex-col items-center"

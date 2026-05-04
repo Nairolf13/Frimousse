@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../src/lib/useI18n';
+import SEO from '../components/SEO';
 
 export default function TrialExpiredPage() {
   const navigate = useNavigate();
@@ -7,6 +8,7 @@ export default function TrialExpiredPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 to-blue-50 flex items-center justify-center p-4">
+      <SEO noindex={true} />
       <div className="bg-white rounded-3xl shadow-xl max-w-md w-full p-8 text-center">
 
         {/* Icon */}

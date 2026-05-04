@@ -1,7 +1,7 @@
 # Robots.txt - lesfrimousses.com
 
 User-agent: *
-# Pages applicatives protégées
+# Pages applicatives et authentification
 Disallow: /admin
 Disallow: /api
 Disallow: /backend
@@ -15,55 +15,61 @@ Disallow: /complete-profile
 Disallow: /verify-email
 Disallow: /reset-password
 Disallow: /invite
-# Pages d'auth sans valeur SEO
 Disallow: /login
 Disallow: /register
+Disallow: /trial-expired
 # URLs dynamiques sans valeur SEO
 Disallow: /reviews/
 Disallow: /centers/
 Disallow: /search
+# Ancienne URL redirigée
 Disallow: /politique-confidentialite
+Allow: /
 
-# Google
+# Google — mêmes règles, sans crawl-delay (Google l'ignore)
 User-agent: Googlebot
 Disallow: /admin
 Disallow: /api
 Disallow: /dashboard
 Disallow: /settings
+Disallow: /payment-history
+Disallow: /subscription
+Disallow: /notifications
+Disallow: /complete-profile
+Disallow: /verify-email
+Disallow: /reset-password
+Disallow: /invite
 Disallow: /login
 Disallow: /register
+Disallow: /trial-expired
 Disallow: /reviews/
 Disallow: /centers/
 Disallow: /search
-Crawl-delay: 1
+Allow: /
 
 # Bing
 User-agent: Bingbot
 Disallow: /admin
 Disallow: /api
 Disallow: /dashboard
+Disallow: /settings
 Disallow: /login
 Disallow: /register
+Disallow: /trial-expired
 Disallow: /reviews/
 Disallow: /centers/
 Disallow: /search
+Allow: /
 Crawl-delay: 2
 
-# Autoriser les crawlers IA pour AEO (Answer Engine Optimization)
+# Crawlers IA — pages publiques uniquement
 User-agent: GPTBot
-Allow: /
-Allow: /fonctionnalites
-Allow: /tarifs
-Allow: /about
-Allow: /guide-demarrage
-Allow: /guide-ajouter-enfant
-Allow: /guide-planning
-Allow: /guide-export-rapport
-Allow: /guide-securite
-Allow: /support
 Disallow: /api
 Disallow: /admin
 Disallow: /dashboard
+Disallow: /login
+Disallow: /register
+Allow: /
 
 User-agent: ChatGPT-User
 Allow: /

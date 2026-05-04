@@ -91,7 +91,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
               title={"Logiciel gestion crèche, MAM, micro-crèche | Les Frimousses"}
               description={"Les Frimousses : logiciel de gestion pour crèches, MAM et micro-crèches. Planning, fiches enfants, communication parents, facturation. Essai gratuit, conforme RGPD."}
               url={"https://lesfrimousses.com/"}
-              image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+              image={"https://lesfrimousses.com/imgs/og-banner.png"}
               tags={["application garde enfant", "logiciel creche", "gestion micro-creche", "application MAM", "planning creche", "communication parents creche", "logiciel petite enfance", "gestion assistante maternelle"]}
             />
 

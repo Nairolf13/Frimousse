@@ -10,7 +10,7 @@ export default function LandingMicroCrechePage() {
         title="Logiciel gestion micro-crèche — Application complète | Les Frimousses"
         description="Les Frimousses : logiciel de gestion micro-crèche tout-en-un. Planning, fiches enfants, communication parents, facturation et conformité RGPD. Conçu pour les petites structures. Essai gratuit."
         url="https://lesfrimousses.com/logiciel-micro-creche"
-        image="https://lesfrimousses.com/imgs/LogoFrimousse.webp"
+        image="https://lesfrimousses.com/imgs/og-banner.png"
         breadcrumbs={[
           { name: 'Accueil', url: 'https://lesfrimousses.com/' },
           { name: 'Logiciel micro-crèche', url: 'https://lesfrimousses.com/logiciel-micro-creche' },

@@ -10,7 +10,7 @@ export default function GuideExportReportPage() {
         title={"Exporter un rapport d'activite | Guide Frimousse - Logiciel creche"}
         description={"Comment exporter un rapport d'activite dans Frimousse : consultation, filtrage, export PDF ou Excel. Guide pour creches, micro-creches et MAM."}
         url={"https://lesfrimousses.com/guide-export-rapport"}
-        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        image={"https://lesfrimousses.com/imgs/og-banner.png"}
         type={"article"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Export rapport', url: 'https://lesfrimousses.com/guide-export-rapport' }]}
       />

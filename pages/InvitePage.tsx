@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import SEO from '../components/SEO';
 
 const InvitePage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -38,6 +39,7 @@ const InvitePage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'linear-gradient(135deg, #e8f4f7 0%, #f1f5f9 100%)' }}>
+      <SEO noindex={true} />
       <div className="w-full max-w-md">
 
         {/* Card */}
