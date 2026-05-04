@@ -11,7 +11,7 @@ export default function AboutPage() {
         title={"A propos de Frimousse | Application de gestion de garde d'enfants pour creches et MAM"}
         description={"Decouvrez Frimousse, la solution digitale pour la gestion des creches, micro-creches et MAM. Securite, RGPD, communication parents, planning, temoignages et FAQ."}
         url={"https://lesfrimousses.com/about"}
-        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        image={"https://lesfrimousses.com/imgs/og-banner.png"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'A propos', url: 'https://lesfrimousses.com/about' }]}
       />
       <script

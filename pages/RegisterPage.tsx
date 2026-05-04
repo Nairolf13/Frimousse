@@ -545,7 +545,7 @@ export default function RegisterPage() {
         description={"Creez votre compte Frimousse gratuitement. Application de gestion pour creches, micro-creches et MAM. Essai gratuit 7 jours, sans carte bancaire."}
         url={"https://lesfrimousses.com/register"}
         image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
-        noindex={false}
+        noindex={true}
       />
       {/* Desktop left branding panel — sticky */}
       <div className="hidden md:flex md:w-[38%] lg:w-[35%] xl:w-[30%] bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 flex-col items-center justify-center p-10 relative overflow-hidden md:sticky md:top-0 md:h-screen md:flex-shrink-0">

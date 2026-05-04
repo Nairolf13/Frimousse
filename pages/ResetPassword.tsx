@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -38,6 +39,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen w-screen max-w-full overflow-x-hidden flex items-center justify-center  bg-gradient-to-r from-[#f7f4d7] to-[#a9ddf2]">
+      <Helmet><meta name="robots" content="noindex,nofollow" /></Helmet>
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md flex flex-col items-center">
         <h2 className="text-2xl font-bold mb-4">Réinitialiser le mot de passe</h2>
         {message && <div className="mb-4 text-center text-sm">{message}</div>}

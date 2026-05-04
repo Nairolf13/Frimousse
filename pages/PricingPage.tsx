@@ -120,7 +120,7 @@ export default function PricingPage() {
         title={"Tarifs Frimousse | Prix logiciel de gestion creche et micro-creche"}
         description={"Tarifs Frimousse : essai gratuit 15 jours, plan Essentiel a 29,99 euros/mois, plan Pro a 59,99 euros/mois. Sans engagement. Application de gestion pour creches, micro-creches, MAM et garderies."}
         url={"https://lesfrimousses.com/tarifs"}
-        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        image={"https://lesfrimousses.com/imgs/og-banner.png"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Tarifs', url: 'https://lesfrimousses.com/tarifs' }]}
         tags={["tarif creche logiciel", "prix application garde enfant", "abonnement gestion micro-creche"]}
         ldJson={{

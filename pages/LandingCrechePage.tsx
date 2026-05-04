@@ -10,7 +10,7 @@ export default function LandingCrechePage() {
         title="Logiciel gestion crèche associative et garderie | Les Frimousses"
         description="Les Frimousses : logiciel de gestion pour crèches associatives et garderies. Planning, inscriptions, fiches enfants, communication parents, rapports et facturation. Essai gratuit, conforme RGPD."
         url="https://lesfrimousses.com/logiciel-creche"
-        image="https://lesfrimousses.com/imgs/LogoFrimousse.webp"
+        image="https://lesfrimousses.com/imgs/og-banner.png"
         breadcrumbs={[
           { name: 'Accueil', url: 'https://lesfrimousses.com/' },
           { name: 'Logiciel crèche', url: 'https://lesfrimousses.com/logiciel-creche' },

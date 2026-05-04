@@ -62,7 +62,7 @@ export default function FeaturesPage() {
         title={"Fonctionnalites de Frimousse | Logiciel de gestion creche, micro-creche et MAM"}
         description={"Decouvrez les fonctionnalites de Frimousse : gestion des enfants et familles, planning intervenants, rapports d'activite, communication parents, assistant IA, securite RGPD. Application complete pour creches et MAM."}
         url={"https://lesfrimousses.com/fonctionnalites"}
-        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        image={"https://lesfrimousses.com/imgs/og-banner.png"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Fonctionnalites', url: 'https://lesfrimousses.com/fonctionnalites' }]}
         tags={["fonctionnalites creche", "logiciel gestion enfant", "planning creche", "application MAM", "gestion micro-creche"]}
       />

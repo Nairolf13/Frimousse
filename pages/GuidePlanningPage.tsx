@@ -10,7 +10,7 @@ export default function GuidePlanningPage() {
         title={"Gerer le planning de garde | Guide Frimousse - Application creche"}
         description={"Comment gerer le planning de garde dans Frimousse : visualisation calendrier, modification des presences, gestion des absences. Tutoriel pour creches et MAM."}
         url={"https://lesfrimousses.com/guide-planning"}
-        image={"https://lesfrimousses.com/imgs/LogoFrimousse.webp"}
+        image={"https://lesfrimousses.com/imgs/og-banner.png"}
         type={"article"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Guide planning', url: 'https://lesfrimousses.com/guide-planning' }]}
       />

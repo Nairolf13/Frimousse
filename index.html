@@ -42,6 +42,13 @@
   <link rel="dns-prefetch" href="//www.googletagmanager.com" />
   <link rel="dns-prefetch" href="//fonts.googleapis.com" />
   <link rel="preconnect" href="https://ougpzhkqotzxrijofobo.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Preload critical assets -->
+  <link rel="preload" href="/imgs/FrimousseLogo.webp" as="image" type="image/webp" />
+  <link rel="preload" href="/imgs/og-banner.png" as="image" />
+  <!-- font-display: swap — load Google Fonts with display=swap to avoid invisible text -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
   <!-- canonical is injected per-page by React Helmet (SEO component) -->
   <!-- iOS home screen -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -78,13 +85,15 @@
           "name": "Frimousse",
           "alternateName": "Les Frimousses",
           "url": "https://lesfrimousses.com/",
+          "foundingDate": "2024",
           "logo": {
             "@type": "ImageObject",
-            "url": "https://lesfrimousses.com/imgs/og-banner.png",
+            "url": "https://lesfrimousses.com/imgs/FrimousseLogo.webp",
             "width": 512,
             "height": 512
           },
-          "description": "Frimousse est une application de gestion pour les structures d'accueil de jeunes enfants : crèches, micro-crèches, MAM et garderies. Planning, fiches enfants, messagerie parents, facturation.",
+          "image": "https://lesfrimousses.com/imgs/og-banner.png",
+          "description": "Frimousse est une application de gestion pour les structures d'accueil de jeunes enfants : crèches, micro-crèches, MAM et garderies. Planning, fiches enfants, messagerie parents, facturation, conformité RGPD.",
           "address": {
             "@type": "PostalAddress",
             "streetAddress": "19 chemin de la gélatine",
@@ -102,7 +111,8 @@
           "sameAs": [
             "https://www.instagram.com/lesfrimousses13/",
             "https://www.facebook.com/profile.php?id=61577468283486",
-            "https://www.linkedin.com/groups/17963103/"
+            "https://www.linkedin.com/groups/17963103/",
+            "https://lesfrimousses.com/"
           ],
           "potentialAction": [
             {
@@ -187,14 +197,38 @@
             "Conformite RGPD",
             "Notifications push",
             "Fil d'actualite avec photos"
-          ],
-          "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": "4.8",
-            "bestRating": "5",
-            "worstRating": "1",
-            "ratingCount": "50"
-          }
+          ]
+        },
+        {
+          "@type": "LocalBusiness",
+          "name": "Frimousse — Les Frimousses",
+          "url": "https://lesfrimousses.com/",
+          "email": "contact@lesfrimousses.com",
+          "image": "https://lesfrimousses.com/imgs/og-banner.png",
+          "logo": "https://lesfrimousses.com/imgs/FrimousseLogo.webp",
+          "description": "Logiciel de gestion pour crèches, micro-crèches, MAM et garderies. Planning, fiches enfants, communication parents, facturation. Essai gratuit 15 jours.",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "19 chemin de la gélatine",
+            "addressLocality": "Aubagne",
+            "postalCode": "13400",
+            "addressCountry": "FR"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 43.2965,
+            "longitude": 5.5669
+          },
+          "areaServed": {
+            "@type": "Country",
+            "name": "France"
+          },
+          "priceRange": "€€",
+          "sameAs": [
+            "https://www.instagram.com/lesfrimousses13/",
+            "https://www.facebook.com/profile.php?id=61577468283486",
+            "https://www.linkedin.com/groups/17963103/"
+          ]
         },
         {
           "@type": "FAQPage",

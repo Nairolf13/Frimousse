@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useNavigate, useLocation } from 'react-router-dom';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
@@ -28,6 +29,7 @@ export default function NotFoundPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
+      <Helmet><meta name="robots" content="noindex,nofollow" /></Helmet>
       <PublicNavbar />
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-20">

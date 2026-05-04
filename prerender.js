@@ -28,6 +28,7 @@ const routes = [
   '/logiciel-mam',
   '/logiciel-creche',
   '/logiciel-micro-creche',
+  '/annuaire',
 ];
 
 // MIME type map

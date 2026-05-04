@@ -23,21 +23,20 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Redirect http -> https and www -> non-www (301 permanent)
-// Only active when behind nginx (X-Forwarded-Proto header present).
-// In local dev, nginx is absent so X-Forwarded-Proto is never set → no redirect.
+// Works both via X-Forwarded-Proto (behind nginx) and directly via req.hostname.
 app.use((req, res, next) => {
   const forwardedProto = req.headers['x-forwarded-proto'];
-
-  // Only redirect when nginx is forwarding the request (production)
-  if (!forwardedProto) return next();
-
-  const isHttp = forwardedProto === 'http';
-  // x-forwarded-host may be absent depending on nginx config — fall back to req.hostname
   const forwardedHost = req.headers['x-forwarded-host'];
-  const host = (forwardedHost || req.hostname || '').split(',')[0].trim().toLowerCase();
+  // Use forwarded host when available, fall back to req.hostname
+  const host = ((forwardedHost || req.hostname || '').split(',')[0].trim().toLowerCase());
   const isWww = host.startsWith('www.');
+  // In prod behind nginx forwardedProto is set; also catch www even without proto header
+  const isHttp = forwardedProto === 'http';
+  const isBehindProxy = !!forwardedProto;
 
-  if (isHttp || isWww) {
+  // Only redirect in contexts where we can be sure we're in production
+  // (proxy present OR host is explicitly www)
+  if ((isBehindProxy && (isHttp || isWww)) || isWww) {
     const cleanHost = isWww ? host.slice(4) : host;
     const target = `https://${cleanHost}${req.originalUrl}`;
     return res.redirect(301, target);
@@ -45,10 +44,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Prevent search engines from indexing API responses
+app.use('/api', (_req, res, next) => {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  next();
+});
+
 // 301 redirects for old/duplicate URLs to consolidate Google canonicals
 app.use((req, res, next) => {
   const legacyRedirects = {
     '/politique-confidentialite': '/confidentialite',
+    '/imgs/ChatGPT-Image-4-mars-2026_-20_32_24-removebg-preview.webp': '/imgs/FrimousseLogo.webp',
   };
   const target = legacyRedirects[req.path];
   if (target) return res.redirect(301, target);
@@ -273,17 +279,23 @@ app.use('/api/payment-history', paymentHistoryAdminRoutes);
 const paymentHistoryRoutes = require('./routes/paymentHistory');
 app.use('/api/payment-history', paymentHistoryRoutes);
 
-app.get('/', (req, res) => {
-  res.send('API is running');
-});
-
-// Catch-all handler: serve index.html for client-side routing in production
+// Catch-all handler: serve pre-rendered HTML or index.html for SPA routing in production.
+// Returns 404 for unknown API routes and for paths with file extensions (avoid soft-404 on assets).
 if (isProd) {
   app.get('*', (req, res) => {
-    // Skip API routes
     if (req.path.startsWith('/api/')) {
       return res.status(404).json({ error: 'API endpoint not found' });
     }
+    // Paths with a file extension that aren't static files → true 404 (avoids Google soft-404)
+    if (/\.[a-z0-9]+$/i.test(req.path)) {
+      return res.status(404).send('Not found');
+    }
+    // Check if a pre-rendered HTML file exists for this route
+    const prerenderPath = path.join(distPath, req.path === '/' ? 'index.html' : req.path.slice(1) + '.html');
+    if (require('fs').existsSync(prerenderPath)) {
+      return res.sendFile(prerenderPath);
+    }
+    // SPA fallback for authenticated/dynamic routes
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useAuth } from '../src/context/AuthContext';
 import { useLocation } from 'react-router-dom';
 import OAuthButtons from '../components/OAuthButtons';
@@ -90,6 +91,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-dvh w-full bg-white md:flex md:flex-row">
+      <Helmet><meta name="robots" content="noindex,nofollow" /></Helmet>
       {/* Desktop left branding panel — sticky */}
       <div className="hidden md:flex md:w-[38%] lg:w-[35%] xl:w-[30%] bg-gradient-to-br from-brand-500 via-brand-600 to-brand-700 flex-col items-center justify-center p-10 relative overflow-hidden md:sticky md:top-0 md:h-screen md:flex-shrink-0">
         <div className="absolute -top-20 -left-20 w-72 h-72 bg-white/5 rounded-full" />
