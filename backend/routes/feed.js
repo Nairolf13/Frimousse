@@ -537,7 +537,7 @@ router.get('/:id/comments', async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { author: true },
     });
-    const mapped = comments.map(c => ({ id: c.id, text: c.text, authorName: c.author?.name, authorAvatarUrl: c.author?.avatarUrl, authorId: c.authorId, createdAt: c.createdAt, parentId: c.parentId || null }));
+    const mapped = comments.map(c => ({ id: c.id, text: c.text, authorName: c.author?.name, authorAvatarUrl: toProxyUrl(c.author?.avatarUrl), authorId: c.authorId, createdAt: c.createdAt, parentId: c.parentId || null }));
     return res.json({ comments: mapped });
   } catch (e) {
     console.error('Failed to list comments', e);
@@ -557,8 +557,12 @@ router.patch('/comments/:commentId', async (req, res) => {
     const existing = await prisma.feedComment.findUnique({ where: { id: commentId } });
     if (!existing) return res.status(404).json({ message: 'Comment not found' });
     // Only author or admins can edit
-    if (existing.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (existing.authorId !== user.id) {
+      if (!['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
+      if (user.role === 'admin') {
+        const post = await prisma.feedPost.findUnique({ where: { id: existing.postId }, select: { centerId: true } });
+        if (!post || post.centerId !== user.centerId) return res.status(403).json({ message: 'Forbidden' });
+      }
     }
     const updated = await prisma.feedComment.update({ where: { id: commentId }, data: { text } });
     return res.json({ id: updated.id, text: updated.text, authorId: updated.authorId, createdAt: updated.createdAt });
@@ -576,8 +580,12 @@ router.delete('/comments/:commentId', async (req, res) => {
   try {
     const existing = await prisma.feedComment.findUnique({ where: { id: commentId } });
     if (!existing) return res.status(404).json({ message: 'Comment not found' });
-    if (existing.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (existing.authorId !== user.id) {
+      if (!['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
+      if (user.role === 'admin') {
+        const post = await prisma.feedPost.findUnique({ where: { id: existing.postId }, select: { centerId: true } });
+        if (!post || post.centerId !== user.centerId) return res.status(403).json({ message: 'Forbidden' });
+      }
     }
     await prisma.feedComment.delete({ where: { id: commentId } });
     return res.json({ deleted: true });

@@ -523,11 +523,13 @@ router.put('/:id/password', auth, async (req, res) => {
     const target = await prisma.user.findUnique({ where: { id } });
     if (!target) return res.status(404).json({ message: 'User not found' });
 
-    // center scoping: non super-admins can only modify users in their center
+    // center scoping: non super-admins can only modify users in their center.
+    // Fail closed — an unresolved target center (orphaned account) must NOT be
+    // treated as "no conflict", otherwise it silently bypasses the check.
     if (!isSuperAdmin(actor)) {
       const actorCenter = actor.centerId || null;
       const targetCenter = await resolveUserCenter(prisma, target);
-      if (actorCenter && targetCenter && String(actorCenter) !== String(targetCenter)) {
+      if (String(actorCenter || '') !== String(targetCenter || '')) {
         console.log(`[ADMIN PW RESET] denied - center mismatch`);
         // hide existence when center differs
         return res.status(404).json({ message: 'User not found' });

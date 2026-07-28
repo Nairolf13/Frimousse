@@ -15,6 +15,13 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const auth = require('../middleware/authMiddleware');
+const prisma = require('../lib/prismaClient');
+
+function isSuperAdmin(user) {
+  if (!user || !user.role) return false;
+  const r = String(user.role).toLowerCase();
+  return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super');
+}
 
 let fetchFn;
 try { fetchFn = globalThis.fetch || require('node-fetch'); } catch (e) { fetchFn = globalThis.fetch; }
@@ -26,6 +33,66 @@ const SUPABASE_JWT_SECRET = process.env.SUPABASE_JWT_SECRET || '';
 
 // Allowed path prefixes — only serve files from known folders
 const ALLOWED_PREFIXES = ['avatars/', 'photos/', 'prescriptions/', 'feed/', 'uploads/', 'thumbnails/', 'children/'];
+
+// Resolve which DB record a storage path corresponds to, and whether the
+// requesting user is allowed to view it. Fails closed: an unrecognized path
+// (one that doesn't match any known naming scheme) is denied rather than
+// served, since this proxy is the single choke point for all private files.
+async function checkAccess(sanitized, user) {
+  const basename = path.posix.basename(sanitized);
+
+  if (sanitized.startsWith('avatars/child-')) {
+    // avatars/child-<childId>-<timestamp>.webp
+    const m = basename.match(/^child-([^-]+(?:-[^-]+){4})-\d+\.\w+$/) || basename.match(/^child-(.+)-\d+\.\w+$/);
+    const childId = m ? m[1] : null;
+    if (!childId) return false;
+    const child = await prisma.child.findUnique({ where: { id: childId }, select: { centerId: true } });
+    if (!child) return false;
+    if (isSuperAdmin(user)) return true;
+    if (child.centerId === user.centerId) return true;
+    if (user.nannyId) return !!(await prisma.childNanny.findFirst({ where: { childId, nannyId: user.nannyId } }));
+    if (user.parentId) return !!(await prisma.parentChild.findFirst({ where: { childId, parentId: user.parentId } }));
+    return false;
+  }
+
+  if (sanitized.startsWith('prescriptions/')) {
+    // prescriptions/<childId>_presc_<timestamp>_<random>.<ext>
+    const m = basename.match(/^(.+?)_presc_/);
+    const childId = m ? m[1] : null;
+    if (!childId) return false;
+    const child = await prisma.child.findUnique({ where: { id: childId }, select: { centerId: true } });
+    if (!child) return false;
+    if (isSuperAdmin(user)) return true;
+    if (child.centerId === user.centerId) return true;
+    if (user.nannyId) return !!(await prisma.childNanny.findFirst({ where: { childId, nannyId: user.nannyId } }));
+    if (user.parentId) return !!(await prisma.parentChild.findFirst({ where: { childId, parentId: user.parentId } }));
+    return false;
+  }
+
+  if (sanitized.startsWith('avatars/')) {
+    // User avatar: avatars/<hash>.webp, stored as User.avatarUrl
+    const owner = await prisma.user.findFirst({ where: { avatarUrl: sanitized }, select: { id: true, centerId: true } });
+    if (!owner) return false;
+    if (isSuperAdmin(user)) return true;
+    if (owner.id === user.id) return true;
+    return !!owner.centerId && owner.centerId === user.centerId;
+  }
+
+  if (sanitized.startsWith('feed/')) {
+    // Feed post media: feed/<name>.webp or feed/thumb_<name>.webp
+    const media = await prisma.feedMedia.findFirst({
+      where: { OR: [{ storagePath: sanitized }, { thumbnailPath: sanitized }] },
+      select: { post: { select: { centerId: true } } },
+    });
+    if (!media || !media.post) return false;
+    if (isSuperAdmin(user)) return true;
+    return media.post.centerId === user.centerId;
+  }
+
+  // No recognized ownership scheme for this prefix (photos/, uploads/, thumbnails/,
+  // children/ are not currently produced by any upload path) — deny by default.
+  return false;
+}
 
 // Build a short-lived service_role JWT using SUPABASE_JWT_SECRET.
 // This bypasses the SDK's internal key validation (Invalid Compact JWS).
@@ -61,6 +128,14 @@ router.get('/photo', auth, async (req, res) => {
       return res.status(403).json({ error: 'Accès refusé' });
     }
     const sanitized = normalized;
+
+    // Verify the requesting user actually owns/has a legitimate relationship to
+    // this specific file, rather than trusting any authenticated caller with any
+    // valid-looking path.
+    const hasAccess = await checkAccess(sanitized, req.user);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
 
     if (!SUPABASE_URL || (!SUPABASE_KEY && !SUPABASE_JWT_SECRET)) {
       console.error('[storage] Supabase credentials missing');

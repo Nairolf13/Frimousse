@@ -6,10 +6,10 @@ const prisma = require('../lib/prismaClient');
 
 function isSuperAdmin(user) { return user && user.role && user.role.toLowerCase().includes('super'); }
 
-// Trigger manual calculation (admin only)
+// Trigger manual calculation (super-admin only — it recomputes billing across ALL centers)
 router.post('/calculate', auth, async (req, res) => {
   try {
-    if (!req.user || !(req.user.role === 'admin' || isSuperAdmin(req.user))) return res.status(403).json({ message: 'Forbidden' });
+    if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Forbidden' });
     const { year, month } = req.body || {};
     const paymentCron = require('../lib/paymentCron');
     if (year && month) {

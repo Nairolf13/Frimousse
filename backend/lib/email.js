@@ -2,6 +2,15 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderTemplate(templateName, lang, substitutions = {}) {
   // Try requested language first, then fall back to 'fr', then 'en'
   const candidates = [lang, 'fr', 'en'].filter((v, i, a) => a.indexOf(v) === i);
@@ -17,12 +26,14 @@ function renderTemplate(templateName, lang, substitutions = {}) {
   }
   if (!html) return null;
   for (const key of Object.keys(substitutions)) {
-    // Support {{{key}}} for unescaped HTML (3 braces)
+    // Support {{{key}}} for unescaped HTML (3 braces) — reserved for pre-built,
+    // system-generated HTML fragments (e.g. activitiesHtml), never raw user text.
     const reTriple = new RegExp(`{{{${key}}}}`, 'g');
     html = html.replace(reTriple, substitutions[key] == null ? '' : substitutions[key]);
-    // Support {{key}} for regular text (2 braces)
+    // Support {{key}} for regular text (2 braces) — HTML-escaped, since these
+    // routinely carry user-supplied strings (names, comments, report text).
     const re = new RegExp(`{{${key}}}`, 'g');
-    html = html.replace(re, substitutions[key] == null ? '' : substitutions[key]);
+    html = html.replace(re, substitutions[key] == null ? '' : escapeHtml(substitutions[key]));
   }
   return html;
 }

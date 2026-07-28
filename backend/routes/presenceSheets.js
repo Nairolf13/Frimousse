@@ -124,6 +124,9 @@ router.post('/', auth, async (req, res) => {
     // vérifie que l'enfant appartient au même centre
     const child = await prisma.child.findUnique({ where: { id: childId } });
     if (!child) return res.status(404).json({ error: 'Enfant introuvable' });
+    if (!isSuperAdmin(req.user) && child.centerId !== req.user.centerId) {
+      return res.status(404).json({ error: 'Enfant introuvable' });
+    }
 
     const entries = generateEntries(parseInt(year), parseInt(month), defaultArrival, defaultDeparture);
 
@@ -279,8 +282,8 @@ router.patch('/:id/entries', auth, async (req, res) => {
     }
 
     await Promise.all(entries.map(e =>
-      prisma.presenceEntry.update({
-        where: { id: e.id },
+      prisma.presenceEntry.updateMany({
+        where: { id: e.id, sheetId: sheet.id },
         data: {
           arrivalTime: e.arrivalTime ?? null,
           departureTime: e.departureTime ?? null,

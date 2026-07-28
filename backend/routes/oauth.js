@@ -136,7 +136,7 @@ router.get('/google/callback', async (req, res) => {
 // Alternative: frontend sends a Google id_token (One Tap)
 router.post('/google/token', async (req, res) => {
   try {
-    const { idToken, credential } = req.body;
+    const { idToken, credential, mode } = req.body;
     const token = idToken || credential;
     if (!token) return res.status(400).json({ error: 'id_token requis' });
 
@@ -147,7 +147,12 @@ router.post('/google/token', async (req, res) => {
       provider: 'google',
       providerId: profile.sub,
       emailVerified: profile.emailVerified,
+      // Default to 'login' (no account auto-creation) unless the caller
+      // explicitly asks to register — mirrors /google/callback's semantics.
+      mode: mode === 'register' ? 'register' : 'login',
     });
+
+    if (!user) return res.status(404).json({ error: 'Aucun compte associé à cette adresse Google.' });
 
     return loginAndRespond(res, user, isNew);
   } catch (err) {

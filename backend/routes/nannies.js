@@ -199,6 +199,11 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
           // Already linked to another nanny record — conflict
           return { nanny, user: null, existingUserConflict: true };
         }
+        // Refuse to silently repurpose an account belonging to a different center —
+        // this would grant a foreign user visibility into this center's children/data.
+        if (existingUser.centerId && existingUser.centerId !== (req.user.centerId || null)) {
+          return { nanny, user: null, existingUserCenterConflict: true };
+        }
         const userUpdateData = { nannyId: nanny.id };
         if (address !== undefined) userUpdateData.address = address || null;
         if (postalCode !== undefined) userUpdateData.postalCode = postalCode || null;
@@ -236,6 +241,9 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
     // If the existing user is already linked to another nanny record
     if (result && result.existingUserConflict) {
       return res.status(409).json({ message: 'Cet utilisateur est déjà associé à une autre fiche nounou.' });
+    }
+    if (result && result.existingUserCenterConflict) {
+      return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse email dans une autre structure.' });
     }
 
       // Send invite email only for newly created users — not for existing users (admin or otherwise)
