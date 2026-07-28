@@ -348,6 +348,7 @@ router.post('/:postId/notify', async (req, res) => {
   try {
     const post = await prisma.feedPost.findUnique({ where: { id: postId }, include: { author: true } });
     if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (user.role === 'admin' && post.centerId !== user.centerId) return res.status(403).json({ message: 'Forbidden' });
 
     await sendFeedPostNotification({ postId: post.id, centerId: post.centerId, authorId: post.authorId, authorName: post.author?.name, text: post.text, action: 'test' });
     return res.json({ sent: true });
@@ -429,6 +430,10 @@ router.post('/:id/like', async (req, res) => {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
   try {
+    const targetPost = await prisma.feedPost.findUnique({ where: { id: postId }, select: { centerId: true } });
+    if (!targetPost) return res.status(404).json({ message: 'Post not found' });
+    if (user.role !== 'super-admin' && targetPost.centerId !== user.centerId) return res.status(404).json({ message: 'Post not found' });
+
     const existing = await prisma.feedLike.findUnique({ where: { postId_userId: { postId, userId: user.id } } });
     if (existing) {
       await prisma.feedLike.delete({ where: { id: existing.id } });
@@ -466,6 +471,10 @@ router.get('/:id/likes', async (req, res) => {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
   try {
+    const post = await prisma.feedPost.findUnique({ where: { id: postId }, select: { centerId: true } });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (user.role !== 'super-admin' && post.centerId !== user.centerId) return res.status(404).json({ message: 'Post not found' });
+
     // find likes and include user info
     const likes = await prisma.feedLike.findMany({ where: { postId }, include: { user: true } });
     const users = likes.map(l => ({ id: l.user?.id, name: l.user?.name || 'Utilisateur', avatarUrl: l.user?.avatarUrl }));
@@ -485,6 +494,10 @@ router.post('/:id/comment', async (req, res) => {
   if (!text || text.trim().length === 0) return res.status(400).json({ message: 'Comment text required' });
   if (String(text).length > 1000) return res.status(400).json({ message: 'Commentaire trop long (max 1000 caractères).' });
   try {
+    const targetPost = await prisma.feedPost.findUnique({ where: { id: postId }, select: { centerId: true } });
+    if (!targetPost) return res.status(404).json({ message: 'Post not found' });
+    if (user.role !== 'super-admin' && targetPost.centerId !== user.centerId) return res.status(404).json({ message: 'Post not found' });
+
     const data = { postId, authorId: user.id, text };
     if (parentId) {
       const parent = await prisma.feedComment.findUnique({ where: { id: parentId } });
@@ -515,6 +528,10 @@ router.get('/:id/comments', async (req, res) => {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
   try {
+    const post = await prisma.feedPost.findUnique({ where: { id: postId }, select: { centerId: true } });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (user.role !== 'super-admin' && post.centerId !== user.centerId) return res.status(404).json({ message: 'Post not found' });
+
     const comments = await prisma.feedComment.findMany({
       where: { postId },
       orderBy: { createdAt: 'desc' },
