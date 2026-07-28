@@ -46,6 +46,11 @@ router.patch('/:id/paid', auth, async (req, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
+    // Non super-admins are scoped to their own center — hide existence of other centers' payments
+    if (!isSuperAdmin(user) && payment.parent && payment.parent.centerId !== user.centerId) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+
     const updated = await prisma.paymentHistory.update({ where: { id }, data: { paid }, include: { parent: true } });
     return res.json({ success: true, record: updated });
   } catch (err) {

@@ -79,6 +79,9 @@ model User {
   emailVerified            Boolean                   @default(false)
   verificationCode         String?
   verificationCodeExpires  DateTime?
+  pendingEmail             String?
+  pendingEmailCode         String?
+  pendingEmailCodeExpires  DateTime?
   oauthProvider            String?
   oauthProviderId          String?
   nanny                    Nanny?                    @relation("NannyUser", fields: [nannyId], references: [id])
