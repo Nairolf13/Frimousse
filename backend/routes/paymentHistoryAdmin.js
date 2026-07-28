@@ -6,10 +6,10 @@ const prisma = require('../lib/prismaClient');
 
 function isSuperAdmin(user) { return user && user.role && user.role.toLowerCase().includes('super'); }
 
-// Trigger manual calculation (admin only)
+// Trigger manual calculation (super-admin only — it recomputes billing across ALL centers)
 router.post('/calculate', auth, async (req, res) => {
   try {
-    if (!req.user || !(req.user.role === 'admin' || isSuperAdmin(req.user))) return res.status(403).json({ message: 'Forbidden' });
+    if (!isSuperAdmin(req.user)) return res.status(403).json({ message: 'Forbidden' });
     const { year, month } = req.body || {};
     const paymentCron = require('../lib/paymentCron');
     if (year && month) {
@@ -44,6 +44,11 @@ router.patch('/:id/paid', auth, async (req, res) => {
     // Only admins / super-admins can toggle paid status
     if (!isAdmin) {
       return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    // Non super-admins are scoped to their own center — hide existence of other centers' payments
+    if (!isSuperAdmin(user) && payment.parent && payment.parent.centerId !== user.centerId) {
+      return res.status(404).json({ message: 'Payment not found' });
     }
 
     const updated = await prisma.paymentHistory.update({ where: { id }, data: { paid }, include: { parent: true } });

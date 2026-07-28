@@ -35,6 +35,18 @@ const SUBJECTS = {
     es: 'Restablecer tu contraseña',
     ar: 'إعادة تعيين كلمة المرور',
   },
+  email_change_confirm: {
+    fr: 'Confirmez votre nouvelle adresse email - Frimousse',
+    en: 'Confirm your new email address - Frimousse',
+    es: 'Confirma tu nueva dirección de correo - Frimousse',
+    ar: 'أكد عنوان بريدك الإلكتروني الجديد - Frimousse',
+  },
+  email_change_alert: {
+    fr: 'Une modification de votre adresse email a été demandée',
+    en: 'A change to your email address was requested',
+    es: 'Se solicitó un cambio de tu dirección de correo',
+    ar: 'تم طلب تغيير عنوان بريدك الإلكتروني',
+  },
   invite_nanny: {
     fr: 'Invitation - Accès Frimousse',
     en: 'Invitation - Access Frimousse',

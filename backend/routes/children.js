@@ -946,6 +946,15 @@ router.post('/:id/photo', auth, photoUpload.single('photo'), async (req, res) =>
     return res.status(403).json({ message: 'Forbidden' });
   }
   try {
+    const child = await prisma.child.findUnique({ where: { id }, select: { centerId: true } });
+    if (!child) return res.status(404).json({ message: 'Child not found' });
+    if (user.role === 'nanny') {
+      const link = await prisma.childNanny.findFirst({ where: { childId: id, nannyId: user.nannyId } });
+      if (!link) return res.status(403).json({ message: 'Forbidden' });
+    } else if (!isSuperAdmin(user) && child.centerId !== user.centerId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
     const file = req.file;
     if (!file) return res.status(400).json({ message: 'No file provided' });
     if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ message: 'Storage not configured' });

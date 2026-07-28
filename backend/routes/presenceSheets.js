@@ -124,6 +124,9 @@ router.post('/', auth, async (req, res) => {
     // vérifie que l'enfant appartient au même centre
     const child = await prisma.child.findUnique({ where: { id: childId } });
     if (!child) return res.status(404).json({ error: 'Enfant introuvable' });
+    if (!isSuperAdmin(req.user) && child.centerId !== req.user.centerId) {
+      return res.status(404).json({ error: 'Enfant introuvable' });
+    }
 
     const entries = generateEntries(parseInt(year), parseInt(month), defaultArrival, defaultDeparture);
 
@@ -279,8 +282,8 @@ router.patch('/:id/entries', auth, async (req, res) => {
     }
 
     await Promise.all(entries.map(e =>
-      prisma.presenceEntry.update({
-        where: { id: e.id },
+      prisma.presenceEntry.updateMany({
+        where: { id: e.id, sheetId: sheet.id },
         data: {
           arrivalTime: e.arrivalTime ?? null,
           departureTime: e.departureTime ?? null,
@@ -310,8 +313,10 @@ router.post('/:id/send', auth, async (req, res) => {
     });
     if (!sheet) return res.status(404).json({ error: 'Feuille introuvable' });
 
-    if (!isAdmin(req.user)) {
-      if (!isNanny(req.user) || sheet.nannyId !== req.user.nannyId) return res.status(403).json({ error: 'Accès interdit' });
+    if (isAdmin(req.user)) {
+      if (!isSuperAdmin(req.user) && sheet.centerId !== req.user.centerId) return res.status(403).json({ error: 'Accès interdit' });
+    } else if (!isNanny(req.user) || sheet.nannyId !== req.user.nannyId) {
+      return res.status(403).json({ error: 'Accès interdit' });
     }
 
     await prisma.presenceSheet.update({
@@ -378,6 +383,7 @@ router.post('/:id/entries/:entryId/sign', auth, async (req, res) => {
       if (!ok) return res.status(403).json({ error: 'Accès interdit' });
       updateData = { parentSignature: signature, parentSignedAt: new Date() };
     } else if (isAdmin(req.user)) {
+      if (!isSuperAdmin(req.user) && sheet.centerId !== req.user.centerId) return res.status(403).json({ error: 'Accès interdit' });
       const { role } = req.body;
       if (role === 'parent') {
         // L'admin ne peut signer côté parent que s'il est aussi parent de cet enfant
@@ -485,6 +491,7 @@ router.post('/:id/sign', auth, async (req, res) => {
       if (!ok) return res.status(403).json({ error: 'Accès interdit' });
       updateData = { parentSignature: signature, parentSignedAt: new Date() };
     } else if (isAdmin(req.user)) {
+      if (!isSuperAdmin(req.user) && sheet.centerId !== req.user.centerId) return res.status(403).json({ error: 'Accès interdit' });
       if (role === 'parent') {
         let parentId = req.user.parentId;
         if (!parentId) {
@@ -529,12 +536,16 @@ router.get('/:id/pdf', auth, async (req, res) => {
     if (!sheet) return res.status(404).json({ error: 'Feuille introuvable' });
 
     // contrôle accès
-    if (!isAdmin(req.user)) {
-      if (isNanny(req.user) && sheet.nannyId !== req.user.nannyId) return res.status(403).json({ error: 'Accès interdit' });
-      if (isParent(req.user)) {
-        const pc = await prisma.parentChild.findFirst({ where: { parentId: req.user.parentId, childId: sheet.childId } });
-        if (!pc) return res.status(403).json({ error: 'Accès interdit' });
-      }
+    if (isAdmin(req.user)) {
+      if (!isSuperAdmin(req.user) && sheet.centerId !== req.user.centerId) return res.status(403).json({ error: 'Accès interdit' });
+    } else if (isNanny(req.user)) {
+      if (sheet.nannyId !== req.user.nannyId) return res.status(403).json({ error: 'Accès interdit' });
+    } else if (isParent(req.user)) {
+      const pc = await prisma.parentChild.findFirst({ where: { parentId: req.user.parentId, childId: sheet.childId } });
+      if (!pc) return res.status(403).json({ error: 'Accès interdit' });
+      if (!['sent', 'signed'].includes(sheet.status)) return res.status(403).json({ error: 'Feuille non disponible' });
+    } else {
+      return res.status(403).json({ error: 'Accès interdit' });
     }
 
     const PDFDocument = require('pdfkit');

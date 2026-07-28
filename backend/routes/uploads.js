@@ -69,7 +69,7 @@ router.post('/supabase/sign', authMiddleware, async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-  const { filename, contentType, prefix = 'feed' } = req.body || {};
+  const { filename, contentType } = req.body || {};
   if (!filename || !contentType) return res.status(400).json({ message: 'filename and contentType required' });
 
   const ALLOWED_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
@@ -80,11 +80,15 @@ router.post('/supabase/sign', authMiddleware, async (req, res) => {
   if (!SUPABASE_URL || !SUPABASE_KEY) return res.status(503).json({ message: 'Storage not configured' });
 
   try {
-    const storagePath = generateStoragePath(prefix, filename);
-    // Supabase doesn't provide a direct presigned PUT url via the JS client; however we can return the storage path
-    // and the frontend can use the Supabase JS client to upload directly to the bucket using anon key or signed policy.
-    // For security, we expect the frontend to use the public upload flow only if configured; otherwise fallback to server upload.
-    return res.json({ storagePath, bucket: SUPABASE_BUCKET, publicUrl: `/api/storage/photo?path=${encodeURIComponent(storagePath)}` });
+    const storagePath = generateStoragePath('feed', filename);
+    // Bind this storagePath to the requesting user so /finalize can verify it was
+    // actually issued to them, rather than trusting a client-supplied path.
+    const uploadToken = jwt.sign(
+      { storagePath, userId: user.id },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+    return res.json({ storagePath, uploadToken, bucket: SUPABASE_BUCKET, publicUrl: `/api/storage/photo?path=${encodeURIComponent(storagePath)}` });
   } catch (e) {
     console.error('Failed to sign upload', e);
     return res.status(500).json({ message: 'Failed to prepare upload' });
@@ -96,8 +100,20 @@ router.post('/supabase/finalize', authMiddleware, async (req, res) => {
   const user = req.user;
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
 
-  const { storagePath, postId, thumbnailPath = null, size = null, originalName = null } = req.body || {};
+  const { storagePath, postId, uploadToken, thumbnailPath = null, size = null, originalName = null } = req.body || {};
   if (!storagePath || !postId) return res.status(400).json({ message: 'storagePath and postId required' });
+
+  // Verify storagePath was actually issued to this user via /supabase/sign,
+  // instead of trusting an arbitrary client-supplied bucket key.
+  if (!uploadToken) return res.status(400).json({ message: 'uploadToken required' });
+  try {
+    const decoded = jwt.verify(uploadToken, process.env.JWT_SECRET);
+    if (decoded.storagePath !== storagePath || decoded.userId !== user.id) {
+      return res.status(403).json({ message: 'Invalid upload token' });
+    }
+  } catch (e) {
+    return res.status(403).json({ message: 'Invalid or expired upload token' });
+  }
 
   // Ensure storage backend is configured on the server. In production a missing service role key
   // will cause downloads/finalize to fail silently; return a clear 503 so the frontend can surface it.

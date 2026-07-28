@@ -348,6 +348,7 @@ router.post('/:postId/notify', async (req, res) => {
   try {
     const post = await prisma.feedPost.findUnique({ where: { id: postId }, include: { author: true } });
     if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (user.role === 'admin' && post.centerId !== user.centerId) return res.status(403).json({ message: 'Forbidden' });
 
     await sendFeedPostNotification({ postId: post.id, centerId: post.centerId, authorId: post.authorId, authorName: post.author?.name, text: post.text, action: 'test' });
     return res.json({ sent: true });
@@ -429,6 +430,10 @@ router.post('/:id/like', async (req, res) => {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
   try {
+    const targetPost = await prisma.feedPost.findUnique({ where: { id: postId }, select: { centerId: true } });
+    if (!targetPost) return res.status(404).json({ message: 'Post not found' });
+    if (user.role !== 'super-admin' && targetPost.centerId !== user.centerId) return res.status(404).json({ message: 'Post not found' });
+
     const existing = await prisma.feedLike.findUnique({ where: { postId_userId: { postId, userId: user.id } } });
     if (existing) {
       await prisma.feedLike.delete({ where: { id: existing.id } });
@@ -466,6 +471,10 @@ router.get('/:id/likes', async (req, res) => {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
   try {
+    const post = await prisma.feedPost.findUnique({ where: { id: postId }, select: { centerId: true } });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (user.role !== 'super-admin' && post.centerId !== user.centerId) return res.status(404).json({ message: 'Post not found' });
+
     // find likes and include user info
     const likes = await prisma.feedLike.findMany({ where: { postId }, include: { user: true } });
     const users = likes.map(l => ({ id: l.user?.id, name: l.user?.name || 'Utilisateur', avatarUrl: l.user?.avatarUrl }));
@@ -485,6 +494,10 @@ router.post('/:id/comment', async (req, res) => {
   if (!text || text.trim().length === 0) return res.status(400).json({ message: 'Comment text required' });
   if (String(text).length > 1000) return res.status(400).json({ message: 'Commentaire trop long (max 1000 caractères).' });
   try {
+    const targetPost = await prisma.feedPost.findUnique({ where: { id: postId }, select: { centerId: true } });
+    if (!targetPost) return res.status(404).json({ message: 'Post not found' });
+    if (user.role !== 'super-admin' && targetPost.centerId !== user.centerId) return res.status(404).json({ message: 'Post not found' });
+
     const data = { postId, authorId: user.id, text };
     if (parentId) {
       const parent = await prisma.feedComment.findUnique({ where: { id: parentId } });
@@ -515,12 +528,16 @@ router.get('/:id/comments', async (req, res) => {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const postId = req.params.id;
   try {
+    const post = await prisma.feedPost.findUnique({ where: { id: postId }, select: { centerId: true } });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (user.role !== 'super-admin' && post.centerId !== user.centerId) return res.status(404).json({ message: 'Post not found' });
+
     const comments = await prisma.feedComment.findMany({
       where: { postId },
       orderBy: { createdAt: 'desc' },
       include: { author: true },
     });
-    const mapped = comments.map(c => ({ id: c.id, text: c.text, authorName: c.author?.name, authorAvatarUrl: c.author?.avatarUrl, authorId: c.authorId, createdAt: c.createdAt, parentId: c.parentId || null }));
+    const mapped = comments.map(c => ({ id: c.id, text: c.text, authorName: c.author?.name, authorAvatarUrl: toProxyUrl(c.author?.avatarUrl), authorId: c.authorId, createdAt: c.createdAt, parentId: c.parentId || null }));
     return res.json({ comments: mapped });
   } catch (e) {
     console.error('Failed to list comments', e);
@@ -540,8 +557,12 @@ router.patch('/comments/:commentId', async (req, res) => {
     const existing = await prisma.feedComment.findUnique({ where: { id: commentId } });
     if (!existing) return res.status(404).json({ message: 'Comment not found' });
     // Only author or admins can edit
-    if (existing.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (existing.authorId !== user.id) {
+      if (!['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
+      if (user.role === 'admin') {
+        const post = await prisma.feedPost.findUnique({ where: { id: existing.postId }, select: { centerId: true } });
+        if (!post || post.centerId !== user.centerId) return res.status(403).json({ message: 'Forbidden' });
+      }
     }
     const updated = await prisma.feedComment.update({ where: { id: commentId }, data: { text } });
     return res.json({ id: updated.id, text: updated.text, authorId: updated.authorId, createdAt: updated.createdAt });
@@ -559,8 +580,12 @@ router.delete('/comments/:commentId', async (req, res) => {
   try {
     const existing = await prisma.feedComment.findUnique({ where: { id: commentId } });
     if (!existing) return res.status(404).json({ message: 'Comment not found' });
-    if (existing.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (existing.authorId !== user.id) {
+      if (!['admin', 'super-admin'].includes(user.role)) return res.status(403).json({ message: 'Forbidden' });
+      if (user.role === 'admin') {
+        const post = await prisma.feedPost.findUnique({ where: { id: existing.postId }, select: { centerId: true } });
+        if (!post || post.centerId !== user.centerId) return res.status(403).json({ message: 'Forbidden' });
+      }
     }
     await prisma.feedComment.delete({ where: { id: commentId } });
     return res.json({ deleted: true });

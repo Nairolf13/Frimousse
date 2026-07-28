@@ -19,6 +19,12 @@ async function handleOAuthUser(prisma, { email, name, provider, providerId, emai
   // 2) Try to find an existing user by email (link to existing account)
   user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
   if (user) {
+    // Only auto-link when the provider itself confirms this email is verified —
+    // otherwise an attacker could claim an unverified email matching a victim's
+    // account and take it over via OAuth login.
+    if (!emailVerified) {
+      throw new Error('oauth_email_not_verified');
+    }
     // Link this OAuth provider to the existing account
     try {
       user = await prisma.user.update({

@@ -101,7 +101,13 @@ router.get('/invoice/:id', auth, requirePlan('pro'), async (req, res) => {
     const user = req.user;
     if (!user) return res.status(403).json({ message: 'Forbidden' });
     const role = (user.role || '').toLowerCase();
-    const isAdmin = role === 'admin' || role.includes('super');
+    const isSuperAdminUser = role.includes('super');
+    const isAdmin = role === 'admin' || isSuperAdminUser;
+
+    // Non super-admins with the admin role are scoped to their own center
+    if (isAdmin && !isSuperAdminUser && (!ph.parent || ph.parent.centerId !== user.centerId)) {
+      return res.status(404).json({ message: 'Not found' });
+    }
 
     if (!isAdmin) {
       const now = new Date();
@@ -157,7 +163,13 @@ router.post('/invoice/:id/send', auth, requirePlan('pro'), async (req, res) => {
     const user = req.user;
     if (!user) return res.status(403).json({ message: 'Forbidden' });
     const role = (user.role || '').toLowerCase();
-    const isAdmin = role === 'admin' || role.includes('super');
+    const isSuperAdminUser = role.includes('super');
+    const isAdmin = role === 'admin' || isSuperAdminUser;
+
+    // Non super-admins with the admin role are scoped to their own center
+    if (isAdmin && !isSuperAdminUser && (!ph.parent || ph.parent.centerId !== user.centerId)) {
+      return res.status(404).json({ message: 'Not found' });
+    }
 
     // Allow admin or the parent who owns the invoice
     if (!isAdmin) {

@@ -59,6 +59,12 @@ function ProfileEditor({ onClose, isAdmin }: { onClose: () => void; isAdmin?: bo
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [originalUserEmail, setOriginalUserEmail] = useState<string>('');
+  const [pendingEmail, setPendingEmail] = useState<string>('');
+  const [emailConfirmCode, setEmailConfirmCode] = useState('');
+  const [confirmingEmailChange, setConfirmingEmailChange] = useState(false);
+  const [resendingEmailCode, setResendingEmailCode] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   // --- geodata/autocomplete ---
   type GeodataPlace = { id?: string | number; name?: string; lat?: number | null; lon?: number | null; house_number?: string | null; street?: string | null; city?: string | null; state?: string | null; country?: string | null; postcode?: string | null; raw?: unknown };
   const [placeSuggestions, setPlaceSuggestions] = useState<GeodataPlace[]>([]);
@@ -181,7 +187,11 @@ function ProfileEditor({ onClose, isAdmin }: { onClose: () => void; isAdmin?: bo
           }
         }
 
-  if (u) setForm({ role: 'user', id: u.id, name: u.name || '', email: u.email || '', phone: u.phone || '', address: u.address || '', postalCode: u.postalCode || '', city: u.city || '', region: u.region || '', country: u.country || '', birthDate: u.birthDate ? new Date(u.birthDate).toISOString().slice(0,10) : '', lat: u.lat ?? null, lon: u.lon ?? null, geodataRaw: u.geodataRaw ?? null, facebookUrl: u.facebookUrl || '', instagramUrl: u.instagramUrl || '', linkedinUrl: u.linkedinUrl || '', twitterUrl: u.twitterUrl || '' });
+  if (u) {
+          setOriginalUserEmail(u.email || '');
+          setPendingEmail(u.pendingEmail || '');
+          setForm({ role: 'user', id: u.id, name: u.name || '', email: u.email || '', phone: u.phone || '', address: u.address || '', postalCode: u.postalCode || '', city: u.city || '', region: u.region || '', country: u.country || '', birthDate: u.birthDate ? new Date(u.birthDate).toISOString().slice(0,10) : '', lat: u.lat ?? null, lon: u.lon ?? null, geodataRaw: u.geodataRaw ?? null, facebookUrl: u.facebookUrl || '', instagramUrl: u.instagramUrl || '', linkedinUrl: u.linkedinUrl || '', twitterUrl: u.twitterUrl || '' });
+        }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         setError(msg);
@@ -221,10 +231,20 @@ function ProfileEditor({ onClose, isAdmin }: { onClose: () => void; isAdmin?: bo
         if (typeof u.lat !== 'undefined') body.lat = u.lat;
         if (typeof u.lon !== 'undefined') body.lon = u.lon;
         if (u.geodataRaw) body.geodataRaw = u.geodataRaw;
+        const emailChanged = (u.email || '') !== originalUserEmail;
+        if (emailChanged) {
+          if (!oldPassword) throw new Error(t('settings.email.password_required', 'Mot de passe actuel requis pour changer d\'email'));
+          body.currentPassword = oldPassword;
+        }
         const res = await fetchWithRefresh(`${API_URL}/user/me`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         if (!res.ok) {
           const txt = await res.text().catch(() => '');
           throw new Error(txt || 'Impossible de mettre à jour l\'utilisateur');
+        }
+        if (emailChanged) {
+          const resBody = await res.json().catch(() => null);
+          setPendingEmail(resBody?.pendingEmail || u.email || '');
+          handleChange('email', originalUserEmail);
         }
         // Update center name if admin
         if (isAdmin && centerName.trim()) {
@@ -237,7 +257,7 @@ function ProfileEditor({ onClose, isAdmin }: { onClose: () => void; isAdmin?: bo
         }
       }
       // If password fields are filled, attempt a password change
-      if (oldPassword || newPassword || confirmPassword) {
+      if (newPassword || confirmPassword) {
         if (!oldPassword || !newPassword || !confirmPassword) throw new Error(t('settings.password.all_required'));
         if (newPassword !== confirmPassword) throw new Error(t('settings.password.mismatch'));
         const pres = await fetchWithRefresh(`${API_URL}/user/password`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oldPassword, newPassword }) });
@@ -250,6 +270,68 @@ function ProfileEditor({ onClose, isAdmin }: { onClose: () => void; isAdmin?: bo
       setError(msg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleConfirmEmailChange = async () => {
+    if (!emailConfirmCode) return;
+    setConfirmingEmailChange(true);
+    setError('');
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/user/me/confirm-email-change`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: emailConfirmCode }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || t('settings.email.confirm_failed', 'Code invalide ou expiré'));
+      setOriginalUserEmail(data.email || pendingEmail);
+      handleChange('email', data.email || pendingEmail);
+      setPendingEmail('');
+      setEmailConfirmCode('');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    } finally {
+      setConfirmingEmailChange(false);
+    }
+  };
+
+  const handleCancelEmailChange = async () => {
+    setConfirmingEmailChange(true);
+    setError('');
+    try {
+      await fetchWithRefresh(`${API_URL}/user/me/cancel-email-change`, { method: 'POST', credentials: 'include' });
+      setPendingEmail('');
+      setEmailConfirmCode('');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    } finally {
+      setConfirmingEmailChange(false);
+    }
+  };
+
+  const handleResendEmailChangeCode = async () => {
+    if (resendCooldown > 0) return;
+    setResendingEmailCode(true);
+    setError('');
+    try {
+      const res = await fetchWithRefresh(`${API_URL}/user/me/resend-email-change-code`, { method: 'POST', credentials: 'include' });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || t('settings.email.resend_failed', 'Impossible de renvoyer le code'));
+      }
+      let seconds = 60;
+      setResendCooldown(seconds);
+      const id = setInterval(() => {
+        seconds -= 1;
+        setResendCooldown(seconds);
+        if (seconds <= 0) clearInterval(id);
+      }, 1000);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+    } finally {
+      setResendingEmailCode(false);
     }
   };
 
@@ -404,7 +486,31 @@ const inputCls = "w-full bg-input border border-border-default rounded-xl px-3 p
           <div>
             <label className={labelCls}>{t('label.email')}</label>
             <input className={inputCls} placeholder="email@exemple.com" type="email" value={(form as UserForm).email || ''} onChange={e => handleChange('email', e.target.value)} />
+            {(form as UserForm).email !== originalUserEmail && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">{t('settings.email.password_hint', 'Votre mot de passe actuel vous sera demandé pour confirmer ce changement.')}</p>
+            )}
           </div>
+          {pendingEmail && (
+            <div className="sm:col-span-2 space-y-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                {t('settings.email.confirm_pending', 'Un code de confirmation a été envoyé à {email}. Saisissez-le pour valider ce nouvel email.').replace('{email}', pendingEmail)}
+              </p>
+              <div className="flex gap-2">
+                <input className={inputCls} placeholder="123456" maxLength={6} value={emailConfirmCode} onChange={e => setEmailConfirmCode(e.target.value.replace(/\D/g, ''))} />
+                <button type="button" disabled={confirmingEmailChange || !emailConfirmCode} onClick={handleConfirmEmailChange} className="px-4 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-semibold disabled:opacity-50">
+                  {t('settings.email.confirm_button', 'Valider')}
+                </button>
+                <button type="button" disabled={confirmingEmailChange} onClick={handleCancelEmailChange} className="px-4 py-2.5 rounded-xl bg-card-hover text-secondary text-sm font-medium disabled:opacity-50">
+                  {t('settings.cancel')}
+                </button>
+              </div>
+              <button type="button" disabled={resendingEmailCode || resendCooldown > 0} onClick={handleResendEmailChangeCode} className="text-xs font-medium text-amber-700 dark:text-amber-400 hover:underline disabled:opacity-50 disabled:no-underline">
+                {resendCooldown > 0
+                  ? t('settings.email.resend_cooldown', 'Renvoyer le code ({s}s)').replace('{s}', String(resendCooldown))
+                  : t('settings.email.resend_code', 'Renvoyer le code')}
+              </button>
+            </div>
+          )}
           <div>
             <label className={labelCls}>{t('label.phone')}</label>
             <input className={inputCls} placeholder="06 00 00 00 00" value={(form as UserForm).phone || ''} onChange={e => handleChange('phone', e.target.value)} />

@@ -302,6 +302,19 @@ if (isProd) {
 
 // /create-payment-intent removed: was unauthenticated and unused.
 
+// Global error handler: never leak stack traces / file paths to clients.
+// Must be the last app.use() — Express recognizes it as an error handler
+// by its 4-argument signature.
+app.use((err, req, res, _next) => {
+  if (!err) return res.status(500).json({ error: 'server_error' });
+  if (err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'file_too_large' });
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') return res.status(400).json({ error: 'invalid_upload' });
+    return res.status(400).json({ error: 'invalid_upload' });
+  }
+  console.error('Unhandled error', err && err.stack ? err.stack : err);
+  res.status(err.status || 500).json({ error: 'server_error' });
+});
 
 const http = require('http');
 const wsServer = require('./lib/wsServer');

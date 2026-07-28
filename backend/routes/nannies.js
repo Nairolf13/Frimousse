@@ -199,6 +199,11 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
           // Already linked to another nanny record — conflict
           return { nanny, user: null, existingUserConflict: true };
         }
+        // Refuse to silently repurpose an account belonging to a different center —
+        // this would grant a foreign user visibility into this center's children/data.
+        if (existingUser.centerId && existingUser.centerId !== (req.user.centerId || null)) {
+          return { nanny, user: null, existingUserCenterConflict: true };
+        }
         const userUpdateData = { nannyId: nanny.id };
         if (address !== undefined) userUpdateData.address = address || null;
         if (postalCode !== undefined) userUpdateData.postalCode = postalCode || null;
@@ -206,7 +211,14 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
         if (region !== undefined) userUpdateData.region = region || null;
         if (country !== undefined) userUpdateData.country = country || null;
         await tx.user.update({ where: { id: existingUser.id }, data: userUpdateData });
-        return { nanny, user: await tx.user.findUnique({ where: { id: existingUser.id } }), isNewUser: false };
+        return {
+          nanny,
+          user: await tx.user.findUnique({
+            where: { id: existingUser.id },
+            select: { id: true, email: true, name: true, role: true, nannyId: true, centerId: true, createdAt: true },
+          }),
+          isNewUser: false,
+        };
       }
 
   // Use provided password if present, otherwise create a temporary random password
@@ -219,13 +231,19 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
     if (city !== undefined) userData.city = city || null;
     if (region !== undefined) userData.region = region || null;
     if (country !== undefined) userData.country = country || null;
-    const user = await tx.user.create({ data: userData });
+    const user = await tx.user.create({
+      data: userData,
+      select: { id: true, email: true, name: true, role: true, nannyId: true, centerId: true, createdAt: true },
+    });
       return { nanny, user, isNewUser: true };
     });
 
     // If the existing user is already linked to another nanny record
     if (result && result.existingUserConflict) {
       return res.status(409).json({ message: 'Cet utilisateur est déjà associé à une autre fiche nounou.' });
+    }
+    if (result && result.existingUserCenterConflict) {
+      return res.status(409).json({ message: 'Un compte existe déjà pour cette adresse email dans une autre structure.' });
     }
 
       // Send invite email only for newly created users — not for existing users (admin or otherwise)

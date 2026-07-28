@@ -284,9 +284,13 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
       await prisma.user.update({ where: { id: dbUser.id }, data: { stripeCustomerId: customerId } });
     }
 
+    // Bind this session to the authenticated caller so /complete-checkout-session can
+    // later resolve the owning user strictly via this signed token, instead of trusting
+    // a leakable Stripe customer id or email.
+    const subscribeToken = jwt.sign({ id: dbUser.id, type: 'subscribe' }, JWT_SECRET, { expiresIn: '1h' });
     const subscriptionData = {
       ...(plan === 'decouverte' ? { trial_end: Math.floor(Date.now() / 1000) + 15 * 24 * 3600 } : {}),
-      metadata: { plan: effectivePlan, selectedPlan: plan === 'decouverte' ? selectedPlan : effectivePlan },
+      metadata: { plan: effectivePlan, selectedPlan: plan === 'decouverte' ? selectedPlan : effectivePlan, subscribeToken },
     };
 
     const session = await stripe.checkout.sessions.create({
@@ -369,7 +373,12 @@ router.post('/complete-checkout-session', async (req, res) => {
 
     const subscriptionObj = await stripe.subscriptions.retrieve(stripeSubId, { expand: ['latest_invoice.payment_intent'] });
 
-    // Resolve user: try metadata.subscribeToken, then stripe customer id, then session customer email
+    // Resolve user strictly via metadata.subscribeToken — a server-issued, signed JWT
+    // set when the Checkout session was created. Do NOT fall back to stripeCustomerId
+    // or session email: a Stripe Checkout sessionId can leak via Referer headers,
+    // browser history, or logs, and those fallbacks would let anyone who obtains a
+    // live sessionId pull another user's subscription details and mint them fresh
+    // session tokens below.
     const meta = subscriptionObj?.metadata || {};
     let user = null;
     if (meta.subscribeToken) {
@@ -378,13 +387,7 @@ router.post('/complete-checkout-session', async (req, res) => {
         if (payload && payload.id) user = await prisma.user.findUnique({ where: { id: payload.id } });
       } catch (e) { /* invalid token - ignore */ }
     }
-    if (!user && subscriptionObj.customer) {
-      user = await prisma.user.findFirst({ where: { stripeCustomerId: subscriptionObj.customer } });
-    }
-    if (!user && session.customer_details && session.customer_details.email) {
-      const sessEmail = String(session.customer_details.email).trim();
-      user = await prisma.user.findFirst({ where: { email: { equals: sessEmail, mode: 'insensitive' } } });
-    }
+    if (!user) return res.status(403).json({ error: 'Impossible de vérifier la propriété de cette session' });
 
     // Upsert subscription record
     const existing = await prisma.subscription.findFirst({ where: { stripeSubscriptionId: stripeSubId } });

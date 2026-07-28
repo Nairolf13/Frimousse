@@ -11,6 +11,8 @@ const prisma = require('../lib/prismaClient');
 const bcrypt = require('bcryptjs');
 const { validatePassword } = require('../lib/validatePassword');
 const { validateAddress } = require('../utils/validateAddress');
+const { sendTemplatedMail } = require('../lib/email');
+const { detectLang, subject: emailSubject } = require('../lib/i18n');
 
 let fetchFn;
 try {
@@ -205,7 +207,7 @@ router.post('/complete-profile', auth, async (req, res) => {
 // Update current user's basic info (name, email, address, etc.)
 router.put('/me', auth, async (req, res) => {
   try {
-    const { name, email, notifyByEmail, address, postalCode, city, region, country, phone, birthDate, avatarUrl, facebookUrl, instagramUrl, linkedinUrl, twitterUrl } = req.body || {};
+    const { name, email, currentPassword, notifyByEmail, address, postalCode, city, region, country, phone, birthDate, avatarUrl, facebookUrl, instagramUrl, linkedinUrl, twitterUrl } = req.body || {};
     if (!name && !email && typeof notifyByEmail === 'undefined' && typeof address === 'undefined' && typeof postalCode === 'undefined' && typeof city === 'undefined' && typeof region === 'undefined' && typeof country === 'undefined' && typeof phone === 'undefined' && typeof birthDate === 'undefined' && typeof avatarUrl === 'undefined' && typeof facebookUrl === 'undefined' && typeof instagramUrl === 'undefined' && typeof linkedinUrl === 'undefined' && typeof twitterUrl === 'undefined') {
       return res.status(400).json({ error: 'No fields to update' });
     }
@@ -215,9 +217,29 @@ router.put('/me', auth, async (req, res) => {
     const addrValidation = validateAddress({ address, postalCode, city, region, country });
     if (addrValidation.errors.length) return res.status(400).json({ error: addrValidation.errors.join(', ') });
 
+    const currentUser = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!currentUser) return res.status(404).json({ error: 'User not found' });
+
+    let pendingEmailRequested = false;
+    let normalizedNewEmail = null;
+    if (typeof email === 'string') {
+      normalizedNewEmail = String(email || '').trim().toLowerCase();
+      if (normalizedNewEmail && normalizedNewEmail !== currentUser.email) {
+        // Changing the account email is security-sensitive: require the current
+        // password and only apply the change after the new address is verified.
+        if (!currentPassword) return res.status(400).json({ error: 'Mot de passe actuel requis pour changer d\'email' });
+        const validPw = await bcrypt.compare(currentPassword, currentUser.password);
+        if (!validPw) return res.status(403).json({ error: 'Mot de passe actuel incorrect' });
+
+        const existing = await prisma.user.findUnique({ where: { email: normalizedNewEmail } });
+        if (existing) return res.status(400).json({ error: 'Email déjà utilisé' });
+
+        pendingEmailRequested = true;
+      }
+    }
+
     const data = {};
     if (typeof name === 'string') data.name = name;
-    if (typeof email === 'string') data.email = String(email || '').trim().toLowerCase();
     if (typeof notifyByEmail === 'boolean') data.notifyByEmail = notifyByEmail;
     // allow updating address fields on the User record (User owns address)
     if ('address' in addrValidation.data) data.address = addrValidation.data.address;
@@ -231,7 +253,41 @@ router.put('/me', auth, async (req, res) => {
     if (typeof linkedinUrl !== 'undefined') data.linkedinUrl = String(linkedinUrl || '').trim() || null;
     if (typeof twitterUrl !== 'undefined') data.twitterUrl = String(twitterUrl || '').trim() || null;
 
-    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, avatarUrl: true, parentId: true, nannyId: true, facebookUrl: true, instagramUrl: true, linkedinUrl: true, twitterUrl: true } });
+    let pendingEmailCode = null;
+    if (pendingEmailRequested) {
+      pendingEmailCode = String(Math.floor(100000 + Math.random() * 900000));
+      data.pendingEmail = normalizedNewEmail;
+      data.pendingEmailCode = pendingEmailCode;
+      data.pendingEmailCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
+    }
+
+    const updated = await prisma.user.update({ where: { id: req.user.id }, data, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, avatarUrl: true, parentId: true, nannyId: true, facebookUrl: true, instagramUrl: true, linkedinUrl: true, twitterUrl: true, pendingEmail: true } });
+
+    if (pendingEmailRequested) {
+      const lang = detectLang(req);
+      try {
+        await sendTemplatedMail({
+          templateName: 'email_change_confirm',
+          lang,
+          to: normalizedNewEmail,
+          subject: emailSubject('email_change_confirm', lang),
+          substitutions: { name: updated.name || '', code: pendingEmailCode },
+          prisma,
+          respectOptOut: false,
+        });
+        await sendTemplatedMail({
+          templateName: 'email_change_alert',
+          lang,
+          to: currentUser.email,
+          subject: emailSubject('email_change_alert', lang),
+          substitutions: { name: updated.name || '', oldEmail: currentUser.email, newEmail: normalizedNewEmail },
+          prisma,
+          respectOptOut: false,
+        });
+      } catch (mailErr) {
+        console.error('Failed to send email-change notifications', mailErr && mailErr.message ? mailErr.message : mailErr);
+      }
+    }
 
     // If phone provided, update linked Parent or Nanny contact as appropriate
     try {
@@ -255,11 +311,97 @@ router.put('/me', auth, async (req, res) => {
     }
 
     // Return freshly updated user (including address fields)
-    const fresh = await prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, avatarUrl: true } });
+    const fresh = await prisma.user.findUnique({ where: { id: req.user.id }, select: { id: true, email: true, name: true, role: true, createdAt: true, centerId: true, notifyByEmail: true, address: true, postalCode: true, city: true, region: true, country: true, avatarUrl: true, pendingEmail: true } });
     res.json(fresh);
   } catch (e) {
     const msg = e && e.code === 'P2002' ? 'Email déjà utilisé' : (e && e.message ? e.message : String(e));
     res.status(400).json({ error: msg });
+  }
+});
+
+// Confirm a pending email change using the code sent to the new address
+router.post('/me/confirm-email-change', auth, async (req, res) => {
+  try {
+    const { code } = req.body || {};
+    if (!code) return res.status(400).json({ error: 'Code requis' });
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.pendingEmail || !user.pendingEmailCode || !user.pendingEmailCodeExpires) {
+      return res.status(400).json({ error: 'Aucun changement d\'email en attente' });
+    }
+    if (new Date() > new Date(user.pendingEmailCodeExpires)) {
+      return res.status(400).json({ error: 'Code expiré, veuillez recommencer' });
+    }
+    if (String(code) !== user.pendingEmailCode) {
+      return res.status(400).json({ error: 'Code incorrect' });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        email: user.pendingEmail,
+        pendingEmail: null,
+        pendingEmailCode: null,
+        pendingEmailCodeExpires: null,
+      },
+      select: { id: true, email: true, name: true, role: true },
+    });
+
+    // Revoke refresh tokens so all sessions must re-authenticate with the new email
+    try { await prisma.refreshToken.deleteMany({ where: { userId: user.id } }); } catch (e) { /* ignore */ }
+
+    res.json({ message: 'Email mis à jour', email: updated.email });
+  } catch (e) {
+    const msg = e && e.code === 'P2002' ? 'Email déjà utilisé' : 'Erreur serveur';
+    res.status(400).json({ error: msg });
+  }
+});
+
+// Resend the confirmation code for a pending email change
+router.post('/me/resend-email-change-code', auth, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user.pendingEmail) return res.status(400).json({ error: 'Aucun changement d\'email en attente' });
+
+    const pendingEmailCode = String(Math.floor(100000 + Math.random() * 900000));
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        pendingEmailCode,
+        pendingEmailCodeExpires: new Date(Date.now() + 15 * 60 * 1000),
+      },
+    });
+
+    const lang = detectLang(req);
+    await sendTemplatedMail({
+      templateName: 'email_change_confirm',
+      lang,
+      to: user.pendingEmail,
+      subject: emailSubject('email_change_confirm', lang),
+      substitutions: { name: user.name || '', code: pendingEmailCode },
+      prisma,
+      respectOptOut: false,
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('resend-email-change-code error', e && e.message ? e.message : e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Cancel a pending email change
+router.post('/me/cancel-email-change', auth, async (req, res) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { pendingEmail: null, pendingEmailCode: null, pendingEmailCodeExpires: null },
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -381,11 +523,13 @@ router.put('/:id/password', auth, async (req, res) => {
     const target = await prisma.user.findUnique({ where: { id } });
     if (!target) return res.status(404).json({ message: 'User not found' });
 
-    // center scoping: non super-admins can only modify users in their center
+    // center scoping: non super-admins can only modify users in their center.
+    // Fail closed — an unresolved target center (orphaned account) must NOT be
+    // treated as "no conflict", otherwise it silently bypasses the check.
     if (!isSuperAdmin(actor)) {
       const actorCenter = actor.centerId || null;
       const targetCenter = await resolveUserCenter(prisma, target);
-      if (actorCenter && targetCenter && String(actorCenter) !== String(targetCenter)) {
+      if (String(actorCenter || '') !== String(targetCenter || '')) {
         console.log(`[ADMIN PW RESET] denied - center mismatch`);
         // hide existence when center differs
         return res.status(404).json({ message: 'User not found' });
