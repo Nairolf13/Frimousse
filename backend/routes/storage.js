@@ -13,6 +13,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const path = require('path');
 const auth = require('../middleware/authMiddleware');
 
 let fetchFn;
@@ -46,14 +47,20 @@ router.get('/photo', auth, async (req, res) => {
       return res.status(400).json({ error: 'Paramètre path manquant' });
     }
 
-    // Sanitize: prevent path traversal
-    const sanitized = filePath.replace(/\.\.\//g, '').replace(/^\/+/, '');
+    // Sanitize: normalize the path and reject any traversal outright, rather than
+    // stripping "../" in a single non-recursive pass (which overlapping sequences
+    // like "..../..../" can survive and later get re-normalized by the HTTP client).
+    const normalized = path.posix.normalize(filePath.replace(/^\/+/, ''));
+    if (normalized.includes('..') || path.posix.isAbsolute(normalized)) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
 
     // Only allow known prefixes
-    const allowed = ALLOWED_PREFIXES.some(prefix => sanitized.startsWith(prefix));
+    const allowed = ALLOWED_PREFIXES.some(prefix => normalized.startsWith(prefix));
     if (!allowed) {
       return res.status(403).json({ error: 'Accès refusé' });
     }
+    const sanitized = normalized;
 
     if (!SUPABASE_URL || (!SUPABASE_KEY && !SUPABASE_JWT_SECRET)) {
       console.error('[storage] Supabase credentials missing');

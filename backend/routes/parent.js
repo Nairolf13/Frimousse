@@ -161,6 +161,10 @@ router.get('/:id/adjustments', requireAuth, async (req, res) => {
     const userReq = req.user || {};
     const isOwner = userReq.parentId && String(userReq.parentId) === String(id);
     if (!canManageParents(userReq) && !isOwner) return res.status(403).json({ message: 'Interdit' });
+    if (!isOwner && !isSuperAdmin(userReq)) {
+      const targetParent = await prisma.parent.findUnique({ where: { id }, select: { centerId: true } });
+      if (!targetParent || targetParent.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
+    }
     const where = { parentId: id };
     if (month) where.month = month;
     const adj = await prisma.invoiceAdjustment.findMany({ where, orderBy: { createdAt: 'desc' } });
@@ -175,7 +179,12 @@ router.post('/:id/adjustments', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     let { month, amount, comment } = req.body;
-    if (!canManageParents(req.user || {})) return res.status(403).json({ message: 'Forbidden' });
+    const userReq = req.user || {};
+    if (!canManageParents(userReq)) return res.status(403).json({ message: 'Forbidden' });
+    if (!isSuperAdmin(userReq)) {
+      const targetParent = await prisma.parent.findUnique({ where: { id }, select: { centerId: true } });
+      if (!targetParent || targetParent.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
+    }
     // force to current month regardless of input to prevent carry‑over
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -203,7 +212,12 @@ router.post('/:id/adjustments', requireAuth, async (req, res) => {
 router.delete('/:id/adjustments/:adjId', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
     const { id, adjId } = req.params;
-    if (!canManageParents(req.user || {})) return res.status(403).json({ message: 'Interdit' });
+    const userReq = req.user || {};
+    if (!canManageParents(userReq)) return res.status(403).json({ message: 'Interdit' });
+    if (!isSuperAdmin(userReq)) {
+      const targetParent = await prisma.parent.findUnique({ where: { id }, select: { centerId: true } });
+      if (!targetParent || targetParent.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
+    }
     const adj = await prisma.invoiceAdjustment.findUnique({ where: { id: adjId } });
     if (!adj || adj.parentId !== id) return res.status(404).json({ message: 'Ajustement non trouvé' });
     // revert paymentHistory if exists
@@ -574,16 +588,21 @@ router.post('/accept-invite', async (req, res) => {
 router.get('/child/:childId/schedule', requireAuth, async (req, res) => {
   try {
     const childId = req.params.childId;
+    const child = await prisma.child.findUnique({ where: { id: childId }, select: { id: true, centerId: true } });
+    if (!child) return res.status(404).json({ message: 'Not found' });
+
     if (req.user && req.user.role === 'parent') {
       const user = await prisma.user.findUnique({ where: { id: req.user.id } });
       const parentId = user?.parentId;
       if (!parentId) return res.status(403).json({ message: 'Forbidden' });
       const relation = await prisma.parentChild.findFirst({ where: { parentId, childId } });
       if (!relation) return res.status(403).json({ message: 'Forbidden' });
+    } else if (!isSuperAdmin(req.user) && child.centerId !== req.user.centerId) {
+      return res.status(404).json({ message: 'Not found' });
     }
 
     const schedules = await prisma.schedule.findMany({
-      where: { },
+      where: { centerId: child.centerId },
       include: { nannies: true }
     });
     res.json(schedules);
@@ -595,12 +614,17 @@ router.get('/child/:childId/schedule', requireAuth, async (req, res) => {
 router.get('/child/:childId/reports', requireAuth, async (req, res) => {
   try {
     const { childId } = req.params;
+    const child = await prisma.child.findUnique({ where: { id: childId }, select: { id: true, centerId: true } });
+    if (!child) return res.status(404).json({ message: 'Not found' });
+
     if (req.user && req.user.role === 'parent') {
       const user = await prisma.user.findUnique({ where: { id: req.user.id } });
       const parentId = user?.parentId;
       if (!parentId) return res.status(403).json({ message: 'Forbidden' });
       const relation = await prisma.parentChild.findFirst({ where: { parentId, childId } });
       if (!relation) return res.status(403).json({ message: 'Forbidden' });
+    } else if (!isSuperAdmin(req.user) && child.centerId !== req.user.centerId) {
+      return res.status(404).json({ message: 'Not found' });
     }
     const reports = await prisma.report.findMany({
       where: { childId },

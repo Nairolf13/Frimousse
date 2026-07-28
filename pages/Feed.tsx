@@ -665,6 +665,7 @@ export default function Feed() {
             }
             const signBody = await signRes.json();
             const storagePath = signBody.storagePath;
+            const uploadToken = signBody.uploadToken;
             const bucket = signBody.bucket || VITE_SUPABASE_BUCKET;
 
             const { error: upErr } = await supabaseClient.storage.from(bucket).upload(storagePath, f, { contentType: f.type, upsert: false });
@@ -674,7 +675,7 @@ export default function Feed() {
             }
 
             // finalize so backend can create DB rows
-            const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: created.id, size: f.size, originalName: f.name, taggedChildIds: selectedChildIds || [], noChildSelected: !!noChildSelected }) });
+            const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, uploadToken, postId: created.id, size: f.size, originalName: f.name, taggedChildIds: selectedChildIds || [], noChildSelected: !!noChildSelected }) });
             if (!finRes.ok) {
               const b = await finRes.json().catch(() => ({}));
               const serverMsg = (b && b.message) ? String(b.message) : '';
@@ -1643,6 +1644,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
           }
           const signBody = await signRes.json();
           const storagePath = signBody.storagePath;
+          const uploadToken = signBody.uploadToken;
           const bucket = signBody.bucket || VITE_SUPABASE_BUCKET;
           // perform direct upload
           const { error: upErr } = await supabaseClient.storage.from(bucket).upload(storagePath, f, { contentType: f.type, upsert: false });
@@ -1663,7 +1665,7 @@ function PostItem({ post, bgClass, currentUser, onUpdatePost, onDeletePost, onMe
             return;
           }
 
-          const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, postId: post.id, size: f.size, originalName: f.name, taggedChildIds: selectedChildIdsLocal || [], noChildSelected: !!noChildSelectedLocal }) });
+          const finRes = await fetchWithRefresh('api/uploads/supabase/finalize', { method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ storagePath, uploadToken, postId: post.id, size: f.size, originalName: f.name, taggedChildIds: selectedChildIdsLocal || [], noChildSelected: !!noChildSelectedLocal }) });
           if (!finRes.ok) {
             const b = await finRes.json().catch(() => ({}));
             const serverMsg = (b && b.message) ? String(b.message) : '';
