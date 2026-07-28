@@ -206,7 +206,14 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
         if (region !== undefined) userUpdateData.region = region || null;
         if (country !== undefined) userUpdateData.country = country || null;
         await tx.user.update({ where: { id: existingUser.id }, data: userUpdateData });
-        return { nanny, user: await tx.user.findUnique({ where: { id: existingUser.id } }), isNewUser: false };
+        return {
+          nanny,
+          user: await tx.user.findUnique({
+            where: { id: existingUser.id },
+            select: { id: true, email: true, name: true, role: true, nannyId: true, centerId: true, createdAt: true },
+          }),
+          isNewUser: false,
+        };
       }
 
   // Use provided password if present, otherwise create a temporary random password
@@ -219,7 +226,10 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
     if (city !== undefined) userData.city = city || null;
     if (region !== undefined) userData.region = region || null;
     if (country !== undefined) userData.country = country || null;
-    const user = await tx.user.create({ data: userData });
+    const user = await tx.user.create({
+      data: userData,
+      select: { id: true, email: true, name: true, role: true, nannyId: true, centerId: true, createdAt: true },
+    });
       return { nanny, user, isNewUser: true };
     });
 

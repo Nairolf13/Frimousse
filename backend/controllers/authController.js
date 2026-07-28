@@ -181,9 +181,9 @@ exports.login = async (req, res) => {
     const email = String(req.body.email || '').trim().toLowerCase();
     const password = req.body.password;
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return res.status(401).json({ message: "Adresse e-mail inconnue. Vérifiez l'adresse saisie." });
+    if (!user) return res.status(401).json({ message: 'Email ou mot de passe incorrect.' });
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ message: "Mot de passe incorrect. Utilisez 'Mot de passe oublié' si nécessaire." });
+    if (!valid) return res.status(401).json({ message: 'Email ou mot de passe incorrect.' });
     
     // Check if email is verified
     if (!user.emailVerified) {
