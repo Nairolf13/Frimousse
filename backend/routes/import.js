@@ -338,8 +338,13 @@ router.post('/confirm', auth, upload.single('file'), async (req, res) => {
               if (pUser && pUser.parentId) parentId = pUser.parentId;
             }
             if (parentId) {
-              const alreadyLinked = await tx.parentChild.findFirst({ where: { childId: child.id, parentId } });
-              if (!alreadyLinked) await tx.parentChild.create({ data: { childId: child.id, parentId } });
+              // Never link a child to a parent belonging to a different center —
+              // this would expose the child's schedule/reports/photos to a stranger.
+              const parentRecord = await tx.parent.findUnique({ where: { id: parentId }, select: { centerId: true } });
+              if (parentRecord && parentRecord.centerId === centerId) {
+                const alreadyLinked = await tx.parentChild.findFirst({ where: { childId: child.id, parentId } });
+                if (!alreadyLinked) await tx.parentChild.create({ data: { childId: child.id, parentId } });
+              }
             }
           }
           report.children.created++;

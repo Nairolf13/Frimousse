@@ -126,7 +126,7 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
     const existing = await prisma.report.findUnique({ where: { id: reportId } });
     if (!existing) return res.status(404).json({ message: 'Report not found' });
     if (!isSuperAdmin(req.user)) {
-      if (existing.centerId && req.user.centerId && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Report not found' });
+      if (existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Report not found' });
     }
 
     const { priority, type, status, childId, nannyId, summary, details, date, time, duration, childrenInvolved } = req.body;
@@ -169,7 +169,7 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
     const existing = await prisma.report.findUnique({ where: { id: reportId } });
     if (!existing) return res.status(404).json({ message: 'Report not found' });
     if (!isSuperAdmin(req.user)) {
-      if (existing.centerId && req.user.centerId && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Report not found' });
+      if (existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Report not found' });
     }
     await prisma.report.delete({ where: { id: reportId } });
     res.status(204).end();

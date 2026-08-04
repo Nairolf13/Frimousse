@@ -151,13 +151,22 @@ router.post('/', checkContentLength, upload.array('images', 6), async (req, res)
   // Normalize tagged children into an array. Maintain backward compatibility with single childId param.
   const tagged = Array.isArray(taggedChildIds) ? taggedChildIds.filter(Boolean) : (childId ? [childId] : []);
 
-  // If tagged children are provided, ensure each has at least one PhotoConsent granting posting for this center.
+  // If tagged children are provided, ensure each belongs to the poster's own center
+  // AND has at least one PhotoConsent granting posting.
   if (tagged.length > 0) {
-    // find all children that lack consent
+    const foreign = [];
     const lacking = [];
     for (const cid of tagged) {
+      const child = await prisma.child.findUnique({ where: { id: cid }, select: { centerId: true } });
+      if (!child || (user.role !== 'super-admin' && child.centerId !== user.centerId)) {
+        foreign.push(cid);
+        continue;
+      }
       const consent = await prisma.photoConsent.findFirst({ where: { childId: cid, consent: true } });
       if (!consent) lacking.push(cid);
+    }
+    if (foreign.length > 0) {
+      return res.status(404).json({ message: 'Some children were not found' });
     }
     if (lacking.length > 0) {
       return res.status(403).json({ message: 'Photo consent absent for some children', lacking });
@@ -685,12 +694,21 @@ router.post('/:postId/media', checkContentLength, upload.array('images', 6), asy
       if (!noChildSelected && (!tagged || tagged.length === 0)) {
         return res.status(400).json({ message: 'Veuillez identifier les enfants ou sélectionner "Pas d\'enfant" avant d\'uploader des photos.' });
       }
-      // If tagged children provided, ensure each has photo consent
+      // If tagged children provided, ensure each belongs to the post's center and has photo consent
       if (tagged && tagged.length > 0) {
+        const foreign = [];
         const lacking = [];
         for (const cid of tagged) {
+          const child = await prisma.child.findUnique({ where: { id: cid }, select: { centerId: true } });
+          if (!child || (user.role !== 'super-admin' && child.centerId !== post.centerId)) {
+            foreign.push(cid);
+            continue;
+          }
           const consent = await prisma.photoConsent.findFirst({ where: { childId: cid, consent: true } });
           if (!consent) lacking.push(cid);
+        }
+        if (foreign.length > 0) {
+          return res.status(404).json({ message: 'Some children were not found' });
         }
         if (lacking.length > 0) {
           return res.status(403).json({ message: 'Photo consent absent for some children', lacking });
