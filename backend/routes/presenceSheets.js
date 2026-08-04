@@ -10,6 +10,27 @@ function isAdmin(user) { return user && (user.role === 'admin' || isSuperAdmin(u
 function isNanny(user) { return user && user.nannyId; }
 function isParent(user) { return user && (user.parentId || user.role === 'parent'); }
 
+// Child.photoUrl stores the raw Supabase storage path, not a usable URL — must
+// go through the /api/storage/photo proxy (which enforces per-child access
+// control) rather than being served to the client as-is.
+function toProxyUrl(pathOrUrl) {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith('/api/storage')) return pathOrUrl;
+  if (pathOrUrl.startsWith('http')) {
+    const match = pathOrUrl.match(/\/object\/(?:public|sign)\/[^/]+\/(.+?)(\?.*)?$/);
+    if (match) return `/api/storage/photo?path=${encodeURIComponent(match[1])}`;
+    return pathOrUrl;
+  }
+  return `/api/storage/photo?path=${encodeURIComponent(pathOrUrl)}`;
+}
+function proxyChildPhoto(sheet) {
+  if (!sheet || !sheet.child) return sheet;
+  return { ...sheet, child: { ...sheet.child, photoUrl: toProxyUrl(sheet.child.photoUrl) } };
+}
+function proxyChildPhotoList(sheets) {
+  return Array.isArray(sheets) ? sheets.map(proxyChildPhoto) : sheets;
+}
+
 // Jours fériés français fixes (MM-DD)
 const FRENCH_HOLIDAYS = [
   '01-01','05-01','05-08','07-14','08-15','11-01','11-11','12-25'
@@ -102,7 +123,7 @@ router.get('/', auth, async (req, res) => {
       },
       orderBy: [{ year: 'desc' }, { month: 'desc' }],
     });
-    res.json(sheets);
+    res.json(proxyChildPhotoList(sheets));
   } catch (err) {
     console.error('GET /api/presence-sheets error', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -146,7 +167,7 @@ router.post('/', auth, async (req, res) => {
         entries: { orderBy: { date: 'asc' } },
       },
     });
-    res.status(201).json(sheet);
+    res.status(201).json(proxyChildPhoto(sheet));
   } catch (err) {
     if (err && err.code === 'P2002') return res.status(409).json({ error: 'Une feuille existe déjà pour cet enfant, cette nounou et ce mois.' });
     console.error('POST /api/presence-sheets error', err);
@@ -179,7 +200,7 @@ router.get('/:id', auth, async (req, res) => {
     } else {
       return res.status(403).json({ error: 'Accès interdit' });
     }
-    res.json(sheet);
+    res.json(proxyChildPhoto(sheet));
   } catch (err) {
     console.error('GET /api/presence-sheets/:id error', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -216,7 +237,7 @@ router.put('/:id', auth, async (req, res) => {
       data: { ...(status ? { status } : {}) },
       include: { child: { select: { id: true, name: true, photoUrl: true } }, nanny: { select: { id: true, name: true } }, entries: { orderBy: { date: 'asc' } } },
     });
-    res.json(updated);
+    res.json(proxyChildPhoto(updated));
   } catch (err) {
     console.error('PUT /api/presence-sheets/:id error', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -244,7 +265,7 @@ router.patch('/:id/billing', auth, async (req, res) => {
       },
       include: { child: true, nanny: true, entries: { orderBy: { date: 'asc' } } },
     });
-    res.json(updated);
+    res.json(proxyChildPhoto(updated));
   } catch (err) {
     console.error('PATCH /api/presence-sheets/:id/billing error', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -297,7 +318,7 @@ router.patch('/:id/entries', auth, async (req, res) => {
       where: { id: req.params.id },
       include: { entries: { orderBy: { date: 'asc' } }, child: { select: { id: true, name: true, photoUrl: true } }, nanny: { select: { id: true, name: true } } },
     });
-    res.json(updated);
+    res.json(proxyChildPhoto(updated));
   } catch (err) {
     console.error('PATCH /api/presence-sheets/:id/entries error', err);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -513,7 +534,7 @@ router.post('/:id/sign', auth, async (req, res) => {
       data: updateData,
       include: { child: true, nanny: true, entries: { orderBy: { date: 'asc' } } },
     });
-    res.json(updated);
+    res.json(proxyChildPhoto(updated));
   } catch (err) {
     console.error('POST /api/presence-sheets/:id/sign error', err);
     res.status(500).json({ error: 'Erreur serveur' });

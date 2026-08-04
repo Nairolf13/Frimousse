@@ -12,6 +12,17 @@ const { validateAddress } = require('../utils/validateAddress');
 const requireAuth = require('../middleware/authMiddleware');
 const { detectLang, subject: emailSubject } = require('../lib/i18n');
 
+function toProxyUrl(pathOrUrl) {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith('/api/storage')) return pathOrUrl;
+  if (pathOrUrl.startsWith('http')) {
+    const match = pathOrUrl.match(/\/object\/(?:public|sign)\/[^/]+\/(.+?)(\?.*)?$/);
+    if (match) return `/api/storage/photo?path=${encodeURIComponent(match[1])}`;
+    return pathOrUrl;
+  }
+  return `/api/storage/photo?path=${encodeURIComponent(pathOrUrl)}`;
+}
+
 function isSuperAdmin(user) {
   if (!user || !user.role) return false;
   const r = String(user.role).toLowerCase();
@@ -36,7 +47,11 @@ router.get('/children', requireAuth, async (req, res) => {
       where: { parentId },
       include: { child: true }
     });
-    res.json(children.map(pc => pc.child));
+    res.json(children.map(pc => ({
+      ...pc.child,
+      photoUrl: toProxyUrl(pc.child.photoUrl),
+      prescriptionUrl: toProxyUrl(pc.child.prescriptionUrl),
+    })));
   } catch (err) {
     res.status(500).json({ error: 'Erreur serveur' });
   }
@@ -135,7 +150,13 @@ router.get('/admin', requireAuth, requireActiveSubscription, async (req, res) =>
         rec.city = (userRec && userRec.city) ? userRec.city : (p.city || null);
         rec.region = (userRec && userRec.region) ? userRec.region : (p.region || null);
         rec.country = (userRec && userRec.country) ? userRec.country : (p.country || null);
-        rec.avatarUrl = (userRec && userRec.avatarUrl) ? userRec.avatarUrl : (p.avatarUrl || null);
+        rec.avatarUrl = toProxyUrl((userRec && userRec.avatarUrl) ? userRec.avatarUrl : (p.avatarUrl || null));
+        if (Array.isArray(rec.children)) {
+          rec.children = rec.children.map(pc => (pc && pc.child) ? {
+            ...pc,
+            child: { ...pc.child, photoUrl: toProxyUrl(pc.child.photoUrl), prescriptionUrl: toProxyUrl(pc.child.prescriptionUrl) },
+          } : pc);
+        }
         if (rec.user) delete rec.user;
         return rec;
       } catch (e) {
