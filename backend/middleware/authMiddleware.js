@@ -67,12 +67,15 @@ module.exports = async function (req, res, next) {
   if (!refreshToken) return res.status(401).json({ message: 'No token' });
 
   try {
-    // Ensure refresh token exists in DB
+    // Verify refresh JWT
+    const payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
+
+    // Ensure refresh token still exists in DB (read-only check; the atomic
+    // consuming delete happens below, right before rotation, so a rejected
+    // request — e.g. lapsed subscription — doesn't burn the token).
     const stored = await prisma.refreshToken.findUnique({ where: { token: refreshToken } });
     if (!stored) return res.status(403).json({ message: 'Invalid refresh token' });
 
-    // Verify refresh JWT
-    const payload = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
     const user = await prisma.user.findUnique({ where: { id: payload.id } });
     if (!user) return res.status(404).json({ message: 'User not found' });
 
@@ -105,10 +108,19 @@ module.exports = async function (req, res, next) {
     const ok = await hasValidSubscriptionForRefresh(user);
     if (!ok) return res.status(402).json({ error: 'Vous devez vous abonner pour avoir accès à votre compte.' });
 
+    // Atomically consume the token right before rotating — if a concurrent
+    // request already rotated it, deleteMany returns count=0 and we reject
+    // instead of racing to create two valid rotated tokens for one rotation.
+    const deleted = await prisma.refreshToken.deleteMany({
+      where: { token: refreshToken, userId: payload.id },
+    });
+    if (deleted.count === 0) {
+      return res.status(403).json({ message: 'Invalid refresh token' });
+    }
+
     // Rotate refresh token on every use to limit exposure if a token is stolen
     const newAccessToken = generateAccessTokenForMiddleware(user);
     const newRefreshToken = generateRefreshTokenForMiddleware(user);
-    await prisma.refreshToken.delete({ where: { token: refreshToken } }).catch(() => {});
     await prisma.refreshToken.create({ data: { token: newRefreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) } }).catch(() => {});
     res.cookie('accessToken', newAccessToken, Object.assign({ maxAge: 15 * 60 * 1000 }, cookieOptions()));
     res.cookie('refreshToken', newRefreshToken, Object.assign({ maxAge: 7 * 24 * 60 * 60 * 1000 }, cookieOptions()));
