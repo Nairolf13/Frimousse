@@ -9,6 +9,20 @@ router.use(auth, requireActiveSubscription);
 
 const DEFAULT_RATE_PER_DAY = 2;
 
+// Child.photoUrl stores the raw Supabase storage path — must go through the
+// /api/storage/photo proxy (which enforces per-child access control) rather
+// than being served to the client as-is.
+function toProxyUrl(pathOrUrl) {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith('/api/storage')) return pathOrUrl;
+  if (pathOrUrl.startsWith('http')) {
+    const match = pathOrUrl.match(/\/object\/(?:public|sign)\/[^/]+\/(.+?)(\?.*)?$/);
+    if (match) return `/api/storage/photo?path=${encodeURIComponent(match[1])}`;
+    return pathOrUrl;
+  }
+  return `/api/storage/photo?path=${encodeURIComponent(pathOrUrl)}`;
+}
+
 // Récupérer l’historique par mois/année
 router.get('/:year/:month', async (req, res) => {
   const { year, month } = req.params;
@@ -118,7 +132,7 @@ router.get('/:year/:month', async (req, res) => {
             const days = await prisma.assignment.count({ where: { childId: k.id, date: { gte: start, lte: end } } });
             const subtotal = days * ratePerDay;
             actual += subtotal;
-            newDetails.push({ childName: child ? child.name : k.id, childPhotoUrl: child?.photoUrl || null, daysPresent: days, ratePerDay, subtotal });
+            newDetails.push({ childName: child ? child.name : k.id, childPhotoUrl: toProxyUrl(child?.photoUrl), daysPresent: days, ratePerDay, subtotal });
           }
         }
         actual -= rec.adjustment || 0;

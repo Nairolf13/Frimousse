@@ -5,6 +5,17 @@ const requireAuth = require('../middleware/authMiddleware');
 // small debug wrapper: enable birthday logs only when SHOW_BIRTHDAY_LOGS=1
 const debug = process.env.SHOW_BIRTHDAY_LOGS === '1' ? console.debug.bind(console) : () => {};
 
+function toProxyUrl(pathOrUrl) {
+  if (!pathOrUrl) return null;
+  if (pathOrUrl.startsWith('/api/storage')) return pathOrUrl;
+  if (pathOrUrl.startsWith('http')) {
+    const match = pathOrUrl.match(/\/object\/(?:public|sign)\/[^/]+\/(.+?)(\?.*)?$/);
+    if (match) return `/api/storage/photo?path=${encodeURIComponent(match[1])}`;
+    return pathOrUrl;
+  }
+  return `/api/storage/photo?path=${encodeURIComponent(pathOrUrl)}`;
+}
+
 // GET /api/centers/public - Public directory of centers (no auth required)
 router.get('/public', async (req, res) => {
   try {
@@ -304,7 +315,7 @@ router.get('/:id/birthdays/today', requireAuth, async (req, res) => {
     // Fetch children with a birthDate for the center, then filter by month/day in JS
     const children = await prisma.child.findMany({
       where: { centerId: id, birthDate: { not: null } },
-      select: { id: true, name: true, birthDate: true, prescriptionUrl: true }
+      select: { id: true, name: true, birthDate: true, photoUrl: true }
     });
 
     const today = new Date();
@@ -315,7 +326,7 @@ router.get('/:id/birthdays/today', requireAuth, async (req, res) => {
       if (!c.birthDate) return false;
       const d = new Date(c.birthDate);
       return d.getMonth() + 1 === todayMonth && d.getDate() === todayDay;
-    }).map(c => ({ id: c.id, name: c.name, dob: c.birthDate, photoUrl: c.prescriptionUrl || null }));
+    }).map(c => ({ id: c.id, name: c.name, dob: c.birthDate, photoUrl: toProxyUrl(c.photoUrl) }));
 
   debug(`[birthdays] resolved ${birthdays.length} birthday(s) for center=${id} user=${req.user && req.user.id ? req.user.id : 'anon'}`);
   if (birthdays.length) debug('[birthdays] list:', JSON.stringify(birthdays));

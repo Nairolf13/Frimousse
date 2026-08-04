@@ -49,10 +49,12 @@ async function checkAccess(sanitized, user) {
     const child = await prisma.child.findUnique({ where: { id: childId }, select: { centerId: true } });
     if (!child) return false;
     if (isSuperAdmin(user)) return true;
-    if (child.centerId === user.centerId) return true;
+    // Nanny/parent roles must have a specific assignment/link to this child —
+    // sharing a centerId alone is not enough (a center has many children).
     if (user.nannyId) return !!(await prisma.childNanny.findFirst({ where: { childId, nannyId: user.nannyId } }));
     if (user.parentId) return !!(await prisma.parentChild.findFirst({ where: { childId, parentId: user.parentId } }));
-    return false;
+    // Center staff without a nanny/parent identity (i.e. admins) see all of their center's children.
+    return child.centerId === user.centerId;
   }
 
   if (sanitized.startsWith('prescriptions/')) {
@@ -63,10 +65,9 @@ async function checkAccess(sanitized, user) {
     const child = await prisma.child.findUnique({ where: { id: childId }, select: { centerId: true } });
     if (!child) return false;
     if (isSuperAdmin(user)) return true;
-    if (child.centerId === user.centerId) return true;
     if (user.nannyId) return !!(await prisma.childNanny.findFirst({ where: { childId, nannyId: user.nannyId } }));
     if (user.parentId) return !!(await prisma.parentChild.findFirst({ where: { childId, parentId: user.parentId } }));
-    return false;
+    return child.centerId === user.centerId;
   }
 
   if (sanitized.startsWith('avatars/')) {

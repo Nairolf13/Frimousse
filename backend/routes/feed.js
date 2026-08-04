@@ -149,15 +149,29 @@ router.post('/', checkContentLength, upload.array('images', 6), async (req, res)
   if (text && String(text).length > 2000) return res.status(400).json({ message: 'Texte trop long (max 2000 caractères).' });
 
   // Normalize tagged children into an array. Maintain backward compatibility with single childId param.
-  const tagged = Array.isArray(taggedChildIds) ? taggedChildIds.filter(Boolean) : (childId ? [childId] : []);
+  // Always include childId even when taggedChildIds is also provided — it is written
+  // onto the post separately below and must not skip validation.
+  const tagged = Array.from(new Set([
+    ...(Array.isArray(taggedChildIds) ? taggedChildIds.filter(Boolean) : []),
+    ...(childId ? [childId] : []),
+  ]));
 
-  // If tagged children are provided, ensure each has at least one PhotoConsent granting posting for this center.
+  // If tagged children are provided, ensure each belongs to the poster's own center
+  // AND has at least one PhotoConsent granting posting.
   if (tagged.length > 0) {
-    // find all children that lack consent
+    const foreign = [];
     const lacking = [];
     for (const cid of tagged) {
+      const child = await prisma.child.findUnique({ where: { id: cid }, select: { centerId: true } });
+      if (!child || (user.role !== 'super-admin' && child.centerId !== user.centerId)) {
+        foreign.push(cid);
+        continue;
+      }
       const consent = await prisma.photoConsent.findFirst({ where: { childId: cid, consent: true } });
       if (!consent) lacking.push(cid);
+    }
+    if (foreign.length > 0) {
+      return res.status(404).json({ message: 'Some children were not found' });
     }
     if (lacking.length > 0) {
       return res.status(403).json({ message: 'Photo consent absent for some children', lacking });
@@ -679,18 +693,30 @@ router.post('/:postId/media', checkContentLength, upload.array('images', 6), asy
     const files = req.files || [];
     // Normalize tagging fields from multipart form fields (multer populates req.body)
     const { taggedChildIds, childId, noChildSelected } = req.body || {};
-    const tagged = Array.isArray(taggedChildIds) ? taggedChildIds.filter(Boolean) : (childId ? [childId] : []);
+    const tagged = Array.from(new Set([
+      ...(Array.isArray(taggedChildIds) ? taggedChildIds.filter(Boolean) : []),
+      ...(childId ? [childId] : []),
+    ]));
     // When uploading files, require the user to either mark 'noChildSelected' or identify at least one child
     if (files.length > 0) {
       if (!noChildSelected && (!tagged || tagged.length === 0)) {
         return res.status(400).json({ message: 'Veuillez identifier les enfants ou sélectionner "Pas d\'enfant" avant d\'uploader des photos.' });
       }
-      // If tagged children provided, ensure each has photo consent
+      // If tagged children provided, ensure each belongs to the post's center and has photo consent
       if (tagged && tagged.length > 0) {
+        const foreign = [];
         const lacking = [];
         for (const cid of tagged) {
+          const child = await prisma.child.findUnique({ where: { id: cid }, select: { centerId: true } });
+          if (!child || (user.role !== 'super-admin' && child.centerId !== post.centerId)) {
+            foreign.push(cid);
+            continue;
+          }
           const consent = await prisma.photoConsent.findFirst({ where: { childId: cid, consent: true } });
           if (!consent) lacking.push(cid);
+        }
+        if (foreign.length > 0) {
+          return res.status(404).json({ message: 'Some children were not found' });
         }
         if (lacking.length > 0) {
           return res.status(403).json({ message: 'Photo consent absent for some children', lacking });

@@ -649,8 +649,8 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   const { id } = req.params;
   try {
-    const child = await prisma.child.findUnique({ 
-      where: { id }, 
+    const child = await prisma.child.findUnique({
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -660,8 +660,9 @@ router.get('/:id', auth, async (req, res) => {
   birthDate: true,
   cotisationPaidUntil: true,
         allergies: true,
-        parents: { 
-          include: { parent: true } 
+        centerId: true,
+        parents: {
+          include: { parent: true }
         }
       }
     });
@@ -676,10 +677,14 @@ router.get('/:id', auth, async (req, res) => {
       if (!parentId) return res.status(404).json({ message: 'Not found' });
       const link = await prisma.parentChild.findFirst({ where: { childId: id, parentId } });
       if (!link) return res.status(404).json({ message: 'Not found' });
+    } else if (req.user && req.user.role === 'nanny') {
+      const link = await prisma.childNanny.findFirst({ where: { childId: id, nannyId: req.user.nannyId } });
+      if (!link) return res.status(404).json({ message: 'Not found' });
     } else if (!isSuperAdmin(req.user) && child.centerId !== req.user.centerId) {
       return res.status(404).json({ message: 'Not found' });
     }
-    res.json(child);
+    const { centerId: _omit, ...childOut } = child;
+    res.json(childOut);
   } catch (error) {
     console.error('Error fetching child', error);
     return res.status(500).json({ error: 'Erreur serveur lors de la lecture de l\'enfant' });
