@@ -7,6 +7,13 @@ const logger = require('../lib/logger');
 const { detectLang, subject: emailSubject, formatDate } = require('../lib/i18n');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
+async function scopeNannyIdsToCenter(nannyIds, user) {
+  if (!Array.isArray(nannyIds) || !nannyIds.length) return [];
+  if (isSuperAdmin(user)) return nannyIds;
+  const nannies = await prisma.nanny.findMany({ where: { id: { in: nannyIds }, centerId: user.centerId }, select: { id: true } });
+  return nannies.map(n => n.id);
+}
+
 router.get('/schedules', auth, async (req, res) => {
   try {
   const where = {};
@@ -42,7 +49,8 @@ router.post('/schedules', auth, async (req, res) => {
     const { date, startTime, endTime, name, nannyIds, comment } = req.body;
   const data = { date: new Date(date), startTime, endTime, name, comment };
   if (!isSuperAdmin(req.user) && req.user.centerId) data.centerId = req.user.centerId;
-  const schedule = await prisma.schedule.create({ data: { ...data, nannies: { connect: nannyIds.map(id => ({ id })) } } });
+  const scopedNannyIds = await scopeNannyIdsToCenter(nannyIds, req.user);
+  const schedule = await prisma.schedule.create({ data: { ...data, nannies: { connect: scopedNannyIds.map(id => ({ id })) } } });
     const fullSchedule = await prisma.schedule.findUnique({
       where: { id: schedule.id },
       include: { nannies: true },
@@ -146,7 +154,8 @@ router.put('/schedules/:scheduleId', auth, async (req, res) => {
       const existing = await prisma.schedule.findUnique({ where: { id: scheduleId } });
       if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Schedule not found' });
     }
-    const schedule = await prisma.schedule.update({ where: { id: scheduleId }, data: { date: new Date(date), startTime, endTime, name, comment, nannies: nannyIds ? { set: nannyIds.map(id => ({ id })) } : undefined } });
+    const scopedNannyIds = nannyIds ? await scopeNannyIdsToCenter(nannyIds, req.user) : undefined;
+    const schedule = await prisma.schedule.update({ where: { id: scheduleId }, data: { date: new Date(date), startTime, endTime, name, comment, nannies: scopedNannyIds ? { set: scopedNannyIds.map(id => ({ id })) } : undefined } });
     res.json(schedule);
       // notify parents about updated activity
       (async () => {

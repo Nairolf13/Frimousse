@@ -165,4 +165,4 @@ async function getParentEmailsForDate(prisma, date, centerId, isSuperAdmin) {
   return [...new Set(parentEmails)].filter(Boolean);
 }
 
-module.exports = { renderTemplate, sendMail, sendTemplatedMail, getParentEmailsForDate };
+module.exports = { renderTemplate, sendMail, sendTemplatedMail, getParentEmailsForDate, escapeHtml };

@@ -40,6 +40,17 @@ function canManageParents(user) {
   return isAdminRole(user) || !!user.nannyId || isSuperAdmin(user);
 }
 
+// Nannies may only manage/view parents whose child(ren) are actually assigned to them —
+// not every parent in the center. Admins/super-admins are unaffected.
+async function nannyCanAccessParent(user, parentId) {
+  if (!user || !user.nannyId) return true;
+  const link = await prisma.parentChild.findFirst({
+    where: { parentId, child: { childNannies: { some: { nannyId: user.nannyId } } } },
+    select: { parentId: true },
+  });
+  return !!link;
+}
+
 router.get('/children', requireAuth, async (req, res) => {
   try {
     const parentId = req.user.parentId || req.user.id;
@@ -186,6 +197,7 @@ router.get('/:id/adjustments', requireAuth, async (req, res) => {
       const targetParent = await prisma.parent.findUnique({ where: { id }, select: { centerId: true } });
       if (!targetParent || targetParent.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
     }
+    if (!isOwner && !(await nannyCanAccessParent(userReq, id))) return res.status(403).json({ message: 'Interdit' });
     const where = { parentId: id };
     if (month) where.month = month;
     const adj = await prisma.invoiceAdjustment.findMany({ where, orderBy: { createdAt: 'desc' } });
@@ -206,6 +218,7 @@ router.post('/:id/adjustments', requireAuth, async (req, res) => {
       const targetParent = await prisma.parent.findUnique({ where: { id }, select: { centerId: true } });
       if (!targetParent || targetParent.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
     }
+    if (!(await nannyCanAccessParent(userReq, id))) return res.status(403).json({ message: 'Forbidden' });
     // force to current month regardless of input to prevent carry‑over
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -239,6 +252,7 @@ router.delete('/:id/adjustments/:adjId', requireAuth, requireActiveSubscription,
       const targetParent = await prisma.parent.findUnique({ where: { id }, select: { centerId: true } });
       if (!targetParent || targetParent.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
     }
+    if (!(await nannyCanAccessParent(userReq, id))) return res.status(403).json({ message: 'Interdit' });
     const adj = await prisma.invoiceAdjustment.findUnique({ where: { id: adjId } });
     if (!adj || adj.parentId !== id) return res.status(404).json({ message: 'Ajustement non trouvé' });
     // revert paymentHistory if exists
@@ -269,6 +283,8 @@ router.get('/billing', requireAuth, async (req, res) => {
     // Build parent list scope similar to /admin. If nanny or non-super-admin, restrict by center.
     const whereParent = {};
     if (!isSuperAdmin(userReq) && userReq.centerId) whereParent.centerId = userReq.centerId;
+    // Nannies only see billing for parents whose children are actually assigned to them.
+    if (userReq.nannyId) whereParent.children = { some: { child: { childNannies: { some: { nannyId: userReq.nannyId } } } } };
 
     // fetch parents in scope with their children ids
     const parents = await prisma.parent.findMany({ where: whereParent, include: { children: { include: { child: true } } } });
@@ -339,6 +355,9 @@ router.get('/by-email', requireAuth, async (req, res) => {
   if (!isSuperAdmin(userReq) && userReq.centerId) {
     where.centerId = userReq.centerId;
   }
+  if (userReq.nannyId) {
+    where.children = { some: { child: { childNannies: { some: { nannyId: userReq.nannyId } } } } };
+  }
   const parent = await prisma.parent.findFirst({ where });
     if (!parent) return res.status(404).json({ message: 'Parent non trouvé' });
     res.json(parent);
@@ -363,6 +382,8 @@ router.get('/:id', requireAuth, async (req, res) => {
     if (!isSuperAdmin(userReq) && canManageParents(userReq) && userReq.centerId && parent.centerId !== userReq.centerId) {
       return res.status(404).json({ message: 'Parent non trouvé' });
     }
+    const isOwner = userReq.parentId && String(userReq.parentId) === String(id);
+    if (!isOwner && !(await nannyCanAccessParent(userReq, id))) return res.status(403).json({ message: 'Interdit' });
     res.json(parent);
   } catch (err) {
     console.error('GET /api/parent/:id error', err);
@@ -416,7 +437,11 @@ router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'
         if (region !== undefined) updateData.region = region;
         if (country !== undefined) updateData.country = country;
         await tx.user.update({ where: { id: existingUser.id }, data: updateData });
-        return { parent, user: await tx.user.findUnique({ where: { id: existingUser.id } }), isNewUser: false };
+        const safeUser = await tx.user.findUnique({
+          where: { id: existingUser.id },
+          select: { id: true, email: true, name: true, role: true, parentId: true, centerId: true, createdAt: true },
+        });
+        return { parent, user: safeUser, isNewUser: false };
       } else {
 
     const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
@@ -427,7 +452,10 @@ router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'
   } else if (userReq.centerId) {
     userData.centerId = userReq.centerId;
   }
-  const user = await tx.user.create({ data: userData });
+  const user = await tx.user.create({
+    data: userData,
+    select: { id: true, email: true, name: true, role: true, parentId: true, centerId: true, createdAt: true },
+  });
         return { parent, user, isNewUser: true };
       }
     });
@@ -469,7 +497,9 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
     const { id } = req.params;
     const userReq = req.user || {};
     // allow if user can manage parents (admin/nanny/super-admin) OR the parent is updating their own record
-    if (!(canManageParents(userReq) || (userReq.parentId && String(userReq.parentId) === String(id)))) return res.status(403).json({ message: 'Interdit' });
+    const isSelf = userReq.parentId && String(userReq.parentId) === String(id);
+    if (!(canManageParents(userReq) || isSelf)) return res.status(403).json({ message: 'Interdit' });
+    if (!isSelf && !(await nannyCanAccessParent(userReq, id))) return res.status(403).json({ message: 'Interdit' });
   const { name, phone, firstName, lastName, address, postalCode, city, region, country } = req.body;
   const email = req.body.email !== undefined ? String(req.body.email || '').trim().toLowerCase() : undefined;
 

@@ -132,6 +132,10 @@ router.get('/:id/billing', auth, async (req, res) => {
       if (process.env.NODE_ENV !== 'production') console.debug('[billing] center mismatch', { childId: id, childCenterId: child.centerId, userId: req.user && req.user.id, userCenterId: req.user && req.user.centerId });
       return res.status(403).json({ error: 'Access denied: child belongs to a different center' });
     }
+    if (req.user.role === 'nanny') {
+      const link = await prisma.childNanny.findFirst({ where: { childId: id, nannyId: req.user.nannyId } });
+      if (!link) return res.status(403).json({ error: 'Access denied: child not assigned to this nanny' });
+    }
   }
   const assignments = await prisma.assignment.findMany({
     where: {
@@ -308,11 +312,10 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('child'), async
       let linkedParent = null;
       if (parentId) {
         const parent = await tx.parent.findUnique({ where: { id: parentId } });
-        if (parent) {
+        if (parent && (isSuperAdmin(req.user) || !child.centerId || parent.centerId === child.centerId)) {
           await tx.parentChild.create({ data: { parentId: parent.id, childId: child.id } });
           linkedParent = parent;
         }
-      } else if (parentMail) {
       } else if (parentMail) {
   let parent = await tx.parent.findFirst({ where: { email: { equals: parentMail, mode: 'insensitive' } } });
         if (!parent) {
@@ -460,18 +463,13 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
       });
 
   if (parentId) {
-        await tx.parentChild.deleteMany({ where: { childId: id } });
         const parent = await tx.parent.findUnique({ where: { id: parentId } });
-        if (parent) {
+        if (parent && (isSuperAdmin(req.user) || !existingChild.centerId || parent.centerId === existingChild.centerId)) {
+          await tx.parentChild.deleteMany({ where: { childId: id } });
           await tx.parentChild.create({ data: { parentId: parent.id, childId: id } });
         }
       } else if (parentMail) {
-      } else if (parentMail) {
   let parent = await tx.parent.findFirst({ where: { email: { equals: parentMail, mode: 'insensitive' } } });
-          if (!isSuperAdmin(req.user)) {
-            const existing = await prisma.child.findUnique({ where: { id } });
-            if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
-          }
         if (!parent) {
           const names = (parentName || '').trim().split(/\s+/);
           const firstName = names.shift() || 'Parent';
@@ -705,7 +703,7 @@ router.get('/:id/photo-consent', auth, async (req, res) => {
     if (!isParent && !isAdmin) return res.status(403).json({ message: 'Forbidden' });
 
     // For admins, check center access
-    if (isAdmin && !isSuperAdmin(req.user) && req.user.centerId && child.centerId !== req.user.centerId) {
+    if (isAdmin && !isSuperAdmin(req.user) && child.centerId !== req.user.centerId) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
@@ -750,7 +748,7 @@ router.post('/:id/photo-consent', auth, async (req, res) => {
     if (!isParent && !isAdmin) return res.status(403).json({ message: 'Forbidden' });
 
     // For admins, check center access
-    if (isAdmin && !isSuperAdmin(req.user) && req.user.centerId && child.centerId !== req.user.centerId) {
+    if (isAdmin && !isSuperAdmin(req.user) && child.centerId !== req.user.centerId) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
@@ -874,7 +872,7 @@ router.get('/:id/photo-consent-summary', auth, async (req, res) => {
       const nannyId = req.user.nannyId;
       const link = await prisma.childNanny.findFirst({ where: { childId: id, nannyId } });
       if (!link) return res.status(403).json({ message: 'Forbidden' });
-    } else if (!isSuperAdmin(req.user) && req.user && req.user.centerId && child.centerId !== req.user.centerId) {
+    } else if (!isSuperAdmin(req.user) && (!req.user || child.centerId !== req.user.centerId)) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 

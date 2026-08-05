@@ -22,6 +22,11 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
     }
     if (!parentId) return res.json([]);
     where.child = { parents: { some: { parentId } } };
+  } else if (req.user && req.user.role === 'nanny') {
+    where.OR = [
+      { nannyId: req.user.nannyId },
+      { child: { childNannies: { some: { nannyId: req.user.nannyId } } } },
+    ];
   }
   const reports = await prisma.report.findMany({ include: { child: true, nanny: true }, where, orderBy: { date: 'desc' } });
     res.json(reports);
