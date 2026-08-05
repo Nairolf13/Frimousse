@@ -9,6 +9,7 @@ import TutorialOverlay from './TutorialOverlay';
 import TutorialMenu from './TutorialMenu';
 import { useAuth } from '../src/context/AuthContext';
 import AnnouncementBanner from './AnnouncementBanner';
+import { usePresenceWS } from '../src/hooks/usePresenceWS';
 
 export default function ProtectedLayout() {
   const { user, setUser } = useAuth();
@@ -21,6 +22,7 @@ export default function ProtectedLayout() {
 
   const { birthdays } = useBirthdayCheck(user ? centerId : undefined);
   const [showBirthday, setShowBirthday] = useState(false);
+  usePresenceWS(user?.id);
 
   useEffect(() => {
     if (!birthdays || birthdays.length === 0 || !centerId) return;
