@@ -12,6 +12,7 @@ import type { Theme } from '../hooks/useTheme';
 import LanguageDropdown from '../components/LanguageDropdown';
 import AvatarCropper from '../components/AvatarCropper';
 import ImportModal from '../components/ImportModal';
+import SuperAdminDashboardSection from '../components/SuperAdminDashboardSection';
 import { HiOutlineChat, HiOutlinePaperAirplane, HiOutlineClock, HiOutlineCheckCircle } from 'react-icons/hi';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -1068,6 +1069,22 @@ export default function Settings() {
               </button>
             )}
 
+            {/* Tableau de bord — super-admin only */}
+            {isSuperAdmin && (
+              <button
+                onClick={() => setSearchParams({ section: 'dashboard' })}
+                className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+              >
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center text-white flex-shrink-0" style={{ background: 'linear-gradient(135deg,#0b5566,#1a8fa8)' }}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
+                </div>
+                <div>
+                  <div className="font-semibold text-primary text-sm">{t('settings.section.dashboard', 'Tableau de bord')}</div>
+                  <div className="text-xs text-muted mt-0.5">{t('settings.section.dashboard.subtitle', 'Connexions et revenus')}</div>
+                </div>
+              </button>
+            )}
+
             {/* Langue */}
             <button
               onClick={() => setSearchParams({ section: 'langue' })}
@@ -1348,6 +1365,14 @@ export default function Settings() {
                 <><svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>{t('settings.billing.save_btn')}</>
               )}
             </button>
+          </div>
+        )}
+
+        {/* ── Section: Tableau de bord (super-admin) ── */}
+        {activeSection === 'dashboard' && isSuperAdmin && (
+          <div>
+            <SectionHeader title={t('settings.section.dashboard', 'Tableau de bord')} />
+            <SuperAdminDashboardSection />
           </div>
         )}
 

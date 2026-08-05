@@ -264,6 +264,9 @@ const supportRoutes = require('./routes/support');
 app.use('/api/admin', adminEmailLogsRoutes);
 app.use('/api/support', supportRoutes);
 
+const adminDashboardRoutes = require('./routes/adminDashboard');
+app.use('/api/admin', adminDashboardRoutes);
+
 const notFoundLogsRoutes = require('./routes/notFoundLogs');
 app.use('/api/not-found-logs', notFoundLogsRoutes);   // POST public (log 404)
 app.use('/api/admin', notFoundLogsRoutes);             // GET/PATCH/DELETE super-admin

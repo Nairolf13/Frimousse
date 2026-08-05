@@ -216,4 +216,8 @@ function broadcastToParticipants(participantUserIds, data) {
   }
 }
 
-module.exports = { init, broadcastSignature, broadcastMessage, broadcastToParticipants, sendToUser };
+function getOnlineUserIds() {
+  return [...onlineUsers];
+}
+
+module.exports = { init, broadcastSignature, broadcastMessage, broadcastToParticipants, sendToUser, getOnlineUserIds };
