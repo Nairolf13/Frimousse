@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { HiOutlineUsers, HiOutlineTrendingUp, HiOutlineTrendingDown } from 'react-icons/hi';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useI18n } from '../src/lib/useI18n';
@@ -39,38 +39,93 @@ function formatMonthLabel(month: string) {
   return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short' });
 }
 
+function wsUrl() {
+  const wsBase = API_URL
+    .replace(/^https:/, 'wss:')
+    .replace(/^http:/, 'ws:')
+    .replace(/\/api\/?$/, '');
+  return `${wsBase}/ws`;
+}
+
 export default function SuperAdminDashboardSection() {
   const { t } = useI18n();
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [revenue, setRevenue] = useState<RevenueStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadOnlineUsersRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
+
+    async function loadOnlineUsers() {
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/admin/online-users`, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setOnlineUsers(data.users || []);
+      } catch { /* ignore transient errors, next event/poll will retry */ }
+    }
+    loadOnlineUsersRef.current = loadOnlineUsers;
+
+    async function loadRevenue() {
+      try {
+        const res = await fetchWithRefresh(`${API_URL}/admin/revenue-stats?months=12`, { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setRevenue(data);
+      } catch { /* ignore transient errors, next poll will retry */ }
+    }
+
+    async function loadAll() {
       try {
         setError(null);
-        const [onlineRes, revenueRes] = await Promise.all([
-          fetchWithRefresh(`${API_URL}/admin/online-users`, { credentials: 'include' }),
-          fetchWithRefresh(`${API_URL}/admin/revenue-stats?months=12`, { credentials: 'include' }),
-        ]);
-        if (!onlineRes.ok || !revenueRes.ok) throw new Error('failed');
-        const onlineData = await onlineRes.json();
-        const revenueData = await revenueRes.json();
-        if (cancelled) return;
-        setOnlineUsers(onlineData.users || []);
-        setRevenue(revenueData);
+        await Promise.all([loadOnlineUsers(), loadRevenue()]);
       } catch {
         if (!cancelled) setError(t('settings.superadmin.load_error', 'Impossible de charger le tableau de bord.'));
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    load();
-    const interval = setInterval(load, 30000);
-    return () => { cancelled = true; clearInterval(interval); };
+    loadAll();
+
+    // Revenue doesn't need to be live — a slow poll is enough.
+    const revenueInterval = setInterval(loadRevenue, 60000);
+
+    return () => { cancelled = true; clearInterval(revenueInterval); };
   }, [t]);
+
+  // Live updates for the online-users panel: react to the same presence
+  // WebSocket used app-wide (see usePresenceWS), instead of polling.
+  useEffect(() => {
+    let ws: WebSocket;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let unmounted = false;
+
+    function connect() {
+      ws = new WebSocket(wsUrl());
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'presence' || msg.type === 'online_list') {
+            loadOnlineUsersRef.current();
+          }
+        } catch { /* ignore malformed frames */ }
+      };
+      ws.onclose = () => {
+        if (unmounted) return;
+        reconnectTimer = setTimeout(connect, 3000);
+      };
+      ws.onerror = () => ws.close();
+    }
+    connect();
+
+    return () => {
+      unmounted = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      ws?.close();
+    };
+  }, []);
 
   if (loading && !revenue) {
     return (
