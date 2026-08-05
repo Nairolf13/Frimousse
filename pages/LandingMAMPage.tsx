@@ -1,7 +1,31 @@
 import SEO from '../components/SEO';
+import { buildFaqLd } from '../components/buildJsonLd';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
 import { Link } from 'react-router-dom';
+
+const FAQ_ITEMS = [
+  {
+    q: "Quel logiciel pour gérer une MAM ?",
+    a: "Les Frimousses est spécialement conçu pour les Maisons d'Assistantes Maternelles. Il permet à chaque assistante maternelle de gérer son planning et ses enfants de façon indépendante, tout en partageant la structure commune. L'application est accessible sur ordinateur, tablette et smartphone.",
+  },
+  {
+    q: "Le logiciel est-il adapté à plusieurs assistantes maternelles ?",
+    a: "Oui, Les Frimousses gère le multi-utilisateurs nativement. Chaque assistante maternelle a son propre accès, ses propres fiches enfants et son planning. La responsable de la MAM dispose d'une vue d'ensemble sur toute la structure.",
+  },
+  {
+    q: "Les Frimousses génère-t-il les rapports pour la PMI ?",
+    a: "Les Frimousses génère automatiquement les rapports d'activité mensuels avec les données de présence, heures de garde et activités. Ces exports facilitent les déclarations auprès de la PMI et de la CAF.",
+  },
+  {
+    q: "Faut-il être informaticien pour utiliser ce logiciel MAM ?",
+    a: "Non. Les Frimousses est conçu pour être utilisé au quotidien sans formation technique. L'interface est intuitive, mobile-first, et notre équipe vous accompagne lors de la prise en main.",
+  },
+  {
+    q: "Quel est le prix du logiciel pour une MAM ?",
+    a: "Les Frimousses propose un essai gratuit sans engagement. Les tarifs démarrent à partir de 29,99 €/mois pour les petites structures. Consultez notre page tarifs pour le détail des offres adaptées aux MAM.",
+  },
+];
 
 export default function LandingMAMPage() {
   return (
@@ -15,6 +39,7 @@ export default function LandingMAMPage() {
           { name: 'Accueil', url: 'https://lesfrimousses.com/' },
           { name: 'Logiciel MAM', url: 'https://lesfrimousses.com/logiciel-mam' },
         ]}
+        ldJson={buildFaqLd(FAQ_ITEMS)}
       />
       <PublicNavbar variant="dark" />
 
@@ -139,28 +164,7 @@ export default function LandingMAMPage() {
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Questions fréquentes sur la gestion MAM</h2>
           </div>
           <div className="space-y-4">
-            {[
-              {
-                q: "Quel logiciel pour gérer une MAM ?",
-                a: "Les Frimousses est spécialement conçu pour les Maisons d'Assistantes Maternelles. Il permet à chaque assistante maternelle de gérer son planning et ses enfants de façon indépendante, tout en partageant la structure commune. L'application est accessible sur ordinateur, tablette et smartphone.",
-              },
-              {
-                q: "Le logiciel est-il adapté à plusieurs assistantes maternelles ?",
-                a: "Oui, Les Frimousses gère le multi-utilisateurs nativement. Chaque assistante maternelle a son propre accès, ses propres fiches enfants et son planning. La responsable de la MAM dispose d'une vue d'ensemble sur toute la structure.",
-              },
-              {
-                q: "Les Frimousses génère-t-il les rapports pour la PMI ?",
-                a: "Les Frimousses génère automatiquement les rapports d'activité mensuels avec les données de présence, heures de garde et activités. Ces exports facilitent les déclarations auprès de la PMI et de la CAF.",
-              },
-              {
-                q: "Faut-il être informaticien pour utiliser ce logiciel MAM ?",
-                a: "Non. Les Frimousses est conçu pour être utilisé au quotidien sans formation technique. L'interface est intuitive, mobile-first, et notre équipe vous accompagne lors de la prise en main.",
-              },
-              {
-                q: "Quel est le prix du logiciel pour une MAM ?",
-                a: "Les Frimousses propose un essai gratuit sans engagement. Les tarifs démarrent à partir de 29,99 €/mois pour les petites structures. Consultez notre page tarifs pour le détail des offres adaptées aux MAM.",
-              },
-            ].map((item, i) => (
+            {FAQ_ITEMS.map((item, i) => (
               <details key={i} className="group bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden">
                 <summary className="flex items-center justify-between p-6 cursor-pointer font-semibold text-gray-900 list-none">
                   {item.q}

@@ -91,7 +91,9 @@ async function purgeOldPushSubscriptions() {
 
 /**
  * Anonymize inactive users (no login for 2 years).
- * We cannot determine last login from the schema, so we use updatedAt on the User record.
+ * lastLoginAt is set on every login (password + OAuth); accounts created before this field
+ * existed have lastLoginAt = null, so we also require updatedAt to be old to avoid
+ * anonymizing an account that logged in recently but whose lastLoginAt backfill is missing.
  * The name and email are replaced with anonymized placeholders; the account is kept for
  * audit trail purposes (e.g. payment history foreign keys).
  */
@@ -101,6 +103,7 @@ async function anonymizeInactiveUsers() {
   const inactive = await prisma.user.findMany({
     where: {
       updatedAt: { lt: cutoff },
+      OR: [{ lastLoginAt: null }, { lastLoginAt: { lt: cutoff } }],
       // Exclude super-admins
       NOT: { role: { in: ['super-admin', 'super_admin', 'SUPER_ADMIN'] } },
       // Skip already-anonymized accounts

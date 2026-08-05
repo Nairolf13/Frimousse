@@ -1,18 +1,62 @@
 import SEO from '../components/SEO';
+import { buildFaqLd } from '../components/buildJsonLd';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
 import { Link } from 'react-router-dom';
+
+const STEPS = [
+  {
+    title: 'Accéder aux rapports',
+    desc: 'Depuis le menu principal, ouvrez la rubrique "Rapports". La liste affiche tous les rapports d\'activité de votre structure (ou uniquement ceux de vos enfants assignés pour une nounou).',
+  },
+  {
+    title: "Filtrer par type ou période",
+    desc: "Filtrez par type de rapport (incident, comportement, soin) ou sur les 30 derniers jours pour retrouver rapidement l'information recherchée.",
+  },
+  {
+    title: 'Consulter un rapport en détail',
+    desc: "Cliquez sur un rapport pour voir son contenu complet : priorité, description, enfant concerné, intervenant à l'origine du rapport et date.",
+  },
+  {
+    title: 'Suivre la facturation associée',
+    desc: "Les rapports d'activité et les présences alimentent automatiquement la facturation mensuelle des familles, disponible en PDF dans l'espace facturation.",
+  },
+  {
+    title: 'Exporter le planning d\'une nounou',
+    desc: "Depuis la fiche d'un intervenant, un export PDF de son planning mensuel est disponible pour archivage ou transmission administrative.",
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    q: 'Qui peut créer un rapport d\'activité ?',
+    a: "Les administrateurs et les nounous peuvent créer un rapport (incident, comportement ou soin) pour un enfant. Les parents ne créent pas de rapport mais peuvent consulter ceux concernant leur enfant.",
+  },
+  {
+    q: 'Peut-on exporter les rapports en PDF ou Excel ?',
+    a: "Les rapports d'activité se consultent et se filtrent directement dans l'application. L'export PDF est disponible pour les factures mensuelles et pour le planning d'un intervenant, depuis leurs rubriques respectives.",
+  },
+  {
+    q: 'Les parents voient-ils tous les rapports de la structure ?',
+    a: "Non, un parent ne voit que les rapports concernant son propre enfant. Une nounou ne voit que les rapports des enfants qui lui sont assignés.",
+  },
+  {
+    q: 'Comment retrouver un rapport ancien ?',
+    a: "Désactivez le filtre \"30 derniers jours\" et utilisez le filtre par type pour parcourir l'historique complet des rapports de la structure.",
+  },
+];
 
 export default function GuideExportReportPage() {
   return (
     <div className="min-h-screen w-full flex flex-col overflow-x-hidden bg-white">
       <SEO
-        title={"Exporter un rapport d'activite | Guide Frimousse - Logiciel creche"}
-        description={"Comment exporter un rapport d'activite dans Frimousse : consultation, filtrage, export PDF ou Excel. Guide pour creches, micro-creches et MAM."}
+        title={"Rapports d'activité et facturation | Guide Frimousse - Logiciel crèche"}
+        description={"Comment consulter, filtrer les rapports d'activité et exporter la facturation et le planning dans Frimousse. Guide pour crèches, micro-crèches et MAM."}
         url={"https://lesfrimousses.com/guide-export-rapport"}
         image={"https://lesfrimousses.com/imgs/og-banner.png"}
         type={"article"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Export rapport', url: 'https://lesfrimousses.com/guide-export-rapport' }]}
+        ldJson={buildFaqLd(FAQ_ITEMS)}
       />
       <PublicNavbar />
       <main className="flex-1 w-full">
@@ -24,37 +68,64 @@ export default function GuideExportReportPage() {
           <div className="relative z-10 max-w-3xl mx-auto text-center px-6">
             <span className="inline-block text-xs font-bold uppercase tracking-widest text-white bg-white/15 px-4 py-1.5 rounded-full mb-6 border border-white/20">Guide</span>
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold !text-[#ffffff] leading-[1.1] tracking-tight mb-6">
-              Exporter un rapport
+              Rapports & facturation
             </h1>
             <p className="text-lg md:text-xl !text-[#ffffff] max-w-2xl mx-auto leading-relaxed">
-              Tutoriel pour exporter un rapport dans Frimousse : consultation, filtrage, export PDF ou Excel des rapports d'activité.
+              Consulter, filtrer les rapports d'activité et exporter la facturation ou le planning d'un intervenant.
             </p>
           </div>
           <div className="absolute bottom-0 left-0 right-0">
             <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto block"><path d="M0 120V60C240 15 480 0 720 25C960 50 1200 80 1440 50V120H0Z" fill="white"/></svg>
           </div>
         </section>
-        {/* ── Guide Card ── */}
-        <section className="py-20 md:py-24 px-6">
+
+        {/* ── Étapes ── */}
+        <section className="py-20 md:py-24 px-6 bg-white">
           <div className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-xl p-8">
-              <h2 className="text-2xl font-bold text-brand-700 mb-6 text-center">Exporter un rapport</h2>
-              <ol className="list-decimal list-inside text-gray-700 space-y-3 mb-6 text-left">
-                <li>Accédez à la rubrique "Rapports" via le menu.</li>
-                <li>Filtrez les rapports selon la période, le groupe ou l’intervenant.</li>
-                <li>Cliquez sur le rapport souhaité pour le consulter en détail.</li>
-                <li>Utilisez les options d'export pour générer un PDF ou un fichier Excel.</li>
-              </ol>
-              <div className="mt-8 text-gray-500 text-sm">Astuce : Utilisez les filtres pour retrouver rapidement le rapport souhaité.</div>
-              <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link to="/support" className="group bg-white text-brand-700 px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-black/10 hover:shadow-2xl transition-all hover:-translate-y-0.5 inline-flex items-center gap-3">
-                  Retour au support
-                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
-                </Link>
-                <Link to="/" className="!text-[#ffffff] border-2 border-brand-500 hover:border-brand-600 px-8 py-4 rounded-2xl font-bold text-lg transition-all bg-brand-500 hover:bg-brand-600">
-                  Accueil
-                </Link>
-              </div>
+            <div className="text-center mb-12">
+              <span className="inline-block text-xs font-bold uppercase tracking-widest text-brand-500 bg-brand-50 px-4 py-1.5 rounded-full mb-4">Étape par étape</span>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Consulter et exporter</h2>
+            </div>
+            <ol className="space-y-6">
+              {STEPS.map((s, i) => (
+                <li key={i} className="flex gap-5 bg-gray-50 rounded-3xl border border-gray-100 p-6 md:p-8">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-brand-500 text-white font-bold flex items-center justify-center">{i + 1}</div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">{s.title}</h3>
+                    <p className="text-gray-600 leading-relaxed">{s.desc}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ── FAQ ── */}
+        <section className="py-20 px-6 bg-gray-50">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-12">
+              <span className="inline-block text-xs font-bold uppercase tracking-widest text-brand-500 bg-brand-50 px-4 py-1.5 rounded-full mb-4">FAQ</span>
+              <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Questions fréquentes sur les rapports</h2>
+            </div>
+            <div className="space-y-4">
+              {FAQ_ITEMS.map((item, i) => (
+                <details key={i} className="group bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                  <summary className="flex items-center justify-between p-6 cursor-pointer font-semibold text-gray-900 list-none">
+                    {item.q}
+                    <svg className="w-5 h-5 text-brand-500 flex-shrink-0 ml-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                  </summary>
+                  <div className="px-6 pb-6 text-gray-600 leading-relaxed">{item.a}</div>
+                </details>
+              ))}
+            </div>
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link to="/support" className="group bg-white text-brand-700 px-8 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-black/10 hover:shadow-2xl transition-all hover:-translate-y-0.5 inline-flex items-center gap-3 border border-gray-100">
+                Retour au support
+                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"/></svg>
+              </Link>
+              <Link to="/" className="!text-[#ffffff] border-2 border-brand-500 hover:border-brand-600 px-8 py-4 rounded-2xl font-bold text-lg transition-all bg-brand-500 hover:bg-brand-600">
+                Accueil
+              </Link>
             </div>
           </div>
         </section>

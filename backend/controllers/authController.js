@@ -272,6 +272,7 @@ exports.login = async (req, res) => {
   const refreshToken = generateRefreshToken(user);
   await prisma.refreshToken.deleteMany({ where: { userId: user.id } });
   await prisma.refreshToken.create({ data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS) } });
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: ACCESS_TOKEN_TTL_MS }, cookieOptions()));
   res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: REFRESH_TOKEN_TTL_MS }, cookieOptions()));
   res.json({ id: user.id, email: user.email, name: user.name, role: user.role, centerId: user.centerId || null });

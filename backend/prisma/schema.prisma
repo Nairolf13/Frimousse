@@ -96,6 +96,7 @@ model User {
   supportTickets           SupportTicket[]
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
+  lastLoginAt              DateTime?
   feedPosts                FeedPost[]
   feedLikes                FeedLike[]
   feedComments             FeedComment[]
@@ -233,25 +234,25 @@ model Report {
 }
 
 model Center {
-  id                      String          @id @default(uuid())
-  name                    String
-  users                   User[]
-  parents                 Parent[]
-  children                Child[]
-  nannies                 Nanny[]
-  assignments             Assignment[]
-  schedules               Schedule[]
-  reports                 Report[]
-  feedPosts               FeedPost[]
-  reviews                 Review[]
-  presenceSheets          PresenceSheet[]
-  conversations           Conversation[]
-  createdAt               DateTime        @default(now())
-  notifyByEmail           Boolean         @default(true)
-  dailyRate               Float           @default(2.0)
-  childCotisationAmount   Float           @default(15.0)
-  nannyCotisationAmount   Float           @default(10.0)
-  showInDirectory         Boolean         @default(true)
+  id                    String          @id @default(uuid())
+  name                  String
+  users                 User[]
+  parents               Parent[]
+  children              Child[]
+  nannies               Nanny[]
+  assignments           Assignment[]
+  schedules             Schedule[]
+  reports               Report[]
+  feedPosts             FeedPost[]
+  reviews               Review[]
+  presenceSheets        PresenceSheet[]
+  conversations         Conversation[]
+  createdAt             DateTime        @default(now())
+  notifyByEmail         Boolean         @default(true)
+  dailyRate             Float           @default(2.0)
+  childCotisationAmount Float           @default(15.0)
+  nannyCotisationAmount Float           @default(10.0)
+  showInDirectory       Boolean         @default(true)
 }
 
 model Subscription {
@@ -591,13 +592,13 @@ model AnnouncementRead {
 
 // Logs des pages 404 — accessible uniquement par le super-admin
 model NotFoundLog {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   url         String
-  count       Int      @default(1)
+  count       Int       @default(1)
   userAgent   String?
-  firstSeenAt DateTime @default(now())
-  lastSeenAt  DateTime @default(now())
-  resolved    Boolean  @default(false)
+  firstSeenAt DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  resolved    Boolean   @default(false)
   resolvedAt  DateTime?
 
   @@index([lastSeenAt])

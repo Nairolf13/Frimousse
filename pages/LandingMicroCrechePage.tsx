@@ -1,7 +1,31 @@
 import SEO from '../components/SEO';
+import { buildFaqLd } from '../components/buildJsonLd';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
 import { Link } from 'react-router-dom';
+
+const FAQ_ITEMS = [
+  {
+    q: "Quel logiciel pour gérer une micro-crèche ?",
+    a: "Les Frimousses est un logiciel de gestion micro-crèche conçu pour les petites structures jusqu'à 12 enfants. Il couvre le planning, les fiches enfants, la communication avec les parents et les rapports d'activité. Simple à prendre en main, accessible sur tous les appareils.",
+  },
+  {
+    q: "Combien coûte un logiciel de gestion pour micro-crèche ?",
+    a: "Les Frimousses propose un essai gratuit sans engagement. L'abonnement pour les petites structures (micro-crèches) démarre à partir de 29,99 €/mois. Consultez notre page tarifs pour les détails.",
+  },
+  {
+    q: "Le logiciel fonctionne-t-il sans connexion internet ?",
+    a: "Les Frimousses est une application web qui nécessite une connexion internet. Cependant, certaines données sont mises en cache pour fonctionner en mode hors ligne partiel. Une connexion même basique (4G) suffit pour une utilisation normale.",
+  },
+  {
+    q: "Peut-on utiliser Les Frimousses sur tablette ?",
+    a: "Oui, Les Frimousses est optimisé pour tablette et smartphone. L'interface s'adapte automatiquement à la taille de l'écran. Idéal pour une utilisation en salle d'accueil avec une tablette affichant le planning du jour.",
+  },
+  {
+    q: "Comment Les Frimousses aide pour la facturation de la micro-crèche ?",
+    a: "L'application trace automatiquement les heures de présence de chaque enfant. En fin de mois, vous exportez les données pour calculer les factures familles et préparer vos déclarations auprès de la CAF et des organismes de financement.",
+  },
+];
 
 export default function LandingMicroCrechePage() {
   return (
@@ -15,6 +39,7 @@ export default function LandingMicroCrechePage() {
           { name: 'Accueil', url: 'https://lesfrimousses.com/' },
           { name: 'Logiciel micro-crèche', url: 'https://lesfrimousses.com/logiciel-micro-creche' },
         ]}
+        ldJson={buildFaqLd(FAQ_ITEMS)}
       />
       <PublicNavbar variant="dark" />
 
@@ -139,28 +164,7 @@ export default function LandingMicroCrechePage() {
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Questions fréquentes sur la gestion de micro-crèche</h2>
           </div>
           <div className="space-y-4">
-            {[
-              {
-                q: "Quel logiciel pour gérer une micro-crèche ?",
-                a: "Les Frimousses est un logiciel de gestion micro-crèche conçu pour les petites structures jusqu'à 12 enfants. Il couvre le planning, les fiches enfants, la communication avec les parents et les rapports d'activité. Simple à prendre en main, accessible sur tous les appareils.",
-              },
-              {
-                q: "Combien coûte un logiciel de gestion pour micro-crèche ?",
-                a: "Les Frimousses propose un essai gratuit sans engagement. L'abonnement pour les petites structures (micro-crèches) démarre à partir de 29,99 €/mois. Consultez notre page tarifs pour les détails.",
-              },
-              {
-                q: "Le logiciel fonctionne-t-il sans connexion internet ?",
-                a: "Les Frimousses est une application web qui nécessite une connexion internet. Cependant, certaines données sont mises en cache pour fonctionner en mode hors ligne partiel. Une connexion même basique (4G) suffit pour une utilisation normale.",
-              },
-              {
-                q: "Peut-on utiliser Les Frimousses sur tablette ?",
-                a: "Oui, Les Frimousses est optimisé pour tablette et smartphone. L'interface s'adapte automatiquement à la taille de l'écran. Idéal pour une utilisation en salle d'accueil avec une tablette affichant le planning du jour.",
-              },
-              {
-                q: "Comment Les Frimousses aide pour la facturation de la micro-crèche ?",
-                a: "L'application trace automatiquement les heures de présence de chaque enfant. En fin de mois, vous exportez les données pour calculer les factures familles et préparer vos déclarations auprès de la CAF et des organismes de financement.",
-              },
-            ].map((item, i) => (
+            {FAQ_ITEMS.map((item, i) => (
               <details key={i} className="group bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden">
                 <summary className="flex items-center justify-between p-6 cursor-pointer font-semibold text-gray-900 list-none">
                   {item.q}

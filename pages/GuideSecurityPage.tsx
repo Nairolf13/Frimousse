@@ -1,8 +1,28 @@
 
 import SEO from '../components/SEO';
+import { buildFaqLd } from '../components/buildJsonLd';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
 import { useNavigate } from 'react-router-dom';
+
+const FAQ_ITEMS = [
+  {
+    q: 'Les photos des enfants sont-elles stockées de façon sécurisée ?',
+    a: "Oui, les photos et documents des enfants sont stockés dans un espace privé et ne sont jamais accessibles par une URL publique directe. Seuls les utilisateurs autorisés (équipe de la structure et parents liés à l'enfant) peuvent les consulter.",
+  },
+  {
+    q: 'Qui a accès aux données médicales des enfants ?',
+    a: "Uniquement l'équipe encadrante de la structure (nounous assignées à l'enfant, administrateurs) et les parents liés à l'enfant. Aucune autre famille ni aucun autre intervenant n'y a accès.",
+  },
+  {
+    q: 'Frimousse est-il hébergé en France ou en Europe ?',
+    a: "Les données sont hébergées chez des prestataires conformes au RGPD. Un registre des traitements est tenu conformément à l'Article 30 du RGPD et peut être consulté sur demande.",
+  },
+  {
+    q: "Comment un parent peut-il exercer son droit à l'oubli ?",
+    a: "Un parent peut demander la suppression de ses données et de celles de son enfant depuis les paramètres de son compte ou en contactant le support. La demande est traitée conformément aux délais prévus par le RGPD.",
+  },
+];
 
 export default function GuideSecurityPage() {
   const navigate = useNavigate();
@@ -15,6 +35,7 @@ export default function GuideSecurityPage() {
         image={"https://lesfrimousses.com/imgs/og-banner.png"}
         type={"article"}
         breadcrumbs={[{ name: 'Accueil', url: 'https://lesfrimousses.com/' }, { name: 'Guide securite', url: 'https://lesfrimousses.com/guide-securite' }]}
+        ldJson={buildFaqLd(FAQ_ITEMS)}
       />
 
       <PublicNavbar variant="dark" />
@@ -98,6 +119,27 @@ export default function GuideSecurityPage() {
                 <h3 className="text-xl font-bold text-gray-900 mb-3">{v.title}</h3>
                 <p className="text-gray-500 leading-relaxed">{v.desc}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ section */}
+      <section className="py-20 px-6 bg-gray-50">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <span className="inline-block text-xs font-bold uppercase tracking-widest text-brand-500 bg-brand-50 px-4 py-1.5 rounded-full mb-4">FAQ</span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Questions fréquentes sur la sécurité et le RGPD</h2>
+          </div>
+          <div className="space-y-4">
+            {FAQ_ITEMS.map((item, i) => (
+              <details key={i} className="group bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                <summary className="flex items-center justify-between p-6 cursor-pointer font-semibold text-gray-900 list-none">
+                  {item.q}
+                  <svg className="w-5 h-5 text-brand-500 flex-shrink-0 ml-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
+                </summary>
+                <div className="px-6 pb-6 text-gray-600 leading-relaxed">{item.a}</div>
+              </details>
             ))}
           </div>
         </div>
