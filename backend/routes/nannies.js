@@ -38,10 +38,13 @@ router.get('/', auth, requireActiveSubscription, async (req, res) => {
   }
   // include linked user so we can return address fields stored on User
   const nannies = await prisma.nanny.findMany({ where, include: { assignedChildren: true, user: true } });
-  // flatten user address fields onto the nanny object for frontend convenience
+  // flatten user address fields onto the nanny object for frontend convenience —
+  // never spread the raw `user` record itself (it carries the bcrypt password
+  // hash and verification codes), always strip it before responding.
   const mapped = nannies.map(n => {
     const u = n.user || {};
-    return Object.assign({}, n, {
+    const { user: _omitUser, ...nannyOut } = n;
+    return Object.assign({}, nannyOut, {
       address: u.address || null,
       postalCode: u.postalCode || null,
       city: u.city || null,
@@ -71,7 +74,8 @@ router.post('/batch/details', auth, async (req, res) => {
     const nannies = await prisma.nanny.findMany({ where, include: { assignedChildren: true, user: true } });
     const mapped = nannies.map(n => {
       const u = n.user || {};
-      return Object.assign({}, n, {
+      const { user: _omitUser, ...nannyOut } = n;
+      return Object.assign({}, nannyOut, {
         address: u.address || null,
         postalCode: u.postalCode || null,
         city: u.city || null,
@@ -394,7 +398,8 @@ router.get('/:id', auth, async (req, res) => {
   if (!nanny) return res.status(404).json({ message: 'Not found' });
   if (!isSuperAdmin(req.user) && nanny.centerId !== req.user.centerId) return res.status(404).json({ message: 'Not found' });
   const u = nanny.user || {};
-  const mapped = Object.assign({}, nanny, {
+  const { user: _omitUser, ...nannyOut } = nanny;
+  const mapped = Object.assign({}, nannyOut, {
     address: u.address || null,
     postalCode: u.postalCode || null,
     city: u.city || null,

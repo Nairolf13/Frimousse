@@ -282,7 +282,13 @@ router.get('/:year/:month/group-by-nanny', async (req, res) => {
         const g = groups.get(nid);
         // PaymentHistory model stores the full entry amount in `total` (not `amount`)
         const amount = Number(rec.total || 0);
-        g.payments.push({ id: rec.id, amount, createdAt: rec.createdAt, parent: rec.parent, invoiceNumber });
+        // Only expose what the frontend actually needs — never the full Parent
+        // record (email, phone, centerId) or nested children/assignments to a
+        // nanny viewing this grouped billing summary.
+        const safeParent = rec.parent
+          ? { id: rec.parent.id, firstName: rec.parent.firstName, lastName: rec.parent.lastName }
+          : null;
+        g.payments.push({ id: rec.id, amount, createdAt: rec.createdAt, parent: safeParent, invoiceNumber });
         g.total = (g.total || 0) + amount;
       }
     }
