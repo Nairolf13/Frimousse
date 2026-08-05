@@ -810,8 +810,13 @@ router.delete('/:postId/media/:mediaId', async (req, res) => {
     if (media.postId !== postId) return res.status(400).json({ message: 'Media does not belong to this post' });
     const post = await prisma.feedPost.findUnique({ where: { id: postId } });
     if (!post) return res.status(404).json({ message: 'Post not found' });
-    if (post.authorId !== user.id && !['admin', 'super-admin'].includes(user.role)) {
-      return res.status(403).json({ message: 'Forbidden' });
+    if (post.authorId !== user.id) {
+      if (!['admin', 'super-admin'].includes(user.role)) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
+      if (user.role === 'admin' && post.centerId !== user.centerId) {
+        return res.status(403).json({ message: 'Forbidden' });
+      }
     }
     // If we have stored storage paths, remove files from Supabase too (public bucket)
     try {

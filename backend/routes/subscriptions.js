@@ -483,7 +483,10 @@ router.post('/create-with-token', async (req, res) => {
   const baseCookie = { httpOnly: true, path: '/', secure: process.env.NODE_ENV === 'production', sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'lax' };
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15*60*1000 }, baseCookie));
   res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7*24*60*60*1000 }, baseCookie));
-      return res.json({ subscription: stripeSub || existing });
+      const safeSub = stripeSub
+        ? { id: stripeSub.id, status: stripeSub.status, plan: existing.plan, currentPeriodEnd: stripeSub.current_period_end ? new Date(stripeSub.current_period_end * 1000) : null }
+        : { id: existing.id, status: existing.status, plan: existing.plan, currentPeriodEnd: existing.currentPeriodEnd };
+      return res.json({ subscription: safeSub });
     }
 
     if (!priceId) {

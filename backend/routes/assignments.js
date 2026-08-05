@@ -5,6 +5,7 @@ const auth = require('../middleware/authMiddleware');
 const prisma = require('../lib/prismaClient');
 const logger = require('../lib/logger');
 const { detectLang, subject: emailSubject, formatDate } = require('../lib/i18n');
+const { escapeHtml } = require('../lib/email');
 function isSuperAdmin(user) { if (!user || !user.role) return false; const r = String(user.role).toLowerCase(); return r === 'super-admin' || r === 'super_admin' || r === 'superadmin' || r.includes('super'); }
 
 function isAdminRole(user) {
@@ -79,7 +80,7 @@ router.get('/', auth, async (req, res) => {
 // helper to format schedules as html list
 function schedulesToHtml(schedules) {
   if (!schedules || schedules.length === 0) return '';
-  const items = schedules.map(s => `<div style="margin-bottom:8px"><strong>${s.name || ''}</strong><div>${s.comment || ''}</div><small>${s.startTime || ''} — ${s.endTime || ''}</small></div>`).join('');
+  const items = schedules.map(s => `<div style="margin-bottom:8px"><strong>${escapeHtml(s.name || '')}</strong><div>${escapeHtml(s.comment || '')}</div><small>${escapeHtml(s.startTime || '')} — ${escapeHtml(s.endTime || '')}</small></div>`).join('');
   return `<div style="margin-top:12px;"><h4 style="margin:0 0 8px;color:#0f172a;">Détails de l'activité</h4>${items}</div>`;
 }
 
@@ -313,7 +314,7 @@ router.put('/:id', auth, async (req, res) => {
     if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Assignment not found' });
 
     // Verify new childId/nannyId belong to the same center before updating
-    if (!isSuperAdmin(req.user) && req.user.centerId) {
+    if (!isSuperAdmin(req.user)) {
       if (childId && childId !== existing.childId) {
         const child = await prisma.child.findUnique({ where: { id: childId } });
         if (!child || child.centerId !== req.user.centerId) return res.status(404).json({ message: 'Child not found' });

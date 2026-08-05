@@ -3,7 +3,7 @@ const router = express.Router();
 
 const prisma = require('../lib/prismaClient');
 const requireAuth = require('../middleware/authMiddleware');
-const { sendMail } = require('../lib/email');
+const { sendMail, escapeHtml } = require('../lib/email');
 
 // GET /api/announcements/active
 // Returns active announcements not yet read by the current user
@@ -65,6 +65,9 @@ router.post('/', requireAuth, async (req, res) => {
   try {
     const { title, message, type = 'info', sendEmail: doSendEmail = false } = req.body;
     if (!title || !message) return res.status(400).json({ error: 'title and message are required' });
+    if (String(title).length > 200 || String(message).length > 5000) {
+      return res.status(400).json({ error: 'title/message too long' });
+    }
 
     const announcement = await prisma.announcement.create({
       data: { title, message, type, active: true, sendEmail: !!doSendEmail },
@@ -79,14 +82,16 @@ router.post('/', requireAuth, async (req, res) => {
         });
         const emails = users.map(u => u.email).filter(Boolean);
         if (emails.length > 0) {
-          const linkedMessage = message
+          const escapedMessage = escapeHtml(message);
+          const linkedMessage = escapedMessage
           .replace(/\n/g, '<br/>')
           .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" style="color:#6366f1;word-break:break-all;">$1</a>');
+        const safeTitle = escapeHtml(title);
         const htmlBody = `
             <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px;">
               <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:16px;padding:32px;color:white;text-align:center;margin-bottom:24px;">
                 <img src="https://lesfrimousses.com/imgs/LogoFrimousse.webp" alt="Frimousse" style="width:60px;height:60px;object-fit:contain;margin-bottom:16px;border-radius:12px;background:white;padding:4px;" />
-                <h1 style="margin:0;font-size:22px;font-weight:800;">${title}</h1>
+                <h1 style="margin:0;font-size:22px;font-weight:800;">${safeTitle}</h1>
               </div>
               <div style="background:#f8fafc;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
                 <p style="margin:0;font-size:15px;color:#374151;line-height:1.7;">${linkedMessage}</p>

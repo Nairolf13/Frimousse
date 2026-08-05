@@ -247,11 +247,18 @@ router.put('/me', auth, async (req, res) => {
     if ('city' in addrValidation.data) data.city = addrValidation.data.city;
     if ('region' in addrValidation.data) data.region = addrValidation.data.region;
     if ('country' in addrValidation.data) data.country = addrValidation.data.country;
-    if (typeof avatarUrl !== 'undefined') data.avatarUrl = avatarUrl || null;
-    if (typeof facebookUrl !== 'undefined') data.facebookUrl = String(facebookUrl || '').trim() || null;
-    if (typeof instagramUrl !== 'undefined') data.instagramUrl = String(instagramUrl || '').trim() || null;
-    if (typeof linkedinUrl !== 'undefined') data.linkedinUrl = String(linkedinUrl || '').trim() || null;
-    if (typeof twitterUrl !== 'undefined') data.twitterUrl = String(twitterUrl || '').trim() || null;
+    const isSafeUrl = (v) => /^https?:\/\//i.test(v) || v.startsWith('/api/storage');
+    if (typeof avatarUrl !== 'undefined') {
+      const v = String(avatarUrl || '').trim();
+      if (v && !isSafeUrl(v)) return res.status(400).json({ message: 'avatarUrl invalide' });
+      data.avatarUrl = v || null;
+    }
+    for (const [key, val] of Object.entries({ facebookUrl, instagramUrl, linkedinUrl, twitterUrl })) {
+      if (typeof val === 'undefined') continue;
+      const v = String(val || '').trim();
+      if (v && !isSafeUrl(v)) return res.status(400).json({ message: `${key} invalide` });
+      data[key] = v || null;
+    }
 
     let pendingEmailCode = null;
     if (pendingEmailRequested) {
