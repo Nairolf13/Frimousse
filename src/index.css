@@ -170,6 +170,14 @@
     @apply bg-surface text-primary;
   }
 
+  /* Public auth forms (Login/Register/...) are always light-themed and don't
+     set an explicit text color on their inputs, so they inherit text-primary
+     from <body> — invisible-looking (light gray on light gray) when the app
+     theme is dark. Force a dark, readable color regardless of theme. */
+  .bg-gray-50.border-gray-400 {
+    color: #111827;
+  }
+
   /* Better focus styles */
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-500;
