@@ -135,3 +135,16 @@ export function buildJsonLd(props: Partial<SEOProps> & { url?: string }): JsonLd
 
   return [...jsonLD, ...extraLd];
 }
+
+/** Build a FAQPage JSON-LD object from a simple {q, a}[] list, e.g. an on-page FAQ accordion. */
+export function buildFaqLd(items: { q: string; a: string }[]): JsonLdObject {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map(({ q, a }) => ({
+      '@type': 'Question',
+      name: q,
+      acceptedAnswer: { '@type': 'Answer', text: a },
+    })),
+  };
+}

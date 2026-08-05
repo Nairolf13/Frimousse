@@ -42,6 +42,7 @@ async function loginAndRedirect(res, user, isNew) {
   await prisma.refreshToken.create({
     data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
   });
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15 * 60 * 1000 }, cookieOptions()));
   res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7 * 24 * 60 * 60 * 1000 }, cookieOptions()));
@@ -62,6 +63,7 @@ async function loginAndRespond(res, user, isNew) {
   await prisma.refreshToken.create({
     data: { token: refreshToken, userId: user.id, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
   });
+  await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
 
   res.cookie('accessToken', accessToken, Object.assign({ maxAge: 15 * 60 * 1000 }, cookieOptions()));
   res.cookie('refreshToken', refreshToken, Object.assign({ maxAge: 7 * 24 * 60 * 60 * 1000 }, cookieOptions()));

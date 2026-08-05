@@ -1,7 +1,31 @@
 import SEO from '../components/SEO';
+import { buildFaqLd } from '../components/buildJsonLd';
 import PublicNavbar from '../components/PublicNavbar';
 import PublicFooter from '../components/PublicFooter';
 import { Link } from 'react-router-dom';
+
+const FAQ_ITEMS = [
+  {
+    q: "Quel logiciel pour gérer une crèche associative ?",
+    a: "Les Frimousses est un logiciel de gestion crèche complet, pensé pour les crèches associatives et parentales. Il couvre les inscriptions, le planning des intervenants, le suivi des enfants, la communication avec les parents et les rapports d'activité. Essai gratuit sans engagement.",
+  },
+  {
+    q: "Le logiciel convient-il aux crèches parentales ?",
+    a: "Oui, Les Frimousses est parfaitement adapté aux crèches parentales. Les parents-bénévoles peuvent accéder à l'application selon les droits définis par le gestionnaire. La transparence et la communication sont au cœur de nos fonctionnalités.",
+  },
+  {
+    q: "Peut-on gérer plusieurs groupes d'enfants dans la crèche ?",
+    a: "Oui, l'application permet de créer plusieurs groupes (bébés, moyens, grands) et d'affecter les intervenants et enfants à chaque groupe. Les plannings et fiches sont filtrables par groupe.",
+  },
+  {
+    q: "Les Frimousses est-il accessible sur smartphone ?",
+    a: "Oui, Les Frimousses est une application web responsive, accessible depuis n'importe quel navigateur sur ordinateur, tablette et smartphone. Les éducatrices peuvent noter les présences et partager des photos directement depuis le terrain.",
+  },
+  {
+    q: "Comment migrer depuis mon ancien logiciel de crèche ?",
+    a: "Notre équipe vous accompagne lors de la migration. Les données existantes (enfants, familles, plannings) peuvent être importées. Un guide de démarrage et un support humain sont disponibles pour assurer une transition sans rupture.",
+  },
+];
 
 export default function LandingCrechePage() {
   return (
@@ -15,6 +39,7 @@ export default function LandingCrechePage() {
           { name: 'Accueil', url: 'https://lesfrimousses.com/' },
           { name: 'Logiciel crèche', url: 'https://lesfrimousses.com/logiciel-creche' },
         ]}
+        ldJson={buildFaqLd(FAQ_ITEMS)}
       />
       <PublicNavbar variant="dark" />
 
@@ -139,28 +164,7 @@ export default function LandingCrechePage() {
             <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Questions fréquentes sur la gestion de crèche</h2>
           </div>
           <div className="space-y-4">
-            {[
-              {
-                q: "Quel logiciel pour gérer une crèche associative ?",
-                a: "Les Frimousses est un logiciel de gestion crèche complet, pensé pour les crèches associatives et parentales. Il couvre les inscriptions, le planning des intervenants, le suivi des enfants, la communication avec les parents et les rapports d'activité. Essai gratuit sans engagement.",
-              },
-              {
-                q: "Le logiciel convient-il aux crèches parentales ?",
-                a: "Oui, Les Frimousses est parfaitement adapté aux crèches parentales. Les parents-bénévoles peuvent accéder à l'application selon les droits définis par le gestionnaire. La transparence et la communication sont au cœur de nos fonctionnalités.",
-              },
-              {
-                q: "Peut-on gérer plusieurs groupes d'enfants dans la crèche ?",
-                a: "Oui, l'application permet de créer plusieurs groupes (bébés, moyens, grands) et d'affecter les intervenants et enfants à chaque groupe. Les plannings et fiches sont filtrables par groupe.",
-              },
-              {
-                q: "Les Frimousses est-il accessible sur smartphone ?",
-                a: "Oui, Les Frimousses est une application web responsive, accessible depuis n'importe quel navigateur sur ordinateur, tablette et smartphone. Les éducatrices peuvent noter les présences et partager des photos directement depuis le terrain.",
-              },
-              {
-                q: "Comment migrer depuis mon ancien logiciel de crèche ?",
-                a: "Notre équipe vous accompagne lors de la migration. Les données existantes (enfants, familles, plannings) peuvent être importées. Un guide de démarrage et un support humain sont disponibles pour assurer une transition sans rupture.",
-              },
-            ].map((item, i) => (
+            {FAQ_ITEMS.map((item, i) => (
               <details key={i} className="group bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden">
                 <summary className="flex items-center justify-between p-6 cursor-pointer font-semibold text-gray-900 list-none">
                   {item.q}
