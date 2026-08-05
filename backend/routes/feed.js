@@ -330,7 +330,13 @@ router.post('/', checkContentLength, upload.array('images', 6), async (req, res)
       try { if (file.path) require('fs').unlinkSync(file.path); } catch (e) { /* ignore */ }
     }
 
-    const result = await prisma.feedPost.findUnique({ where: { id: post.id }, include: { medias: true, author: true } });
+    const result = await prisma.feedPost.findUnique({
+      where: { id: post.id },
+      include: {
+        medias: true,
+        author: { select: { id: true, name: true, avatarUrl: true, role: true } },
+      },
+    });
 
     // send push notifications in background (don't block response)
     (async () => {
