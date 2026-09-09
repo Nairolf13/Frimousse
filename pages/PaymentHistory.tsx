@@ -7,7 +7,16 @@ const meta = import.meta as { env?: { VITE_API_URL?: string } };
 const API_URL = meta?.env?.VITE_API_URL ?? '/api';
 
 type Detail = { childName: string; childPhotoUrl?: string | null; daysPresent: number; ratePerDay: number; subtotal: number };
-type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null; user?: { avatarUrl?: string | null } | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string; adjustment?: number };
+type RecordType = { id: string; parent: { id?: string; firstName?: string; lastName?: string; email?: string | null; phone?: string | null; user?: { avatarUrl?: string | null } | null } | null; parentSnapshot?: { firstName?: string; lastName?: string; email?: string | null } | null; total: number; details: Detail[]; createdAt?: string | null; paid?: boolean; invoiceNumber?: string; adjustment?: number };
+
+// A detached invoice (parent since deleted) still carries the identity
+// snapshot taken at deletion time — fall back to it so the name/email don't
+// just disappear from the history once the Parent record is gone.
+function displayParentName(rec: RecordType): string {
+  if (rec.parent) return `${rec.parent.firstName || ''} ${rec.parent.lastName || ''}`.trim();
+  if (rec.parentSnapshot) return `${rec.parentSnapshot.firstName || ''} ${rec.parentSnapshot.lastName || ''}`.trim();
+  return '';
+}
 type NannyGroup = {
   nanny: { id: string; name?: string | null; avatarUrl?: string | null };
   payments: Array<{ id: string; amount: number; createdAt?: string | null; parent?: { firstName?: string | null; lastName?: string | null; email?: string | null }; invoiceNumber?: string | null; adjustment?: number }>;
@@ -230,7 +239,7 @@ export default function PaymentHistoryPage() {
       if (!r.parent || r.parent.id !== parentFilter) return false;
     }
     if (search) {
-      const name = r.parent ? `${r.parent.firstName || ''} ${r.parent.lastName || ''}`.trim().toLowerCase() : '';
+      const name = displayParentName(r).toLowerCase();
       const q = search.trim().toLowerCase();
       if (!name.split(' ').some(part => part.startsWith(q))) return false;
     }
@@ -246,8 +255,8 @@ export default function PaymentHistoryPage() {
     const rows: string[] = [];
     rows.push(['Parent','Email','Phone','Child','Days','Rate','Subtotal','Total'].join(','));
     data.forEach(r => {
-      const parentName = r.parent ? `${r.parent.firstName || ''} ${r.parent.lastName || ''}`.trim() : '';
-      const email = r.parent?.email || '';
+      const parentName = displayParentName(r);
+      const email = r.parent?.email || r.parentSnapshot?.email || '';
       const phone = r.parent?.phone || '';
       (r.details || []).forEach(d => {
         rows.push([`"${parentName}"`,`"${email}"`,`"${phone}"`,`"${d.childName}"`,String(d.daysPresent),String(d.ratePerDay),String(d.subtotal),String(r.total)].join(','));
@@ -268,8 +277,8 @@ export default function PaymentHistoryPage() {
     if (!loading && filtered.length === 0) return <div className="text-muted text-sm py-8 text-center">{t('payments.history.empty')}</div>;
     return <>
       {filtered.map(rec => {
-        const initials = (rec.parent ? `${rec.parent.firstName || ''}`.slice(0,1) + (rec.parent?.lastName || '').slice(0,1) : '--').toUpperCase();
-        const parentName = rec.parent ? `${rec.parent.firstName || ''} ${rec.parent.lastName || ''}`.trim() : t('common.none');
+        const parentName = displayParentName(rec) || t('common.none');
+        const initials = (parentName !== t('common.none') ? parentName.slice(0, 1) + (parentName.split(' ')[1] || '').slice(0, 1) : '--').toUpperCase();
         return (
           <div key={rec.id} className="bg-card rounded-2xl shadow-md border border-border-default overflow-hidden mb-4">
             {/* Card header */}
@@ -282,7 +291,7 @@ export default function PaymentHistoryPage() {
                 </div>
                 <div className="min-w-0">
                   <div className="font-bold text-white text-base leading-tight truncate">{parentName}</div>
-                  <div className="text-xs text-white/70 mt-0.5 truncate">{rec.parent?.email ?? ''}{rec.parent?.phone ? ` • ${rec.parent?.phone}` : ''}</div>
+                  <div className="text-xs text-white/70 mt-0.5 truncate">{rec.parent?.email ?? rec.parentSnapshot?.email ?? ''}{rec.parent?.phone ? ` • ${rec.parent?.phone}` : ''}</div>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-wrap">

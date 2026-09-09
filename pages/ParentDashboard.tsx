@@ -54,6 +54,7 @@ const ParentDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [centers, setCenters] = useState<{ id: string; name: string }[]>([]);
   const [centerFilter, setCenterFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [adminData, setAdminData] = useState<AdminData>(null);
   const [parentBilling, setParentBilling] = useState<Record<string, number>>({});
@@ -369,7 +370,7 @@ const ParentDashboard: React.FC = () => {
               )}
               <div className="relative">
                 <svg className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input type="text" placeholder={t('children.search_placeholder')} className="border border-border-default rounded-xl pl-9 pr-3 py-2.5 text-primary bg-card shadow-sm text-sm w-full sm:w-64 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
+                <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('children.search_placeholder')} className="border border-border-default rounded-xl pl-9 pr-3 py-2.5 text-primary bg-card shadow-sm text-sm w-full sm:w-64 min-h-[44px] focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30" />
               </div>
             </div>
           </div>
@@ -556,7 +557,14 @@ const ParentDashboard: React.FC = () => {
           {/* Grille des cartes parents */}
           <div className="grid gap-5 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 auto-rows-fr items-stretch w-full">
             {(() => {
-              return parents.map((p) => {
+              const q = search.trim().toLowerCase();
+              const visibleParents = q
+                ? parents.filter(p => {
+                    const name = p.name || `${p.firstName || ''} ${p.lastName || ''}`.trim();
+                    return name.toLowerCase().split(' ').some(part => part.startsWith(q));
+                  })
+                : parents;
+              return visibleParents.map((p) => {
                 return (
                   <ParentCard
                     key={p.id}
