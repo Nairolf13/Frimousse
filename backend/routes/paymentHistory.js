@@ -61,12 +61,19 @@ router.get('/:year/:month', async (req, res) => {
       // Super-admin: full access
       data = await prisma.paymentHistory.findMany({ where: whereBase, include: { parent: { include: { user: { select: { avatarUrl: true } } } } } });
     } else if (isAdmin) {
-      // Regular admin: only parents belonging to the same center as the admin
+      // Regular admin: only parents belonging to the same center as the admin.
+      // Also include detached invoices (parent since deleted, parentId null)
+      // whose parentSnapshot still says they belonged to this center — the
+      // `parent: { is: { centerId } }` filter alone excludes those since
+      // there's no Parent relation left to match against.
       if (!user || !user.centerId) return res.status(403).json({ message: 'Accès refusé' });
       data = await prisma.paymentHistory.findMany({
         where: {
           ...whereBase,
-          parent: { is: { centerId: user.centerId } }
+          OR: [
+            { parent: { is: { centerId: user.centerId } } },
+            { AND: [{ parentId: null }, { parentSnapshot: { path: ['centerId'], equals: user.centerId } }] }
+          ]
         },
         include: { parent: { include: { user: { select: { avatarUrl: true } } } } }
       });
