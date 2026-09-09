@@ -109,7 +109,7 @@
   --animate-slide-up: slide-up 0.35s ease-out;
   --animate-fade-in: fade-in 0.2s ease-out;
   --animate-scale-in: scale-in 0.2s ease-out;
-  --animate-spin-slow: spin-slow 1.2s linear infinite;
+  --animate-spin-slow: spin-slow 2.2s infinite;
 
   @keyframes slide-up {
     0% { transform: translateY(100%); opacity: 0; }
@@ -124,7 +124,8 @@
     100% { opacity: 1; transform: scale(1); }
   }
   @keyframes spin-slow {
-    0% { transform: rotate(0deg); }
+    0% { transform: rotate(0deg); animation-timing-function: linear; }
+    82% { transform: rotate(360deg); animation-timing-function: linear; }
     100% { transform: rotate(360deg); }
   }
 

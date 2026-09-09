@@ -22,7 +22,17 @@ type Parent = {
 import InvoiceAdjustmentModal from './InvoiceAdjustmentModal';
 import parentService from '../services/parent';
 
-export default function ParentCard({ parent, color, parentDue, onChildClick, onEdit, onDelete, onAdjustmentSaved }: { parent: Parent; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; onAdjustmentSaved?: () => void }) {
+const CARD_GRADIENTS = [
+  'from-[#0b5566] to-[#0a7c97]',
+  'from-violet-600 to-purple-500',
+  'from-rose-500 to-pink-400',
+  'from-emerald-600 to-teal-500',
+  'from-amber-500 to-orange-400',
+  'from-sky-600 to-blue-500',
+];
+
+export default function ParentCard({ parent, idx, color, parentDue, onChildClick, onEdit, onDelete, onAdjustmentSaved }: { parent: Parent; idx?: number; color?: string; parentDue?: number; onChildClick?: (child: { id: string; name: string; group?: string }) => void; onEdit?: (p: Parent) => void; onDelete?: (id: string) => void; onAdjustmentSaved?: () => void }) {
+  const gradient = CARD_GRADIENTS[(idx ?? 0) % CARD_GRADIENTS.length];
   const navigate = useNavigate();
   const { t } = useI18n();
   const initials = ((parent.firstName && parent.lastName) ? `${parent.firstName[0] || ''}${parent.lastName[0] || ''}` : (parent.name || 'U')).toUpperCase().slice(0,2);
@@ -137,8 +147,8 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
       <div className={`flex flex-col h-full ${isDeleting ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
 
         {/* Header carte */}
-        <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-border-default dark:bg-input">
-          <div className="w-11 h-11 rounded-full flex items-center justify-center text-base font-extrabold text-white dark:text-primary flex-shrink-0 shadow-sm overflow-hidden bg-gradient-to-br from-[#0b5566] to-[#1a8fa8] dark:from-transparent dark:to-transparent dark:bg-border-default">
+        <div className={`flex items-center gap-3 px-5 pt-5 pb-4 bg-gradient-to-r ${gradient} dark:bg-none dark:bg-input dark:border-b dark:border-border-default`}>
+          <div className="w-11 h-11 rounded-full flex items-center justify-center text-base font-extrabold text-white dark:text-primary flex-shrink-0 shadow-sm overflow-hidden bg-white/20 dark:bg-border-default">
             {parent.avatarUrl ? (
               <img src={parent.avatarUrl} alt={`${parent.firstName || parent.name || 'Utilisateur'} avatar`} className="w-full h-full object-cover" />
             ) : (
@@ -146,7 +156,7 @@ export default function ParentCard({ parent, color, parentDue, onChildClick, onE
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-bold text-primary truncate text-base leading-tight">
+            <div className="font-bold text-white dark:text-primary truncate text-base leading-tight">
               {(parent.firstName || parent.lastName) ? `${parent.firstName || ''} ${parent.lastName || ''}`.trim() : (parent.name || '—')}
             </div>
           </div>
