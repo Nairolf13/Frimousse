@@ -564,11 +564,12 @@ const ParentDashboard: React.FC = () => {
                     return name.toLowerCase().split(' ').some(part => part.startsWith(q));
                   })
                 : parents;
-              return visibleParents.map((p) => {
+              return visibleParents.map((p, idx) => {
                 return (
                   <ParentCard
                     key={p.id}
                     parent={p}
+                    idx={idx}
                     color={'bg-card'}
                     parentDue={parentBilling[String(p.id)] || 0}
                     onAdjustmentSaved={refreshBilling}
