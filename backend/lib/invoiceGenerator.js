@@ -10,6 +10,12 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
       const ph = await prisma.paymentHistory.findUnique({ where: { id: paymentHistoryId }, include: { parent: true } });
       if (!ph) return reject(new Error('paymentHistory not found'));
 
+      // If the parent was since deleted, fall back to the snapshot taken at
+      // deletion time so detached invoices still render center/issuer info.
+      const snapshotCenterId = (!ph.parent && ph.parentSnapshot && typeof ph.parentSnapshot === 'object')
+        ? ph.parentSnapshot.centerId
+        : null;
+
       // try to find the User linked to this parent to get address fields
       let parentUser = null;
       try {
@@ -24,10 +30,11 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
       let centerName = null;
       let adminIssuer = null;
       try {
-        if (ph.parent && ph.parent.centerId) {
-          const center = await prisma.center.findUnique({ where: { id: ph.parent.centerId } });
+        const centerId = (ph.parent && ph.parent.centerId) || snapshotCenterId;
+        if (centerId) {
+          const center = await prisma.center.findUnique({ where: { id: centerId } });
           if (center) centerName = center.name || null;
-          const adminUser = await prisma.user.findFirst({ where: { centerId: ph.parent.centerId, role: { contains: 'admin', mode: 'insensitive' } } });
+          const adminUser = await prisma.user.findFirst({ where: { centerId, role: { contains: 'admin', mode: 'insensitive' } } });
           if (adminUser) {
             adminIssuer = {
               address: adminUser.address || '',
@@ -44,8 +51,9 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
 
       let issuer = null;
       try {
-        if (ph.parent && ph.parent.centerId) {
-          const adminUser = await prisma.user.findFirst({ where: { centerId: ph.parent.centerId, role: { contains: 'admin', mode: 'insensitive' } } });
+        const centerId = (ph.parent && ph.parent.centerId) || snapshotCenterId;
+        if (centerId) {
+          const adminUser = await prisma.user.findFirst({ where: { centerId, role: { contains: 'admin', mode: 'insensitive' } } });
           if (adminUser) {
             issuer = {
               name: adminUser.name || `${adminUser.email}`,
@@ -128,7 +136,10 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
       const colNameW = colAgeX - leftX - gap;
       const cols = { name: { x: colNameX, w: colNameW }, age: { x: colAgeX, w: colAgeW }, days: { x: colDaysX, w: colDaysW }, rate: { x: colRateX, w: colRateW }, subtotal: { x: colSubtotalX, w: colSubtotalW } };
 
-      const parentName = ph.parent ? `${ph.parent.firstName || ''} ${ph.parent.lastName || ''}`.trim() : '';
+      const snapshot = (!ph.parent && ph.parentSnapshot && typeof ph.parentSnapshot === 'object') ? ph.parentSnapshot : null;
+      const parentName = ph.parent
+        ? `${ph.parent.firstName || ''} ${ph.parent.lastName || ''}`.trim()
+        : (snapshot ? `${snapshot.firstName || ''} ${snapshot.lastName || ''}`.trim() : '');
 
       // Billing card
       const cardW = (pageWidthInner - 20) / 2;
@@ -153,7 +164,7 @@ async function generateInvoiceBuffer(prisma, paymentHistoryId) {
       const leftColX = contactX;
       const rightColX = contactX + leftColW + innerPadding;
       let leftY = currentContactY;
-      const emailToShow = ph.parent?.email || (parentUser && parentUser.email) || '';
+      const emailToShow = ph.parent?.email || (parentUser && parentUser.email) || snapshot?.email || '';
       const phoneToShow = (ph.parent && ph.parent.phone) || (parentUser && parentUser.phone) || '';
       if (emailToShow) { doc.fontSize(8.5).fillColor('#2563eb').text(emailToShow, leftColX, leftY, { width: leftColW }); leftY += doc.heightOfString(emailToShow, { width: leftColW }) + 4; }
       if (phoneToShow) { doc.fontSize(8.5).fillColor('#374151').text(phoneToShow, leftColX, leftY, { width: leftColW }); leftY += doc.heightOfString(phoneToShow, { width: leftColW }) + 4; }
