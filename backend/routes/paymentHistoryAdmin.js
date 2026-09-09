@@ -46,9 +46,15 @@ router.patch('/:id/paid', auth, async (req, res) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    // Non super-admins are scoped to their own center — hide existence of other centers' payments
-    if (!isSuperAdmin(user) && payment.parent && payment.parent.centerId !== user.centerId) {
-      return res.status(404).json({ message: 'Payment not found' });
+    // Non super-admins are scoped to their own center — hide existence of other centers' payments.
+    // Fall back to the parentSnapshot's centerId when the Parent has since been deleted, so a
+    // detached invoice can't silently bypass the tenant check by having a null parent relation.
+    if (!isSuperAdmin(user)) {
+      const snapshot = payment.parentSnapshot && typeof payment.parentSnapshot === 'object' ? payment.parentSnapshot : null;
+      const paymentCenterId = payment.parent ? payment.parent.centerId : snapshot?.centerId;
+      if (!paymentCenterId || paymentCenterId !== user.centerId) {
+        return res.status(404).json({ message: 'Payment not found' });
+      }
     }
 
     const updated = await prisma.paymentHistory.update({ where: { id }, data: { paid }, include: { parent: true } });

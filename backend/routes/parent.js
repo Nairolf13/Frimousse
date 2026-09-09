@@ -576,9 +576,13 @@ router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) =
   if (userReq.role === 'nanny') return res.status(403).json({ code: 'errors.nanny_cannot_delete' });
   if (!canManageParents(userReq)) return res.status(403).json({ message: 'Interdit' });
     const { id } = req.params;
+    let existing;
     if (!isSuperAdmin(userReq)) {
-      const existing = await prisma.parent.findUnique({ where: { id } });
+      existing = await prisma.parent.findUnique({ where: { id } });
       if (!existing || existing.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
+    } else {
+      existing = await prisma.parent.findUnique({ where: { id } });
+      if (!existing) return res.status(404).json({ message: 'Parent non trouvé' });
     }
     await prisma.$transaction(async (tx) => {
       // Si l'utilisateur est admin → on retire juste le lien parentId
@@ -597,8 +601,26 @@ router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) =
       await tx.parentChild.deleteMany({ where: { parentId: id } });
       // delete photo consents referencing this parent
       try { await tx.photoConsent.deleteMany({ where: { parentId: id } }); } catch (e) { /* ignore if model not present */ }
-      // delete payment histories referencing this parent
-      try { await tx.paymentHistory.deleteMany({ where: { parentId: id } }); } catch (e) { /* ignore if model not present */ }
+      // Keep payment histories for accounting retention (legal requirement):
+      // detach them from the parent instead of deleting, and snapshot the
+      // parent's identity so invoices remain legible after this deletion.
+      try {
+        await tx.paymentHistory.updateMany({
+          where: { parentId: id },
+          data: {
+            parentId: null,
+            // centerId is kept in the snapshot so tenant-isolation checks
+            // elsewhere (admin can only see their own center's invoices)
+            // keep working once the Parent relation is gone.
+            parentSnapshot: {
+              firstName: existing.firstName,
+              lastName: existing.lastName,
+              email: existing.email,
+              centerId: existing.centerId,
+            },
+          },
+        });
+      } catch (e) { /* ignore if model not present */ }
       // finally delete the parent
       await tx.parent.delete({ where: { id } });
     });

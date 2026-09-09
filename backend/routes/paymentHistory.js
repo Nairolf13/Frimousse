@@ -111,7 +111,9 @@ router.get('/:year/:month', async (req, res) => {
         rec.adjustment = 0;
       }
 
-      // Recompute actual total using assignments to guard against drift
+      // Recompute actual total using assignments to guard against drift.
+      // Skip detached invoices (parent deleted, parentId null) — nothing to reconcile against.
+      if (!rec.parentId) continue;
       try {
         let actual = 0;
         // find children of this parent

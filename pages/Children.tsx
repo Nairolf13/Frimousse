@@ -246,7 +246,10 @@ export default function Children() {
   const isAdminUser = !!(user && typeof user.role === 'string' && (user.role.toLowerCase() === 'admin' || user.role.toLowerCase().includes('super') || user.role.toLowerCase() === 'administrator'));
   type UserLike = { role?: string | null; nannyId?: string | null } | null;
   const uLike = user as unknown as UserLike;
-  const isNannyUser = !!(uLike && ((typeof uLike.role === 'string' && uLike.role.toLowerCase() === 'nanny') || !!uLike.nannyId));
+  // An explicit admin/super-admin role always wins, even if the account still
+  // carries a leftover nannyId (e.g. a nanny account later promoted to admin) —
+  // otherwise this hides admin-only actions like the "Payer" button for them.
+  const isNannyUser = !isAdminUser && !!(uLike && ((typeof uLike.role === 'string' && uLike.role.toLowerCase() === 'nanny') || !!uLike.nannyId));
 
   function handleEdit(child: Child) {
     setForm({
