@@ -573,8 +573,10 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
 router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
   try {
   const userReq = req.user || {};
-  if (userReq.role === 'nanny') return res.status(403).json({ code: 'errors.nanny_cannot_delete' });
-  if (!canManageParents(userReq)) return res.status(403).json({ message: 'Interdit' });
+  // Only admins/super-admins can delete a parent — checked by inclusion
+  // rather than canManageParents() (which also allows nannies) since
+  // deleting a parent account is an admin-only action.
+  if (!isAdminRole(userReq) && !isSuperAdmin(userReq)) return res.status(403).json({ message: 'Interdit' });
     const { id } = req.params;
     let existing;
     if (!isSuperAdmin(userReq)) {

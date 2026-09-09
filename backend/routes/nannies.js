@@ -355,6 +355,14 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
 
 router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
   const { id } = req.params;
+  // Only admins/super-admins can delete a nanny — this route previously had
+  // no role check at all beyond center scoping, so any authenticated user
+  // of the center (including the nanny's own account, or a parent) could
+  // call it.
+  const role = (req.user && req.user.role || '').toLowerCase();
+  if (role !== 'admin' && !isSuperAdmin(req.user)) {
+    return res.status(403).json({ message: 'Forbidden: seuls les administrateurs peuvent supprimer des nounous' });
+  }
   try {
     if (!isSuperAdmin(req.user)) {
       const existing = await prisma.nanny.findUnique({ where: { id } });
