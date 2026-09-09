@@ -3,6 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
+const { createParentUserAndInvite } = require('../lib/parentInvite');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
 function toProxyUrl(pathOrUrl) {
@@ -272,6 +273,12 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('child'), async
   }
     const { name, age, sexe, parentId, parentName, parentContact, allergies, group, birthDate } = req.body;
     const parentMail = req.body.parentMail !== undefined ? String(req.body.parentMail || '').trim().toLowerCase() : undefined;
+    // A child must always be linked to a real Parent record — either an
+    // existing one (parentId) or a new one created from parentMail — so it
+    // never ends up with only free-text parent info that nothing can use.
+    if (!parentId && !parentMail) {
+      return res.status(400).json({ message: "L'email du parent est requis pour créer un enfant" });
+    }
   // Try to parse age if provided; otherwise compute from birthDate when possible
   let parsedAge = typeof age === 'string' ? parseInt(age, 10) : age;
   if (parsedAge === undefined || parsedAge === null || Number.isNaN(parsedAge)) {
@@ -325,6 +332,14 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('child'), async
           const parentData = { firstName, lastName, email: parentMail, phone: parentContact || null };
           if (!isSuperAdmin(req.user) && req.user.centerId) parentData.centerId = req.user.centerId;
           parent = await tx.parent.create({ data: parentData });
+          // Give this newly-created parent a login account right away, so they
+          // aren't left unreachable until an admin remembers to invite them later.
+          const existingUser = await tx.user.findFirst({ where: { email: { equals: parentMail, mode: 'insensitive' } } });
+          if (!existingUser) {
+            await createParentUserAndInvite(tx, { parent, centerId: parentData.centerId, req });
+          } else if (!existingUser.parentId) {
+            await tx.user.update({ where: { id: existingUser.id }, data: { parentId: parent.id } });
+          }
         }
         await tx.parentChild.create({ data: { parentId: parent.id, childId: child.id } });
         linkedParent = parent;
@@ -444,6 +459,16 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
     if (!existingChild) return res.status(404).json({ error: 'Child not found' });
     if (!isSuperAdmin(req.user) && existingChild.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
 
+    // A child must always end up linked to a real Parent record. Only enforce
+    // this when the child currently has none — editing an already-linked
+    // child without touching parent fields must keep working.
+    if (!parentId && !parentMail) {
+      const hasParentLink = await prisma.parentChild.findFirst({ where: { childId: id } });
+      if (!hasParentLink) {
+        return res.status(400).json({ message: "L'email du parent est requis pour cet enfant" });
+      }
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const updateData = {
         name,
@@ -474,7 +499,17 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
           const names = (parentName || '').trim().split(/\s+/);
           const firstName = names.shift() || 'Parent';
           const lastName = names.join(' ') || '';
-          parent = await tx.parent.create({ data: { firstName, lastName, email: parentMail, phone: parentContact || null } });
+          const parentData = { firstName, lastName, email: parentMail, phone: parentContact || null };
+          if (!isSuperAdmin(req.user) && req.user.centerId) parentData.centerId = req.user.centerId;
+          parent = await tx.parent.create({ data: parentData });
+          // Give this newly-created parent a login account right away, so they
+          // aren't left unreachable until an admin remembers to invite them later.
+          const existingUser = await tx.user.findFirst({ where: { email: { equals: parentMail, mode: 'insensitive' } } });
+          if (!existingUser) {
+            await createParentUserAndInvite(tx, { parent, centerId: parentData.centerId, req });
+          } else if (!existingUser.parentId) {
+            await tx.user.update({ where: { id: existingUser.id }, data: { parentId: parent.id } });
+          }
         }
         await tx.parentChild.deleteMany({ where: { childId: id } });
         await tx.parentChild.create({ data: { parentId: parent.id, childId: id } });

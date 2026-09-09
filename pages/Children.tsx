@@ -511,6 +511,12 @@ export default function Children() {
           setError("Le sexe est requis");
           return;
         }
+        // Require a parent email so every child stays linked to a real Parent
+        // record (and a login-capable account) instead of free-text only.
+        if (!form.parentMail || !form.parentMail.trim()) {
+          setError("L'email du parent est requis");
+          return;
+        }
         // when creating a new child (not editing), ensure at least one nanny is assigned
         if (!editingId && (!Array.isArray(form.nannyIds) || form.nannyIds.length === 0)) {
           setError("Veuillez assigner au moins une nounou");
@@ -722,7 +728,10 @@ export default function Children() {
   const presentToday = children.filter(c => c.present).length;
 
   let filtered = children.filter(c => {
-    const matchSearch = !search || c.name.toLowerCase().includes(search.toLowerCase()) || c.parentName.toLowerCase().includes(search.toLowerCase());
+    const q = search.trim().toLowerCase();
+    const matchSearch = !q
+      || c.name.toLowerCase().split(' ').some(part => part.startsWith(q))
+      || c.parentName.toLowerCase().split(' ').some(part => part.startsWith(q));
     let matchGroup = true;
     if (groupFilter) {
       const group = groupLabels.find(g => g.key === groupFilter);
@@ -912,7 +921,7 @@ export default function Children() {
 
             {showParentsDropdown && (() => {
               const lower = form.parentName.trim().toLowerCase();
-              const filtered = lower ? parentsList.filter(p => p.name.toLowerCase().includes(lower)) : parentsList;
+              const filtered = lower ? parentsList.filter(p => p.name.toLowerCase().split(' ').some(part => part.startsWith(lower))) : parentsList;
               if (filtered.length === 0) return null;
               return (
                 <ul className="absolute left-0 right-0 bg-card border rounded shadow max-h-56 overflow-auto z-50 mt-1">
@@ -933,8 +942,8 @@ export default function Children() {
             <input id="parent-contact" name="parentContact" value={form.parentContact} onChange={handleChange} placeholder={t('children.form.parentPhone_placeholder')} className={inputCls} />
           </div>
           <div className="flex flex-col">
-            <label htmlFor="parent-mail" className={labelCls}>{t('children.form.parentEmail_label')}</label>
-            <input id="parent-mail" name="parentMail" type="email" value={form.parentMail} onChange={handleChange} placeholder={t('children.form.parentEmail_placeholder')} className={inputCls} />
+            <label htmlFor="parent-mail" className={labelCls}>{t('children.form.parentEmail_label')} <span className="text-red-500">*</span></label>
+            <input id="parent-mail" name="parentMail" type="email" required value={form.parentMail} onChange={handleChange} placeholder={t('children.form.parentEmail_placeholder')} className={inputCls} />
           </div>
           <div className="flex flex-col" data-tour="child-form-medical">
             <label htmlFor="child-allergies" className={labelCls}>{t('children.form.allergies_label')}</label>

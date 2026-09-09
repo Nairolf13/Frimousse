@@ -770,7 +770,7 @@ export default function Nannies() {
   const onLeave = visibleNannies.filter(n => n.availability === 'En_congé' || n.availability === 'En congé').length;
 
   const filtered = nannies.filter(n =>
-    (!search || n.name.toLowerCase().includes(search.toLowerCase())) &&
+    (!search || n.name.toLowerCase().split(' ').some(part => part.startsWith(search.trim().toLowerCase()))) &&
     (!availabilityFilter ||
       (availabilityFilter === 'Disponible' && n.availability === 'Disponible') ||
       (availabilityFilter === 'En congé' && (n.availability === 'En_congé' || n.availability === 'En congé')) ||
