@@ -6,7 +6,8 @@ module.exports = {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
     "./pages/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}"
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./routes/**/*.{js,ts,jsx,tsx}"
   ],
   theme: {
     extend: {
@@ -45,11 +46,16 @@ module.exports = {
           '0%': { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
+        'spin-slow': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
+        },
       },
       animation: {
         'slide-up': 'slide-up 0.35s ease-out',
         'fade-in': 'fade-in 0.2s ease-out',
         'scale-in': 'scale-in 0.2s ease-out',
+        'spin-slow': 'spin-slow 2.5s linear infinite',
       },
     },
   },

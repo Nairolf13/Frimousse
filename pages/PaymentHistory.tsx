@@ -36,6 +36,7 @@ export default function PaymentHistoryPage() {
   const [data, setData] = useState<RecordType[]>([]);
   const [loading, setLoading] = useState(false);
   const [parentFilter, setParentFilter] = useState<string>('');
+  const [search, setSearch] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [modalMessage, setModalMessage] = useState<string>('');
@@ -228,6 +229,11 @@ export default function PaymentHistoryPage() {
     if (parentFilter) {
       if (!r.parent || r.parent.id !== parentFilter) return false;
     }
+    if (search) {
+      const name = r.parent ? `${r.parent.firstName || ''} ${r.parent.lastName || ''}`.trim().toLowerCase() : '';
+      const q = search.trim().toLowerCase();
+      if (!name.split(' ').some(part => part.startsWith(q))) return false;
+    }
     return true;
   });
 
@@ -365,8 +371,12 @@ export default function PaymentHistoryPage() {
     if (loadingNannyGroups) return <div className="text-muted text-sm py-8 text-center">{t('loading')}</div>;
     if (nannyGroupsError) return <div className="bg-red-50 dark:bg-red-950 border border-red-100 dark:border-red-800 text-red-700 dark:text-red-300 p-4 rounded-xl text-sm">{nannyGroupsError}</div>;
     if (!Array.isArray(nannyGroups) || nannyGroups.length === 0) return <div className="text-muted text-sm py-8 text-center">{t('payments.history.empty')}</div>;
+    const visibleGroups = search
+      ? nannyGroups.filter(g => (g.nanny?.name || '').toLowerCase().split(' ').some(part => part.startsWith(search.trim().toLowerCase())))
+      : nannyGroups;
+    if (visibleGroups.length === 0) return <div className="text-muted text-sm py-8 text-center">{t('payments.history.empty')}</div>;
     return <>
-      {nannyGroups.map((g: NannyGroup) => {
+      {visibleGroups.map((g: NannyGroup) => {
         const initials = (g.nanny?.name || '').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2) || '—';
         return (
           <div key={String(g.nanny?.id || Math.random())} className="bg-card rounded-2xl shadow-md border border-border-default overflow-hidden mb-4">
@@ -644,13 +654,22 @@ export default function PaymentHistoryPage() {
               {yearOptions.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
             {user?.role !== 'parent' && (
-              <select value={parentFilter} onChange={e => setParentFilter(e.target.value)} className="border border-border-default px-3 py-2 rounded-xl text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 flex-1 min-w-0">
-                <option value="">{t('payments.filter.all_parents')}</option>
-                {parents.map((p, idx) => {
-                  const name = p ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : '—';
-                  return <option key={p?.id || idx} value={p?.id || ''}>{name}</option>;
-                })}
-              </select>
+              <>
+                <input
+                  type="text"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder={t('payments.filter.search_placeholder', 'Rechercher par nom...')}
+                  className="border border-border-default px-3 py-2 rounded-xl text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 flex-1 min-w-0"
+                />
+                <select value={parentFilter} onChange={e => setParentFilter(e.target.value)} className="border border-border-default px-3 py-2 rounded-xl text-sm bg-card text-primary focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 flex-1 min-w-0">
+                  <option value="">{t('payments.filter.all_parents')}</option>
+                  {parents.map((p, idx) => {
+                    const name = p ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : '—';
+                    return <option key={p?.id || idx} value={p?.id || ''}>{name}</option>;
+                  })}
+                </select>
+              </>
             )}
           </div>
 

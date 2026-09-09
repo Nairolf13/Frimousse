@@ -114,6 +114,13 @@ router.get('/:year/:month', async (req, res) => {
       // Recompute actual total using assignments to guard against drift.
       // Skip detached invoices (parent deleted, parentId null) — nothing to reconcile against.
       if (!rec.parentId) continue;
+      // Only reconcile the current month: once a month is over, its invoice is
+      // final. Recomputing past months here would silently rewrite already
+      // issued/paid invoices — e.g. if a child was later deleted, their past
+      // billed days would vanish even though the family already paid for them.
+      const now = new Date();
+      const isCurrentMonth = yearInt === now.getFullYear() && monthInt === now.getMonth() + 1;
+      if (!isCurrentMonth) continue;
       try {
         let actual = 0;
         // find children of this parent

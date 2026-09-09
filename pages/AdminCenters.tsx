@@ -70,6 +70,7 @@ export default function AdminCenters() {
   const { t } = useI18n();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   const [centers, setCenters] = useState<Center[]>([]);
+  const [search, setSearch] = useState('');
   const [orphanAdmins, setOrphanAdmins] = useState<OrphanAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -268,6 +269,9 @@ export default function AdminCenters() {
     }
   };
 
+  const filteredCenters = search
+    ? centers.filter(c => (c.name || '').toLowerCase().startsWith(search.trim().toLowerCase()))
+    : centers;
   const totalUsers = centers.reduce((s, c) => s + c._count.users, 0);
   const totalChildren = centers.reduce((s, c) => s + c._count.children, 0);
   const totalNannies = centers.reduce((s, c) => s + c._count.nannies, 0);
@@ -326,16 +330,27 @@ export default function AdminCenters() {
               ))}
             </div>
 
-            {centers.length === 0 && (
+            {/* Search by name */}
+            <div className="mb-4">
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={t('centers.search_placeholder', 'Rechercher par nom de centre...')}
+                className="w-full sm:w-80 border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0b5566]/30 focus:border-[#0b5566]"
+              />
+            </div>
+
+            {filteredCenters.length === 0 && (
               <div className="bg-white rounded-2xl shadow-sm p-12 text-center text-gray-400">
                 <HiOutlineOfficeBuilding className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p className="text-lg font-medium">Aucun centre trouvé</p>
+                <p className="text-lg font-medium">{search ? t('centers.no_results', 'Aucun centre ne correspond à votre recherche') : 'Aucun centre trouvé'}</p>
               </div>
             )}
 
             {/* Mobile cards */}
             <div className="md:hidden space-y-4">
-              {centers.map(center => (
+              {filteredCenters.map(center => (
                 <div key={center.id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
                   {/* Card header */}
                   <div className="px-4 pt-4 pb-3 border-b border-gray-50 flex items-start justify-between gap-2">
@@ -425,7 +440,7 @@ export default function AdminCenters() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {centers.map(center => (
+                    {filteredCenters.map(center => (
                       <tr key={center.id} className="hover:bg-gray-50/60 transition-colors">
                         {/* Centre */}
                         <td className="py-4 px-5">
