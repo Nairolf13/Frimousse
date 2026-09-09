@@ -542,11 +542,11 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
 
 router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
   const { id } = req.params;
-  if (req.user && req.user.role === 'nanny') {
-    return res.status(403).json({ code: 'errors.nanny_cannot_delete' });
-  }
-  if (req.user && req.user.role === 'parent') {
-    return res.status(403).json({ error: 'Forbidden: parents cannot delete children' });
+  // Only admins/super-admins can delete a child — checked by inclusion (not
+  // by excluding known non-admin roles) so a future role can't slip through.
+  const role = (req.user && req.user.role || '').toLowerCase();
+  if (role !== 'admin' && !isSuperAdmin(req.user)) {
+    return res.status(403).json({ error: 'Forbidden: seuls les administrateurs peuvent supprimer des enfants' });
   }
   try {
     // load child with assigned nannies so we can notify them after deletion
