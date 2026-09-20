@@ -72,6 +72,7 @@ export default function Dashboard() {
     return () => { try { if (typeof mql.removeEventListener === 'function') mql.removeEventListener('change', onChange); else mql.removeListener(onChange); } catch { /* ignore */ } window.removeEventListener('resize', onChange); window.removeEventListener('orientationchange', onChange); };
   }, []);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [showTodayPopup, setShowTodayPopup] = useState(false);
   const [childrenCount, setChildrenCount] = useState<number>(0);
   const [activeCaregivers, setActiveCaregivers] = useState<number>(0);
   const [childrenChangePercent, setChildrenChangePercent] = useState<number | null>(null);
@@ -157,6 +158,18 @@ export default function Dashboard() {
       .then(res => res.json())
       .then((data: Assignment[]) => {
         setAssignments(data);
+        // Show the "who's here today" summary as a once-a-day popup instead
+        // of a permanent header line, once we actually have today's data.
+        if (user?.id) {
+          const todayKey = new Date().toISOString().split('T')[0];
+          const storageKey = `dashboard-today-popup-${user.id}-${todayKey}`;
+          let alreadyShown = false;
+          try { alreadyShown = window.localStorage.getItem(storageKey) === '1'; } catch { /* ignore */ }
+          if (!alreadyShown) {
+            setShowTodayPopup(true);
+            try { window.localStorage.setItem(storageKey, '1'); } catch { /* ignore */ }
+          }
+        }
         const uniqueThis = new Set((data || []).map(a => a.child.id)).size;
 
         const prevFirst = new Date(year, month - 1, 1);
@@ -244,7 +257,10 @@ export default function Dashboard() {
   ).length;
 
   // Personalized "who's here today" summary for the welcome banner.
-  const firstName = (user?.name || '').trim().split(' ')[0] || '';
+  // Names are stored "Lastname Firstname" — use the last word so the
+  // greeting reads naturally with the first name instead of the surname.
+  const nameParts = (user?.name || '').trim().split(/\s+/).filter(Boolean);
+  const firstName = nameParts.length > 0 ? nameParts[nameParts.length - 1] : '';
   const greeting = today.getHours() < 18 ? t('dashboard.greeting.day', 'Bonjour') : t('dashboard.greeting.evening', 'Bonsoir');
   // Keep the summary to a single readable line even for large centers: cap
   // both how many names are listed per group and how many groups are shown,
@@ -286,6 +302,7 @@ export default function Dashboard() {
       .replace('{nannies}', String(nannyCount))
       .replace('{children}', String(childCount));
   })();
+
   let weeklyAverage = 0;
   if (totalChildren > 0) {
     const last7Days: string[] = [];
@@ -414,6 +431,20 @@ export default function Dashboard() {
 
   return (
   <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      {showTodayPopup && (
+        <div role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setShowTodayPopup(false); }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="bg-card rounded-2xl shadow-xl max-w-sm w-full p-6 text-center animate-scale-in">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <h2 className="text-lg font-bold text-primary mb-1">{firstName ? `${greeting} ${firstName}` : greeting}</h2>
+            <p className="text-sm text-secondary">{todaySummary}</p>
+            <button onClick={() => setShowTodayPopup(false)} className="mt-5 w-full bg-brand-500 text-white py-2.5 rounded-xl font-semibold text-sm hover:bg-brand-600 transition-colors">
+              {t('common.ok', 'OK')}
+            </button>
+          </div>
+        </div>
+      )}
       {successMessage && (
         <div className="fixed top-6 right-6 z-50 bg-green-50 border border-green-200 text-green-800 px-5 py-3 rounded-xl shadow-lg animate-slide-up flex items-center gap-2">
           <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
@@ -431,7 +462,7 @@ export default function Dashboard() {
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">
               {firstName ? `${greeting} ${firstName}` : greeting}
             </h1>
-            <p className="text-xs sm:text-sm text-secondary mt-0.5 truncate max-w-[280px] sm:max-w-md md:max-w-lg" title={todaySummary}>{todaySummary}</p>
+            <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('dashboard.welcome')}</p>
           </div>
         </div>
           <div className="flex items-center gap-3 self-start md:self-end">

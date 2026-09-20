@@ -145,6 +145,7 @@
   "dashboard.summary.parent.none": "No childcare scheduled today.",
   "dashboard.summary.parent.entry": "{child} will be cared for by {nannies}",
   "dashboard.summary.admin.none": "No childcare scheduled today.",
+  "planning.summary.title": "Today",
   "planning.summary.none": "No childcare scheduled today.",
   "planning.summary.entry": "Today, you're looking after {names}",
   "planning.summary.entry_overflow": "Today, you're looking after {names} and {count} more",

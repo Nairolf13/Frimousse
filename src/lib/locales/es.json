@@ -456,6 +456,7 @@
   "dashboard.summary.parent.none": "No hay cuidado previsto hoy.",
   "dashboard.summary.parent.entry": "{child} será cuidado(a) por {nannies}",
   "dashboard.summary.admin.none": "No hay cuidado previsto hoy.",
+  "planning.summary.title": "Hoy",
   "planning.summary.none": "No hay cuidado previsto hoy.",
   "planning.summary.entry": "Hoy, te ocupas de {names}",
   "planning.summary.entry_overflow": "Hoy, te ocupas de {names} y {count} más",

@@ -15,6 +15,7 @@ export default function MonPlanning() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [nannies, setNannies] = useState<Array<{ id: string; name: string }>>([]);
   const [todaysChildren, setTodaysChildren] = useState<string[]>([]);
+  const [showTodayPopup, setShowTodayPopup] = useState(false);
   const [exportMonth, setExportMonth] = useState<string>(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -48,6 +49,16 @@ export default function MonPlanning() {
               const data = await r.json();
               const names: string[] = Array.isArray(data) ? (data as TodayAssignment[]).map(a => a.child.name) : [];
               setTodaysChildren(names);
+              // Show the "who you're looking after today" summary as a
+              // once-a-day popup instead of a permanent header line.
+              const todayKey = new Date().toISOString().split('T')[0];
+              const storageKey = `planning-today-popup-${user.nannyId}-${todayKey}`;
+              let alreadyShown = false;
+              try { alreadyShown = window.localStorage.getItem(storageKey) === '1'; } catch { /* ignore */ }
+              if (!alreadyShown) {
+                setShowTodayPopup(true);
+                try { window.localStorage.setItem(storageKey, '1'); } catch { /* ignore */ }
+              }
             }
           } catch (e) {
             console.error('Failed to load today\'s assignments for nanny summary', e);
@@ -98,13 +109,25 @@ export default function MonPlanning() {
 
   return (
     <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
+      {showTodayPopup && !isAdmin && (
+        <div role="presentation" onClick={(e) => { if (e.target === e.currentTarget) setShowTodayPopup(false); }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+          <div className="bg-card rounded-2xl shadow-xl max-w-sm w-full p-6 text-center animate-scale-in">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <h2 className="text-lg font-bold text-primary mb-1">{t('planning.summary.title', "Aujourd'hui")}</h2>
+            <p className="text-sm text-secondary">{todaysSummary}</p>
+            <button onClick={() => setShowTodayPopup(false)} className="mt-5 w-full bg-brand-500 text-white py-2.5 rounded-xl font-semibold text-sm hover:bg-brand-600 transition-colors">
+              {t('common.ok', 'OK')}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight text-brand-500">Mon planning</h1>
-              <div className="text-sm md:text-base font-medium text-brand-700/60 truncate" title={!isAdmin ? todaysSummary : undefined}>
-                {isAdmin ? 'Gérez vos affectations' : todaysSummary}
-              </div>
+              <div className="text-sm md:text-base font-medium text-brand-700/60">Gérez vos affectations</div>
             </div>
             <div className="flex flex-wrap items-center gap-2 self-start md:self-end">
               {isAdmin && nannies.length > 0 && (
