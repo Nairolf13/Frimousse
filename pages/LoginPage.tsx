@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [needsSubscription, setNeedsSubscription] = useState(false);
   const [prefillEmail, setPrefillEmail] = useState('');
   const [subscribeToken, setSubscribeToken] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   const { setUser } = useAuth();
   const location = useLocation();
@@ -79,7 +80,10 @@ export default function LoginPage() {
       } catch {
         // ignore
       }
-      window.location.href = '/dashboard';
+      // Brief success animation before the full page navigation so the
+      // transition feels acknowledged instead of an abrupt hard redirect.
+      setLoginSuccess(true);
+      window.setTimeout(() => { window.location.href = '/dashboard'; }, 650);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || 'Erreur de connexion');
@@ -128,6 +132,16 @@ export default function LoginPage() {
 
       {/* Form panel */}
       <div className="flex-1 flex items-center justify-center px-4 sm:px-6 md:px-10 lg:px-16 py-6 md:py-10">
+      {loginSuccess ? (
+        <div className="w-full max-w-md flex flex-col items-center justify-center animate-fade-in">
+          <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-4 animate-scale-in">
+            <svg className="w-9 h-9 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+          </div>
+          <p className="text-gray-600 text-sm font-medium">Connexion réussie</p>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="w-full max-w-md">
 
         {/* Mobile header */}
@@ -208,6 +222,7 @@ export default function LoginPage() {
 
         <p className="mt-5 text-center text-sm text-gray-400">Pas encore de compte ? <a href="/register" className="text-brand-500 font-semibold hover:underline">Créer un compte</a></p>
       </form>
+      )}
       </div>
 
       {forgotOpen && (

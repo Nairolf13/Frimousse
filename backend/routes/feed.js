@@ -444,6 +444,50 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Fetch a single post by id (used for deep-linking, e.g. push notifications
+// pointing at /feed/:postId).
+router.get('/:id', async (req, res) => {
+  const user = req.user;
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const postId = req.params.id;
+  try {
+    const p = await prisma.feedPost.findUnique({
+      where: { id: postId },
+      include: {
+        medias: true,
+        author: true,
+        _count: { select: { likes: true, comments: true } },
+        comments: { take: 1, orderBy: { createdAt: 'desc' }, include: { author: true } },
+      },
+    });
+    if (!p) return res.status(404).json({ message: 'Post not found' });
+    if (user.role !== 'super-admin' && p.centerId !== user.centerId) return res.status(404).json({ message: 'Post not found' });
+
+    const hasLiked = !!(await prisma.feedLike.findUnique({ where: { postId_userId: { postId: p.id, userId: user.id } } }));
+    const mapped = {
+      id: p.id,
+      text: p.text,
+      createdAt: p.createdAt,
+      author: { name: p.author?.name, avatarUrl: toProxyUrl(p.author?.avatarUrl) },
+      authorId: p.author?.id,
+      medias: p.medias.map(toProxyMedia),
+      likes: p._count?.likes || 0,
+      commentsCount: p._count?.comments || 0,
+      comments: p.comments.map(c => ({
+        authorName: c.author?.name || 'Utilisateur',
+        authorAvatarUrl: toProxyUrl(c.author?.avatarUrl),
+        timeAgo: c.createdAt,
+        text: c.text,
+      })),
+      hasLiked,
+    };
+    return res.json({ post: mapped });
+  } catch (e) {
+    console.error('Failed to fetch feed post', e);
+    return res.status(500).json({ message: 'Failed to fetch post' });
+  }
+});
+
 // Toggle like for a post
 router.post('/:id/like', async (req, res) => {
   const user = req.user;

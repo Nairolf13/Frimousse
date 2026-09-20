@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useI18n } from '../src/lib/useI18n';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
@@ -101,6 +102,7 @@ function CommentBox({ postId, onSubmit, authorName }: { postId: string; onSubmit
 
 export default function Feed() {
   const { t } = useI18n();
+  const { postId: targetPostId } = useParams<{ postId?: string }>();
   const [isShortLandscape, setIsShortLandscape] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
@@ -239,6 +241,53 @@ export default function Feed() {
     }
     loadPostsWithCache();
   }, [centerFilter]);
+
+  // Deep-link support (e.g. a push notification linking to /feed/:postId):
+  // fetch the target post on its own if the regular paginated list hasn't
+  // reached it yet, then scroll to and briefly highlight its card.
+  const [missingTargetPost, setMissingTargetPost] = useState(false);
+  useEffect(() => {
+    if (!targetPostId) return;
+    setMissingTargetPost(false);
+    let cancelled = false;
+    function jumpToPostMonth(post: Post) {
+      const d = new Date(post.createdAt);
+      setSelectedMonth({ year: d.getFullYear(), month: d.getMonth() });
+    }
+    async function ensureTargetPostLoaded() {
+      const existing = posts.find(p => p.id === targetPostId);
+      if (existing) {
+        jumpToPostMonth(existing);
+        scrollToTargetPost();
+        return;
+      }
+      try {
+        const res = await fetchWithRefresh(`api/feed/${targetPostId}`);
+        if (!res.ok) {
+          if (!cancelled) setMissingTargetPost(true);
+          return;
+        }
+        const body = await res.json();
+        if (cancelled || !body.post) return;
+        jumpToPostMonth(body.post);
+        setPosts(prev => prev.some(p => p.id === body.post.id) ? prev : [body.post, ...prev]);
+      } catch (e) {
+        if (import.meta.env.DEV) console.error('Failed to load target feed post', e);
+        if (!cancelled) setMissingTargetPost(true);
+      }
+    }
+    function scrollToTargetPost() {
+      window.setTimeout(() => {
+        const el = document.getElementById(`post-${targetPostId}`);
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-[#0b5566]');
+        window.setTimeout(() => el.classList.remove('ring-2', 'ring-[#0b5566]'), 2500);
+      }, 150);
+    }
+    ensureTargetPostLoaded();
+    return () => { cancelled = true; };
+  }, [targetPostId, posts]);
 
   // load center name when AuthContext user is available ( mirrors Sidebar behaviour )
   useEffect(() => {
@@ -872,6 +921,12 @@ export default function Feed() {
                 <button onClick={() => setShowConsentModal(false)} className="px-4 py-2 bg-gradient-to-r from-[#0b5566] to-[#08323a] text-white rounded-xl text-sm font-medium">Retour</button>
               </div>
             </div>
+          </div>
+        )}
+
+        {missingTargetPost && (
+          <div className="mb-4 p-3 bg-input border border-border-default text-secondary rounded-xl text-sm text-center">
+            {t('feed.target_post.unavailable', "Cette publication n'est plus disponible.")}
           </div>
         )}
 

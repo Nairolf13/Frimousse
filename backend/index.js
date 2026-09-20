@@ -271,6 +271,9 @@ const notFoundLogsRoutes = require('./routes/notFoundLogs');
 app.use('/api/not-found-logs', notFoundLogsRoutes);   // POST public (log 404)
 app.use('/api/admin', notFoundLogsRoutes);             // GET/PATCH/DELETE super-admin
 
+const auditLogsRoutes = require('./routes/auditLogs');
+app.use('/api/admin', auditLogsRoutes);                // GET super-admin only
+
 
 const paymentInvoiceRoutes = require('./routes/paymentInvoice');
 // Mount invoice route before the general payment-history routes so it has priority

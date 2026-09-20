@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const { createParentUserAndInvite } = require('../lib/parentInvite');
+const { logDeletion } = require('../lib/auditLog');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
 function toProxyUrl(pathOrUrl) {
@@ -554,6 +555,9 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
     if (!fullExisting) return res.status(404).json({ error: 'Child not found' });
     if (!isSuperAdmin(req.user) && fullExisting.centerId !== req.user.centerId) return res.status(404).json({ error: 'Child not found' });
 
+    const center = fullExisting.centerId ? await prisma.center.findUnique({ where: { id: fullExisting.centerId }, select: { name: true } }) : null;
+    const parentLinks = await prisma.parentChild.findMany({ where: { childId: id }, include: { parent: { select: { id: true, firstName: true, lastName: true, email: true } } } });
+
     // Collect storage paths to remove (prescription + any feed media)
     const toRemoveStorage = [];
     if (fullExisting.prescriptionPath) toRemoveStorage.push(fullExisting.prescriptionPath);
@@ -609,6 +613,21 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
 
       // finally remove child record
       await tx.child.delete({ where: { id } });
+    });
+
+    await logDeletion({
+      action: 'child.delete',
+      targetType: 'child',
+      targetId: id,
+      snapshot: {
+        name: fullExisting.name,
+        birthDate: fullExisting.birthDate,
+        parents: parentLinks.map(pc => ({ id: pc.parent.id, name: `${pc.parent.firstName || ''} ${pc.parent.lastName || ''}`.trim(), email: pc.parent.email })),
+        nannies: fullExisting.childNannies.map(cn => ({ id: cn.nanny.id, name: cn.nanny.name })),
+      },
+      actor: req.user,
+      centerId: fullExisting.centerId,
+      centerName: center?.name || null,
     });
 
     res.json({ message: 'Child deleted' });

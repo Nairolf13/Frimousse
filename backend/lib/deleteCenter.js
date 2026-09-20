@@ -18,11 +18,13 @@
  * 10. Users (RefreshToken / Notification / SupportTicket cascadent)
  * 11. Center
  */
-async function deleteCenter(prisma, centerId) {
+async function deleteCenter(prisma, centerId, actor) {
+  let centerSnapshot = null;
   await prisma.$transaction(async (tx) => {
     // ── 0. Vérifier que le centre existe ─────────────────────────────────────
     const center = await tx.center.findUnique({ where: { id: centerId } });
     if (!center) throw Object.assign(new Error('Centre non trouvé'), { code: 'NOT_FOUND' });
+    centerSnapshot = { name: center.name, email: center.email, phone: center.phone };
 
     // ── 1. Collecter les IDs de toutes les entités du centre ─────────────────
     const [children, nannies, parents, users, feedPosts, presenceSheets, conversations] =
@@ -40,6 +42,7 @@ async function deleteCenter(prisma, centerId) {
     const nannyIds = nannies.map(n => n.id);
     const parentIds = parents.map(p => p.id);
     const userIds = users.map(u => u.id);
+    centerSnapshot.counts = { children: childIds.length, nannies: nannyIds.length, parents: parentIds.length, users: userIds.length };
     const feedPostIds = feedPosts.map(p => p.id);
     const presenceSheetIds = presenceSheets.map(s => s.id);
     const conversationIds = conversations.map(c => c.id);
@@ -157,6 +160,17 @@ async function deleteCenter(prisma, centerId) {
     // ── 15. Centre ────────────────────────────────────────────────────────────
     await tx.center.delete({ where: { id: centerId } });
   }, { timeout: 30000 });
+
+  const { logDeletion } = require('./auditLog');
+  await logDeletion({
+    action: 'center.delete',
+    targetType: 'center',
+    targetId: centerId,
+    snapshot: centerSnapshot,
+    actor,
+    centerId,
+    centerName: centerSnapshot?.name || null,
+  });
 }
 
 module.exports = { deleteCenter };

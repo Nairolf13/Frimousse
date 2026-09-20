@@ -10,6 +10,7 @@ const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const { validateAddress } = require('../utils/validateAddress');
 const requireAuth = require('../middleware/authMiddleware');
+const { logDeletion } = require('../lib/auditLog');
 const { detectLang, subject: emailSubject } = require('../lib/i18n');
 
 function toProxyUrl(pathOrUrl) {
@@ -586,6 +587,8 @@ router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) =
       existing = await prisma.parent.findUnique({ where: { id } });
       if (!existing) return res.status(404).json({ message: 'Parent non trouvé' });
     }
+    const linkedChildren = await prisma.parentChild.findMany({ where: { parentId: id }, include: { child: { select: { id: true, name: true } } } });
+    const center = existing.centerId ? await prisma.center.findUnique({ where: { id: existing.centerId }, select: { name: true } }) : null;
     await prisma.$transaction(async (tx) => {
       // Si l'utilisateur est admin → on retire juste le lien parentId
       // Sinon → on supprime complètement le compte utilisateur
@@ -643,6 +646,21 @@ router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) =
       } catch (e) { /* ignore if model not present */ }
       // finally delete the parent
       await tx.parent.delete({ where: { id } });
+    });
+    await logDeletion({
+      action: 'parent.delete',
+      targetType: 'parent',
+      targetId: id,
+      snapshot: {
+        firstName: existing.firstName,
+        lastName: existing.lastName,
+        email: existing.email,
+        phone: existing.phone,
+        children: linkedChildren.map(pc => ({ id: pc.child.id, name: pc.child.name })),
+      },
+      actor: userReq,
+      centerId: existing.centerId,
+      centerName: center?.name || null,
     });
     res.json({ message: 'Parent supprimé' });
   } catch (err) {

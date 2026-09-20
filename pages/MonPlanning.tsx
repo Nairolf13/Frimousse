@@ -2,14 +2,19 @@ import { useEffect, useState } from 'react';
 import NannyCalendar from '../components/NannyCalendar';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import PageLoader from '../components/PageLoader';
+import { useI18n } from '../src/lib/useI18n';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+type TodayAssignment = { child: { name: string } };
+
 export default function MonPlanning() {
+  const { t } = useI18n();
   const [nannyId, setNannyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [nannies, setNannies] = useState<Array<{ id: string; name: string }>>([]);
+  const [todaysChildren, setTodaysChildren] = useState<string[]>([]);
   const [exportMonth, setExportMonth] = useState<string>(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -33,6 +38,20 @@ export default function MonPlanning() {
       .then(async (user) => {
         if (user.role === 'nanny' && user.nannyId) {
           setNannyId(user.nannyId);
+          try {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+            const params = new URLSearchParams({ nannyId: user.nannyId, start: start.toISOString(), end: end.toISOString() });
+            const r = await fetchWithRefresh(`api/assignments?${params.toString()}`);
+            if (r.ok) {
+              const data = await r.json();
+              const names: string[] = Array.isArray(data) ? (data as TodayAssignment[]).map(a => a.child.name) : [];
+              setTodaysChildren(names);
+            }
+          } catch (e) {
+            console.error('Failed to load today\'s assignments for nanny summary', e);
+          }
           return;
         }
 
@@ -63,13 +82,29 @@ export default function MonPlanning() {
     return <div className="p-8 text-center text-red-500">Accès réservé aux nounous.</div>;
   }
 
+  // Keep the "who you're looking after today" line to a single readable
+  // sentence — a nanny rarely has more than a handful of kids in one day,
+  // but cap it anyway so it can never overflow the header.
+  const MAX_NAMED = 3;
+  const todaysSummary = (() => {
+    if (todaysChildren.length === 0) return t('planning.summary.none', "Aucune garde prévue aujourd'hui.");
+    if (todaysChildren.length <= MAX_NAMED) {
+      return t('planning.summary.entry', "Aujourd'hui, vous vous occupez de {names}").replace('{names}', todaysChildren.join(', '));
+    }
+    const shown = todaysChildren.slice(0, MAX_NAMED).join(', ');
+    const remaining = todaysChildren.length - MAX_NAMED;
+    return t('planning.summary.entry_overflow', "Aujourd'hui, vous vous occupez de {names} et {count} autre(s)").replace('{names}', shown).replace('{count}', String(remaining));
+  })();
+
   return (
     <div className={`min-h-screen bg-surface p-2 sm:p-4 ${!isShortLandscape ? 'md:pl-64' : ''} w-full`}>
       <div className="max-w-7xl mx-auto w-full px-0 sm:px-2 md:px-4">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 w-full">
             <div className="flex-1 min-w-0">
               <h1 className="text-2xl md:text-3xl font-extrabold mb-1 tracking-tight text-brand-500">Mon planning</h1>
-              <div className="text-sm md:text-base font-medium text-brand-700/60">Gérez vos affectations</div>
+              <div className="text-sm md:text-base font-medium text-brand-700/60 truncate" title={!isAdmin ? todaysSummary : undefined}>
+                {isAdmin ? 'Gérez vos affectations' : todaysSummary}
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2 self-start md:self-end">
               {isAdmin && nannies.length > 0 && (

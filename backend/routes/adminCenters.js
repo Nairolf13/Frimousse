@@ -159,7 +159,7 @@ router.delete('/centers/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Centre non trouvé' });
     }
 
-    await deleteCenter(prisma, id);
+    await deleteCenter(prisma, id, req.user);
 
     res.json({ message: 'Centre supprimé avec succès' });
   } catch (e) {

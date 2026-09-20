@@ -477,7 +477,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
 
     const { deleteCenter } = require('../lib/deleteCenter');
-    await deleteCenter(prisma, id);
+    await deleteCenter(prisma, id, req.user);
 
     res.json({ message: 'Centre supprimé' });
   } catch (e) {
