@@ -25,8 +25,15 @@ router.get('/', auth, async (req, res) => {
     if (start && end) {
       const startDate = new Date(start);
       const endDate = new Date(end);
-      endDate.setDate(endDate.getDate() + 1);
-      where.date = { gte: startDate, lt: endDate };
+      // Some callers pass a bare date (midnight, meaning "that whole day")
+      // and rely on us covering the full 24h window; others already pass a
+      // precise end-of-range timestamp (end of day, end of month). Only bump
+      // to the next day for the bare-midnight case — always adding a day
+      // used to leak the next day's assignments into the result (e.g. an
+      // empty Sunday would incorrectly include Monday's schedule).
+      const endIsBareMidnight = endDate.getUTCHours() === 0 && endDate.getUTCMinutes() === 0 && endDate.getUTCSeconds() === 0 && endDate.getUTCMilliseconds() === 0;
+      if (endIsBareMidnight) endDate.setDate(endDate.getDate() + 1);
+      where.date = endIsBareMidnight ? { gte: startDate, lt: endDate } : { gte: startDate, lte: endDate };
     }
     // If authenticated user is a parent, restrict assignments to children linked to that parent
     if (req.user && req.user.role === 'parent') {
