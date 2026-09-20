@@ -13,6 +13,7 @@ import LanguageDropdown from '../components/LanguageDropdown';
 import AvatarCropper from '../components/AvatarCropper';
 import ImportModal from '../components/ImportModal';
 import SuperAdminDashboardSection from '../components/SuperAdminDashboardSection';
+import AuditLogSection from '../components/AuditLogSection';
 import { HiOutlineChat, HiOutlinePaperAirplane, HiOutlineClock, HiOutlineCheckCircle } from 'react-icons/hi';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -1085,6 +1086,22 @@ export default function Settings() {
               </button>
             )}
 
+            {/* Historique des suppressions — super-admin only */}
+            {isSuperAdmin && (
+              <button
+                onClick={() => setSearchParams({ section: 'auditlog' })}
+                className="bg-card rounded-2xl shadow p-4 flex flex-col gap-3 text-left hover:shadow-md hover:border-[#0b5566] border border-transparent transition group"
+              >
+                <div className="w-11 h-11 rounded-xl bg-red-50 dark:bg-red-950 flex items-center justify-center text-red-500 group-hover:bg-red-500 group-hover:text-white transition">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+                </div>
+                <div>
+                  <div className="font-semibold text-primary text-sm">{t('settings.section.auditlog', 'Historique des suppressions')}</div>
+                  <div className="text-xs text-muted mt-0.5">{t('settings.section.auditlog.subtitle', 'Qui a supprimé quoi, et quand')}</div>
+                </div>
+              </button>
+            )}
+
             {/* Langue */}
             <button
               onClick={() => setSearchParams({ section: 'langue' })}
@@ -1373,6 +1390,14 @@ export default function Settings() {
           <div>
             <SectionHeader title={t('settings.section.dashboard', 'Tableau de bord')} />
             <SuperAdminDashboardSection />
+          </div>
+        )}
+
+        {/* ── Section: Historique des suppressions (super-admin) ── */}
+        {activeSection === 'auditlog' && isSuperAdmin && (
+          <div>
+            <SectionHeader title={t('settings.section.auditlog', 'Historique des suppressions')} />
+            <AuditLogSection />
           </div>
         )}
 

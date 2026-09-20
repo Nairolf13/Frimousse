@@ -149,6 +149,7 @@ export default function AppRoutes() {
             <Route path="/nannies" element={<Nannies />} />
             <Route path="/mon-planning" element={<MonPlanning />} />
             <Route path="/feed" element={<Feed />} />
+            <Route path="/feed/:postId" element={<Feed />} />
             <Route path="/activites" element={<Activites />} />
             <Route path="/parent" element={<ParentDashboard />} />
             <Route path="/parent/child/:childId/schedule" element={<ParentChildSchedule />} />

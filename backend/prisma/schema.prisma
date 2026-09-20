@@ -594,6 +594,28 @@ model AnnouncementRead {
   @@index([userId])
 }
 
+// Audit trail for sensitive deletions (parent, nanny, child, center) —
+// accessible only by the super-admin. `snapshot` keeps the deleted
+// record's identifying fields so it stays legible/exploitable even
+// though the original row is gone (same pattern as PaymentHistory.parentSnapshot).
+model AuditLog {
+  id           String   @id @default(uuid())
+  action       String // e.g. "parent.delete", "nanny.delete", "child.delete", "center.delete"
+  targetType   String // "parent" | "nanny" | "child" | "center"
+  targetId     String
+  snapshot     Json?
+  actorId      String?
+  actorName    String?
+  actorEmail   String?
+  centerId     String?
+  centerName   String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetType])
+  @@index([centerId])
+}
+
 // Logs des pages 404 — accessible uniquement par le super-admin
 model NotFoundLog {
   id          String    @id @default(uuid())

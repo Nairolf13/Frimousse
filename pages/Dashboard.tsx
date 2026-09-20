@@ -3,6 +3,7 @@ import { useAuth } from '../src/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../src/lib/useI18n';
 import AssignmentModal from '../components/AssignmentModal';
+import AnimatedNumber from '../components/AnimatedNumber';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -237,13 +238,54 @@ export default function Dashboard() {
   const totalChildren = childrenCount;
   const today = new Date();
   const todayStr = today.toISOString().split('T')[0];
+  const todaysAssignments = assignments.filter(a => a.date.split('T')[0] === todayStr);
   const presentToday = Array.from(
-    new Set(
-      assignments
-        .filter(a => a.date.split('T')[0] === todayStr)
-        .map(a => a.child.id)
-    )
+    new Set(todaysAssignments.map(a => a.child.id))
   ).length;
+
+  // Personalized "who's here today" summary for the welcome banner.
+  const firstName = (user?.name || '').trim().split(' ')[0] || '';
+  const greeting = today.getHours() < 18 ? t('dashboard.greeting.day', 'Bonjour') : t('dashboard.greeting.evening', 'Bonsoir');
+  // Keep the summary to a single readable line even for large centers: cap
+  // both how many names are listed per group and how many groups are shown,
+  // folding the rest into a "+N autres" tail instead of enumerating everyone.
+  const MAX_NAMES_PER_GROUP = 3;
+  const MAX_GROUPS = 3;
+  function joinWithOverflow(names: string[], max: number): string {
+    if (names.length <= max) return names.join(', ');
+    const shown = names.slice(0, max).join(', ');
+    return t('dashboard.summary.and_more', '{names} et {count} autre(s)').replace('{names}', shown).replace('{count}', String(names.length - max));
+  }
+  const todaySummary = (() => {
+    if (user?.role === 'parent') {
+      const mine = todaysAssignments;
+      if (mine.length === 0) return t('dashboard.summary.parent.none', "Aucune garde prévue aujourd'hui.");
+      const byChild = new Map<string, string[]>();
+      for (const a of mine) {
+        const list = byChild.get(a.child.name) || [];
+        list.push(a.nanny.name);
+        byChild.set(a.child.name, list);
+      }
+      const entries = Array.from(byChild.entries());
+      const parts = entries.slice(0, MAX_GROUPS).map(([childName, nannies]) =>
+        t('dashboard.summary.parent.entry', '{child} sera gardé(e) par {nannies}').replace('{child}', childName).replace('{nannies}', joinWithOverflow(nannies, MAX_NAMES_PER_GROUP))
+      );
+      const remaining = entries.length - MAX_GROUPS;
+      if (remaining > 0) parts.push(t('dashboard.summary.more_children', '+{count} autre(s) enfant(s)').replace('{count}', String(remaining)));
+      return parts.join(' · ');
+    }
+    // admin / super-admin: with dozens of nannies/children this could become
+    // a very long, hard-to-scan line — a plain headcount reads instantly and
+    // the full "who's with whom" detail is one glance away in the calendar.
+    if (todaysAssignments.length === 0) {
+      return t('dashboard.summary.admin.none', "Aucune garde prévue aujourd'hui.");
+    }
+    const nannyCount = new Set(todaysAssignments.map(a => a.nanny.name)).size;
+    const childCount = new Set(todaysAssignments.map(a => a.child.name)).size;
+    return t('dashboard.summary.admin.count', '{nannies} nounou(s) s\'occupent de {children} enfant(s) aujourd\'hui')
+      .replace('{nannies}', String(nannyCount))
+      .replace('{children}', String(childCount));
+  })();
   let weeklyAverage = 0;
   if (totalChildren > 0) {
     const last7Days: string[] = [];
@@ -385,9 +427,11 @@ export default function Dashboard() {
           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-[#0b5566] to-[#08323a] flex items-center justify-center shadow-lg flex-shrink-0">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           </div>
-          <div className="pt-0.5">
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">{t('page.dashboard')}</h1>
-            <p className="text-xs sm:text-sm text-secondary mt-0.5">{t('dashboard.welcome')}</p>
+          <div className="pt-0.5 animate-fade-in">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-[#0b5566]">
+              {firstName ? `${greeting} ${firstName}` : greeting}
+            </h1>
+            <p className="text-xs sm:text-sm text-secondary mt-0.5 truncate max-w-[280px] sm:max-w-md md:max-w-lg" title={todaySummary}>{todaySummary}</p>
           </div>
         </div>
           <div className="flex items-center gap-3 self-start md:self-end">
@@ -401,7 +445,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4 mb-8 w-full">
         <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-border-default hover:shadow-md transition-shadow w-full">
             <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl sm:text-3xl font-bold text-primary">{totalChildren}</span>
+            <span className="text-2xl sm:text-3xl font-bold text-primary"><AnimatedNumber value={totalChildren} /></span>
             <span className="rounded-full p-2 bg-brand-200 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0 1 13 0"/></svg></span>
           </div>
           <div className="text-secondary font-medium text-sm sm:text-base">{t('dashboard.children_registered')}</div>
@@ -409,7 +453,7 @@ export default function Dashboard() {
         </div>
         <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-border-default hover:shadow-md transition-shadow w-full">
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl sm:text-3xl font-bold text-primary">{presentToday}</span>
+            <span className="text-2xl sm:text-3xl font-bold text-primary"><AnimatedNumber value={presentToday} /></span>
             <span className="bg-brand-200 text-brand-500 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>
           </div>
           <div className="text-secondary font-medium text-sm sm:text-base">{t('dashboard.present_today')}</div>
@@ -417,7 +461,7 @@ export default function Dashboard() {
         </div>
         <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-border-default hover:shadow-md transition-shadow w-full">
             <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl sm:text-3xl font-bold text-primary">{activeCaregivers}</span>
+            <span className="text-2xl sm:text-3xl font-bold text-primary"><AnimatedNumber value={activeCaregivers} /></span>
             <span className="rounded-full p-2 bg-cream-100 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21C7 21 2 17 2 12V7a5 5 0 0 1 10 0v5c0 5-5 9-10 9z"/></svg></span>
           </div>
           <div className="text-secondary font-medium text-sm sm:text-base">{t('dashboard.active_caregivers')}</div>
@@ -425,7 +469,7 @@ export default function Dashboard() {
         </div>
         <div className="bg-card rounded-2xl shadow-sm p-4 md:p-6 flex flex-col items-start gap-2 border border-border-default hover:shadow-md transition-shadow w-full">
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl sm:text-3xl font-bold text-primary">{weeklyAverage}%</span>
+            <span className="text-2xl sm:text-3xl font-bold text-primary"><AnimatedNumber value={weeklyAverage} suffix="%" /></span>
             <span className="rounded-full p-2 bg-pink-100 dark:bg-pink-900 text-brand-700"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8 17l4-4 4 4"/></svg></span>
           </div>
           <div className="text-secondary font-medium text-sm sm:text-base">{t('dashboard.weekly_average')}</div>

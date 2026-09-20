@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const { validateAddress } = require('../utils/validateAddress');
+const { logDeletion } = require('../lib/auditLog');
 function isSuperAdmin(user) { return user && user.role === 'super-admin'; }
 
 function toProxyUrl(pathOrUrl) {
@@ -364,10 +365,13 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
     return res.status(403).json({ message: 'Forbidden: seuls les administrateurs peuvent supprimer des nounous' });
   }
   try {
-    if (!isSuperAdmin(req.user)) {
-      const existing = await prisma.nanny.findUnique({ where: { id } });
-      if (!existing || existing.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
+    const existing = await prisma.nanny.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ message: 'Nanny not found' });
+    if (!isSuperAdmin(req.user) && existing.centerId !== req.user.centerId) {
+      return res.status(404).json({ message: 'Nanny not found' });
     }
+    const center = existing.centerId ? await prisma.center.findUnique({ where: { id: existing.centerId }, select: { name: true } }) : null;
+    const assignedChildren = await prisma.childNanny.findMany({ where: { nannyId: id }, include: { child: { select: { id: true, name: true } } } });
     await prisma.$transaction(async (tx) => {
       await tx.assignment.deleteMany({ where: { nannyId: id } });
       await tx.report.deleteMany({ where: { nannyId: id } });
@@ -407,6 +411,20 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
       }
 
       await tx.nanny.delete({ where: { id } });
+    });
+    await logDeletion({
+      action: 'nanny.delete',
+      targetType: 'nanny',
+      targetId: id,
+      snapshot: {
+        name: existing.name,
+        email: existing.email,
+        contact: existing.contact,
+        assignedChildren: assignedChildren.map(cn => ({ id: cn.child.id, name: cn.child.name })),
+      },
+      actor: req.user,
+      centerId: existing.centerId,
+      centerName: center?.name || null,
     });
     res.json({ success: true });
   } catch (e) {
