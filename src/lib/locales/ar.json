@@ -105,6 +105,7 @@
   "dashboard.summary.parent.none": "لا توجد رعاية مقررة اليوم.",
   "dashboard.summary.parent.entry": "سيتم رعاية {child} من قبل {nannies}",
   "dashboard.summary.admin.none": "لا توجد رعاية مقررة اليوم.",
+  "planning.summary.title": "اليوم",
   "planning.summary.none": "لا توجد رعاية مقررة اليوم.",
   "planning.summary.entry": "اليوم، أنت تعتني بـ {names}",
   "planning.summary.entry_overflow": "اليوم، أنت تعتني بـ {names} و {count} آخرين",
