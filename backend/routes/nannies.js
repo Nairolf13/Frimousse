@@ -386,7 +386,22 @@ router.delete('/:id', auth, requireActiveSubscription, async (req, res) => {
           // If the user is also an admin, keep the account and unlink nanny role only
           await tx.user.update({ where: { id: user.id }, data: { nannyId: null } });
         } else {
-          // For pure nanny accounts, delete the user entirely (and related data is already cleaned up above)
+          // For pure nanny accounts, delete the user entirely. Feed posts/likes/
+          // comments authored by this user have RESTRICT foreign keys to User,
+          // so they must be cleaned up first or the delete below throws a raw
+          // Prisma FK error (surfaced to the client as an opaque 400).
+          const posts = await tx.feedPost.findMany({ where: { authorId: user.id }, select: { id: true } });
+          const postIds = posts.map(p => p.id);
+          await tx.feedLike.deleteMany({ where: { userId: user.id } });
+          await tx.feedComment.deleteMany({ where: { authorId: user.id } });
+          if (postIds.length) {
+            await tx.feedLike.deleteMany({ where: { postId: { in: postIds } } });
+            await tx.feedComment.deleteMany({ where: { postId: { in: postIds } } });
+            await tx.feedMedia.deleteMany({ where: { postId: { in: postIds } } });
+            await tx.feedPost.deleteMany({ where: { id: { in: postIds } } });
+          }
+          await tx.pushSubscription.deleteMany({ where: { userId: user.id } });
+          await tx.notification.deleteMany({ where: { userId: user.id } });
           await tx.user.delete({ where: { id: user.id } });
         }
       }

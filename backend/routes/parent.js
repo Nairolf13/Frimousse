@@ -596,6 +596,24 @@ router.delete('/:id', requireAuth, requireActiveSubscription, async (req, res) =
           await tx.user.update({ where: { id: user.id }, data: { parentId: null } });
         } else {
           try { await tx.refreshToken.deleteMany({ where: { userId: user.id } }); } catch (e) { /* ignore */ }
+          // Feed posts/likes/comments authored by this user have RESTRICT
+          // foreign keys to User, so they must be cleaned up first or the
+          // delete below throws a raw Prisma FK error (surfaced as an
+          // opaque 400 to the client).
+          try {
+            const posts = await tx.feedPost.findMany({ where: { authorId: user.id }, select: { id: true } });
+            const postIds = posts.map(p => p.id);
+            await tx.feedLike.deleteMany({ where: { userId: user.id } });
+            await tx.feedComment.deleteMany({ where: { authorId: user.id } });
+            if (postIds.length) {
+              await tx.feedLike.deleteMany({ where: { postId: { in: postIds } } });
+              await tx.feedComment.deleteMany({ where: { postId: { in: postIds } } });
+              await tx.feedMedia.deleteMany({ where: { postId: { in: postIds } } });
+              await tx.feedPost.deleteMany({ where: { id: { in: postIds } } });
+            }
+            await tx.pushSubscription.deleteMany({ where: { userId: user.id } });
+            await tx.notification.deleteMany({ where: { userId: user.id } });
+          } catch (e) { /* ignore if model not present */ }
           await tx.user.delete({ where: { id: user.id } });
         }
       }
