@@ -4,9 +4,22 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Assignment removed</title>
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
+  <style>
+    :root { color-scheme: light; supported-color-schemes: light; }
+    /* Force our own backgrounds even when the mail client applies a dark
+       theme (e.g. Gmail's [data-ogsc] class) — without this, light card
+       backgrounds can get inverted while text colors stay put, making
+       dark text on a now-dark background nearly unreadable. */
+    [data-ogsc] [data-fr-bg="f1f5f9"] { background: #f1f5f9 !important; }
+    [data-ogsc] [data-fr-bg="f8fafc"] { background: #f8fafc !important; }
+    [data-ogsc] [data-fr-bg="fef2f2"] { background: #fef2f2 !important; }
+    [data-ogsc] [data-fr-bg="ffffff"] { background: #ffffff !important; }
+  </style>
 </head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f1f5f9" data-fr-bg="f1f5f9" style="background:#f1f5f9;padding:32px 16px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
 
@@ -18,17 +31,17 @@
         </td></tr>
 
         <!-- Alert banner -->
-        <tr><td style="background:#fef2f2;border-left:4px solid #ef4444;padding:14px 32px;">
+        <tr><td bgcolor="#fef2f2" data-fr-bg="fef2f2" style="background:#fef2f2;border-left:4px solid #ef4444;padding:14px 32px;">
           <p style="margin:0;font-size:14px;color:#b91c1c;font-weight:500;">⚠️ This assignment has been removed from the schedule.</p>
         </td></tr>
 
         <!-- Body -->
-        <tr><td style="background:#ffffff;padding:32px;">
+        <tr><td bgcolor="#ffffff" data-fr-bg="ffffff" style="background:#ffffff;padding:32px;">
           <p style="margin:0 0 16px;font-size:15px;color:#374151;">Hello,</p>
           <p style="margin:0 0 20px;font-size:15px;color:#374151;">The assignment for your child <strong style="color:#0b5566;">{{childName}}</strong> has been removed:</p>
 
           <!-- Info card -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:20px;">
+          <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f8fafc" data-fr-bg="f8fafc" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:20px;">
             <tr>
               <td style="padding:16px 20px;border-bottom:1px solid #e2e8f0;">
                 <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;">Nanny</span><br/>
@@ -54,7 +67,7 @@
         </td></tr>
 
         <!-- Footer -->
-        <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:20px 32px;text-align:center;">
+        <tr><td bgcolor="#f8fafc" data-fr-bg="f8fafc" style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:20px 32px;text-align:center;">
           <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Questions? Reply to this email or contact your center.</p>
           <p style="margin:0;font-size:13px;color:#6b7280;">Regards, <strong style="color:#0b5566;">The Frimousse team</strong></p>
         </td></tr>
