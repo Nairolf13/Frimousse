@@ -3,24 +3,38 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <meta name="supported-color-schemes" content="light" />
   <title>Reset your password</title>
+  <style>
+    :root { color-scheme: light; supported-color-schemes: light; }
+    /* Force our own colors even when the mail client applies a dark theme —
+       without this, clients like Gmail/Outlook dark mode can invert the
+       white card background while leaving text colors untouched, making
+       dark-gray text on a now-dark background nearly unreadable. */
+    [data-ogsc] .fr-body-text { color: #374151 !important; }
+    [data-ogsc] .fr-muted-text { color: #6b7280 !important; }
+    [data-ogsc] .fr-card { background: #ffffff !important; }
+    [data-ogsc] .fr-footer { background: #f8fafc !important; }
+    [data-ogsc] .fr-page-bg { background: #f1f5f9 !important; }
+  </style>
 </head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f1f5f9" class="fr-page-bg" style="background:#f1f5f9;padding:32px 16px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
 
         <!-- Header -->
-        <tr><td style="background:linear-gradient(135deg,#0b5566 0%,#08323a 100%);border-radius:16px 16px 0 0;padding:32px 32px 24px;text-align:center;">
+        <tr><td bgcolor="#0b5566" style="background:linear-gradient(135deg,#0b5566 0%,#08323a 100%);border-radius:16px 16px 0 0;padding:32px 32px 24px;text-align:center;">
           <img src="{{logoUrl}}" alt="Frimousse" width="64" style="display:block;margin:0 auto 16px;border-radius:12px;" />
           <h1 style="margin:0;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;">Reset your password</h1>
           <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.75);">A password reset was requested for your account.</p>
         </td></tr>
 
         <!-- Body -->
-        <tr><td style="background:#ffffff;padding:32px;">
-          <p style="margin:0 0 12px;font-size:15px;color:#374151;">Hello <strong style="color:#0b5566;">{{name}}</strong>,</p>
-          <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">You requested a password reset. Click the button below to set a new one. This link is valid for <strong>1 hour</strong>.</p>
+        <tr><td bgcolor="#ffffff" class="fr-card" style="background:#ffffff;padding:32px;">
+          <p class="fr-body-text" style="margin:0 0 12px;font-size:15px;color:#374151;">Hello <strong style="color:#0b5566;">{{name}}</strong>,</p>
+          <p class="fr-body-text" style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">You requested a password reset. Click the button below to set a new one. This link is valid for <strong>1 hour</strong>.</p>
 
           <!-- CTA -->
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
@@ -31,15 +45,15 @@
 
           <!-- Security note -->
           <table width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
+            <tr><td bgcolor="#fefce8" style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;">
               <p style="margin:0;font-size:13px;color:#92400e;">🔐 If you did not request this reset, ignore this email. Your password remains unchanged.</p>
             </td></tr>
           </table>
         </td></tr>
 
         <!-- Footer -->
-        <tr><td style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:20px 32px;text-align:center;">
-          <p style="margin:0;font-size:13px;color:#6b7280;">© Frimousse — <strong style="color:#0b5566;">The Frimousse team</strong></p>
+        <tr><td bgcolor="#f8fafc" class="fr-footer" style="background:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 16px 16px;padding:20px 32px;text-align:center;">
+          <p class="fr-muted-text" style="margin:0;font-size:13px;color:#6b7280;">© Frimousse — <strong style="color:#0b5566;">The Frimousse team</strong></p>
         </td></tr>
 
       </table>
