@@ -158,7 +158,11 @@ exports.register = async (req, res) => {
           code: verificationCode,
           logoUrl: `${frontendUrl}/imgs/FrimousseLogo.webp`
         },
-        prisma
+        prisma,
+        // Account security emails must never be silently dropped by a
+        // notification opt-out — the user would be locked out with no
+        // way to verify their account and no error shown anywhere.
+        respectOptOut: false
       });
     } catch (err) {
       console.error('Failed to send verification email', err);
@@ -213,7 +217,8 @@ exports.login = async (req, res) => {
                 code: verificationCode,
                 logoUrl: `${frontendUrl}/imgs/FrimousseLogo.webp`
               },
-              prisma
+              prisma,
+              respectOptOut: false
             });
           } catch (err) {
             console.error('Failed to send verification email on login attempt', err);
@@ -380,7 +385,11 @@ exports.forgotPassword = async (req, res) => {
     // send templated email (lang detection)
     const lang = detectLang(req);
     try {
-  await sendTemplatedMail({ templateName: 'reset', lang, to: user.email, subject: emailSubject('reset', lang), substitutions: { name: user.name || '', resetUrl }, prisma });
+  // A password-reset email must never be silently dropped by a notification
+  // opt-out — that would permanently lock the user out with no error shown
+  // anywhere (the response always says { ok: true } to avoid leaking whether
+  // the email exists), which is exactly the "I never receive the email" bug.
+  await sendTemplatedMail({ templateName: 'reset', lang, to: user.email, subject: emailSubject('reset', lang), substitutions: { name: user.name || '', resetUrl }, prisma, respectOptOut: false });
     } catch (e) {
       console.error('Failed to send reset email', e && e.message ? e.message : e);
     }
@@ -534,7 +543,8 @@ exports.resendVerification = async (req, res) => {
         code: verificationCode,
                 logoUrl: `${frontendUrl}/imgs/FrimousseLogo.webp`
       },
-      prisma
+      prisma,
+      respectOptOut: false
     });
     
     return res.json({ ok: true });

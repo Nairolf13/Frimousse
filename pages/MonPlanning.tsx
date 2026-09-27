@@ -66,10 +66,10 @@ export default function MonPlanning() {
       .then(async (user) => {
         if (user.role === 'nanny' && user.nannyId) {
           setNannyId(user.nannyId);
-          // Names are stored "Lastname Firstname" — use the last word so
-          // the popup reads naturally with the first name.
+          // Names are built/labeled "Firstname Lastname" throughout the app
+          // (form labels say "Prénom & Nom") — use the first word.
           const parts = String(user.name || '').trim().split(/\s+/).filter(Boolean);
-          setNannyFirstName(parts.length > 0 ? parts[parts.length - 1] : '');
+          setNannyFirstName(parts.length > 0 ? parts[0] : '');
           await checkDayPopup(user.nannyId, 0);
           return;
         }

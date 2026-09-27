@@ -257,10 +257,11 @@ export default function Dashboard() {
   ).length;
 
   // Personalized "who's here today" summary for the welcome banner.
-  // Names are stored "Lastname Firstname" — use the last word so the
-  // greeting reads naturally with the first name instead of the surname.
+  // Names are built/labeled "Firstname Lastname" throughout the app (form
+  // labels say "Prénom & Nom", and `${firstName} ${lastName}` is how parent
+  // User.name is constructed server-side) — use the first word.
   const nameParts = (user?.name || '').trim().split(/\s+/).filter(Boolean);
-  const firstName = nameParts.length > 0 ? nameParts[nameParts.length - 1] : '';
+  const firstName = nameParts.length > 0 ? nameParts[0] : '';
   const greeting = today.getHours() < 18 ? t('dashboard.greeting.day', 'Bonjour') : t('dashboard.greeting.evening', 'Bonsoir');
   // Keep the summary to a single readable line even for large centers: cap
   // both how many names are listed per group and how many groups are shown,
