@@ -17,6 +17,10 @@ type Parent = {
   phone?: string | null;
   avatarUrl?: string | null;
   children?: ChildRef[];
+  // Set by GET /parent/admin: whether this parent's account has a User
+  // record, and whether it has ever actually been used to log in.
+  hasUserAccount?: boolean;
+  hasAcceptedInvite?: boolean;
 };
 
 import InvoiceAdjustmentModal from './InvoiceAdjustmentModal';
@@ -37,6 +41,8 @@ export default function ParentCard({ parent, idx, color, parentDue, onChildClick
   const { t } = useI18n();
   const initials = ((parent.firstName && parent.lastName) ? `${parent.firstName[0] || ''}${parent.lastName[0] || ''}` : (parent.name || 'U')).toUpperCase().slice(0,2);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [resendingInvite, setResendingInvite] = useState(false);
+  const [inviteResent, setInviteResent] = useState(false);
   const { settings: centerSettings } = useCenterSettings();
   const annualPerChild = centerSettings.childCotisationAmount;
   const API_URL = import.meta.env.VITE_API_URL;
@@ -255,6 +261,32 @@ export default function ParentCard({ parent, idx, color, parentDue, onChildClick
           {isAdminUser && (annualPerChild > 0 || centerSettings.dailyRate > 0) && (
             <div className="text-center mb-2">
               <button className="text-xs font-semibold text-[#0b5566] dark:text-accent hover:underline" onClick={() => setShowAdjModal(true)}>{t('adjustment.button')}</button>
+            </div>
+          )}
+          {isAdminUser && parent.hasUserAccount && !parent.hasAcceptedInvite && (
+            <div className="text-center mb-2">
+              {inviteResent ? (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{t('parent.invite.resent', 'Invitation renvoyée !')}</span>
+              ) : (
+                <button
+                  disabled={resendingInvite}
+                  onClick={async () => {
+                    setResendingInvite(true);
+                    try {
+                      const res = await fetchWithRefresh(`${API_URL}/parent/${parent.id}/resend-invite`, { method: 'POST', credentials: 'include' });
+                      if (res.ok) {
+                        setInviteResent(true);
+                        window.setTimeout(() => setInviteResent(false), 4000);
+                      }
+                    } finally {
+                      setResendingInvite(false);
+                    }
+                  }}
+                  className="text-xs font-semibold text-[#0b5566] dark:text-accent hover:underline disabled:opacity-50"
+                >
+                  {resendingInvite ? t('parent.invite.resending', 'Envoi...') : t('parent.invite.resend', "Renvoyer l'invitation")}
+                </button>
+              )}
             </div>
           )}
           <div className="flex justify-center gap-2">

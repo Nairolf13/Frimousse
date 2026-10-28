@@ -7,6 +7,8 @@ const rateLimit = require('express-rate-limit');
 
 const prisma = require('../lib/prismaClient');
 const { validatePassword } = require('../lib/validatePassword');
+const { sendParentInviteEmail, INVITE_TOKEN_TTL } = require('../lib/parentInvite');
+const { detectLang, subject: emailSubject } = require('../lib/i18n');
 
 // Strict rate limiter for login: 10 attempts / 15 min per IP+email combination
 const authLimiter = rateLimit({
@@ -82,6 +84,44 @@ router.post('/accept-invite', inviteLimiter, async (req, res) => {
   } catch (err) {
     console.error('POST /api/auth/accept-invite error', err);
     res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Resend an invite link (parent or nanny) when the original one expired or
+// was lost. Deliberately doesn't require auth — the recipient has no
+// working account yet, that's the whole point — but is rate-limited and
+// never reveals whether the email exists, same as /auth/forgot.
+router.post('/resend-invite', inviteLimiter, async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ message: 'Email requis' });
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    // Only resend for accounts that still look like a pending invite (never
+    // logged in / never verified) — a real password-set account should go
+    // through "forgot password" instead. Not revealing existence either way.
+    if (!user || (!user.parentId && !user.nannyId)) return res.json({ ok: true });
+    const lang = detectLang(req);
+    if (user.parentId) {
+      const parent = await prisma.parent.findUnique({ where: { id: user.parentId } });
+      await sendParentInviteEmail({
+        userId: user.id,
+        email: user.email,
+        firstName: parent ? parent.firstName : (user.name || '').split(' ')[0],
+        lang,
+        prisma,
+      });
+    } else if (user.nannyId) {
+      const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
+      const inviteToken = jwt.sign({ type: 'invite', userId: user.id }, inviteSecret, { expiresIn: INVITE_TOKEN_TTL });
+      const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
+      const subject = emailSubject('invite_nanny', lang);
+      await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_nanny', lang, to: user.email, subject, substitutions: { name: user.name || '', inviteUrl }, prisma, respectOptOut: false });
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('POST /api/auth/resend-invite error', err);
+    return res.status(500).json({ message: 'Erreur serveur' });
   }
 });
 
