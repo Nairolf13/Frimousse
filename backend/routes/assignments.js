@@ -25,15 +25,16 @@ router.get('/', auth, async (req, res) => {
     if (start && end) {
       const startDate = new Date(start);
       const endDate = new Date(end);
-      // Some callers pass a bare date (midnight, meaning "that whole day")
-      // and rely on us covering the full 24h window; others already pass a
-      // precise end-of-range timestamp (end of day, end of month). Only bump
-      // to the next day for the bare-midnight case — always adding a day
-      // used to leak the next day's assignments into the result (e.g. an
-      // empty Sunday would incorrectly include Monday's schedule).
-      const endIsBareMidnight = endDate.getUTCHours() === 0 && endDate.getUTCMinutes() === 0 && endDate.getUTCSeconds() === 0 && endDate.getUTCMilliseconds() === 0;
-      if (endIsBareMidnight) endDate.setDate(endDate.getDate() + 1);
-      where.date = endIsBareMidnight ? { gte: startDate, lt: endDate } : { gte: startDate, lte: endDate };
+      // Every caller means "through the end of this calendar day" (UTC) —
+      // whether they pass a bare midnight or a local end-of-day timestamp
+      // converted to UTC (e.g. `new Date(year, month + 1, 0)` becomes
+      // 23:00 UTC the previous day during French winter time, UTC+1).
+      // Normalize to that day's 23:59:59.999 UTC instead of trusting the
+      // caller's exact hour, so DST/timezone conversion never silently
+      // excludes the last day of a range (this previously made the 30th of
+      // a month vanish from the calendar once winter time kicked in).
+      endDate.setUTCHours(23, 59, 59, 999);
+      where.date = { gte: startDate, lte: endDate };
     }
     // If authenticated user is a parent, restrict assignments to children linked to that parent
     if (req.user && req.user.role === 'parent') {

@@ -6,12 +6,12 @@ const discoveryLimit = require('../middleware/discoveryLimitMiddleware');
 const requireActiveSubscription = require('../middleware/subscriptionMiddleware');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 const { validateAddress } = require('../utils/validateAddress');
 const requireAuth = require('../middleware/authMiddleware');
 const { logDeletion } = require('../lib/auditLog');
-const { detectLang, subject: emailSubject } = require('../lib/i18n');
+const { detectLang } = require('../lib/i18n');
+const { sendParentInviteEmail, createParentUserAndInvite } = require('../lib/parentInvite');
 
 function toProxyUrl(pathOrUrl) {
   if (!pathOrUrl) return null;
@@ -163,6 +163,10 @@ router.get('/admin', requireAuth, requireActiveSubscription, async (req, res) =>
         rec.region = (userRec && userRec.region) ? userRec.region : (p.region || null);
         rec.country = (userRec && userRec.country) ? userRec.country : (p.country || null);
         rec.avatarUrl = toProxyUrl((userRec && userRec.avatarUrl) ? userRec.avatarUrl : (p.avatarUrl || null));
+        // Used by the admin UI to only show "resend invitation" for an
+        // account that has never actually logged in — not for every parent.
+        rec.hasAcceptedInvite = !!(userRec && userRec.lastLoginAt);
+        rec.hasUserAccount = !!userRec;
         if (Array.isArray(rec.children)) {
           rec.children = rec.children.map(pc => (pc && pc.child) ? {
             ...pc,
@@ -392,6 +396,32 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Admin-triggered resend of the parent's invite email — lets an admin fix
+// an expired/lost invite link without recreating the parent record.
+router.post('/:id/resend-invite', requireAuth, async (req, res) => {
+  try {
+    const userReq = req.user || {};
+    if (!isAdminRole(userReq) && !isSuperAdmin(userReq)) return res.status(403).json({ message: 'Interdit' });
+    const { id } = req.params;
+    const parent = await prisma.parent.findUnique({ where: { id } });
+    if (!parent) return res.status(404).json({ message: 'Parent non trouvé' });
+    if (!isSuperAdmin(userReq) && parent.centerId !== userReq.centerId) return res.status(404).json({ message: 'Parent non trouvé' });
+    const user = await prisma.user.findFirst({ where: { parentId: id } });
+    if (!user) return res.status(404).json({ message: "Aucun compte lié à ce parent — il n'a jamais été invité." });
+    await sendParentInviteEmail({
+      userId: user.id,
+      email: user.email,
+      firstName: parent.firstName,
+      lang: detectLang(req),
+      prisma,
+    });
+    res.json({ message: 'Invitation renvoyée' });
+  } catch (err) {
+    console.error('POST /api/parent/:id/resend-invite error', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
 router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'), async (req, res) => {
   try {
   const userReq = req.user || {};
@@ -462,26 +492,15 @@ router.post('/', requireAuth, requireActiveSubscription, discoveryLimit('parent'
     });
 
     // Envoyer l'invitation uniquement pour les nouveaux comptes créés
-    if (result.user && result.isNewUser && process.env.SMTP_HOST) {
+    if (result.user && result.isNewUser) {
       (async () => {
-        try {
-          const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 587,
-            secure: process.env.SMTP_SECURE === 'true',
-            auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-          });
-          const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-          const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
-          const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
-          const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
-          const lang = detectLang(req);
-          const subject = emailSubject('invite_parent', lang);
-          await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_parent', lang, to: email, subject, substitutions: { name: firstName || '', inviteUrl }, prisma });
-          
-        } catch (err) {
-          console.error('Failed to send invite email', err && err.message ? err.message : err);
-        }
+        await sendParentInviteEmail({
+          userId: result.user.id,
+          email,
+          firstName,
+          lang: detectLang(req),
+          prisma,
+        });
       })();
     }
 
@@ -526,15 +545,29 @@ router.put('/:id', requireAuth, requireActiveSubscription, async (req, res) => {
     }
     const updated = await prisma.parent.update({ where: { id }, data });
 
-    // Also update any linked user records so User.address etc. stay in sync
+    // Address/postal/city/etc. only live on User, not Parent — sync them to
+    // any linked account. If the parent has no account yet (never invited,
+    // or invite never accepted), create one now so the address an admin
+    // just typed isn't silently lost with nowhere to be stored.
     try {
+      const userUpdate = { ...addrValidation.data };
       const linkedUsers = await prisma.user.findMany({ where: { parentId: id } });
       if (linkedUsers && linkedUsers.length > 0) {
-        const userUpdate = { ...addrValidation.data };
         if (Object.keys(userUpdate).length > 0) {
           for (const u of linkedUsers) {
             try { await prisma.user.update({ where: { id: u.id }, data: userUpdate }); } catch (e) { /* ignore per-user failure */ }
           }
+        }
+      } else if (Object.keys(userUpdate).length > 0 && updated.email) {
+        const existingUser = await prisma.user.findFirst({ where: { email: { equals: updated.email, mode: 'insensitive' } } });
+        if (existingUser) {
+          if (!existingUser.parentId) await prisma.user.update({ where: { id: existingUser.id }, data: { parentId: id, ...userUpdate } });
+          else await prisma.user.update({ where: { id: existingUser.id }, data: userUpdate });
+        } else {
+          await prisma.$transaction(async (tx) => {
+            const newUser = await createParentUserAndInvite(tx, { parent: updated, centerId: updated.centerId, req });
+            if (Object.keys(userUpdate).length > 0) await tx.user.update({ where: { id: newUser.id }, data: userUpdate });
+          });
         }
       }
     } catch (e) {

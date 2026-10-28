@@ -1,5 +1,6 @@
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import { useI18n } from '../src/lib/useI18n';
+import { monthRangeUTC } from '../src/utils/dateRange';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -102,8 +103,7 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
   useEffect(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const first = new Date(year, month, 1);
-    const last = new Date(year, month + 1, 0);
+    const { first, last } = monthRangeUTC(year, month);
     const params = new URLSearchParams();
     if (nannyId) params.set('nannyId', nannyId);
     if (centerId) params.set('centerId', centerId);
@@ -258,10 +258,7 @@ export default function NannyCalendar({ nannyId, centerId }: { nannyId?: string 
               if (!res.ok) { setError("Erreur lors de l'ajout"); return; }
               setSuccess('Enfant ajouté au planning !');
               setTimeout(() => { setShowForm(null); setSelectedChild(''); setSuccess(''); }, 1200);
-              const yearNow = currentDate.getFullYear();
-              const monthNow = currentDate.getMonth();
-              const first = new Date(yearNow, monthNow, 1);
-              const last = new Date(yearNow, monthNow + 1, 0);
+              const { first, last } = monthRangeUTC(currentDate.getFullYear(), currentDate.getMonth());
               fetch(`${API_URL}/assignments?nannyId=${nannyId}&start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
                 .then(res => res.json()).then(setAssignments);
               notifyPaymentHistory();

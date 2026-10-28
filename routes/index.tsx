@@ -1,10 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import GuideStartPage from '../pages/GuideStartPage';
-import GuideAddChildPage from '../pages/GuideAddChildPage';
-import GuidePlanningPage from '../pages/GuidePlanningPage';
-import GuideExportReportPage from '../pages/GuideExportReportPage';
-import GuideSecurityPage from '../pages/GuideSecurityPage';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 // Listens for sw:navigate events dispatched when a push notification is clicked
@@ -51,6 +46,11 @@ if (typeof window !== 'undefined') {
 
 // Lazy load non-critical pages for better code splitting
 const LandingPage = lazyWithRetry(() => import('../pages/LandingPage'));
+const GuideStartPage = lazyWithRetry(() => import('../pages/GuideStartPage'));
+const GuideAddChildPage = lazyWithRetry(() => import('../pages/GuideAddChildPage'));
+const GuidePlanningPage = lazyWithRetry(() => import('../pages/GuidePlanningPage'));
+const GuideExportReportPage = lazyWithRetry(() => import('../pages/GuideExportReportPage'));
+const GuideSecurityPage = lazyWithRetry(() => import('../pages/GuideSecurityPage'));
 const LoginPage = lazyWithRetry(() => import('../pages/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('../pages/RegisterPage'));
 const VerifyEmailPage = lazyWithRetry(() => import('../pages/VerifyEmailPage'));

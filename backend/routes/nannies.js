@@ -184,6 +184,10 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
   const { name, availability, experience, contact, birthDate, password, address, postalCode, city, region, country } = req.body;
     if (name && String(name).length > 100) return res.status(400).json({ error: 'Nom trop long (max 100 caractères).' });
     const email = String(req.body.email || '').trim().toLowerCase();
+    // A nanny must always end up linked to a real login account — without an
+    // email there is nowhere to send an invite, and the record is stuck
+    // with no account forever (mirrors the same requirement for parents).
+    if (!email) return res.status(400).json({ error: "L'email de la nounou est requis" });
     const parsedExperience = typeof experience === 'string' ? parseInt(experience, 10) : experience;
     if (isNaN(parsedExperience)) {
       return res.status(400).json({ error: 'Le champ "experience" doit être un nombre.' });
@@ -257,11 +261,13 @@ router.post('/', auth, requireActiveSubscription, discoveryLimit('nanny'), async
           try {
             const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
             const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
-            const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '7d' });
+            const inviteToken = jwt.sign({ type: 'invite', userId: result.user.id }, inviteSecret, { expiresIn: '30d' });
             const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
             const lang = detectLang(req);
             const subject = emailSubject('invite_nanny', lang);
-            await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_nanny', lang, to: result.user.email, subject, substitutions: { name: result.user.name || '', inviteUrl }, prisma });
+            // Setting a password is the only way this account becomes usable
+            // at all — never let a notification opt-out silently swallow it.
+            await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_nanny', lang, to: result.user.email, subject, substitutions: { name: result.user.name || '', inviteUrl }, prisma, respectOptOut: false });
           } catch (err) {
             console.error('Failed to send nanny invite email', err && err.message ? err.message : err);
           }
@@ -315,13 +321,37 @@ router.put('/:id', auth, requireActiveSubscription, async (req, res) => {
   if (email !== undefined) updateData.email = email;
   const nanny = await prisma.nanny.update({ where: { id }, data: updateData });
 
-  // If address fields were provided, update the linked user(s) instead (User holds address info)
+  // Address/postal/city/etc. only live on User, not Nanny — sync them to any
+  // linked account. If the nanny has no account yet (created without an
+  // email in the past, before it became required), create one now so the
+  // address an admin just typed isn't silently lost with nowhere to go.
   try {
     const addrUpdate = { ...addrValidation.data };
-    if (Object.keys(addrUpdate).length > 0) {
-      const users = await prisma.user.findMany({ where: { nannyId: id } });
-      for (const u of users) {
-        await prisma.user.update({ where: { id: u.id }, data: addrUpdate });
+    const users = await prisma.user.findMany({ where: { nannyId: id } });
+    if (users.length > 0) {
+      if (Object.keys(addrUpdate).length > 0) {
+        for (const u of users) {
+          await prisma.user.update({ where: { id: u.id }, data: addrUpdate });
+        }
+      }
+    } else if (nanny.email) {
+      const existingUser = await prisma.user.findFirst({ where: { email: { equals: nanny.email, mode: 'insensitive' } } });
+      if (existingUser) {
+        if (!existingUser.nannyId) await prisma.user.update({ where: { id: existingUser.id }, data: { nannyId: id, ...addrUpdate } });
+        else if (Object.keys(addrUpdate).length > 0) await prisma.user.update({ where: { id: existingUser.id }, data: addrUpdate });
+      } else {
+        const tempPassword = crypto.randomBytes(12).toString('base64').replace(/\//g, '_');
+        const hash = await bcrypt.hash(tempPassword, 10);
+        const userData = { email: nanny.email, password: hash, name: nanny.name, role: 'nanny', nannyId: id, ...addrUpdate };
+        if (nanny.centerId) userData.centerId = nanny.centerId;
+        const newUser = await prisma.user.create({ data: userData });
+        const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+        const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
+        const inviteToken = jwt.sign({ type: 'invite', userId: newUser.id }, inviteSecret, { expiresIn: '30d' });
+        const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
+        const lang = detectLang(req);
+        const subject = emailSubject('invite_nanny', lang);
+        await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_nanny', lang, to: nanny.email, subject, substitutions: { name: nanny.name || '', inviteUrl }, prisma, respectOptOut: false });
       }
     }
   } catch (e) {
@@ -448,6 +478,32 @@ router.get('/:id', auth, async (req, res) => {
     country: u.country || null,
   });
   res.json(mapped);
+});
+
+// Admin-triggered resend of the nanny's invite email — lets an admin fix
+// an expired/lost invite link without recreating the nanny record.
+router.post('/:id/resend-invite', auth, async (req, res) => {
+  try {
+    const role = (req.user && req.user.role || '').toLowerCase();
+    if (role !== 'admin' && !isSuperAdmin(req.user)) return res.status(403).json({ message: 'Forbidden' });
+    const { id } = req.params;
+    const nanny = await prisma.nanny.findUnique({ where: { id } });
+    if (!nanny) return res.status(404).json({ message: 'Nanny not found' });
+    if (!isSuperAdmin(req.user) && nanny.centerId !== req.user.centerId) return res.status(404).json({ message: 'Nanny not found' });
+    const user = await prisma.user.findFirst({ where: { nannyId: id } });
+    if (!user) return res.status(404).json({ message: "Aucun compte lié à cette nounou — elle n'a jamais été invitée." });
+    const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const inviteSecret = process.env.INVITE_TOKEN_SECRET || process.env.REFRESH_TOKEN_SECRET;
+    const inviteToken = jwt.sign({ type: 'invite', userId: user.id }, inviteSecret, { expiresIn: '30d' });
+    const inviteUrl = `${loginUrl}/invite?token=${inviteToken}`;
+    const lang = detectLang(req);
+    const subject = emailSubject('invite_nanny', lang);
+    await require('../lib/email').sendTemplatedMail({ templateName: 'welcome_nanny', lang, to: user.email, subject, substitutions: { name: user.name || '', inviteUrl }, prisma, respectOptOut: false });
+    res.json({ message: 'Invitation renvoyée' });
+  } catch (err) {
+    console.error('POST /api/nannies/:id/resend-invite error', err);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 router.get('/:id/cotisation', auth, async (req, res) => {

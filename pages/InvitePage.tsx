@@ -3,6 +3,10 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
 import SEO from '../components/SEO';
 
+// Messages returned by the backend for an invalid/expired invite token —
+// matched so we can offer the "resend" flow instead of a dead end.
+const EXPIRED_TOKEN_MESSAGES = ['Invalid or expired token', 'Token invalide ou expiré'];
+
 const InvitePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
@@ -13,12 +17,17 @@ const InvitePage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [tokenExpired, setTokenExpired] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || '';
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setTokenExpired(false);
     if (!token) return setError("Lien d'invitation manquant");
     if (!password) return setError('Mot de passe requis');
     if (password !== confirm) return setError('Les mots de passe ne correspondent pas');
@@ -28,13 +37,36 @@ const InvitePage: React.FC = () => {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password })
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body?.message || body?.error || 'Erreur');
+      if (!res.ok) {
+        const message = body?.message || body?.error || 'Erreur';
+        if (EXPIRED_TOKEN_MESSAGES.includes(message)) {
+          setTokenExpired(true);
+          setError("Ce lien d'invitation n'est plus valide — il a probablement expiré ou a déjà été utilisé. Demandez un nouveau lien ci-dessous, il sera envoyé à votre adresse email.");
+        } else {
+          setError(message);
+        }
+        return;
+      }
       setSuccess('Mot de passe défini avec succès !');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: unknown) {
       if (err instanceof Error) setError(err.message);
       else setError('Erreur');
     } finally { setLoading(false); }
+  };
+
+  const resendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resendEmail.trim()) return;
+    try {
+      setResendLoading(true);
+      await fetchWithRefresh(`${API_URL}/auth/resend-invite`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: resendEmail.trim() })
+      });
+      // Always show success, whether or not the email exists — same
+      // not-revealing-existence pattern as password reset.
+      setResendSent(true);
+    } finally { setResendLoading(false); }
   };
 
   return (
@@ -68,6 +100,44 @@ const InvitePage: React.FC = () => {
                 </div>
                 <p className="font-semibold text-gray-800 mb-1">{success}</p>
                 <p className="text-sm text-gray-500">Redirection vers la connexion...</p>
+              </div>
+            ) : tokenExpired ? (
+              <div className="space-y-5">
+                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl px-4 py-3">
+                  <span>⚠️</span>
+                  <span>{error}</span>
+                </div>
+                {resendSent ? (
+                  <div className="text-center py-2">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center text-2xl mx-auto mb-4" style={{ background: '#e8f4f7' }}>
+                      ✉️
+                    </div>
+                    <p className="font-semibold text-gray-800 mb-1">Nouveau lien envoyé !</p>
+                    <p className="text-sm text-gray-500">Si un compte existe avec cette adresse, vous recevrez un nouvel email d'invitation sous quelques minutes.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={resendInvite} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Votre adresse email</label>
+                      <input
+                        type="email"
+                        value={resendEmail}
+                        onChange={e => setResendEmail(e.target.value)}
+                        placeholder="vous@exemple.com"
+                        required
+                        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={resendLoading}
+                      className="w-full py-3 rounded-xl text-white font-semibold text-sm transition disabled:opacity-60"
+                      style={{ background: 'linear-gradient(135deg, #0b5566 0%, #08323a 100%)' }}
+                    >
+                      {resendLoading ? 'Envoi...' : "Recevoir un nouveau lien d'invitation"}
+                    </button>
+                  </form>
+                )}
               </div>
             ) : (
               <form onSubmit={submit} className="space-y-5">

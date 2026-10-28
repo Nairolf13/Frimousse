@@ -402,6 +402,13 @@ export default function Nannies() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    // A nanny must always end up linked to a real login account — without
+    // an email we can never create one, and the nanny would be stuck with
+    // no way to sign in or receive an invite.
+    if (!editingId && !form.email) {
+      setError("L'email de la nounou est requis");
+      return;
+    }
     if (form.password && form.password !== confirmPassword) {
       setError('Les mots de passe ne correspondent pas');
       return;
@@ -965,9 +972,9 @@ export default function Nannies() {
             {/* Credentials (email + password) */}
             <div className="md:col-span-2" data-tour="nanny-form-credentials">
               <div className="flex flex-col">
-                <label className={labelCls}>{t('nanny.form.email')} <span className="text-muted font-normal text-xs ml-1">(optionnel)</span></label>
-                <input name="email" type="email" value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className={inputCls} />
-                <p className="text-xs text-muted mt-1">Vous pouvez utiliser votre propre email. Laissez vide pour créer sans compte de connexion.</p>
+                <label className={labelCls}>{t('nanny.form.email')} <span className="text-red-500">*</span></label>
+                <input name="email" type="email" required value={form.email || ''} onChange={handleChange} placeholder={t('nanny.form.email')} className={inputCls} />
+                <p className="text-xs text-muted mt-1">{t('nanny.form.email_hint', "Un compte de connexion sera créé pour cette nounou et une invitation lui sera envoyée.")}</p>
               </div>
 
               {/* Message si l'email saisi est celui du compte admin connecté */}
