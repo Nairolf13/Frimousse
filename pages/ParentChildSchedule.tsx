@@ -4,6 +4,7 @@ import AssignmentDetailModal from '../components/AssignmentDetailModal';
 import ActivityDetailModal from '../components/ActivityDetailModal';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import { monthRangeUTC } from '../src/utils/dateRange';
 
 type Assignment = {
   id: string;
@@ -106,10 +107,7 @@ export default function ParentChildSchedule() {
       }
     })();
     setLoading(true);
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const first = new Date(year, month, 1);
-    const last = new Date(year, month + 1, 0);
+    const { first, last } = monthRangeUTC(currentDate.getFullYear(), currentDate.getMonth());
     (async () => {
       try {
         const data: Assignment[] = await fetchAssignments(first, last);

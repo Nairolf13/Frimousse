@@ -5,6 +5,7 @@ import { useI18n } from '../src/lib/useI18n';
 import AssignmentModal from '../components/AssignmentModal';
 import AnimatedNumber from '../components/AnimatedNumber';
 import { fetchWithRefresh } from '../utils/fetchWithRefresh';
+import { monthRangeUTC } from '../src/utils/dateRange';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -151,8 +152,7 @@ export default function Dashboard() {
   useEffect(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const first = new Date(year, month, 1);
-    const last = new Date(year, month + 1, 0);
+    const { first, last } = monthRangeUTC(year, month);
 
     fetchWithRefresh(`${API_URL}/assignments?start=${first.toISOString()}&end=${last.toISOString()}`, { credentials: 'include' })
       .then(res => res.json())
@@ -172,8 +172,7 @@ export default function Dashboard() {
         }
         const uniqueThis = new Set((data || []).map(a => a.child.id)).size;
 
-        const prevFirst = new Date(year, month - 1, 1);
-        const prevLast = new Date(year, month, 0);
+        const { first: prevFirst, last: prevLast } = monthRangeUTC(year, month - 1);
         fetchWithRefresh(`${API_URL}/assignments?start=${prevFirst.toISOString()}&end=${prevLast.toISOString()}`, { credentials: 'include' })
           .then(r => r.json())
           .then((prevData: Assignment[]) => {
@@ -370,8 +369,10 @@ export default function Dashboard() {
         });
         if (!putRes.ok) { setSaveError("Erreur lors de la modification. Veuillez réessayer."); return; }
         setModalOpen(false); setSelectedId(null); setModalInitial(null);
-        const yearF = currentDate.getFullYear(), monthIdxF = currentDate.getMonth();
-        fetchAssignments(new Date(yearF, monthIdxF, 1), new Date(yearF, monthIdxF + 1, 0));
+        {
+          const { first, last } = monthRangeUTC(currentDate.getFullYear(), currentDate.getMonth());
+          fetchAssignments(first, last);
+        }
         notifyPaymentHistory();
         setSuccessMessage("Affectation modifiée.");
         if (successTimer.current) window.clearTimeout(successTimer.current);
@@ -399,8 +400,10 @@ export default function Dashboard() {
     }
 
     setModalOpen(false); setSelectedId(null); setModalInitial(null);
-    const yearF = currentDate.getFullYear(), monthIdxF = currentDate.getMonth();
-    fetchAssignments(new Date(yearF, monthIdxF, 1), new Date(yearF, monthIdxF + 1, 0));
+    {
+      const { first, last } = monthRangeUTC(currentDate.getFullYear(), currentDate.getMonth());
+      fetchAssignments(first, last);
+    }
     notifyPaymentHistory();
 
     const msg = added > 1
@@ -749,11 +752,10 @@ export default function Dashboard() {
                       }
                       setSelectedId(null);
                       setModalInitial(null);
-                      const year = currentDate.getFullYear();
-                      const monthIdx = currentDate.getMonth();
-                      const first = new Date(year, monthIdx, 1);
-                      const last = new Date(year, monthIdx + 1, 0);
-                      fetchAssignments(first, last);
+                      {
+                        const { first, last } = monthRangeUTC(currentDate.getFullYear(), currentDate.getMonth());
+                        fetchAssignments(first, last);
+                      }
                       notifyPaymentHistory();
 
                       setSuccessMessage(`${childName} a bien été supprimé du planning.`);
