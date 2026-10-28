@@ -99,17 +99,17 @@ import ConfirmDialog from '../components/ConfirmDialog';
 
             {/* ── Hero ── */}
             <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-gradient-to-br from-brand-800 via-brand-600 to-brand-500">
-              {/* Decorative blobs */}
-              <div className="absolute top-1/4 -left-32 w-[500px] h-[500px] bg-brand-400/20 rounded-full blur-[100px]" />
-              <div className="absolute bottom-1/4 -right-32 w-[400px] h-[400px] bg-brand-300/15 rounded-full blur-[100px]" />
-              <div className="absolute top-20 right-1/4 w-72 h-72 bg-cream-100/10 rounded-full blur-[80px]" />
+              {/* Decorative blobs — radial gradients, not filter: blur(), which saturates mobile GPUs */}
+              <div className="absolute top-1/4 -left-32 w-[500px] h-[500px] bg-[radial-gradient(circle,rgba(47,168,209,0.2)_0%,transparent_70%)]" />
+              <div className="absolute bottom-1/4 -right-32 w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(107,196,228,0.15)_0%,transparent_70%)]" />
+              <div className="absolute top-20 right-1/4 w-72 h-72 bg-[radial-gradient(circle,rgba(247,244,215,0.1)_0%,transparent_70%)]" />
               {/* Subtle grid overlay */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.03)_1px,transparent_1px)] bg-[size:64px_64px]" />
 
               <div className="relative z-10 max-w-5xl mx-auto text-center px-6 pt-32 pb-24 md:pt-40 md:pb-32">
                 {/* Trust badge */}
                 <div className="flex justify-center mb-8 animate-fade-in">
-                  <div className="inline-flex items-center gap-2.5 bg-white/10 backdrop-blur-sm rounded-full px-4 sm:px-5 py-2 border border-white/20 max-w-[90vw]">
+                  <div className="inline-flex items-center gap-2.5 bg-white/10 rounded-full px-4 sm:px-5 py-2 border border-white/20 max-w-[90vw]">
                     <div className="w-2 h-2 flex-shrink-0 rounded-full bg-emerald-400 animate-pulse" />
                     <span className="text-xs sm:text-sm font-medium text-white text-center leading-snug">
                       Plateforme de confiance pour{' '}
@@ -685,8 +685,8 @@ import ConfirmDialog from '../components/ConfirmDialog';
 
             {/* ── Final CTA ── */}
             <section className="py-24 px-6 bg-gradient-to-br from-brand-700 via-brand-600 to-brand-500 relative overflow-hidden">
-              <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-brand-400/20 rounded-full blur-[100px]" />
-              <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-brand-300/15 rounded-full blur-[80px]" />
+              <div className="absolute top-0 left-1/4 w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(47,168,209,0.2)_0%,transparent_70%)]" />
+              <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(107,196,228,0.15)_0%,transparent_70%)]" />
               <div className="max-w-3xl mx-auto text-center relative z-10">
                 <h2 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight mb-6">Prêt à simplifier votre gestion&nbsp;?</h2>
                 <p className="text-white text-lg mb-10 max-w-xl mx-auto leading-relaxed">Rejoignez des dizaines d'associations et de familles déjà convaincues. Inscription rapide, sans engagement.</p>
