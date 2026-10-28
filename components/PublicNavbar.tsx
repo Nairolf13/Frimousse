@@ -1,6 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useI18n } from '../src/lib/useI18n';
+
+function prefetchAuthPages() {
+  import('../pages/LoginPage').catch(() => null);
+  import('../pages/RegisterPage').catch(() => null);
+}
 
 type PublicNavbarProps = {
   variant?: string;
@@ -10,6 +15,12 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
   const { t } = useI18n();
   const { pathname } = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(prefetchAuthPages);
+    else setTimeout(prefetchAuthPages, 1500);
+  }, []);
 
   const NAV_LINKS = [
     { to: '/', label: t('nav.home', 'Accueil') },
@@ -24,8 +35,8 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
 
   /* ── style tokens ── */
   const barBg = isDark
-    ? 'bg-brand-900/70 border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
-    : 'bg-white/80 border-gray-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.06)]';
+    ? 'bg-brand-900/90 sm:bg-brand-900/70 border-white/15 shadow-[0_8px_32px_rgba(0,0,0,0.25)]'
+    : 'bg-white/95 sm:bg-white/80 border-gray-200/60 shadow-[0_8px_32px_rgba(0,0,0,0.06)]';
 
 
   const logoText = isDark ? 'text-white' : 'text-brand-700';
@@ -51,11 +62,12 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 pt-4 sm:pt-5">
-        <div className={`max-w-6xl mx-auto backdrop-blur-2xl rounded-full border px-5 sm:px-8 py-0 flex items-center justify-between ${barBg}`} style={{minHeight: 64, height: 64}}>
+        {/* backdrop-blur only from sm: — a live blur over a fixed bar is too heavy for phone GPUs */}
+        <div className={`max-w-6xl mx-auto sm:backdrop-blur-2xl rounded-full border px-5 sm:px-8 py-0 flex items-center justify-between ${barBg}`} style={{minHeight: 64, height: 64}}>
           {/* Logo */}
           <Link to="/" className="flex items-center gap-1 group pl-0 sm:pl-2">
             <div className="flex items-center justify-center transition-all mt-1 sm:-ml-4">
-              <img loading="lazy" src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-12 h-12 object-contain" />
+              <img src="/imgs/FrimousseLogo.webp" alt="Logo Frimousse" className="w-12 h-12 object-contain" />
             </div>
             <span className={`font-bold text-[15px] hidden sm:inline tracking-tight ${logoText}`}>Les frimousses</span>
           </Link>
@@ -99,7 +111,7 @@ export default function PublicNavbar({ variant = 'dark' }: PublicNavbarProps) {
       {/* Mobile menu overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-[60] lg:hidden" onClick={() => setMobileOpen(false)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="absolute inset-0 bg-black/50" />
           <div
             className="absolute top-20 left-4 right-4 bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 animate-in slide-in-from-top-2"
             onClick={e => e.stopPropagation()}
